@@ -5,119 +5,65 @@ from scipy.stats import gamma as gammadist
 import numpy as np
 from math import sqrt
 
-# Obtained (this version of) the number of initial infections by adding the number of new
-# cases (as reported by Worldometers) on the days Feb 27, 28, 29, Mar 1, then multiplying
-# by 10. Four days, because 1/gamma=4, and multiplying by 10 because p=0.1 (assumed
-# probability of an infection being reported as a case).
+# Set initial infections to replicate the output in the Gomes paper (checking they are plausible).
 
-situations=[
+countries=[
   {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "gamma",
-    "CV": 1,
-    "SD": 0.00
+    "name": "Italy",
+    "population": 60360000,
+    "initialinfections": 14000,
+    "delay": 10# Number of days before phasing in lockdown
   },
   {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "gamma",
-    "CV": 3,
-    "SD": 0.00
-  },
-  {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "gamma",
-    "CV": 1,
-    "SD": 0.68
-  },
-  {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "gamma",
-    "CV": 3,
-    "SD": 0.61
-  },
-  {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "twopoint",
-    "CV": 1,
-    "x": 0,
-    "SD": 0.68
-  },
-  {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "twopoint",
-    "CV": 1,
-    "x": 0.99,
-    "SD": 0.68
-  },
-  {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "twopoint",
-    "CV": 3,
-    "x": 0,
-    "SD": 0.61
-  },
-  {
-    "Country": "Italy",
-    "Population": 60360000,
-    "initialinfections": 12310,
-    "disttype": "twopoint",
-    "CV": 3,
-    "x": 0.99,
-    "SD": 0.61
-  },
-  {
-    "Country": "Austria",
-    "Population": 8859000,
-    "initialinfections": 120,
-    "disttype": "gamma",
-    "CV": 1,
-    "SD": 0.00
-  },
-  {
-    "Country": "Austria",
-    "Population": 8859000,
-    "initialinfections": 120,
-    "disttype": "gamma",
-    "CV": 3,
-    "SD": 0.00
-  },
-  {
-    "Country": "Austria",
-    "Population": 8859000,
-    "initialinfections": 120,
-    "disttype": "gamma",
-    "CV": 1,
-    "SD": 0.80
-  },
-  {
-    "Country": "Austria",
-    "Population": 8859000,
-    "initialinfections": 120,
-    "disttype": "gamma",
-    "CV": 3,
-    "SD": 0.77
+    "name": "Austria",
+    "population": 8859000,
+    "initialinfections": 540,
+    "delay": 16# Number of days before phasing in lockdown
   }
 ]
 
-delta=1/4
-gamma=1/4
-rho=0.5
+distributions=[
+  {
+    "disttype": "gamma",
+    "CV": 1,
+  },
+  {
+    "disttype": "gamma",
+    "CV": 3,
+  },
+  {
+    "disttype": "twopoint",
+    "CV": 1,
+    "x": 0,
+  },
+  {
+    "disttype": "twopoint",
+    "CV": 1,
+    "x": 0.99,
+  },
+  {
+    "disttype": "twopoint",
+    "CV": 3,
+    "x": 0,
+  },
+  {
+    "disttype": "twopoint",
+    "CV": 3,
+    "x": 0.99,
+  }
+]
+
+SD={
+  "Italy": {1: 0.68, 3: 0.61},
+  "Austria": {1: 0.80, 3: 0.77}
+}
+
+delta=1/4# rate of progression (in days^{-1}) from E->I
+gamma=1/4# rate of progression (in days^{-1}) from I->R
+rho=0.5# Relative infectivity of E group compared with I group
 R0=2.7
-p=0.1
+p=0.026# Proportion of infections that are reported. The paper says to use 0.1, but 0.026 seems to replicate their
+#       results much better.
 days=487# Days from 2020-03-01 to 2021-07-01
 
 # By experimentation, values of 10 for stepsperday and sbins give near to limiting
@@ -127,8 +73,10 @@ maxsbins=100# Number of bins for susceptibility (equally spaced by CDF)
 
 # Caption to Figure 1 gives this time-dependence of the social distancing parameter:
 # Return value, x, is effective social distancing number. Infection force is multiplied
-# by 1-x.
-def SD(sd0,day):
+# by 1-x. Initial ten day period is from examining the red R0 and Rt graphs.
+def SDt(sd0,day,delay):
+  if day<delay: return 0
+  day-=delay
   if day<14: return day/14*sd0
   day-=14
   if day<31: return sd0
@@ -190,51 +138,53 @@ def checkcv(susc,q,cv):
 
 seen=set()
 
-for sit in situations:
-  N=sit["Population"]
-  cv=sit["CV"]
-  sd0=sit["SD"]
-  print("Country:",sit["Country"])
-  print("Coefficient of Variation:",cv)
-  print("Max social distancing:",sd0)
-
-  susc,q,desc = getsusceptibilitydist(sit,maxsbins)
-  print("Susceptibility distribution:",desc)
-  sbins=len(susc)
-  checkcv(susc,q,cv)
-  S=q*N
-
-  if cv not in seen:
-    seen.add(cv)
-    with open('q_CV%g'%cv,'w') as fp:
-      for i in range(sbins):
-        print("%9.3f   %9.7f"%(susc[i],q[i]),file=fp)
-  
-  E=np.zeros(sbins)
-  I=np.zeros(sbins)
-  beta=R0/(rho/delta+1/gamma)# NB there is a factor of 1/N error in formula (2) from the paper
-  
-  lam=0
-
-  fn='output_%s_%s_SD%g'%(sit['Country'],desc,sd0)
-  with open(fn,'w') as fp:
-    print("#   Day            s        e        i   I_reported",file=fp)
-    for d0 in range(days*stepsperday):
-      day=d0/stepsperday
-  
-      # Introduce initial infections by boosting the infection force for the expected duration of an infection (1/gamma days)
-      if day<1/gamma: lam+=beta/N*sit['initialinfections']
+for country in countries:
+  N=country['population']
+  for dist in distributions:
+    cv=dist["CV"]
+    for sd0 in [0, SD[country['name']][cv]]:
+      print("Country:",country['name'])
+      print("Coefficient of Variation:",cv)
+      print("Max social distancing:",sd0)
+    
+      susc,q,desc = getsusceptibilitydist(dist,maxsbins)
+      print("Susceptibility distribution:",desc)
+      sbins=len(susc)
+      checkcv(susc,q,cv)
+      S=q*N
+    
+      if cv not in seen:
+        seen.add(cv)
+        with open('q_CV%g'%cv,'w') as fp:
+          for i in range(sbins):
+            print("%9.3f   %9.7f"%(susc[i],q[i]),file=fp)
       
-      new=lam*susc*S*(1-SD(sd0,day))
-      I+=(delta*E-gamma*I)/stepsperday
-      E+=(new-delta*E)/stepsperday
-      S+=-new/stepsperday
-      Ssum=S.sum()
-      Esum=E.sum()
-      Isum=I.sum()
-      lam=beta/N*(rho*Esum+Isum)
-      print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum),file=fp)
-    print("Final proportion infected = %.1f%%"%((1-Ssum/N)*100))
-  print("Written output to file \"%s\""%fn)
-  print()
-
+      beta=R0/(rho/delta+1/gamma)# NB there is a factor of 1/N error in formula (2) from the paper
+      E=np.zeros(sbins)
+      I=np.zeros(sbins)
+      # Assume initial infections occur proportional to susceptibility by including the factor susc[i] here
+      # (though this won't make a big difference)
+      for i in range(sbins):
+        I[i]=country['initialinfections']*q[i]*susc[i]
+        S[i]-=I[i];assert S[i]>=0
+      
+      lam=0
+    
+      fn='output_%s_%s_SD%g'%(country['name'],desc,sd0)
+      with open(fn,'w') as fp:
+        print("#   Day            s        e        i   I_reported",file=fp)
+        for d0 in range(days*stepsperday):
+          day=d0/stepsperday
+      
+          new=lam*susc*S*(1-SDt(sd0,day,country['delay']))
+          I+=(delta*E-gamma*I)/stepsperday
+          E+=(new-delta*E)/stepsperday
+          S+=-new/stepsperday
+          Ssum=S.sum()
+          Esum=E.sum()
+          Isum=I.sum()
+          lam=beta/N*(rho*Esum+Isum)
+          print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum),file=fp)
+        print("Final proportion infected = %.1f%%"%((1-Ssum/N)*100))
+      print("Written output to file \"%s\""%fn)
+      print()
