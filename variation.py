@@ -168,23 +168,20 @@ for country in countries:
         I[i]=country['initialinfections']*q[i]*susc[i]
         S[i]-=I[i];assert S[i]>=0
       
-      lam=0
-    
       fn='output_%s_%s_SD%g'%(country['name'],desc,sd0)
       with open(fn,'w') as fp:
         print("#   Day            s        e        i   I_reported",file=fp)
         for d0 in range(days*stepsperday):
           day=d0/stepsperday
-      
+          Ssum=S.sum()
+          Esum=E.sum()
+          Isum=I.sum()
+          print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum),file=fp)
+          lam=beta/N*(rho*Esum+Isum)
           new=lam*susc*S*(1-SDt(sd0,day,country['delay']))
           I+=(delta*E-gamma*I)/stepsperday
           E+=(new-delta*E)/stepsperday
           S+=-new/stepsperday
-          Ssum=S.sum()
-          Esum=E.sum()
-          Isum=I.sum()
-          lam=beta/N*(rho*Esum+Isum)
-          print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum),file=fp)
         print("Final proportion infected = %.1f%%"%((1-Ssum/N)*100))
       print("Written output to file \"%s\""%fn)
       print()
