@@ -5,7 +5,7 @@ from scipy.stats import gamma as gammadist
 import numpy as np
 from math import sqrt
 
-# Set initial infections to replicate the output in the Gomes paper (checking they are plausible).
+# Set initial infections to replicate the output in the Gomes paper (checking they are plausible values).
 
 countries=[
   {
@@ -63,7 +63,7 @@ gamma=1/4# rate of progression (in days^{-1}) from I->R
 rho=0.5# Relative infectivity of E group compared with I group
 R0=2.7
 p=0.026# Proportion of infections that are reported. The paper says to use 0.1, but 0.026 seems to replicate their
-#       results much better.
+#        results much better.
 days=487# Days from 2020-03-01 to 2021-07-01
 
 # By experimentation, values of 10 for stepsperday and sbins give near to limiting
@@ -71,9 +71,9 @@ days=487# Days from 2020-03-01 to 2021-07-01
 stepsperday=100# Subdivision of each day
 maxsbins=100# Number of bins for susceptibility (equally spaced by CDF)
 
-# Caption to Figure 1 gives this time-dependence of the social distancing parameter:
-# Return value, x, is effective social distancing number. Infection force is multiplied
-# by 1-x. Initial ten day period is from examining the red R0 and Rt graphs.
+# Caption to Figure 1 give this time-dependence of the social distancing parameter:
+# return value, x, is effective social distancing number (infection force is multiplied by 1-x).
+# Initial 10 or 16 day period ("delay") is from examining the red R0 and Rt graphs.
 def SDt(sd0,day,delay):
   if day<delay: return 0
   day-=delay
@@ -188,3 +188,7 @@ for country in countries:
         print("Final proportion infected = %.1f%%"%((1-Ssum/N)*100))
       print("Written output to file \"%s\""%fn)
       print()
+
+# gnuplot> plot "output_Italy_gamma_CV1_SD0" u 1:5 w lines, "output_Italy_gamma_CV1_SD0.68" u 1:5 w lines
+# gnuplot> plot "output_Italy_gamma_CV3_SD0" u 1:5 w lines, "output_Italy_gamma_CV3_SD0.61" u 1:5 w lines
+# etc.
