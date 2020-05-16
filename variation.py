@@ -169,6 +169,7 @@ for country in countries:
         S[i]-=I[i];assert S[i]>=0
       
       fn='output_%s_%s_SD%g'%(country['name'],desc,sd0)
+      HIT=None
       with open(fn,'w') as fp:
         print("#   Day            s        e        i   I_reported",file=fp)
         for d0 in range(days*stepsperday):
@@ -176,13 +177,23 @@ for country in countries:
           Ssum=S.sum()
           Esum=E.sum()
           Isum=I.sum()
-          print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum),file=fp)
+          sd=SDt(sd0,day,country['delay'])# current social distancing
+          R_s=(susc*S).sum()*beta/N*(rho/delta+1/gamma)
+          R_t=R_s*(1-sd)
+          if HIT==None and R_s<=1: HIT=1-Ssum/N
+          print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f   %6.3f  %6.3f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum,R_s,R_t),file=fp)
           lam=beta/N*(rho*Esum+Isum)
-          new=lam*susc*S*(1-SDt(sd0,day,country['delay']))
+          new=lam*susc*S*(1-sd)
           I+=(delta*E-gamma*I)/stepsperday
           E+=(new-delta*E)/stepsperday
           S+=-new/stepsperday
-        print("Final proportion infected = %.1f%%"%((1-Ssum/N)*100))
+        final=(1-Ssum/N)*100
+        print("Final proportion infected ",end="")
+        if lam>1e-4: print("> %.1f%% (infection ongoing)"%final)
+        else: print("= %.1f%%"%final)
+        print("Herd immunity threshold ",end="")
+        if HIT==None: print("> %.1f%% (not yet attained)"%final)
+        else: print("= %.1f%%"%(HIT*100))
       print("Written output to file \"%s\""%fn)
       print()
 
