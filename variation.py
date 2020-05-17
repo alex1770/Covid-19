@@ -2,8 +2,9 @@
 
 from scipy.special import gammainc
 from scipy.stats import gamma as gammadist
+from scipy.stats import norm as normaldist
 import numpy as np
-from math import sqrt
+from math import sqrt,log
 
 # Set initial infections to replicate the output in the Gomes paper (checking they are plausible values).
 
@@ -29,6 +30,14 @@ distributions=[
   },
   {
     "disttype": "gamma",
+    "CV": 3,
+  },
+  {
+    "disttype": "lognormal",
+    "CV": 1,
+  },
+  {
+    "disttype": "lognormal",
     "CV": 3,
   },
   {
@@ -60,11 +69,11 @@ SD={
 
 delta=1/4# rate of progression (in days^{-1}) from E->I
 gamma=1/4# rate of progression (in days^{-1}) from I->R
-rho=0.5# Relative infectivity of E group compared with I group
-R0=2.7
-p=0.026# Proportion of infections that are reported. The paper says to use 0.1, but 0.026 seems to replicate their
-#        results much better.
-days=487# Days from 2020-03-01 to 2021-07-01
+rho=0.5#   Relative infectivity of E group compared with I group
+R0=2.7#    R0 value used in v1 of paper
+p=0.026#   Proportion of infections that are reported. The paper says to use 0.1, but 0.026 seems to replicate their
+#          results much better.
+days=487#  Days from 2020-03-01 to 2021-07-01
 
 # By experimentation, values of 10 for stepsperday and sbins give near to limiting
 # behaviour (within small tolerances), so 100 for each is hopefully plenty.
@@ -94,17 +103,16 @@ def getsusceptibilitydist(sit,maxsbins):
     k=1/cv**2
     
     # Space out bins according to shape k+1 so that each bin represents an equal
-    # (incomplete) expectation. Other bin choices are possible, but k+1 is better than using
-    # k (which would make each bin represent an equal probability from the gamma
-    # distribution) in the sense that you get limiting behaviour for a smaller value of
-    # maxsbins. (This is to be expected because the infection force is the important quantity.)
+    # (incomplete) expectation of X in the shape k distribution. Other bin
+    # choices are possible, this is a good one from the point of view of getting a more
+    # accurate CV using a smaller value of maxsbins.
     l=gammadist.ppf([i/maxsbins for i in range(maxsbins)],k+1)
   
     # Calculate:
-    #   m0[i] = P[X<i/sbin]
-    #   m1[i] = E[X; X<i/sbin]
-    #   susc[i] = E[X | i/sbin < X < (i+1)/sbin], the representative susceptibility for bin i
-    #   q[i] = P(i/sbin < X < (i+1)/sbin)
+    #   m0[i]   = P[X < l_i]
+    #   m1[i]   = E[X; X < l_i]
+    #   susc[i] = E[X | l_i <= X < l_{i+1}], the representative susceptibility for bin i
+    #   q[i]    = P(l_i <= X < l_{i+1})
     m0=np.append(gammainc(k,l),1)
     m1=np.append(gammainc(k+1,l),1)
     susc=np.array([(m1[i+1]-m1[i])/(m0[i+1]-m0[i]) for i in range(maxsbins)])
@@ -119,7 +127,29 @@ def getsusceptibilitydist(sit,maxsbins):
     susc=np.array([x,y])
     desc="twopoint_CV%g_x%g"%(cv,x)
 
-  else: raise NotImplementedError("Unknown susceptibility distribution type "+sit["disttype"])
+  elif sit["disttype"]=="lognormal":
+    var=log(1+cv**2)
+    mu=-var/2
+
+    # Space out bins according to lognormal(-3mu,var) so that each bin represents an equal
+    # (incomplete) expectation of X^2 in the lognormal(mu,var) distribution. Other bin
+    # choices are possible, this is a good one from the point of view of getting a more
+    # accurate CV using a smaller value of maxsbins.
+    l=normaldist.ppf([i/maxsbins+1e-30 for i in range(maxsbins)],-3*mu,sqrt(var))
+    
+    # Calculate:
+    #   [L_i    = exp(l_i)]
+    #   m0[i]   = P[X < L_i] = P[log(X) < l_i]
+    #   m1[i]   = E[X; X < L_i] = E[X; log(X) < l_i]
+    #   susc[i] = E[X | L_i <= X < L_{i+1}], the representative susceptibility for bin i
+    #   q[i]    = P(L_i <= X < L_{i+1})
+    m0=np.append(normaldist.cdf(l,mu,sqrt(var)),1)
+    m1=np.append(normaldist.cdf(l,-mu,sqrt(var)),1)
+    susc=np.array([(m1[i+1]-m1[i])/(m0[i+1]-m0[i]) for i in range(maxsbins)])
+    q=np.array([m0[i+1]-m0[i] for i in range(maxsbins)])
+    desc="lognormal_CV%g"%cv
+
+  else: raise NotImplementedError("Unknown susceptibility distribution type: "+sit["disttype"])
   
   return susc,q,desc
   
@@ -171,7 +201,7 @@ for country in countries:
       fn='output_%s_%s_SD%g'%(country['name'],desc,sd0)
       HIT=None
       with open(fn,'w') as fp:
-        print("#   Day            s        e        i   I_reported",file=fp)
+        print("#   Day            s        e        i   I_reported      R_s     R_t",file=fp)
         for d0 in range(days*stepsperday):
           day=d0/stepsperday
           Ssum=S.sum()
@@ -188,12 +218,12 @@ for country in countries:
           E+=(new-delta*E)/stepsperday
           S+=-new/stepsperday
         final=(1-Ssum/N)*100
-        print("Final proportion infected ",end="")
-        if lam>1e-4: print("> %.1f%% (infection ongoing)"%final)
-        else: print("= %.1f%%"%final)
         print("Herd immunity threshold ",end="")
         if HIT==None: print("> %.1f%% (not yet attained)"%final)
         else: print("= %.1f%%"%(HIT*100))
+        print("Final proportion infected ",end="")
+        if lam>1e-4: print("> %.1f%% (infection ongoing)"%final)
+        else: print("= %.1f%%"%final)
       print("Written output to file \"%s\""%fn)
       print()
 
