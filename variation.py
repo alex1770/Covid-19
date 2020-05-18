@@ -1,4 +1,5 @@
 # Exploring https://www.medrxiv.org/content/10.1101/2020.04.27.20081893v1
+# This reproduces the susceptibilty curves for v1 of the paper, but not the connectivity curves (possibly a discrepancy in initial data)
 
 from scipy.special import gammainc
 from scipy.stats import gamma as gammadist
@@ -63,34 +64,45 @@ distributions=[
 ]
 
 SD={
-  "Italy": {1: 0.68, 3: 0.61},
-  "Austria": {1: 0.80, 3: 0.77}
+  "Italy": {
+    "susceptibility": {1: 0.68, 3: 0.61},
+    "connectivity": {1: 0.67, 3: 0.65}
+  },
+  "Austria": {
+    "susceptibility": {1: 0.80, 3: 0.77},
+    "connectivity": {1: 0.80, 3: 0.78}
+  }
+}
+
+# R0 values used in v1 of the paper, as a function of mode (susceptibility/connectivity) and CV:
+R0values={
+  "susceptibility": {1: 2.7, 3: 2.7},
+  "connectivity": {1: 2.8, 3: 3.1}
 }
 
 delta=1/4# rate of progression (in days^{-1}) from E->I
 gamma=1/4# rate of progression (in days^{-1}) from I->R
 rho=0.5#   Relative infectivity of E group compared with I group
-R0=2.7#    R0 value used in v1 of paper
 p=0.026#   Proportion of infections that are reported. The paper says to use 0.1, but 0.026 seems to replicate their
-#          results much better.
+#          results much better in the susceptibility mode.
 days=487#  Days from 2020-03-01 to 2021-07-01
 
-# By experimentation, values of 10 for stepsperday and sbins give near to limiting
-# behaviour (within small tolerances), so 100 for each is hopefully plenty.
+# By experimentation, values of 10 for stepsperday and 50 for sbins give near to limiting
+# behaviour (within small tolerances), so 100 and 500 is hopefully plenty.
 stepsperday=100# Subdivision of each day
-maxsbins=100# Number of bins for susceptibility (equally spaced by CDF)
+maxsbins=500# Number of bins for susceptibility (equally spaced by CDF)
 
 # Caption to Figure 1 give this time-dependence of the social distancing parameter:
 # return value, x, is effective social distancing number (infection force is multiplied by 1-x).
 # Initial 10 or 16 day period ("delay") is from examining the red R0 and Rt graphs.
-def SDt(sd0,day,delay):
+def SDt(day,delay):
   if day<delay: return 0
   day-=delay
-  if day<14: return day/14*sd0
+  if day<14: return day/14
   day-=14
-  if day<31: return sd0
+  if day<31: return 1
   day-=31
-  if day<365: return (1-day/365)*sd0
+  if day<365: return 1-day/365
   return 0
 
 # Returns template distribution with mean 1 and coefficient of variation cv, using up to sbins bins
@@ -103,9 +115,9 @@ def getsusceptibilitydist(sit,maxsbins):
     k=1/cv**2
     
     # Space out bins according to shape k+1 so that each bin represents an equal
-    # (incomplete) expectation of X in the shape k distribution. Other bin
-    # choices are possible, this is a good one from the point of view of getting a more
-    # accurate CV using a smaller value of maxsbins.
+    # (incomplete) expectation of X in the shape k distribution. Other bin choices are
+    # possible, but this is a good one from the point of view of getting a more accurate
+    # CV using a smaller number of bins.
     l=gammadist.ppf([i/maxsbins for i in range(maxsbins)],k+1)
   
     # Calculate:
@@ -133,12 +145,15 @@ def getsusceptibilitydist(sit,maxsbins):
 
     # Space out bins according to lognormal(-3mu,var) so that each bin represents an equal
     # (incomplete) expectation of X^2 in the lognormal(mu,var) distribution. Other bin
-    # choices are possible, this is a good one from the point of view of getting a more
-    # accurate CV using a smaller value of maxsbins.
+    # choices are possible, but this is a good one from the point of view of getting a
+    # more accurate CV using a smaller number of bins.
     l=normaldist.ppf([i/maxsbins+1e-30 for i in range(maxsbins)],-3*mu,sqrt(var))
-    
+
+    # Given
+    #   L_i    = exp(l_i)
+    #   mu     = -var/2
+    #   log(X) ~ N(mu,var)
     # Calculate:
-    #   [L_i    = exp(l_i)]
     #   m0[i]   = P[X < L_i] = P[log(X) < l_i]
     #   m1[i]   = E[X; X < L_i] = E[X; log(X) < l_i]
     #   susc[i] = E[X | L_i <= X < L_{i+1}], the representative susceptibility for bin i
@@ -170,63 +185,81 @@ seen=set()
 
 for country in countries:
   N=country['population']
-  for dist in distributions:
-    cv=dist["CV"]
-    for sd0 in [0, SD[country['name']][cv]]:
-      print("Country:",country['name'])
-      print("Coefficient of Variation:",cv)
-      print("Max social distancing:",sd0)
-    
-      susc,q,desc = getsusceptibilitydist(dist,maxsbins)
-      print("Susceptibility distribution:",desc)
-      sbins=len(susc)
-      checkcv(susc,q,cv)
-      S=q*N
-    
-      if cv not in seen:
-        seen.add(cv)
-        with open('q_CV%g'%cv,'w') as fp:
-          for i in range(sbins):
-            print("%9.3f   %9.7f"%(susc[i],q[i]),file=fp)
+  for mode in ['susceptibility', 'connectivity']:
+    for dist in distributions:
+      cv=dist["CV"]
+      R0=R0values[mode][cv]
+      for sd0 in [0, SD[country['name']][mode][cv]]:
+        #if not (country['name']=="Italy" and mode=="connectivity" and cv==3 and sd0>=0.64): continue
+        print("Country:",country['name'])
+        print("Mode:",mode)
+        print("R0:",R0)
+        print("Coefficient of Variation:",cv)
+        print("Max social distancing:",sd0)
       
-      beta=R0/(rho/delta+1/gamma)# NB there is a factor of 1/N error in formula (2) from the paper
-      E=np.zeros(sbins)
-      I=np.zeros(sbins)
-      # Assume initial infections occur proportional to susceptibility by including the factor susc[i] here
-      # (though this won't make a big difference)
-      for i in range(sbins):
-        I[i]=country['initialinfections']*q[i]*susc[i]
-        S[i]-=I[i];assert S[i]>=0
+        susc,q,desc = getsusceptibilitydist(dist,maxsbins)
+        print("Susceptibility distribution:",desc)
+        sbins=len(susc)
+        checkcv(susc,q,cv)
+        S=q*N
       
-      fn='output_%s_%s_SD%g'%(country['name'],desc,sd0)
-      HIT=None
-      with open(fn,'w') as fp:
-        print("#   Day            s        e        i   I_reported      R_s     R_t",file=fp)
-        for d0 in range(days*stepsperday):
-          day=d0/stepsperday
-          Ssum=S.sum()
-          Esum=E.sum()
-          Isum=I.sum()
-          sd=SDt(sd0,day,country['delay'])# current social distancing
-          R_s=(susc*S).sum()*beta/N*(rho/delta+1/gamma)
-          R_t=R_s*(1-sd)
-          if HIT==None and R_s<=1: HIT=1-Ssum/N
-          print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f   %6.3f  %6.3f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum,R_s,R_t),file=fp)
-          lam=beta/N*(rho*Esum+Isum)
-          new=lam*susc*S*(1-sd)
-          I+=(delta*E-gamma*I)/stepsperday
-          E+=(new-delta*E)/stepsperday
-          S+=-new/stepsperday
-        final=(1-Ssum/N)*100
-        print("Herd immunity threshold ",end="")
-        if HIT==None: print("> %.1f%% (not yet attained)"%final)
-        else: print("= %.1f%%"%(HIT*100))
-        print("Final proportion infected ",end="")
-        if lam>1e-4: print("> %.1f%% (infection ongoing)"%final)
-        else: print("= %.1f%%"%final)
-      print("Written output to file \"%s\""%fn)
-      print()
+        if desc not in seen:
+          seen.add(desc)
+          with open('q_%s'%desc,'w') as fp:
+            for i in range(sbins):
+              print("%9.3f   %9.7f"%(susc[i],q[i]),file=fp)
 
-# gnuplot> plot "output_Italy_gamma_CV1_SD0" u 1:5 w lines, "output_Italy_gamma_CV1_SD0.68" u 1:5 w lines
-# gnuplot> plot "output_Italy_gamma_CV3_SD0" u 1:5 w lines, "output_Italy_gamma_CV3_SD0.61" u 1:5 w lines
+        # NB there is a factor of 1/N error in formula (2) from the paper
+        if mode=='susceptibility':
+          beta=R0/(rho/delta+1/gamma)
+        else:
+          beta=R0/((1+cv**2)*(rho/delta+1/gamma))
+        E=np.zeros(sbins)
+        I=np.zeros(sbins)
+        # Assume initial infections occur proportional to susceptibility by including the factor susc[i] here
+        # (though this won't make a big difference)
+        for i in range(sbins):
+          E[i]=country['initialinfections']*q[i]*susc[i]
+          S[i]-=I[i];assert S[i]>=0
+        
+        fn='output_%s_%s_%s_SD%g'%(country['name'],mode,desc,sd0)
+        HIT=None
+        with open(fn,'w') as fp:
+          print("#   Day            s        e        i   I_reported      R_s     R_t",file=fp)
+          for d0 in range(days*stepsperday):
+            day=d0/stepsperday
+            Ssum=S.sum()
+            Esum=E.sum()
+            Isum=I.sum()
+            if mode=='connectivity':
+              Esum_infective=(susc*E).sum()
+              Isum_infective=(susc*I).sum()
+              R_s=(susc*susc*S).sum()*beta/N*(rho/delta+1/gamma)
+            else:
+              Esum_infective=Esum
+              Isum_infective=Isum
+              R_s=(susc*S).sum()*beta/N*(rho/delta+1/gamma)
+            sd=sd0*SDt(day,country['delay'])# current social distancing
+            R_t=R_s*(1-sd)
+            if HIT==None and R_s<=1: HIT=1-Ssum/N
+            print("%7.2f      %7.5f  %7.5f  %7.5f    %9.0f   %6.3f  %6.3f"%(day,Ssum/N,Esum/N,Isum/N,p*Isum,R_s,R_t),file=fp)
+            lam=beta/N*(rho*Esum_infective+Isum_infective)
+            new=lam*susc*S*(1-sd)
+            I+=(delta*E-gamma*I)/stepsperday
+            E+=(new-delta*E)/stepsperday
+            S+=-new/stepsperday
+          final=(1-Ssum/N)*100
+          print("Herd immunity threshold ",end="")
+          if HIT==None: print("> %.1f%% (not yet attained)"%final)
+          else: print("= %.1f%%"%(HIT*100))
+          print("Final proportion infected ",end="")
+          if lam>1e-4: print("> %.1f%% (infection ongoing)"%final)
+          else: print("= %.1f%%"%final)
+        print("Written output to file \"%s\""%fn)
+        print()
+
+# gnuplot> plot "output_Italy_susceptibility_gamma_CV1_SD0" u 1:5 w lines, "output_Italy_susceptibility_gamma_CV1_SD0.68" u 1:5 w lines
+# gnuplot> plot "output_Italy_susceptibility_gamma_CV3_SD0" u 1:5 w lines, "output_Italy_susceptibility_gamma_CV3_SD0.61" u 1:5 w lines
+# gnuplot> plot "output_Italy_connectivity_gamma_CV1_SD0" u 1:5 w lines, "output_Italy_connectivity_gamma_CV1_SD0.67" u 1:5 w lines
+# gnuplot> plot "output_Italy_connectivity_gamma_CV3_SD0" u 1:5 w lines, "output_Italy_connectivity_gamma_CV3_SD0.65" u 1:5 w lines 
 # etc.
