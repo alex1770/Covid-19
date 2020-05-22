@@ -22,7 +22,7 @@ for mode in [0,1]:
   write('set title "%s"'%title)
   write('set xlabel "Coefficient of Variation"')
   write('set ylabel "HIT"')
-  #write('set grid ytics lc rgb "#dddddd" lt 1')
+  write('set grid noxtics ytics lc rgb "#dddddd" lt 1')
   s='plot '
   #write('plot "-" using 1:xtic(1) with lines')
   for dist in range(4):
