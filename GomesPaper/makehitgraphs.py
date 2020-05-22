@@ -13,8 +13,9 @@ for mode in [0,1]:
   desc=["susceptibility","connectivity"][mode]
   outfn="HITgraph_"+desc+".png"
   p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
-  write('set terminal pngcairo font "sans,13" size 1920,1280')
-  write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
+  write('set terminal pngcairo font "sans,20" size 1920,1280')
+  write('set bmargin 5;set lmargin 12;set rmargin 12;set tmargin 4')
+  if mode==0: write('set key at screen 0.89,0.783')
   write('set output "%s"'%outfn)
   write('set xtics nomirror')
   write('set y2tics mirror')
