@@ -49,7 +49,7 @@ distributions=[
   {
     "disttype": "twopoint",
     "CV": 1,
-    "x": 0.99,
+    "x": 0.9,
   },
   {
     "disttype": "twopoint",
@@ -59,7 +59,7 @@ distributions=[
   {
     "disttype": "twopoint",
     "CV": 3,
-    "x": 0.99,
+    "x": 0.9,
   }
 ]
 
