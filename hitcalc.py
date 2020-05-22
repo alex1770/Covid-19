@@ -6,19 +6,29 @@ from scipy.stats import gamma, norm, lognorm
 
 # CV -> (r,Lambda) -> E[X^r.exp(-Lambda.X)], X ~ Gamma(shape=1/CV^2,scale=CV^2)
 def makegammaexpectation(CV):
-  k=1/CV**2# shape
-  s=CV**2# scale
-  def gammaexpectation(r,Lambda):
-    return gamma.expect(lambda x:x**r*exp(-Lambda*x),(k,),scale=s)
-  return gammaexpectation
+  if CV>0:
+    k=1/CV**2# shape
+    s=CV**2# scale
+    def gammaexpectation(r,Lambda):
+      return gamma.expect(lambda x:x**r*exp(-Lambda*x),(k,),scale=s)
+    return gammaexpectation
+  else:
+    def constexpectation(r,Lambda):
+      return exp(-Lambda)
+    return constexpectation
 
 # CV -> (r,Lambda) -> E[X^r.exp(-Lambda.X)], X ~ exp(N(var,-var/2)), var=log(1+CV^2)
 def makelognormalexpectation(CV):
-  var=log(1+CV**2)
-  mu=-var/2
-  def lognormalexpectation(r,Lambda):
-    return lognorm.expect(lambda x:x**r*exp(-Lambda*x),(sqrt(var),),scale=exp(mu))
-  return lognormalexpectation
+  if CV>0: # lognormal can't cope with variance 0 for some reason
+    var=log(1+CV**2)
+    mu=-var/2
+    def lognormalexpectation(r,Lambda):
+      return lognorm.expect(lambda x:x**r*exp(-Lambda*x),(sqrt(var),),scale=exp(mu))
+    return lognormalexpectation
+  else:
+    def constexpectation(r,Lambda):
+      return exp(-Lambda)
+    return constexpectation
 
 # CV,x -> (r,Lambda) -> E[X^r.exp(-Lambda.X)], X ~ twopoint(CV,x)
 def maketwopointexpectation(CV,x):
@@ -50,14 +60,20 @@ def HIT(R0,dist,connectivity=False):
 
 R0=3
 x0=0
-x1=0.99
+x1=0.9
 
-print("#    CV     Gamma_susc     Gamma_conn   Lognorm_susc   Lognorm_conn      TP_0_susc      TP_0_conn   TP_0.99_susc   TP_0.99_conn")
-for cv0 in range(1,41):
-  CV=cv0/10
-  print("%7.4f"%CV,end="")
-  l=[]
-  for dist in (makegammaexpectation(CV), makelognormalexpectation(CV), maketwopointexpectation(CV,x0), maketwopointexpectation(CV,x1)):
-    for conn in [False, True]:
-      print("        %7.4f"%HIT(R0,dist,conn),end="")
-  print()
+fn="hitout"
+with open(fn,"w") as fp:
+  print("#    R0 =",R0,file=fp)
+  print("#    CV     Gamma-susc     Gamma-conn   Lognorm-susc   Lognorm-conn      TP-0-susc      TP-0-conn    TP-0.9-susc    TP-0.9-conn",file=fp)
+  for cv0 in range(401):
+    CV=cv0/100
+    print("%7.4f"%CV,end="",file=fp)
+    l=[]
+    for dist in (makegammaexpectation(CV), makelognormalexpectation(CV), maketwopointexpectation(CV,x0), maketwopointexpectation(CV,x1)):
+      for conn in [False, True]:
+        print("        %7.4f"%HIT(R0,dist,conn),end="",file=fp)
+    print(file=fp)
+    fp.flush()
+
+print('Written output to file "'+fn+'"')
