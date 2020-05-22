@@ -36,6 +36,6 @@ for fn in sorted(listdir(tdir)):
     #print(fn,"%8d"%traffic)
 
 with open(cachefn,'w') as fp:
+  print("#      Location.LocalDateTime    White    Green   Orange      Red  Darkred",file=fp)
   for name in sorted(levels):
     print(name,' '.join("%8d"%x for x in levels[name]),file=fp)
-
