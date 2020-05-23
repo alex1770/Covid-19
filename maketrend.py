@@ -128,7 +128,7 @@ for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
   countries=countries[:numbar]
   barfn=barfn0+'_'+desc+'.png'
   
-  p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
+  po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
   write('set terminal pngcairo font "sans,12" size 1920,1280')
   write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
   write('set output "%s"'%barfn)
@@ -142,9 +142,11 @@ for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
   write('set grid ytics lc rgb "#dddddd" lt 1')
   write('set boxwidth 0.8')
   write('set style fill solid')
-  write('set xtics rotate by 20 right offset 2,0')
+  write('set xtics rotate by 20 right offset 1.5,0')
   write('plot "-" using 2:xtic(1) with boxes')
   for country in countries:
     write('"'+country+'"',stats[country][-1])
+  write('quit')
   p.close()
+  po.wait()
   print("Written bar chart to %s"%barfn)
