@@ -3,7 +3,7 @@ import numpy as np
 from os.path import join
 from os import listdir
 
-tdir='Traffic'
+tdir='.'
 
 # Google maps traffic levels
 whitecol   = 0xffffff
