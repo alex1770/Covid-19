@@ -55,7 +55,7 @@ def R2_2(X,Y,Z):
   al=(yy*xz-xy*yz)/det
   be=(-xy*xz+xx*yz)/det
   resid=al**2*xx+be**2*yy+zz+2*al*be*xy-2*al*xz-2*be*yz
-  return 1-(resid/(n-3))/(zz/(n-1))
+  return 1-(resid/(n-3))/(zz/(n-1)), al, be
 
 print("Simple time-shifted correlations (h_i with h_{i+d} and p_i with h_{i+d})")
 for day in range(-10,11):
@@ -65,12 +65,12 @@ for day in range(-10,11):
   print("Day %+3d   corr_hh = %+5.3f   corr_ph = %+5.3f"%(day,corr(hosp[i0:i1],hosp[i0+day:i1+day]),corr(poo[i0:i1],hosp[i0+day:i1+day])))
 print()
   
-print("Compare adjust R^2s (h_i predicting h_{i+d} cf h_i, p_i predicting h_{i+d})")
+print("Compare adjusted R^2s (h_i predicting h_{i+d} cf h_i, p_i predicting h_{i+d})")
 for day in range(-10,11):
   # poo[i] vs hosp[i+day]
   i0=max(0,-day)
   i1=min(n,n-day)
   R2_hh=R2_1(hosp[i0:i1],hosp[i0+day:i1+day])
-  R2_phh=R2_2(poo[i0:i1],hosp[i0:i1],hosp[i0+day:i1+day])
-  print("Day %+3d  R^2(h==>h') = %+5.3f   R^2(p,h==>h') = %+5.3f   Poo advantage = %+5.3f"%(day,R2_hh,R2_phh,R2_phh-R2_hh))
+  R2_phh,al,be=R2_2(poo[i0:i1],hosp[i0:i1],hosp[i0+day:i1+day])
+  print("Day %+3d  R^2(h==>h') = %+5.3f   R^2(p,h==>h') = %+5.3f   Poo advantage = %+5.3f    coeff_poo = %+5.3f  coeff_hosp = %+5.3f"%(day,R2_hh,R2_phh,R2_phh-R2_hh,al,be))
 print()
