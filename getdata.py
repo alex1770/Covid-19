@@ -58,6 +58,42 @@ def getcountrydata(country,thr=0,smoothlevel=0,region="",source="worldometer"):
 
   return (dates[i:n], confirmed[i:n], deaths[i:n], recovered[i:n], active[i:n], newc[i:n], newd[i:n])
 
+def getallsimpledata(source="worldometer"):
+  """
+  Returns map (dict) from country to list of (date, confirmed cases, deaths, recovered, active), for all available countries
+  If returned numerical values are of int type then valid, else will be '?'.
+  """
+  
+  equivnames={}
+  with open("countrynames") as fp:
+    r=csv.reader(fp)
+    for x in r:
+      if len(x)==0 or x[0][:1]=='#': continue
+      for y in x[1:]: equivnames[y]=x[0]
+
+  results={}
+  with open(source+".csv") as f:
+    r=csv.reader(f)
+    first=1
+    dates=[]
+    confirmed=[]
+    deaths=[]
+    recovered=[]
+    active=[]
+    for x in r:
+      if first: first=0;continue
+      country=equivnames.get(x[1],x[1])
+      if country not in results: results[country]=[]
+      date=x[0]
+      confirmed=deaths=recovered=active='?'
+      if x[4].isdigit(): confirmed=int(x[4])
+      if x[5].isdigit(): deaths=int(x[5])
+      if len(x)>6 and x[6].isdigit(): recovered=int(x[6])
+      if confirmed!='?' and recovered!='?': active=confirmed-recovered
+      results[country].append((date,confirmed,deaths,recovered,active))
+  
+  return results
+
 # Adjust vv[] to be as smooth as possible by shifting readings back at most 1 day.  I.e.,
 # we assume that there was a delay of 1 day in reporting some values and try to
 # make the increment vector log(vv[i]/vv[i-1]) as near concave as possible, fixing vv[i0] (first non-zero entry) and vv[n-1].
