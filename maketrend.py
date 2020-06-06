@@ -5,7 +5,7 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 # Selection of countries to use for the trend graph
 #selectcountries=["US","UK","Italy","Spain","France","Germany","Brazil","Austria","S. Korea","Norway","Sweden","Japan","Australia"]
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","Canada","S. Korea","Belgium","Japan","France","Brazil"]
-selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Ecuador","Canada","Ireland","Netherlands","Peru"]
+selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
