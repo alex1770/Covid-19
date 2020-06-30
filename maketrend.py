@@ -172,7 +172,7 @@ for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
   write('set timefmt "%Y-%m-%d"')
   write('set tics scale 2,0.5')
   write('set xtics "2020-01-06", 604800')#%startdate)# Date labels on Mondays
-  write('set xtics rotate by 45 right offset 1.5,0')
+  write('set xtics rotate by 45 right offset 0.5,0')
   write('set grid xtics ytics lc rgb "#dddddd" lt 1')
   s='plot '
   for country in countries:
@@ -212,6 +212,7 @@ for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
   write('set boxwidth 0.8')
   write('set style fill solid')
   write('set xtics rotate by 20 right offset 1.5,0')
+  write('set yrange [0:]')
   write('plot "-" using 2:xtic(1) with boxes')
   for country in countries:
     write('"'+country+'"',stats[country][1][-1])
