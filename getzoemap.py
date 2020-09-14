@@ -1,23 +1,35 @@
-import os
+#/usr/bin/env python3
+
+import os,ast,json
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-opts = Options()
+from proczoemap import processdata
+
+opts=Options()
 opts.add_argument("--headless")
-
-driver = webdriver.Chrome(chrome_options=opts)
-#driver = webdriver.Chrome('/usr/bin/chromedriver',chrome_options=opts)
-
+driver=webdriver.Chrome(options=opts)
+#driver=webdriver.Chrome('/usr/bin/chromedriver',options=opts)
 driver.get('file://'+os.path.join(os.getcwd(),'getzoemap.html'))
-
-WebDriverWait(driver, 100).until(EC.presence_of_element_located((By.ID, 'nowfinished')))
-
-res=driver.find_element_by_id('xyzzy')
-a=res.text
-
+WebDriverWait(driver,100).until(EC.presence_of_element_located((By.ID, 'nowfinished')))
+res=driver.find_element_by_id('xyzzy').text.split('\n')
 driver.quit()
 
-print(a)
+# Convert format HH:MM:SS DD-MM-YYYY to YYYY-MM-DD
+def convdate(ds):
+  return ds[-4:]+'-'+ds[-7:-5]+'-'+ds[-10:-8]
+
+tdir='zoemapdata'
+date=convdate(ast.literal_eval(res[0])['data_status'])
+fn=os.path.join(tdir,date)
+if not os.path.isfile(fn):
+  d={}
+  for r in res:
+    e=ast.literal_eval(r)
+    d[e["lad16nm"]]=e
+  with open(fn,'w') as fp:
+    json.dump(d,fp,indent=2)
+  #processdata(tdir)
