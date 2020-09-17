@@ -9,6 +9,9 @@ from selenium.webdriver.common.by import By
 
 from proczoemap import processdata
 
+floatkeys=["long", "lat", "st_areasha", "st_lengths", "corrected_covid_positive", "cases", "cases_pm", "percentage", "discrete_percentage"]
+intkeys=["cartodb_id", "objectid", "bng_e", "bng_n", "respondent", "predicted_covid_positive_count", "population", "discrete_cases_pm"]
+
 opts=Options()
 opts.add_argument("--headless")
 driver=webdriver.Chrome(options=opts)
@@ -29,6 +32,17 @@ if not os.path.isfile(fn):
   d={}
   for r in res:
     e=ast.literal_eval(r)
+    for k in list(e):
+      if k in floatkeys:
+        try:
+          e[k]=float(e[k])
+        except:
+          del e[k]
+      elif k in intkeys:
+        try:
+          e[k]=int(e[k])
+        except:
+          del e[k]
     d[e["lad16nm"]]=e
   with open(fn,'w') as fp:
     json.dump(d,fp,indent=2)
