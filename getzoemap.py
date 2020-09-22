@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
 from proczoemap import processdata
+from subprocess import Popen
 
 floatkeys=["long", "lat", "st_areasha", "st_lengths", "corrected_covid_positive", "cases", "cases_pm", "percentage", "discrete_percentage"]
 intkeys=["cartodb_id", "objectid", "bng_e", "bng_n", "respondent", "predicted_covid_positive_count", "population", "discrete_cases_pm"]
@@ -46,4 +47,5 @@ if not os.path.isfile(fn):
     d[e["lad16nm"]]=e
   with open(fn,'w') as fp:
     json.dump(d,fp,indent=2)
-  #processdata(tdir)
+  processdata(tdir)
+  Popen("rsync -a zoemapdata zoeselected.csv zoeselected.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
