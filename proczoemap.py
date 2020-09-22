@@ -43,11 +43,12 @@ def processdata(tdir):
         row.append("%.4g"%v)
         data[loc].append(v)
       writer.writerow(row)
+  print("Written %s"%zoetrendfn)
 
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-  trendfn='zoetrends.png'
+  trendfn='zoeselected.png'
   p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
   write('set terminal pngcairo font "sans,13" size 1920,1280')
   write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
@@ -74,7 +75,7 @@ def processdata(tdir):
     for (d,v) in zip(dates,data[loc]): write(d,v)
     write("e")
   p.close()
-  print("Written Zoe trend graph to %s"%trendfn)
+  print("Written %s"%trendfn)
   
 
 if __name__=="__main__":
