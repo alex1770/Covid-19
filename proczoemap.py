@@ -1,7 +1,6 @@
 from collections import defaultdict
 import os,json,csv,time,calendar
-import pandas as pd
-from matplotlib import pyplot
+from subprocess import Popen,PIPE
 from os.path import join
 
 def datetoday(x):
@@ -16,16 +15,17 @@ keys=["respondent", "population", "corrected_covid_positive"]
 
 locs=["Cambridge", "East Cambridgeshire", "South Cambridgeshire", "Barnet", "Haringey", "Epsom and Ewell", "London", "UK"]
 
-selectedfn='zoeselected.csv'
+zoetrendfn='zoeselected.csv'
 
 tdir='zoemapdata'
-if 1:#def processdata(tdir):
-  l=os.listdir(tdir)
-  l.sort()
-  with open(selectedfn,'w') as fp:
+def processdata(tdir):
+  dates=os.listdir(tdir)
+  dates.sort()
+  data={loc:[] for loc in locs}
+  with open(zoetrendfn,'w') as fp:
     writer=csv.writer(fp)
     writer.writerow(['Date']+locs)
-    for date in l:
+    for date in dates:
       tot=defaultdict(float)
       totlon=defaultdict(float)
       with open(join(tdir,date),'r') as fp:
@@ -39,14 +39,42 @@ if 1:#def processdata(tdir):
         if loc=="London": src=totlon
         elif loc=="UK": src=tot
         else: src=dd[loc]
-        row.append("%.4g"%(src["corrected_covid_positive"]/src["population"]*1e5))
+        v=src["corrected_covid_positive"]/src["population"]*1e3
+        row.append("%.4g"%v)
+        data[loc].append(v)
       writer.writerow(row)
-  selprev=pd.read_csv(selectedfn)
-  graph=selprev.plot('Date',locs)
-  graph.set_xticklabels(selprev.Date)
-  #pyplot.rcParams["date.autoformatter.day"]="%Y-%m-%d"
-  pyplot.show()
 
-#if __name__=="__main__":
-#  processdata("zoemapdata")
+  # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
+  def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
+
+  trendfn='zoetrends.png'
+  p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
+  write('set terminal pngcairo font "sans,13" size 1920,1280')
+  write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
+  write('set output "%s"'%trendfn)
+  write('set for [i=9:16] linetype i dashtype (20,7)')
+  write('set key left')
+  #write('set logscale y')
+  title="Zoe-estimated active cases per 1000 people"
+  write('set title "%s"'%title)
+  #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
+  write('set grid ytics lc rgb "#dddddd" lt 1')
+  write('set tics scale 2,0.5')
+  write('set xdata time')
+  write('set format x "%Y-%m-%d"')
+  write('set timefmt "%Y-%m-%d"')
+  s='plot '
+  for loc in locs:
+    if s!='plot ': s+=', '
+    s+='"-" using 1:2 with lines lw 2 title "%s"'%loc
+  write(s)
+  for loc in locs:
+    for (d,v) in zip(dates,data[loc]): write(d,v)
+    write("e")
+  p.close()
+  print("Written Zoe trend graph to %s"%trendfn)
+  
+
+if __name__=="__main__":
+  processdata("zoemapdata")
   
