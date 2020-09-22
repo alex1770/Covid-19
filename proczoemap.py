@@ -59,7 +59,9 @@ def processdata(tdir):
   write('set title "%s"'%title)
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
   write('set grid ytics lc rgb "#dddddd" lt 1')
-  write('set tics scale 2,0.5')
+  write('set tics scale 3,0')
+  write('set xtics "2020-09-06", 86400')
+  write('set xtics rotate by 45 right offset 0.5,0')
   write('set xdata time')
   write('set format x "%Y-%m-%d"')
   write('set timefmt "%Y-%m-%d"')
@@ -77,4 +79,3 @@ def processdata(tdir):
 
 if __name__=="__main__":
   processdata("zoemapdata")
-  
