@@ -22,6 +22,7 @@ def processdata(tdir):
   dates=os.listdir(tdir)
   dates.sort()
   data={loc:[] for loc in locs}
+  shifteddates=[]
   with open(zoetrendfn,'w') as fp:
     writer=csv.writer(fp)
     writer.writerow(['Date']+locs)
@@ -34,7 +35,9 @@ def processdata(tdir):
           for x in keys:
             tot[x]+=d[x]
             if d["region"]=="London": totlon[x]+=d[x]
-      row=[daytodate(datetoday(date)-1)]# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+      shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+      row=[shdate]
+      shifteddates.append(shdate)
       for loc in locs:
         if loc=="London": src=totlon
         elif loc=="UK": src=tot
@@ -61,7 +64,7 @@ def processdata(tdir):
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
   write('set grid ytics lc rgb "#dddddd" lt 1')
   write('set tics scale 3,0')
-  write('set xtics "2020-09-06", 86400')
+  write('set xtics "2020-09-05", 86400')
   write('set xtics rotate by 45 right offset 0.5,0')
   write('set xdata time')
   write('set format x "%Y-%m-%d"')
@@ -72,7 +75,7 @@ def processdata(tdir):
     s+='"-" using 1:2 with lines lw 2 title "%s"'%loc
   write(s)
   for loc in locs:
-    for (d,v) in zip(dates,data[loc]): write(d,v)
+    for (d,v) in zip(shifteddates,data[loc]): write(d,v)
     write("e")
   p.close()
   print("Written %s"%trendfn)
