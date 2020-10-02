@@ -5,7 +5,12 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 # Selection of countries to use for the trend graph
 #selectcountries=["US","UK","Italy","Spain","France","Germany","Brazil","Austria","S. Korea","Norway","Sweden","Japan","Australia"]
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","Canada","S. Korea","Belgium","Japan","France","Brazil"]
-selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia","Panama"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia","Panama","Kyrgyzstan","South Africa","Israel"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Peru","Armenia","Panama","South Africa","Israel","Colombia"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Peru","Argentina","Panama","South Africa","Israel","Colombia"]
+selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Argentina","Panama","South Africa","Israel","Costa Rica"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
@@ -132,7 +137,7 @@ for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
   
   trendfn=trendfn0+'_'+desc+'.png'
   p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
-  write('set terminal pngcairo font "sans,13" size 1920,1280')
+  write('set terminal pngcairo font "sans,13" size 2560,1280')
   write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
   write('set output "%s"'%trendfn)
   write('set for [i=9:16] linetype i dashtype (20,7)')
@@ -157,7 +162,7 @@ for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
 
   trendfn=trendfn1+'_'+desc+'.png'
   p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
-  write('set terminal pngcairo font "sans,13" size 1920,1280')
+  write('set terminal pngcairo font "sans,13" size 2560,1280')
   write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
   write('set output "%s"'%trendfn)
   write('set for [i=9:16] linetype i dashtype (20,7)')
