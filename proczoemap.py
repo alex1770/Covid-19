@@ -64,6 +64,7 @@ def processdata(tdir):
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
   write('set grid ytics lc rgb "#dddddd" lt 1')
   write('set tics scale 3,0')
+  write('set xtics nomirror')
   write('set xtics "2020-09-05", 86400')
   write('set xtics rotate by 45 right offset 0.5,0')
   write('set xdata time')
