@@ -11,7 +11,7 @@
     
     <script>
       function main() {
-          var sql = new cartodb.SQL({ user: 'joinzoe', api_key: 'P6G8DgjFF94mduMkA_VroQ' });
+          var sql = new cartodb.SQL({ user: 'joinzoe', api_key: 'iTsdIq-t8_cElnLjNmoRLA'})
           sql.execute("SELECT * FROM prevalence_map").done(function(data) {
               s='\n<pre>\n';
               for(datum of data.rows){
