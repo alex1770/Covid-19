@@ -7,10 +7,11 @@
 import os,csv,time,calendar
 from subprocess import Popen,PIPE
 
-#countrycode='GBRTENW';countryname='England+Wales'
-countrycode='FRATNP';countryname='France'
+# Country codes listed here: https://www.mortality.org/Public/HMD-countries-codes.pdf
+countrycode='GBRTENW';countryname='England+Wales'
+#countrycode='FRATNP';countryname='France'
 meanfrom=[2015,2010]
-displayfrom=2015
+displayfrom=2020
 update=False
 
 # YYYY-MM-DD -> day number
@@ -28,7 +29,7 @@ if update or not os.path.isfile(fn):
   Popen("wget https://www.mortality.org/Public/STMF/Outputs/stmf.csv",shell=True).wait()
 
 cn=-1
-wd={}
+wd={}# Process every country even though only using one at the moment
 with open(fn,'r') as fp:
   r=csv.reader(fp)
   for row in r:
@@ -60,7 +61,7 @@ for c in wd:
         s1+=sm[j+n]*l[k]
     wd[c][i][2]=s1/s0
 
-# Yearly deaths for each country
+# Print yearly deaths for each country
 if 0:
   for c in wd:
     tot={};orig=set()
