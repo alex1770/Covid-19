@@ -11,7 +11,7 @@ from subprocess import Popen,PIPE
 countrycode='GBRTENW';countryname='England+Wales'
 #countrycode='FRATNP';countryname='France'
 meanfrom=[2015,2010]
-displayfrom=2020
+displayfrom=2019
 update=False
 
 # YYYY-MM-DD -> day number
@@ -100,7 +100,7 @@ write('set key left')
 #write('set logscale y')
 title="Mortality in %s compared with "%countryname
 title+=','.join("%d"%(2020-y) for y in meanfrom)
-title+=' average'+'s'*(len(meanfrom)>1)+' for corresponding week of year\\n'
+title+='-year average'+'s'*(len(meanfrom)>1)+' for corresponding week of year\\n'
 title+='Averaging period excludes 2020. Last date: %s. '%(l[-1][0])
 title+='Source: www.mortality.org'
 write('set title "%s"'%title)
