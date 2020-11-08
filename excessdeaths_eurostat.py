@@ -8,10 +8,11 @@ import os,csv,time,calendar
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-#countrycode='UK';countryname='UK'
-countrycode='FR';countryname='France'
-meanfrom=[2015,2010]
-displayfrom=2019
+countrycode='UK';countryname='UK'
+#countrycode='FR';countryname='France'
+#meanfrom=[2015,2010]
+meanfrom=[2015]
+displayfrom=2020
 update=False
 
 assert displayfrom>=min(meanfrom)
@@ -119,7 +120,7 @@ title="Mortality in %s compared with "%countryname
 title+=','.join("%d"%(2020-y) for y in meanfrom)
 title+='-year average'+'s'*(len(meanfrom)>1)+' for corresponding week of year\\n'
 title+='Averaging period excludes 2020. Last date: %s. '%(l[-1][0])
-title+='Source: https://data.europa.eu'
+title+='Source: Eurostat demo\\\_r\\\_mwk\\\_05'
 write('set title "%s"'%title)
 write('set grid xtics lc rgb "#e0e0e0" lt 1')
 write('set grid ytics lc rgb "#e0e0e0" lt 1')
