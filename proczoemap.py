@@ -22,6 +22,7 @@ def processdata(tdir):
   dates=os.listdir(tdir)
   dates.sort()
   data={loc:[] for loc in locs}
+  pop={}
   shifteddates=[]
   with open(zoetrendfn,'w') as fp:
     writer=csv.writer(fp)
@@ -45,8 +46,19 @@ def processdata(tdir):
         v=src["corrected_covid_positive"]/src["population"]*1e3
         row.append("%.4g"%v)
         data[loc].append(v)
+        if date==dates[-1]: pop[loc]=src['population']
       writer.writerow(row)
   print("Written %s"%zoetrendfn)
+
+  # Smooth the small regions in time
+  for loc in locs:
+    if pop[loc]<2e6:
+      n=len(data[loc])
+      newdata=[]
+      for i in range(n):
+        r=min(3,i,n-1-i)
+        newdata.append(sum(data[loc][i-r:i+r+1])/(1+2*r))
+      data[loc]=newdata
 
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
@@ -62,14 +74,14 @@ def processdata(tdir):
   title="Zoe-estimated active cases per 1000 people"
   write('set title "%s"'%title)
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
-  write('set grid ytics lc rgb "#dddddd" lt 1')
-  write('set tics scale 3,0')
-  write('set xtics nomirror')
-  write('set xtics "2020-09-05", 86400')
-  write('set xtics rotate by 45 right offset 0.5,0')
   write('set xdata time')
   write('set format x "%Y-%m-%d"')
   write('set timefmt "%Y-%m-%d"')
+  write('set tics scale 3,0.5')
+  write('set xtics nomirror')
+  write('set xtics "2020-08-31", 86400*7')
+  write('set xtics rotate by 45 right offset 0.5,0')
+  write('set grid xtics ytics lc rgb "#dddddd" lt 1')
   s='plot '
   for loc in locs:
     if s!='plot ': s+=', '

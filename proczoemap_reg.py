@@ -80,14 +80,14 @@ def processdata_reg(tdir):
   title="Zoe-estimated active cases per 1000 people"
   write('set title "%s"'%title)
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
-  write('set grid ytics lc rgb "#dddddd" lt 1')
-  write('set tics scale 3,0')
-  write('set xtics nomirror')
-  write('set xtics "2020-09-05", 86400')
-  write('set xtics rotate by 45 right offset 0.5,0')
   write('set xdata time')
   write('set format x "%Y-%m-%d"')
   write('set timefmt "%Y-%m-%d"')
+  write('set grid xtics ytics lc rgb "#dddddd" lt 1')
+  write('set tics scale 3,0.5')
+  write('set xtics nomirror')
+  write('set xtics "2020-08-31", 86400*7')
+  write('set xtics rotate by 45 right offset 0.5,0')
   s='plot '
   for reg in sortedregions:
     if s!='plot ': s+=', '
