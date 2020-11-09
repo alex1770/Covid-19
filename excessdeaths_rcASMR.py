@@ -23,16 +23,17 @@ import os,csv,time,calendar
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-#countrycode='UK';countryname='UK'
+countrycode='UK';countryname='UK'
 #countrycode='FR';countryname='France'
-countrycode='ES';countryname='Spain'
+#countrycode='ES';countryname='Spain'
 meanyears=range(2015,2020)
 targetyear=2020
 assert targetyear not in meanyears and 2020 not in meanyears
 update=False
 
 print("Country:",countryname)
-print("Meanyears:",list(meanyears))
+print("meanyears:",list(meanyears))
+print("targetyear:",targetyear)
 allyears=list(meanyears)+[targetyear]
 minyear=min(allyears)
 
@@ -120,11 +121,6 @@ with open(popfn,'r') as fp:
         assert ': z' not in row# Insist all data present
         for i in range(nyears): pp[age][i]+=int2(row[nyears-i])
 
-# Print total population as a check
-if 1:
-  for i in range(nyears):
-    print(minyear+i,sum(pp[age][i] for age in pp))
-
 # Number of deaths at year y, week k (1-52), age group a
 def D(y,w,a):
   return dd[a][(y-dates[0][1])*52+w-1]
@@ -160,12 +156,16 @@ def age_i2s(i):
 
 # Print populations by age
 if 1:
-  yrs=range(2014,2021)
-  print("              "+"       ".join("%4d"%y for y in yrs))
+  print()
+  print("                "+"        ".join("%4d"%y for y in allyears))
+  s={y:0 for y in allyears}
   for a in range(nages): 
     aa=age_i2s(a)
-    print("%8s  "%aa,end="")
-    print("   ".join("%8d"%E(y,0.5,aa) for y in yrs))
+    print("%8s"%aa,end="")
+    for y in allyears: n=E(y,0.5,aa);s[y]+=n;print("   %9d"%n,end="")
+    print()
+  print("   TOTAL   ",end="")
+  print("   ".join("%9d"%s[y] for y in allyears))
   print()
 
 ASMR={}#  ASMR[y][w-1] = ASMR at year y, week w (1-52)
@@ -175,7 +175,7 @@ for y in allyears:
   else: numw=dates[N-1][2]
   ASMR[y]=[]
   cASMR[y]=[0]
-  print(y,end="")
+  #print(y,end="")
   td=[0]*nages;te=[0]*nages
   for w in range(1,numw+1):
     t=0
@@ -187,7 +187,7 @@ for y in allyears:
       td[a]+=D(y,w,aa)
       te[a]+=E(y,w,aa)
     #if w==8: print()
-    if w==17: print(''.join(" %8.4f"%(100*d/e) for (d,e) in zip(td,te)))
+    #if w==17: print(''.join(" %8.4f"%(100*d/e) for (d,e) in zip(td,te)))
     ASMR[y].append(t/sum(ESP))
     cASMR[y].append(cASMR[y][-1]+ASMR[y][-1])
 
@@ -206,11 +206,11 @@ for w in range(53):
 rcASMR=[]
 numw=dates[N-1][2]
 for w in range(numw+1):
-  rcASMR.append((cASMR[2020][w]-cASMR_bar[w])/cASMR_bar[52])
+  rcASMR.append((cASMR[targetyear][w]-cASMR_bar[w])/cASMR_bar[52])
 
 dASMR=[]
 for w in range(numw):
-  dASMR.append(ASMR[2020][w]-ASMR_bar[w])
+  dASMR.append(ASMR[targetyear][w]-ASMR_bar[w])
 
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
@@ -222,7 +222,7 @@ write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
 write('set output "%s"'%fn)
 write('set key left')
 #write('set logscale y')
-title="Mortality in %s for %d"%(countryname,2020)
+title="Mortality in %s for %d"%(countryname,targetyear)
 title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using rcASMR measure\\n'
 title+='Last date: %s. '%(dates[-1][3])
 title+='Sources: Eurostat urt\\\_pjangrp3 and demo\\\_r\\\_mwk\\\_05'
@@ -243,5 +243,5 @@ p.close()
 po.wait()
 print("Written %s"%fn)
 
-for y in allyears:
-  print(y,"%.10f  %.10f"%(ASMR[y][8],ASMR[y][8]/ASMR_bar[8]))
+#for y in allyears:
+#  print(y,"%.10f  %.10f"%(ASMR[y][8],ASMR[y][8]/ASMR_bar[8]))
