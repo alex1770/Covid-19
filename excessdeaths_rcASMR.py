@@ -1,5 +1,5 @@
 # Trying to replicate rcASMR calculation from bottom of https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
-# Simplified version not handling week 53, leap years, or population projections to 2019, 2020 properly
+# Simplified version not using population projections to 2019, 2020
 
 # Population source: https://ec.europa.eu/eurostat/web/products-datasets/product?code=urt_pjangrp3 giving urt_pjangrp3.tsv
 # (https://ec.europa.eu/eurostat/en/web/products-datasets/-/demo_pjangroup goes back further but doesn't have a 85-89 age group)
@@ -17,7 +17,6 @@
 # Explanation: https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm
 # Ignoring week 99, which appears to contain no data in the examples I've looked at.
 # The week number (1-53) is the ISO 8601 week: weeks run Mon-Sun and are assigned to the year in which Thursday falls.
-# For the moment just ignore week 53 and (slightly wrongly) pretend that week i is aligned at the same point in the year for any year.
 
 # Following https://www.actuaries.org.uk/system/files/field/document/CMI%20WP111%20v02%202019-04-25-%20Regular%20monitoring%20of%20England%20%20Wales%20population%20mortality.pdf
 # and https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
@@ -248,14 +247,15 @@ rcASMR=[]
 for w in range(numstdweeks+1):
   rcASMR.append((cASMR[targetyear][w]-cASMR_bar[w])/cASMR_bar[52])
 
-dASMR=[]
+rASMR=[]
 for w in range(numstdweeks):
-  dASMR.append(ASMR[targetyear][w]-ASMR_bar[w])
+  rASMR.append((ASMR[targetyear][w]-ASMR_bar[w])/(cASMR_bar[52]/52))
 
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-fn=countryname+'_rcASMR.png'
+mode="rASMR"
+fn=countryname+'_'+mode+'.png'
 po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
 write('set terminal pngcairo font "sans,13" size 1920,1280')
 write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
@@ -275,9 +275,11 @@ write('set xtics rotate by 45 right offset 0.5,0')
 write('set xdata time')
 write('set format x "%Y-%m"')
 write('set timefmt "%Y-%m-%d"')
-write('plot "-" using 1:2 w lines title "rcASMR"')
-for w in range(numstdweeks): write(stddaytostring(targetyear,3+w*7),dASMR[w]*sum(STDPOP))
-#for w in range(numstdweeks+1): write(stddaytostring(targetyear,w*7),rcASMR[w]*100)
+write('plot "-" using 1:2 w lines title "'+mode+'"')
+if mode=="rASMR":
+  for w in range(numstdweeks): write(stddaytostring(targetyear,3+w*7),rASMR[w]*100)
+elif mode=="rcASMR":
+  for w in range(numstdweeks+1): write(stddaytostring(targetyear,w*7),rcASMR[w]*100)
 write("e")
 p.close()
 po.wait()
