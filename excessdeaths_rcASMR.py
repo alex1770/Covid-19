@@ -19,12 +19,19 @@
 # The week number (1-53) is the ISO 8601 week: weeks run Mon-Sun and are assigned to the year in which Thursday falls.
 # For the moment just ignore week 53 and (slightly wrongly) pretend that week i is aligned at the same point in the year for any year.
 
-import os,csv,time,calendar
+# Following https://www.actuaries.org.uk/system/files/field/document/CMI%20WP111%20v02%202019-04-25-%20Regular%20monitoring%20of%20England%20%20Wales%20population%20mortality.pdf
+# and https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
+# The former (actuaries) is more detailed, but using the notation of the latter (ONS), i.e., ASMR rather than SMR; csASMR etc.
+
+# "Standard" day and week refer to idealised years that always have exactly 365 days and always start at the same week alignment (week 0 is 1-7 Jan).
+
+import os,csv,sys,time,calendar,datetime
+from collections import defaultdict
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-countrycode='UK';countryname='UK'
-#countrycode='FR';countryname='France'
+#countrycode='UK';countryname='UK'
+countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 meanyears=range(2015,2020)
 targetyear=2020
@@ -56,14 +63,52 @@ if update or not os.path.isfile(popfn):
   if os.path.exists(popfn): os.remove(popfn)
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
 
-# Ages: Y_LT5, Y5-9, Y10-14, Y15-19, Y20-24, Y25-29, Y30-34, Y35-39, Y40-44, Y45-49, Y50-54, Y55-59, Y60-64, Y65-69, Y70-74, Y75-79, Y80-84, Y85-89, Y_GE90
+ages="Y_LT5, Y5-9, Y10-14, Y15-19, Y20-24, Y25-29, Y30-34, Y35-39, Y40-44, Y45-49, Y50-54, Y55-59, Y60-64, Y65-69, Y70-74, Y75-79, Y80-84, Y85-89, Y_GE90".split(", ")
 # (Also TOTAL, UNK)
 
-wd={}
-minr=1000000;maxr=0
+# Convert ISO 8601 year,week to weighted list of year,day
+# Resample leap years to range(365)
+# (Not using datetime.date.fromisocalendar to avoid creating a dependancy on too recent a python version)
+def isoweektodates(y,w):
+  day=datetime.date.toordinal(datetime.date(y,1,1))+7*(w-2)
+  while 1:
+    dt=datetime.date.fromordinal(day)
+    iso=datetime.date.isocalendar(dt)
+    if iso[0]==y and iso[1]==w: break
+    day+=1
+  year2wd=defaultdict(int)# working days for each year present in week
+  year2days=defaultdict(int)# total days for each year present in week
+  for d in range(7):
+    dt=datetime.date.fromordinal(day+d)
+    year2days[dt.year]+=1
+    # Only care about determining working days when crossing year boundary, in which case the week lies between 29 Dec and 6 Jan, inclusive.
+    # Assume the only public holiday in this range is 1st Jan, or 2nd or 3rd Jan if 1st Jan falls on a Sunday, Saturday respectively.
+    # Of course getting this wrong is only going to make a microscopic difference overall.
+    if dt.weekday()>=6: holiday=True
+    elif dt.month>1 or dt.day>3: holiday=False
+    elif dt.day==1: holiday=True
+    else: holiday=(dt.weekday()==0)
+    if not holiday: year2wd[dt.year]+=1
+  twd=sum(year2wd.values())
+  l=defaultdict(float)
+  for i in range(7):
+    dt=datetime.date.fromordinal(day+i)
+    wt=year2wd[dt.year]/twd/year2days[dt.year]
+    day0=datetime.date.toordinal(datetime.date(dt.year,1,1))
+    (y,d)=dt.year,day+i-day0
+    # Resample leap year to range(365)
+    if y%4:
+      l[y,d]+=wt
+    else:
+      if d>0: l[y,d-1]+=d/366*wt
+      if d<365: l[y,d]+=(365-d)/366*wt
+  return [(y,d,l[y,d]) for (y,d) in l]
+
+wd={age:{} for age in ages}
 with open(deathsfn,'r') as fp:
   r=csv.reader(fp,delimiter='\t')
   first=True
+  ok={age:{y:set() for y in allyears} for age in ages}
   for row in r:
     if first:
       assert row[0][:16]=='age,sex,unit,geo'
@@ -71,30 +116,31 @@ with open(deathsfn,'r') as fp:
       # Construct datelist and indexes
       dates=[]
       for i in range(len(row)-1,0,-1):
-        y,w=map(int,row[i].strip().split('W'))
-        if y>=minyear and w<53:# Just ignore week 53 for the moment. Perhaps treat it properly later.
-          dates.append((i,y,w,daytodate(datetoday("%4d-01-07"%y)+7*(w-1))))
+        y0,w0=map(int,row[i].strip().split('W'))
+        if w0<=53:
+          for (y,d,wt) in isoweektodates(y0,w0):
+            if y in allyears:
+              dates.append((i,y,d,wt))
       first=False
     else:
       (age,sex,unit,geo)=row[0].split(',')
       if sex=='T' and geo==countrycode and age[0]=='Y':
-        if age not in wd: wd[age]=[-1]*len(dates)
-        for (r,(i,y,w,d)) in enumerate(dates):
+        for (i,y,d,wt) in dates:
           x=row[i].strip()
           if x[-1]=='p' or x[-1]=='e': x=x[:-1].strip()
           if x!=':':
-            wd[age][r]=int(x)
-            if r<minr: minr=r
-            if r>=maxr: maxr=r+1
+            wd[age][y,d]=wd[age].get((y,d),0)+wt*float(x)
+            ok[age][y].add(d)
+  for age in ages:
+    for y in meanyears:
+      if len(ok[age][y])!=365: print("Missing data in year %d at age %s"%(y,age),file=sys.stderr);sys.exit(1)
 
+laststdday=min(len(ok[age][targetyear]) for age in ages)
+numstdweeks=laststdday//7# last+1 centered standardised week
 
-# Reduce to valid date range and check contiguous
-dd={}
-for age in wd:
-  dd[age]=wd[age][minr:maxr]
-  assert -1 not in dd[age]
-dates=dates[minr:maxr]
-N=maxr-minr
+def stddaytostring(y,d0):
+  d=int(d0*(365+(y%4==0))/365+.5)
+  return datetime.date.fromordinal(datetime.date.toordinal(datetime.date(y,1,1))+d).strftime("%Y-%m-%d")
 
 def int2(s):
   if s[-2:]==' p': return int(s[:-2])
@@ -108,30 +154,33 @@ with open(popfn,'r') as fp:
     if first:
       assert row[0]=='unit,sex,age,terrtypo,geo\\time'
       # Expecting row[1:] = 2019, 2018, 2017, 2016, 2015, 2014
-      nyears=len(row)-1
-      minyear=int(row[-1])
+      nyears_pop=len(row)-1
+      minyear_pop=int(row[-1])
       # Something
       first=False
     else:
       (unit,sex,age,terr,geo)=row[0].split(',')
       # TOTAL territory not available, so construct it from URB+RUR+INT
       if sex=='T' and geo==countrycode and age[0]=='Y'and (terr=='URB' or terr=='RUR' or terr=='INT'):
-        if age not in pp: pp[age]=[0]*nyears
-        assert len(row)==nyears+1
+        if age not in pp: pp[age]=[0]*nyears_pop
+        assert len(row)==nyears_pop+1
         assert ': z' not in row# Insist all data present
-        for i in range(nyears): pp[age][i]+=int2(row[nyears-i])
+        for i in range(nyears_pop): pp[age][i]+=int2(row[nyears_pop-i])
 
-# Number of deaths at year y, week k (1-52), age group a
-def D(y,w,a):
-  return dd[a][(y-dates[0][1])*52+w-1]
-    
-# Estimated population at year y, week k, age group a
-def E(y,w,a):
-  #return ESP[age_s2i(a)]/sum(ESP)*67e6#test
-  yy=y-minyear
-  if yy<nyears-1: y0=yy;y1=yy+1
-  else: y0=nyears-2;y1=nyears-1
-  yf=yy+(w-.5)/52
+# Number of deaths at age group a, year y0, in a 1 week interval centered around day d0 (0-364)
+def D(y0,d0,a):
+  t=0
+  for x in range(y0*365+d0-3,y0*365+d0+4):
+    y=x//365;d=x%365
+    t+=wd[a][y,d]
+  return t
+
+# Estimated population at age group a, year y, day d (0-364)
+def E(y,d,a):
+  yy=y-minyear_pop
+  if yy<nyears_pop-1: y0=yy;y1=yy+1
+  else: y0=nyears_pop-2;y1=nyears_pop-1
+  yf=yy+d/365
   return (y1-yf)*pp[a][y0]+(yf-y0)*pp[a][y1]
 
 # European Standard Population 2013
@@ -168,27 +217,19 @@ if 1:
   print("   ".join("%9d"%s[y] for y in allyears))
   print()
 
-ASMR={}#  ASMR[y][w-1] = ASMR at year y, week w (1-52)
-cASMR={}# cASMR[y][w] = cASMR at year y, week w (1-52)
+ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, standardised week w (0-51)
+cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, standardised week w (0-51)
+STDPOP=ESP
+#STDPOP=[E(2020,3+(numstdweeks-1)*7,age_i2s(a)) for a in range(nages)]
 for y in allyears:
-  if y<2020: numw=52
-  else: numw=dates[N-1][2]
-  ASMR[y]=[]
-  cASMR[y]=[0]
-  #print(y,end="")
-  td=[0]*nages;te=[0]*nages
-  for w in range(1,numw+1):
+  numw=numstdweeks if y==targetyear else 52
+  for w in range(numw):
+    d=3+w*7
     t=0
     for a in range(nages):
       aa=age_i2s(a)
-      t+=D(y,w,aa)/E(y,w,aa)*ESP[a]#E(2020,40,aa)
-      #if w==8: print(" %8.0f"%(t/sum(ESP)*1e6),end="")
-      #if w==8: print(" %8.4f"%(D(y,w,aa)/E(y,w,aa)*100),end="")
-      td[a]+=D(y,w,aa)
-      te[a]+=E(y,w,aa)
-    #if w==8: print()
-    #if w==17: print(''.join(" %8.4f"%(100*d/e) for (d,e) in zip(td,te)))
-    ASMR[y].append(t/sum(ESP))
+      t+=D(y,d,aa)/E(y,d,aa)*STDPOP[a]
+    ASMR[y].append(t/sum(STDPOP))
     cASMR[y].append(cASMR[y][-1]+ASMR[y][-1])
 
 ASMR_bar=[]
@@ -204,12 +245,11 @@ for w in range(53):
   cASMR_bar.append(t/len(meanyears))
 
 rcASMR=[]
-numw=dates[N-1][2]
-for w in range(numw+1):
+for w in range(numstdweeks+1):
   rcASMR.append((cASMR[targetyear][w]-cASMR_bar[w])/cASMR_bar[52])
 
 dASMR=[]
-for w in range(numw):
+for w in range(numstdweeks):
   dASMR.append(ASMR[targetyear][w]-ASMR_bar[w])
 
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
@@ -224,7 +264,7 @@ write('set key left')
 #write('set logscale y')
 title="Mortality in %s for %d"%(countryname,targetyear)
 title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using rcASMR measure\\n'
-title+='Last date: %s. '%(dates[-1][3])
+title+='Last date: %s. '%stddaytostring(targetyear,laststdday)
 title+='Sources: Eurostat urt\\\_pjangrp3 and demo\\\_r\\\_mwk\\\_05'
 write('set title "%s"'%title)
 write('set grid xtics lc rgb "#e0e0e0" lt 1')
@@ -236,12 +276,9 @@ write('set xdata time')
 write('set format x "%Y-%m"')
 write('set timefmt "%Y-%m-%d"')
 write('plot "-" using 1:2 w lines title "rcASMR"')
-#for w in range(numw): write(dates[(2020-dates[0][1])*52+w][3],dASMR[w]*sum(ESP))
-for w in range(numw+1): write(dates[(2020-dates[0][1])*52+w-1][3],rcASMR[w]*100)
+for w in range(numstdweeks): write(stddaytostring(targetyear,3+w*7),dASMR[w]*sum(STDPOP))
+#for w in range(numstdweeks+1): write(stddaytostring(targetyear,w*7),rcASMR[w]*100)
 write("e")
 p.close()
 po.wait()
 print("Written %s"%fn)
-
-#for y in allyears:
-#  print(y,"%.10f  %.10f"%(ASMR[y][8],ASMR[y][8]/ASMR_bar[8]))
