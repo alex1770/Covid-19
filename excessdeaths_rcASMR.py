@@ -29,8 +29,8 @@ from collections import defaultdict
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-#countrycode='UK';countryname='UK'
-countrycode='FR';countryname='France'
+countrycode='UK';countryname='UK'
+#countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 meanyears=range(2015,2020)
 targetyear=2020
@@ -218,8 +218,8 @@ if 1:
 
 ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, standardised week w (0-51)
 cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, standardised week w (0-51)
-STDPOP=ESP
-#STDPOP=[E(2020,3+(numstdweeks-1)*7,age_i2s(a)) for a in range(nages)]
+#REFPOP=ESP
+REFPOP=[E(2020,3+(numstdweeks-1)*7,age_i2s(a)) for a in range(nages)]
 for y in allyears:
   numw=numstdweeks if y==targetyear else 52
   for w in range(numw):
@@ -227,8 +227,8 @@ for y in allyears:
     t=0
     for a in range(nages):
       aa=age_i2s(a)
-      t+=D(y,d,aa)/E(y,d,aa)*STDPOP[a]
-    ASMR[y].append(t/sum(STDPOP))
+      t+=D(y,d,aa)/E(y,d,aa)*REFPOP[a]
+    ASMR[y].append(t/sum(REFPOP))
     cASMR[y].append(cASMR[y][-1]+ASMR[y][-1])
 
 ASMR_bar=[]
@@ -263,7 +263,7 @@ write('set output "%s"'%fn)
 write('set key left')
 #write('set logscale y')
 title="Mortality in %s for %d"%(countryname,targetyear)
-title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using rcASMR measure\\n'
+title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using '+mode+' measure\\n'
 title+='Last date: %s. '%stddaytostring(targetyear,laststdday)
 title+='Sources: Eurostat urt\\\_pjangrp3 and demo\\\_r\\\_mwk\\\_05'
 write('set title "%s"'%title)
