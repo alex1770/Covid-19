@@ -29,7 +29,7 @@ from collections import defaultdict
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-countrycode='UK';countryname='UK'
+countrycode='UK';countryname='United Kingdom'
 #countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 meanyears=range(2015,2020)
@@ -37,11 +37,37 @@ targetyear=2020
 assert targetyear not in meanyears and 2020 not in meanyears
 update=False
 
+deathsfn='demo_r_mwk_05.tsv'
+popfn='urt_pjangrp3.tsv'
+#popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.tsv'
+
 print("Country:",countryname)
 print("meanyears:",list(meanyears))
 print("targetyear:",targetyear)
 allyears=list(meanyears)+[targetyear]
 minyear=min(allyears)
+
+# European Standard Population 2013
+# https://webarchive.nationalarchives.gov.uk/20160106020035/http://www.ons.gov.uk/ons/guide-method/user-guidance/health-and-life-events/revised-european-standard-population-2013--2013-esp-/index.html
+# ESP[i] = std pop for age group [5i,5(i+1)), except last one is [90,infinty)
+ESP=[5000, 5500, 5500, 5500, 6000, 6000, 6500, 7000, 7000, 7000, 7000, 6500, 6000, 5500, 5000, 4000, 2500, 1500, 1000]
+nages=len(ESP)
+    
+# Convert Eurostat age string (Y_LT5, Y5-9, Y10-14, ..., Y85-89, Y_GE90) to integer 0-18
+def age_s2i(s):
+  assert s[0]=='Y'
+  if s=='Y_LT5': return 0
+  i=0
+  while i<len(s) and not s[i].isdigit(): i+=1
+  j=i
+  while j<len(s) and s[j].isdigit(): j+=1
+  return int(s[i:j])//5
+
+# Inverse function to age_s2i
+def age_i2s(i):
+  if i==0: return 'Y_LT5'
+  if i==nages-1: return 'Y_GE%d'%(5*i)
+  return 'Y%d-%d'%(5*i,5*i+4)
 
 # YYYY-MM-DD -> day number
 def datetoday(x):
@@ -52,18 +78,13 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
-deathsfn='demo_r_mwk_05.tsv'
 if update or not os.path.isfile(deathsfn):
   if os.path.exists(deathsfn): os.remove(deathsfn)
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/demo_r_mwk_05.tsv.gz -O -|gunzip -c > %s"%deathsfn,shell=True).wait()
 
-popfn='urt_pjangrp3.tsv'
-if update or not os.path.isfile(popfn):
+if popfn and (update or not os.path.isfile(popfn)):
   if os.path.exists(popfn): os.remove(popfn)
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
-
-ages="Y_LT5, Y5-9, Y10-14, Y15-19, Y20-24, Y25-29, Y30-34, Y35-39, Y40-44, Y45-49, Y50-54, Y55-59, Y60-64, Y65-69, Y70-74, Y75-79, Y80-84, Y85-89, Y_GE90".split(", ")
-# (Also TOTAL, UNK)
 
 # Convert ISO 8601 year,week to weighted list of year,day
 # Resample leap years to range(365)
@@ -103,11 +124,12 @@ def isoweektodates(y,w):
       if d<365: l[y,d]+=(365-d)/366*wt
   return [(y,d,l[y,d]) for (y,d) in l]
 
-wd={age:{} for age in ages}
+# Parse Eurostat death data
+wd=[{} for age in range(nages)]
 with open(deathsfn,'r') as fp:
   r=csv.reader(fp,delimiter='\t')
   first=True
-  ok={age:{y:set() for y in allyears} for age in ages}
+  ok=[{y:set() for y in allyears} for age in range(nages)]
   for row in r:
     if first:
       assert row[0][:16]=='age,sex,unit,geo'
@@ -122,19 +144,20 @@ with open(deathsfn,'r') as fp:
               dates.append((i,y,d,wt))
       first=False
     else:
-      (age,sex,unit,geo)=row[0].split(',')
-      if sex=='T' and geo==countrycode and age[0]=='Y':
+      (agestring,sex,unit,geo)=row[0].split(',')
+      if sex=='T' and geo==countrycode and agestring[0]=='Y':
+        age=age_s2i(agestring)
         for (i,y,d,wt) in dates:
           x=row[i].strip()
           if x[-1]=='p' or x[-1]=='e': x=x[:-1].strip()
           if x!=':':
             wd[age][y,d]=wd[age].get((y,d),0)+wt*float(x)
             ok[age][y].add(d)
-  for age in ages:
+  for age in range(nages):
     for y in meanyears:
-      if len(ok[age][y])!=365: print("Missing data in year %d at age %s"%(y,age),file=sys.stderr);sys.exit(1)
+      if len(ok[age][y])!=365: print("Missing data in year %d at age band %s"%(y,age_i2s(age)),file=sys.stderr);sys.exit(1)
 
-laststdday=min(len(ok[age][targetyear]) for age in ages)
+laststdday=min(len(ok[age][targetyear]) for age in range(nages))
 numstdweeks=laststdday//7# last+1 centered standardised week
 
 def stddaytostring(y,d0):
@@ -145,26 +168,45 @@ def int2(s):
   if s[-2:]==' p': return int(s[:-2])
   return int(s)
 
-pp={}
-with open(popfn,'r') as fp:
-  r=csv.reader(fp,delimiter='\t')
-  first=True
-  for row in r:
-    if first:
-      assert row[0]=='unit,sex,age,terrtypo,geo\\time'
-      # Expecting row[1:] = 2019, 2018, 2017, 2016, 2015, 2014
-      nyears_pop=len(row)-1
-      minyear_pop=int(row[-1])
-      # Something
-      first=False
-    else:
-      (unit,sex,age,terr,geo)=row[0].split(',')
-      # TOTAL territory not available, so construct it from URB+RUR+INT
-      if sex=='T' and geo==countrycode and age[0]=='Y'and (terr=='URB' or terr=='RUR' or terr=='INT'):
-        if age not in pp: pp[age]=[0]*nyears_pop
-        assert len(row)==nyears_pop+1
-        assert ': z' not in row# Insist all data present
-        for i in range(nyears_pop): pp[age][i]+=int2(row[nyears_pop-i])
+if popfn=='urt_pjangrp3.tsv':
+  # Parse Eurostat population data
+  with open(popfn,'r') as fp:
+    r=csv.reader(fp,delimiter='\t')
+    first=True
+    for row in r:
+      if first:
+        assert row[0]=='unit,sex,age,terrtypo,geo\\time'
+        # Expecting row[1:] = 2019, 2018, 2017, 2016, 2015, 2014
+        nyears_pop=len(row)-1
+        minyear_pop=int(row[-1])
+        pp=[[0]*nyears_pop for age in range(nages)]
+        # Something
+        first=False
+      else:
+        (unit,sex,agestring,terr,geo)=row[0].split(',')
+        # TOTAL territory not available, so construct it from URB+RUR+INT
+        if sex=='T' and geo==countrycode and agestring[0]=='Y' and (terr=='URB' or terr=='RUR' or terr=='INT'):
+          assert len(row)==nyears_pop+1
+          assert ': z' not in row# Insist all data present
+          age=age_s2i(agestring)
+          for i in range(nyears_pop): pp[age][i]+=int2(row[nyears_pop-i])
+else:
+  # Parse UN WPP population data
+  with open(popfn,'r') as fp:
+    r=csv.reader(fp,delimiter='\t')
+    first=True
+    for row in r:
+      if first:
+        print(row)
+        for (c,x) in enumerate(row):
+          if x[:6]=='Region': cc=c
+          if x[:9]=='Reference': yearcol=c
+          if x=='0-4': agecol0=c
+        agecol1=len(row)
+        first=False
+      else:
+        print(row)
+        if row[cc]=='France': print(row)
 
 # Number of deaths at age group a, year y0, in a 1 week interval centered around day d0 (0-364)
 def D(y0,d0,a):
@@ -173,7 +215,7 @@ def D(y0,d0,a):
     y=x//365;d=x%365
     t+=wd[a][y,d]
   return t
-
+r
 # Estimated population at age group a, year y, day d (0-364)
 def E(y,d,a):
   yy=y-minyear_pop
@@ -182,35 +224,14 @@ def E(y,d,a):
   yf=yy+d/365
   return (y1-yf)*pp[a][y0]+(yf-y0)*pp[a][y1]
 
-# European Standard Population 2013
-# https://webarchive.nationalarchives.gov.uk/20160106020035/http://www.ons.gov.uk/ons/guide-method/user-guidance/health-and-life-events/revised-european-standard-population-2013--2013-esp-/index.html
-# ESP[i] = std pop for age group [5i,5(i+1)), except last one is [90,infinty)
-ESP=[5000, 5500, 5500, 5500, 6000, 6000, 6500, 7000, 7000, 7000, 7000, 6500, 6000, 5500, 5000, 4000, 2500, 1500, 1000]
-nages=len(ESP)
-    
-def age_s2i(s):
-  assert s[0]=='Y'
-  if s=='Y_LT5': return 0
-  i=0
-  while i<len(s) and not s[i].isdigit(): i+=1
-  j=i
-  while j<len(s) and s[j].isdigit(): j+=1
-  return int(s[i:j])//5
-
-def age_i2s(i):
-  if i==0: return 'Y_LT5'
-  if i==nages-1: return 'Y_GE%d'%(5*i)
-  return 'Y%d-%d'%(5*i,5*i+4)
-
 # Print populations by age
 if 1:
   print()
   print("                "+"        ".join("%4d"%y for y in allyears))
   s={y:0 for y in allyears}
   for a in range(nages): 
-    aa=age_i2s(a)
-    print("%8s"%aa,end="")
-    for y in allyears: n=E(y,0.5,aa);s[y]+=n;print("   %9d"%n,end="")
+    print("%8s"%age_i2s(a),end="")
+    for y in allyears: n=E(y,0.5,a);s[y]+=n;print("   %9d"%n,end="")
     print()
   print("   TOTAL   ",end="")
   print("   ".join("%9d"%s[y] for y in allyears))
@@ -219,15 +240,14 @@ if 1:
 ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, standardised week w (0-51)
 cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, standardised week w (0-51)
 #REFPOP=ESP
-REFPOP=[E(2020,3+(numstdweeks-1)*7,age_i2s(a)) for a in range(nages)]
+REFPOP=[E(2020,3+(numstdweeks-1)*7,a) for a in range(nages)]
 for y in allyears:
   numw=numstdweeks if y==targetyear else 52
   for w in range(numw):
     d=3+w*7
     t=0
     for a in range(nages):
-      aa=age_i2s(a)
-      t+=D(y,d,aa)/E(y,d,aa)*REFPOP[a]
+      t+=D(y,d,a)/E(y,d,a)*REFPOP[a]
     ASMR[y].append(t/sum(REFPOP))
     cASMR[y].append(cASMR[y][-1]+ASMR[y][-1])
 
@@ -255,7 +275,7 @@ for w in range(numstdweeks):
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
 mode="rASMR"
-fn=countryname+'_'+mode+'.png'
+fn=countryname.replace(' ','')+'_'+mode+'.png'
 po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
 write('set terminal pngcairo font "sans,13" size 1920,1280')
 write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
