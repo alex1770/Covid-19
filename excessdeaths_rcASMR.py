@@ -38,8 +38,8 @@ assert targetyear not in meanyears and 2020 not in meanyears
 update=False
 
 deathsfn='demo_r_mwk_05.tsv'
-popfn='urt_pjangrp3.tsv'
-#popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.tsv'
+#popfn='urt_pjangrp3.tsv';yearoffset=0
+popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.tsv';yearoffset=0.5
 
 print("Country:",countryname)
 print("meanyears:",list(meanyears))
@@ -179,7 +179,7 @@ if popfn=='urt_pjangrp3.tsv':
         # Expecting row[1:] = 2019, 2018, 2017, 2016, 2015, 2014
         nyears_pop=len(row)-1
         minyear_pop=int(row[-1])
-        pp=[[0]*nyears_pop for age in range(nages)]
+        pp=[[0]*nages for y in range(nyears_pop)]
         # Something
         first=False
       else:
@@ -189,7 +189,7 @@ if popfn=='urt_pjangrp3.tsv':
           assert len(row)==nyears_pop+1
           assert ': z' not in row# Insist all data present
           age=age_s2i(agestring)
-          for i in range(nyears_pop): pp[age][i]+=int2(row[nyears_pop-i])
+          for i in range(nyears_pop): pp[i][age]+=int2(row[nyears_pop-i])
 else:
   # Parse UN WPP population data
   with open(popfn,'r') as fp:
@@ -203,10 +203,18 @@ else:
           if x[:9]=='Reference': yearcol=c
           if x=='0-4': agecol0=c
         agecol1=len(row)
+        pp=[]
         first=False
       else:
-        print(row)
-        if row[cc]=='France': print(row)
+        if row[cc]==countryname:
+          print(row)
+          y=int(row[yearcol])
+          if len(pp)==0: minyear_pop=y
+          assert y==minyear_pop+len(pp)# Insist years are contiguous
+          l=[int(row[i].replace(' ',''))*1000 for i in range(agecol0,agecol1)]
+          l=l[:nages-1]+[sum(l[nages-1:])]# If the 90+ age group is subdivided then amalgamate it into one group
+          pp.append(l)
+  nyears_pop=len(pp)
 
 # Number of deaths at age group a, year y0, in a 1 week interval centered around day d0 (0-364)
 def D(y0,d0,a):
@@ -215,14 +223,14 @@ def D(y0,d0,a):
     y=x//365;d=x%365
     t+=wd[a][y,d]
   return t
-r
+
 # Estimated population at age group a, year y, day d (0-364)
 def E(y,d,a):
   yy=y-minyear_pop
   if yy<nyears_pop-1: y0=yy;y1=yy+1
   else: y0=nyears_pop-2;y1=nyears_pop-1
-  yf=yy+d/365
-  return (y1-yf)*pp[a][y0]+(yf-y0)*pp[a][y1]
+  yf=yy+d/365-yearoffset
+  return (y1-yf)*pp[y0][a]+(yf-y0)*pp[y1][a]
 
 # Print populations by age
 if 1:
@@ -274,7 +282,9 @@ for w in range(numstdweeks):
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-mode="rASMR"
+def escape(s): return s.replace('_','\\\_')
+
+mode="rcASMR"
 fn=countryname.replace(' ','')+'_'+mode+'.png'
 po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
 write('set terminal pngcairo font "sans,13" size 1920,1280')
@@ -285,7 +295,7 @@ write('set key left')
 title="Mortality in %s for %d"%(countryname,targetyear)
 title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using '+mode+' measure\\n'
 title+='Last date: %s. '%stddaytostring(targetyear,laststdday)
-title+='Sources: Eurostat urt\\\_pjangrp3 and demo\\\_r\\\_mwk\\\_05'
+title+='Sources: '+escape(popfn[:-4])+' and '+escape(deathsfn[:-4])
 write('set title "%s"'%title)
 write('set grid xtics lc rgb "#e0e0e0" lt 1')
 write('set grid ytics lc rgb "#e0e0e0" lt 1')
