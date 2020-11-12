@@ -33,8 +33,11 @@ for fn in sorted(listdir(tdir)):
       im_frame.close()
       rgb = np_frame[:,:,0]*65536+np_frame[:,:,1]*256+np_frame[:,:,2]
       numcols = [np.sum(rgb==v) for v in [whitecol,greencol,orangecol,redcol,darkredcol]]
-      levels[key]=numcols
-      print("Read",fn)
+      if numcols[0]<1000000:
+        levels[key]=numcols
+        print("Read",fn)
+      else:
+        print("Discarding",fn)
 
 with open(cachefn,'w') as fp:
   print("# Location      LocalDateTime    White    Green   Orange      Red  Darkred",file=fp)
