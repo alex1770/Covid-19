@@ -5,7 +5,7 @@ def write(*s): inp.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
 outfn="trafficgraph.png"
 p=Popen("gnuplot",shell=True,stdin=PIPE);inp=p.stdin
-write('set terminal pngcairo font "sans,10" size 2400,640')
+write('set terminal pngcairo font "sans,10" size 4800,640')
 write('set bmargin 5;set lmargin 12;set rmargin 12;set tmargin 4')
 write('set output "%s"'%outfn)
 write('set tics nomirror')
