@@ -29,23 +29,28 @@ from collections import defaultdict
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-countrycode='UK';countryname='United Kingdom'
-#countrycode='FR';countryname='France'
+#countrycode='UK';countryname='United Kingdom'
+countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 meanyears=range(2015,2020)
 targetyear=2020
-assert targetyear not in meanyears and 2020 not in meanyears
+popsource="WPP"
+useESP=False
 update=False
 
+assert targetyear not in meanyears and 2020 not in meanyears
+assert popsource in ["WPP","Eurostat"]
+
 deathsfn='demo_r_mwk_05.tsv'
-#popfn='urt_pjangrp3.tsv';yearoffset=0
-popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.tsv';yearoffset=0.5
+if popsource=="Eurostat":
+  popfn='urt_pjangrp3.tsv';yearoffset=0
+else:
+  popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.tsv';yearoffset=0.5
 
 print("Country:",countryname)
 print("meanyears:",list(meanyears))
 print("targetyear:",targetyear)
 allyears=list(meanyears)+[targetyear]
-minyear=min(allyears)
 
 # European Standard Population 2013
 # https://webarchive.nationalarchives.gov.uk/20160106020035/http://www.ons.gov.uk/ons/guide-method/user-guidance/health-and-life-events/revised-european-standard-population-2013--2013-esp-/index.html
@@ -82,9 +87,10 @@ if update or not os.path.isfile(deathsfn):
   if os.path.exists(deathsfn): os.remove(deathsfn)
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/demo_r_mwk_05.tsv.gz -O -|gunzip -c > %s"%deathsfn,shell=True).wait()
 
-if popfn and (update or not os.path.isfile(popfn)):
+if update or not os.path.isfile(popfn):
   if os.path.exists(popfn): os.remove(popfn)
-  Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
+  if popfn=='urt_pjangrp3.tsv':
+    Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
 
 # Convert ISO 8601 year,week to weighted list of year,day
 # Resample leap years to range(365)
@@ -197,7 +203,6 @@ else:
     first=True
     for row in r:
       if first:
-        print(row)
         for (c,x) in enumerate(row):
           if x[:6]=='Region': cc=c
           if x[:9]=='Reference': yearcol=c
@@ -207,7 +212,6 @@ else:
         first=False
       else:
         if row[cc]==countryname:
-          print(row)
           y=int(row[yearcol])
           if len(pp)==0: minyear_pop=y
           assert y==minyear_pop+len(pp)# Insist years are contiguous
@@ -216,6 +220,8 @@ else:
           pp.append(l)
   nyears_pop=len(pp)
 
+#nyears_pop-=2#alter
+  
 # Number of deaths at age group a, year y0, in a 1 week interval centered around day d0 (0-364)
 def D(y0,d0,a):
   t=0
@@ -224,22 +230,22 @@ def D(y0,d0,a):
     t+=wd[a][y,d]
   return t
 
-# Estimated population at age group a, year y, day d (0-364)
+# Estimated population at age group a, year y, std day d (0-364)
 def E(y,d,a):
-  yy=y-minyear_pop
-  if yy<nyears_pop-1: y0=yy;y1=yy+1
-  else: y0=nyears_pop-2;y1=nyears_pop-1
-  yf=yy+d/365-yearoffset
+  yf=y+d/365-yearoffset-minyear_pop# convert to ideal index of pp[]
+  y0=min(int(yf),nyears_pop-2)
+  y1=y0+1
   return (y1-yf)*pp[y0][a]+(yf-y0)*pp[y1][a]
 
 # Print populations by age
 if 1:
   print()
   print("                "+"        ".join("%4d"%y for y in allyears))
-  s={y:0 for y in allyears}
+  s={y:sum(E(y,0,a) for a in range(nages)) for y in allyears}
   for a in range(nages): 
     print("%8s"%age_i2s(a),end="")
-    for y in allyears: n=E(y,0.5,a);s[y]+=n;print("   %9d"%n,end="")
+    #for y in allyears: n=E(y,0,a);print("   %9d"%n,end="")
+    for y in allyears: n=E(y,0,a);print("   %8.2f%%"%(n/s[y]*100),end="")
     print()
   print("   TOTAL   ",end="")
   print("   ".join("%9d"%s[y] for y in allyears))
@@ -247,8 +253,8 @@ if 1:
 
 ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, standardised week w (0-51)
 cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, standardised week w (0-51)
-#REFPOP=ESP
-REFPOP=[E(2020,3+(numstdweeks-1)*7,a) for a in range(nages)]
+if useESP: REFPOP=ESP
+else: REFPOP=[E(2020,3+(numstdweeks-1)*7,a) for a in range(nages)]
 for y in allyears:
   numw=numstdweeks if y==targetyear else 52
   for w in range(numw):
