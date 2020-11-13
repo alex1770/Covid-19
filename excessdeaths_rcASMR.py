@@ -45,7 +45,7 @@ deathsfn='demo_r_mwk_05.tsv'
 if popsource=="Eurostat":
   popfn='urt_pjangrp3.tsv';yearoffset=0
 else:
-  popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.tsv';yearoffset=0.5
+  popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv';yearoffset=0.5
 
 print("Country:",countryname)
 print("meanyears:",list(meanyears))
@@ -84,13 +84,17 @@ def daytodate(r):
   return time.strftime('%Y-%m-%d',t)
 
 if update or not os.path.isfile(deathsfn):
-  if os.path.exists(deathsfn): os.remove(deathsfn)
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/demo_r_mwk_05.tsv.gz -O -|gunzip -c > %s"%deathsfn,shell=True).wait()
 
-if update or not os.path.isfile(popfn):
-  if os.path.exists(popfn): os.remove(popfn)
-  if popfn=='urt_pjangrp3.tsv':
+if not os.path.isfile(popfn):
+  if popsource=="Eurostat":
     Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
+  else:
+    import pandas
+    p=Popen("wget 'https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/1_Population/WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.xlsx' -O -",stdout=PIPE,shell=True)
+    data=pandas.read_excel(p.stdout)
+    data.to_csv("WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv", encoding='utf-8', index=False)
+    p.wait()
 
 # Convert ISO 8601 year,week to weighted list of year,day
 # Resample leap years to range(365)
@@ -199,29 +203,28 @@ if popfn=='urt_pjangrp3.tsv':
 else:
   # Parse UN WPP population data
   with open(popfn,'r') as fp:
-    r=csv.reader(fp,delimiter='\t')
-    first=True
+    r=csv.reader(fp)
+    start=True
     for row in r:
-      if first:
-        for (c,x) in enumerate(row):
-          if x[:6]=='Region': cc=c
-          if x[:9]=='Reference': yearcol=c
-          if x=='0-4': agecol0=c
-        agecol1=len(row)
-        pp=[]
-        first=False
+      if start:
+        if row[0]=='Index':
+          for (c,x) in enumerate(row):
+            if x[:6]=='Region': cc=c
+            if x[:9]=='Reference': yearcol=c
+            if x=='0-4': agecol0=c
+          agecol1=len(row)
+          pp=[]
+          start=False
       else:
         if row[cc]==countryname:
           y=int(row[yearcol])
           if len(pp)==0: minyear_pop=y
           assert y==minyear_pop+len(pp)# Insist years are contiguous
-          l=[int(row[i].replace(' ',''))*1000 for i in range(agecol0,agecol1)]
+          l=[int(float(row[i].replace(' ',''))*1000+.5) for i in range(agecol0,agecol1)]
           l=l[:nages-1]+[sum(l[nages-1:])]# If the 90+ age group is subdivided then amalgamate it into one group
           pp.append(l)
   nyears_pop=len(pp)
 
-#nyears_pop-=2#alter
-  
 # Number of deaths at age group a, year y0, in a 1 week interval centered around day d0 (0-364)
 def D(y0,d0,a):
   t=0
