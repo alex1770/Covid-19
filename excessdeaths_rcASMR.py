@@ -1,42 +1,47 @@
-# Trying to replicate rcASMR calculation from bottom of https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
-# Simplified version not using population projections to 2019, 2020
-
-# Population source: https://ec.europa.eu/eurostat/web/products-datasets/product?code=urt_pjangrp3 giving urt_pjangrp3.tsv
-# (https://ec.europa.eu/eurostat/en/web/products-datasets/-/demo_pjangroup goes back further but doesn't have a 85-89 age group)
-# For population projections (not currently used), can use
-# EU: https://ec.europa.eu/eurostat/web/products-datasets/product?code=proj_19np
-# UK: (uses midpoints of years): https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections/datasets/tablea21principalprojectionukpopulationinagegroups
-#     or                         https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections/datasets/tablel21oldagestructurevariantukpopulationinagegroups
-# but for simplicity not using these to start with (instead linearly interpolate off the end of the actuals)
-# Going to be simpler to switch to using:
-# https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/1_Population/WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.xlsx
-# from https://population.un.org/wpp/Download/Standard/Population/
-# (though I think the linear interpolation off the end isn't actually that bad an estimate)
+# Trying to replicate (and improve upon) rcASMR, rASMR calculations from bottom of https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
 
 # Mortality source: https://data.europa.eu/euodp/en/data/dataset/QrtzdXsI5w26vnr54SIzpQ giving demo_r_mwk_05.tsv
 # Explanation: https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm
 # Ignoring week 99, which appears to contain no data in the examples I've looked at.
 # The week number (1-53) is the ISO 8601 week: weeks run Mon-Sun and are assigned to the year in which Thursday falls.
 
+# For population source, can use either Eurostat or UN WPP
+#
+# Eurostat:
+# https://ec.europa.eu/eurostat/web/products-datasets/product?code=urt_pjangrp3 giving urt_pjangrp3.tsv
+# (https://ec.europa.eu/eurostat/en/web/products-datasets/-/demo_pjangroup goes back further but doesn't have a 85-89 age group)
+# and for population projections, use
+# EU: https://ec.europa.eu/eurostat/web/products-datasets/product?code=proj_19np
+# UK: (uses midpoints of years): https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections/datasets/tablea21principalprojectionukpopulationinagegroups
+#     or                         https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationprojections/datasets/tablel21oldagestructurevariantukpopulationinagegroups
+# Not currently using population projections for UK (so UK 2020, 2021 projections are done by simple linear interpolation)
+#
+# UN WPP:
+# https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/1_Population/WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.xlsx
+# from https://population.un.org/wpp/Download/Standard/Population/
+# These go 1.5 years later than Eurostat (mid 2020 cf start 2019) so projection not so important.
+
 # Following https://www.actuaries.org.uk/system/files/field/document/CMI%20WP111%20v02%202019-04-25-%20Regular%20monitoring%20of%20England%20%20Wales%20population%20mortality.pdf
 # and https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
 # The former (actuaries) is more detailed, but using the notation of the latter (ONS), i.e., ASMR rather than SMR; csASMR etc.
 
-# "Standard" day and week refer to idealised years that always have exactly 365 days and always start at the same week alignment (week 0 is 1-7 Jan).
+# In this code, "ideal" day and week refer to idealised years that always have exactly 365 days and always start at the same week alignment (week 0 is 1-7 Jan).
 
 import os,csv,sys,time,calendar,datetime
 from collections import defaultdict
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-#countrycode='UK';countryname='United Kingdom'
-countrycode='FR';countryname='France'
+countrycode='UK';countryname='United Kingdom'
+#countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 meanyears=range(2015,2020)
 targetyear=2020
 popsource="WPP"
+#popsource="Eurostat"
 useESP=False
 update=False
+mode="rASMR"
 
 assert targetyear not in meanyears and 2020 not in meanyears
 assert popsource in ["WPP","Eurostat"]
@@ -44,6 +49,7 @@ assert popsource in ["WPP","Eurostat"]
 deathsfn='demo_r_mwk_05.tsv'
 if popsource=="Eurostat":
   popfn='urt_pjangrp3.tsv';yearoffset=0
+  projfn='proj_19np.tsv'
 else:
   popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv';yearoffset=0.5
 
@@ -59,14 +65,15 @@ ESP=[5000, 5500, 5500, 5500, 6000, 6000, 6500, 7000, 7000, 7000, 7000, 6500, 600
 nages=len(ESP)
     
 # Convert Eurostat age string (Y_LT5, Y5-9, Y10-14, ..., Y85-89, Y_GE90) to integer 0-18
+# Also convert Y_LT1, Y_1, Y_2, ..., Y_99, Y_GE100 to 0-18 according to which of the above brackets it belongs to
 def age_s2i(s):
   assert s[0]=='Y'
-  if s=='Y_LT5': return 0
+  if s=='Y_LT1' or s=='Y_LT5': return 0
   i=0
   while i<len(s) and not s[i].isdigit(): i+=1
   j=i
   while j<len(s) and s[j].isdigit(): j+=1
-  return int(s[i:j])//5
+  return min(int(s[i:j])//5,18)
 
 # Inverse function to age_s2i
 def age_i2s(i):
@@ -86,10 +93,13 @@ def daytodate(r):
 if update or not os.path.isfile(deathsfn):
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/demo_r_mwk_05.tsv.gz -O -|gunzip -c > %s"%deathsfn,shell=True).wait()
 
-if not os.path.isfile(popfn):
-  if popsource=="Eurostat":
+if popsource=="Eurostat":
+  if not os.path.isfile(popfn):
     Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
-  else:
+  if not os.path.isfile(projfn):
+    Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/proj_19np.tsv.gz -O -|gunzip -c > %s"%projfn,shell=True).wait()
+if popsource=="WPP":
+  if not os.path.isfile(popfn):
     import pandas
     p=Popen("wget 'https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/1_Population/WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.xlsx' -O -",stdout=PIPE,shell=True)
     data=pandas.read_excel(p.stdout)
@@ -167,10 +177,10 @@ with open(deathsfn,'r') as fp:
     for y in meanyears:
       if len(ok[age][y])!=365: print("Missing data in year %d at age band %s"%(y,age_i2s(age)),file=sys.stderr);sys.exit(1)
 
-laststdday=min(len(ok[age][targetyear]) for age in range(nages))
-numstdweeks=laststdday//7# last+1 centered standardised week
+lastidealday=min(len(ok[age][targetyear]) for age in range(nages))
+numidealweeks=lastidealday//7# last+1 centered ideal week
 
-def stddaytostring(y,d0):
+def idealdaytostring(y,d0):
   d=int(d0*(365+(y%4==0))/365+.5)
   return datetime.date.fromordinal(datetime.date.toordinal(datetime.date(y,1,1))+d).strftime("%Y-%m-%d")
 
@@ -185,12 +195,11 @@ if popfn=='urt_pjangrp3.tsv':
     first=True
     for row in r:
       if first:
-        assert row[0]=='unit,sex,age,terrtypo,geo\\time'
+        assert row[0].strip()=='unit,sex,age,terrtypo,geo\\time'
         # Expecting row[1:] = 2019, 2018, 2017, 2016, 2015, 2014
         nyears_pop=len(row)-1
         minyear_pop=int(row[-1])
-        pp=[[0]*nages for y in range(nyears_pop)]
-        # Something
+        pp=[[0]*nages for y in range(nyears_pop+2)]
         first=False
       else:
         (unit,sex,agestring,terr,geo)=row[0].split(',')
@@ -200,6 +209,30 @@ if popfn=='urt_pjangrp3.tsv':
           assert ': z' not in row# Insist all data present
           age=age_s2i(agestring)
           for i in range(nyears_pop): pp[i][age]+=int2(row[nyears_pop-i])
+  if countrycode=="UK":
+    # Brexit means no Eurostat population projections for the UK
+    pass
+  else:
+    # Parse Eurostat projected population data
+    # Ages are Y_LT1, Y1, Y2, ..., Y99, Y_GE100, TOTAL
+    with open(projfn,'r') as fp:
+      r=csv.reader(fp,delimiter='\t')
+      first=True
+      for row in r:
+        if first:
+          assert row[0].strip()=='projection,unit,sex,age,geo\\time'
+          # In 2020 expect row[-3:] = 2021, 2020, 2019
+          for col in range(1,len(row)):
+            if int(row[col].strip())==minyear_pop+nyears_pop: break
+          else: raise LookupError("Year %d not found in %s"%(minyear_pop+nyears_pop,projfn))
+          first=False
+        else:
+          (proj,unit,sex,agestring,geo)=row[0].split(',')
+          if proj=="BSL" and sex=='T' and geo==countrycode and agestring[0]=='Y':
+            age=age_s2i(agestring)
+            for i in range(2):
+              pp[nyears_pop+i][age]+=int(row[col-i])
+    nyears_pop+=2
 else:
   # Parse UN WPP population data
   with open(popfn,'r') as fp:
@@ -233,7 +266,7 @@ def D(y0,d0,a):
     t+=wd[a][y,d]
   return t
 
-# Estimated population at age group a, year y, std day d (0-364)
+# Estimated population at age group a, year y, ideal day d (0-364)
 def E(y,d,a):
   yf=y+d/365-yearoffset-minyear_pop# convert to ideal index of pp[]
   y0=min(int(yf),nyears_pop-2)
@@ -254,12 +287,12 @@ if 1:
   print("   ".join("%9d"%s[y] for y in allyears))
   print()
 
-ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, standardised week w (0-51)
-cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, standardised week w (0-51)
+ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, ideal week w (0-51)
+cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, ideal week w (0-51)
 if useESP: REFPOP=ESP
-else: REFPOP=[E(2020,3+(numstdweeks-1)*7,a) for a in range(nages)]
+else: REFPOP=[E(2020,3+(numidealweeks-1)*7,a) for a in range(nages)]
 for y in allyears:
-  numw=numstdweeks if y==targetyear else 52
+  numw=numidealweeks if y==targetyear else 52
   for w in range(numw):
     d=3+w*7
     t=0
@@ -281,11 +314,11 @@ for w in range(53):
   cASMR_bar.append(t/len(meanyears))
 
 rcASMR=[]
-for w in range(numstdweeks+1):
+for w in range(numidealweeks+1):
   rcASMR.append((cASMR[targetyear][w]-cASMR_bar[w])/cASMR_bar[52])
 
 rASMR=[]
-for w in range(numstdweeks):
+for w in range(numidealweeks):
   rASMR.append((ASMR[targetyear][w]-ASMR_bar[w])/(cASMR_bar[52]/52))
 
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
@@ -293,7 +326,6 @@ def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
 def escape(s): return s.replace('_','\\\_')
 
-mode="rcASMR"
 fn=countryname.replace(' ','')+'_'+mode+'.png'
 po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
 write('set terminal pngcairo font "sans,13" size 1920,1280')
@@ -303,7 +335,7 @@ write('set key left')
 #write('set logscale y')
 title="Mortality in %s for %d"%(countryname,targetyear)
 title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using '+mode+' measure\\n'
-title+='Last date: %s. '%stddaytostring(targetyear,laststdday)
+title+='Last date: %s. '%idealdaytostring(targetyear,lastidealday)
 title+='Sources: '+escape(popfn[:-4])+' and '+escape(deathsfn[:-4])
 write('set title "%s"'%title)
 write('set grid xtics lc rgb "#e0e0e0" lt 1')
@@ -316,9 +348,9 @@ write('set format x "%Y-%m"')
 write('set timefmt "%Y-%m-%d"')
 write('plot "-" using 1:2 w lines title "'+mode+'"')
 if mode=="rASMR":
-  for w in range(numstdweeks): write(stddaytostring(targetyear,3+w*7),rASMR[w]*100)
+  for w in range(numidealweeks): write(idealdaytostring(targetyear,3+w*7),rASMR[w]*100)
 elif mode=="rcASMR":
-  for w in range(numstdweeks+1): write(stddaytostring(targetyear,w*7),rcASMR[w]*100)
+  for w in range(numidealweeks+1): write(idealdaytostring(targetyear,w*7),rcASMR[w]*100)
 write("e")
 p.close()
 po.wait()
