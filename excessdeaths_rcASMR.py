@@ -32,13 +32,17 @@ from collections import defaultdict
 from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
-countrycode='UK';countryname='United Kingdom'
-#countrycode='FR';countryname='France'
+# and https://population.un.org/wpp/Download/Metadata/Documentation/ for country names
+#countrycode='UK';countryname='United Kingdom'
+countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
+#countrycode='CZ';countryname='Czechia'
+#countrycode='IT';countryname='Italy'
+#countrycode='SE';countryname='Sweden'
 meanyears=range(2015,2020)
 targetyear=2020
-popsource="WPP"
-#popsource="Eurostat"
+#popsource="WPP"
+popsource="Eurostat"
 useESP=False
 update=False
 mode="rASMR"
@@ -346,7 +350,7 @@ write('set xtics rotate by 45 right offset 0.5,0')
 write('set xdata time')
 write('set format x "%Y-%m"')
 write('set timefmt "%Y-%m-%d"')
-write('plot "-" using 1:2 w lines title "'+mode+'"')
+write('plot 0 title "Baseline", "-" using 1:2 w lines title "'+mode+'"')
 if mode=="rASMR":
   for w in range(numidealweeks): write(idealdaytostring(targetyear,3+w*7),rASMR[w]*100)
 elif mode=="rcASMR":
