@@ -1,4 +1,4 @@
-# Trying to replicate (and improve upon) rcASMR, rASMR calculations from bottom of https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
+# Trying to replicate (and possibly improve upon) rcASMR, rASMR calculations from bottom of https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
 
 # Mortality source: https://data.europa.eu/euodp/en/data/dataset/QrtzdXsI5w26vnr54SIzpQ giving demo_r_mwk_05.tsv
 # Explanation: https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm
@@ -41,8 +41,8 @@ countrycode='FR';countryname='France'
 #countrycode='SE';countryname='Sweden'
 meanyears=range(2015,2020)
 targetyear=2020
-#popsource="WPP"
-popsource="Eurostat"
+popsource="WPP"
+#popsource="Eurostat"
 useESP=False
 update=False
 mode="rASMR"
@@ -294,10 +294,10 @@ if 1:
 ASMR={y:[] for y in allyears}#      ASMR[y][w] = ASMR at year y, ideal week w (0-51)
 cASMR={y:[0] for y in allyears}# cASMR[y][w+1] = cASMR at year y, ideal week w (0-51)
 if useESP: REFPOP=ESP
-else: REFPOP=[E(2020,3+(numidealweeks-1)*7,a) for a in range(nages)]
 for y in allyears:
   numw=numidealweeks if y==targetyear else 52
   for w in range(numw):
+    if not useESP: REFPOP=[E(2020,3+w*7,a) for a in range(nages)]
     d=3+w*7
     t=0
     for a in range(nages):
