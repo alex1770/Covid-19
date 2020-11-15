@@ -33,29 +33,26 @@ from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
 # and https://population.un.org/wpp/Download/Metadata/Documentation/ for country names
-#countrycode='UK';countryname='United Kingdom'
-countrycode='FR';countryname='France'
+countrycode='UK';countryname='United Kingdom'
+#countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 #countrycode='CZ';countryname='Czechia'
 #countrycode='IT';countryname='Italy'
 #countrycode='SE';countryname='Sweden'
 meanyears=range(2015,2020)
+agerange=(0,150)
 targetyear=2020
-popsource="WPP"
-#popsource="Eurostat"
+# popsource = (Description, yearoffset, population [, projected population])
+popsource=("WPP", 0.5, "WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv")
+#popsource=("Eurostat", 0.0, "urt_pjangrp3.tsv", "proj_19np.tsv")
 useESP=False
-update=False
+update=True
 mode="rASMR"
 
 assert targetyear not in meanyears and 2020 not in meanyears
-assert popsource in ["WPP","Eurostat"]
+assert popsource[0] in ["WPP","Eurostat"]
 
 deathsfn='demo_r_mwk_05.tsv'
-if popsource=="Eurostat":
-  popfn='urt_pjangrp3.tsv';yearoffset=0
-  projfn='proj_19np.tsv'
-else:
-  popfn='WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv';yearoffset=0.5
 
 print("Country:",countryname)
 print("meanyears:",list(meanyears))
@@ -67,7 +64,8 @@ allyears=list(meanyears)+[targetyear]
 # ESP[i] = std pop for age group [5i,5(i+1)), except last one is [90,infinty)
 ESP=[5000, 5500, 5500, 5500, 6000, 6000, 6500, 7000, 7000, 7000, 7000, 6500, 6000, 5500, 5000, 4000, 2500, 1500, 1000]
 nages=len(ESP)
-    
+agegrouprange=(agerange[0]//5,min((agerange[1]+4)//5,nages))# agegroup in [agegrouprage[0],agegrouprange[1])
+
 # Convert Eurostat age string (Y_LT5, Y5-9, Y10-14, ..., Y85-89, Y_GE90) to integer 0-18
 # Also convert Y_LT1, Y_1, Y_2, ..., Y_99, Y_GE100 to 0-18 according to which of the above brackets it belongs to
 def age_s2i(s):
@@ -97,17 +95,16 @@ def daytodate(r):
 if update or not os.path.isfile(deathsfn):
   Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/demo_r_mwk_05.tsv.gz -O -|gunzip -c > %s"%deathsfn,shell=True).wait()
 
-if popsource=="Eurostat":
-  if not os.path.isfile(popfn):
-    Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/urt_pjangrp3.tsv.gz -O -|gunzip -c > %s"%popfn,shell=True).wait()
-  if not os.path.isfile(projfn):
-    Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/proj_19np.tsv.gz -O -|gunzip -c > %s"%projfn,shell=True).wait()
-if popsource=="WPP":
-  if not os.path.isfile(popfn):
+if popsource[0]=="Eurostat":
+  for x in popsource[2:]:
+    if not os.path.isfile(x):
+      Popen("wget https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?file=data/"+x+".gz -O -|gunzip -c > "+x,shell=True).wait()
+if popsource[0]=="WPP":
+  if not os.path.isfile(popsource[2]):
     import pandas
-    p=Popen("wget 'https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/1_Population/WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.xlsx' -O -",stdout=PIPE,shell=True)
+    p=Popen("wget 'https://population.un.org/wpp/Download/Files/1_Indicators%20(Standard)/EXCEL_FILES/1_Population/"+noext(popsource[2])+".xlsx"+"' -O -",stdout=PIPE,shell=True)
     data=pandas.read_excel(p.stdout)
-    data.to_csv("WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv", encoding='utf-8', index=False)
+    data.to_csv(popsource[2], encoding='utf-8', index=False)
     p.wait()
 
 # Convert ISO 8601 year,week to weighted list of year,day
@@ -149,6 +146,7 @@ def isoweektodates(y,w):
   return [(y,d,l[y,d]) for (y,d) in l]
 
 # Parse Eurostat death data
+# End up with wd[age group number][year,idealday]=number of deaths for that age group, year, day
 wd=[{} for age in range(nages)]
 with open(deathsfn,'r') as fp:
   r=csv.reader(fp,delimiter='\t')
@@ -192,9 +190,10 @@ def int2(s):
   if s[-2:]==' p': return int(s[:-2])
   return int(s)
 
-if popfn=='urt_pjangrp3.tsv':
+# End up with pp[year-minyear_pop][age group]=population for that year and age group, at proportion popsource[1] of the way through the year
+if popsource[0]=="Eurostat":
   # Parse Eurostat population data
-  with open(popfn,'r') as fp:
+  with open(popsource[2],'r') as fp:
     r=csv.reader(fp,delimiter='\t')
     first=True
     for row in r:
@@ -219,7 +218,7 @@ if popfn=='urt_pjangrp3.tsv':
   else:
     # Parse Eurostat projected population data
     # Ages are Y_LT1, Y1, Y2, ..., Y99, Y_GE100, TOTAL
-    with open(projfn,'r') as fp:
+    with open(popsource[3],'r') as fp:
       r=csv.reader(fp,delimiter='\t')
       first=True
       for row in r:
@@ -228,7 +227,7 @@ if popfn=='urt_pjangrp3.tsv':
           # In 2020 expect row[-3:] = 2021, 2020, 2019
           for col in range(1,len(row)):
             if int(row[col].strip())==minyear_pop+nyears_pop: break
-          else: raise LookupError("Year %d not found in %s"%(minyear_pop+nyears_pop,projfn))
+          else: raise LookupError("Year %d not found in %s"%(minyear_pop+nyears_pop,popsource[3]))
           first=False
         else:
           (proj,unit,sex,agestring,geo)=row[0].split(',')
@@ -239,7 +238,7 @@ if popfn=='urt_pjangrp3.tsv':
     nyears_pop+=2
 else:
   # Parse UN WPP population data
-  with open(popfn,'r') as fp:
+  with open(popsource[2],'r') as fp:
     r=csv.reader(fp)
     start=True
     for row in r:
@@ -272,7 +271,7 @@ def D(y0,d0,a):
 
 # Estimated population at age group a, year y, ideal day d (0-364)
 def E(y,d,a):
-  yf=y+d/365-yearoffset-minyear_pop# convert to ideal index of pp[]
+  yf=y+d/365-popsource[1]-minyear_pop# convert to ideal index of pp[]
   y0=min(int(yf),nyears_pop-2)
   y1=y0+1
   return (y1-yf)*pp[y0][a]+(yf-y0)*pp[y1][a]
@@ -300,7 +299,7 @@ for y in allyears:
     if not useESP: REFPOP=[E(2020,3+w*7,a) for a in range(nages)]
     d=3+w*7
     t=0
-    for a in range(nages):
+    for a in range(agegrouprange[0],agegrouprange[1]):
       t+=D(y,d,a)/E(y,d,a)*REFPOP[a]
     ASMR[y].append(t/sum(REFPOP))
     cASMR[y].append(cASMR[y][-1]+ASMR[y][-1])
@@ -328,7 +327,13 @@ for w in range(numidealweeks):
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-def escape(s): return s.replace('_','\\\_')
+def noext(s):
+  r=s.rfind('.')
+  if r>=0: return s[:r]
+  else: return s
+  
+def escape(s):
+  return noext(s).replace('_','\\\_')
 
 fn=countryname.replace(' ','')+'_'+mode+'.png'
 po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
@@ -338,9 +343,14 @@ write('set output "%s"'%fn)
 write('set key left')
 #write('set logscale y')
 title="Mortality in %s for %d"%(countryname,targetyear)
-title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year, using '+mode+' measure\\n'
-title+='Last date: %s. '%idealdaytostring(targetyear,lastidealday)
-title+='Sources: '+escape(popfn[:-4])+' and '+escape(deathsfn[:-4])
+title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year\\n'
+title+='Using '+("" if useESP else "dynamic variant of ")+mode+' measure.'
+title+='   Age range %d - '%(agegrouprange[0]*5)+('%d.'%(agegrouprange[1]*5) if agegrouprange[1]<nages else 'infinity.')
+title+='   Last date: %s\\n'%idealdaytostring(targetyear,lastidealday)
+if popsource[0]=="Eurostat":
+  title+='Sources: Eurostat '+', '.join(map(escape,popsource[2:]+(deathsfn,)))
+else:
+  title+='Sources: '+escape(popsource[2])+', Eurostat '+escape(deathsfn)
 write('set title "%s"'%title)
 write('set grid xtics lc rgb "#e0e0e0" lt 1')
 write('set grid ytics lc rgb "#e0e0e0" lt 1')
@@ -350,7 +360,7 @@ write('set xtics rotate by 45 right offset 0.5,0')
 write('set xdata time')
 write('set format x "%Y-%m"')
 write('set timefmt "%Y-%m-%d"')
-write('plot 0 title "Baseline", "-" using 1:2 w lines title "'+mode+'"')
+write('plot 0 title "Baseline", "-" using 1:2 w lines title "'+mode+'%"')
 if mode=="rASMR":
   for w in range(numidealweeks): write(idealdaytostring(targetyear,3+w*7),rASMR[w]*100)
 elif mode=="rcASMR":
