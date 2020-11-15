@@ -1,4 +1,5 @@
 # Trying to replicate (and possibly improve upon) rcASMR, rASMR calculations from bottom of https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/articles/comparisonsofallcausemortalitybetweeneuropeancountriesandregions/januarytojune2020
+# which uses the Institute and Faculty of Actuaries' Continuous Mortality Investigation method as described in working paper 111 here: https://www.actuaries.org.uk/learn-and-develop/continuous-mortality-investigation/cmi-working-papers/mortality-projections/cmi-working-paper-111
 
 # Mortality source: https://data.europa.eu/euodp/en/data/dataset/QrtzdXsI5w26vnr54SIzpQ giving demo_r_mwk_05.tsv
 # Explanation: https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm
@@ -47,7 +48,7 @@ popsource=("WPP", 0.5, "WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.cs
 #popsource=("Eurostat", 0.0, "urt_pjangrp3.tsv", "proj_19np.tsv")
 useESP=False
 update=True
-mode="rASMR"
+mode="rASMR"# eASMR, rASMR, ecASMR or rcASMR
 
 assert targetyear not in meanyears and 2020 not in meanyears
 assert popsource[0] in ["WPP","Eurostat"]
@@ -296,12 +297,13 @@ if useESP: REFPOP=ESP
 for y in allyears:
   numw=numidealweeks if y==targetyear else 52
   for w in range(numw):
-    if not useESP: REFPOP=[E(2020,3+w*7,a) for a in range(nages)]
+    POP=[E(2020,3+w*7,a) for a in range(nages)]
+    if not useESP: REFPOP=POP
     d=3+w*7
     t=0
     for a in range(agegrouprange[0],agegrouprange[1]):
       t+=D(y,d,a)/E(y,d,a)*REFPOP[a]
-    ASMR[y].append(t/sum(REFPOP))
+    ASMR[y].append(t/sum(REFPOP)*sum(POP))
     cASMR[y].append(cASMR[y][-1]+ASMR[y][-1])
 
 ASMR_bar=[]
@@ -317,11 +319,15 @@ for w in range(53):
   cASMR_bar.append(t/len(meanyears))
 
 rcASMR=[]
+ecASMR=[]
 for w in range(numidealweeks+1):
+  ecASMR.append(cASMR[targetyear][w]-cASMR_bar[w])
   rcASMR.append((cASMR[targetyear][w]-cASMR_bar[w])/cASMR_bar[52])
 
 rASMR=[]
+eASMR=[]
 for w in range(numidealweeks):
+  eASMR.append(ASMR[targetyear][w]-ASMR_bar[w])
   rASMR.append((ASMR[targetyear][w]-ASMR_bar[w])/(cASMR_bar[52]/52))
 
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
@@ -341,7 +347,6 @@ write('set terminal pngcairo font "sans,13" size 1920,1280')
 write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
 write('set output "%s"'%fn)
 write('set key left')
-#write('set logscale y')
 title="Mortality in %s for %d"%(countryname,targetyear)
 title+=' compared with %d-year average'%len(meanyears)+' for corresponding week of year\\n'
 title+='Using '+("" if useESP else "dynamic variant of ")+mode+' measure.'
@@ -360,11 +365,22 @@ write('set xtics rotate by 45 right offset 0.5,0')
 write('set xdata time')
 write('set format x "%Y-%m"')
 write('set timefmt "%Y-%m-%d"')
-write('plot 0 title "Baseline", "-" using 1:2 w lines title "'+mode+'%"')
-if mode=="rASMR":
-  for w in range(numidealweeks): write(idealdaytostring(targetyear,3+w*7),rASMR[w]*100)
-elif mode=="rcASMR":
-  for w in range(numidealweeks+1): write(idealdaytostring(targetyear,w*7),rcASMR[w]*100)
+if 'r' in mode:
+  if 'c' in mode:
+    graphlabel='excess deaths as % of expected deaths over year'
+  else:
+    graphlabel='excess deaths over week as % of expected deaths over week'
+else:
+  if 'c' in mode:
+    graphlabel='cumulative excess deaths'
+  else:
+    graphlabel='excess deaths per week'
+write('plot 0 title "Baseline", "-" using 1:2 w lines title "'+mode+' ('+graphlabel+')"')
+if mode=="rASMR": source=[x*100 for x in rASMR]
+if mode=="eASMR": source=eASMR
+if mode=="rcASMR": source=[x*100 for x in rcASMR]
+if mode=="ecASMR": source=ecASMR
+for w in range(numidealweeks+('c' in mode)): write(idealdaytostring(targetyear,3*('c' in mode)+w*7),source[w])
 write("e")
 p.close()
 po.wait()
