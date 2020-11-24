@@ -1,4 +1,4 @@
-import time,calendar
+import time,calendar,sys
 
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
@@ -10,7 +10,9 @@ def daytodate(r):
 
 
 l=[];ok=0;offset=288
-with open('zoenewcases','r') as fp:
+#with open('zoenewcases','r') as fp:
+if 1:
+  fp=sys.stdin
   for x in fp:
     if x[:5]=='START':
       headings=x.strip()
@@ -70,7 +72,7 @@ for i in range(n+period-2):
   a[n+i,i+1]=sameweight
 
 # Infer least squares best hidden variables
-x,resid,rank,sing=np.linalg.lstsq(a,b,rcond=None)
+x,resid,rank,sing=np.linalg.lstsq(a,b,rcond=-1)
 
 output=[(daytodate(days[i]-offset), "%9.1f"%nn[i], "%9.1f"%x[period+i-1]) for i in range(n)]
 
@@ -92,9 +94,9 @@ p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
 write('set terminal pngcairo font "sans,13" size 2560,1280')
 write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
 write('set output "%s"'%graphfn)
-#write('set for [i=9:16] linetype i dashtype (20,7)')
 write('set key left')
-title="Zoe-estimated new cases per day from app+swab tests"
+title="Zoe-estimated new cases per day across the UK from app+swab tests"
+title+="\\nData source: https://covid.joinzoe.com/data"
 write('set title "%s"'%title)
 write('set xdata time')
 write('set format x "%Y-%m-%d"')
@@ -104,9 +106,10 @@ write('set xtics nomirror')
 write('set xtics "2020-01-06", 86400*7')
 write('set xtics rotate by 45 right offset 0.5,0')
 write('set grid xtics ytics lc rgb "#dddddd" lt 1')
+write('set ylabel "New cases per day"')
 s='plot '
-s+='"-" using 1:2 with linespoints lw 3 title "Cases per day over %d-day period", '%period
-s+='"-" using 1:2 with linespoints lw 3 title "Deconvolved cases per day"'
+s+='"-" using 1:2 with linespoints lw 3 title "Cases per day over %d-day period (x-axis date is end of period)", '%period
+s+='"-" using 1:2 with linespoints lw 3 title "Soft-deconvolved cases per day"'
 write(s)
 for row in output: write(row[0],row[1])
 write("e")
