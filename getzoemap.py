@@ -9,6 +9,8 @@ from selenium.webdriver.common.by import By
 
 from proczoemap import processdata
 from proczoemap_reg import processdata_reg
+from getzoenewcases import updatenewcases
+from proczoenewcases import processnewcases
 from subprocess import Popen
 
 floatkeys=["long", "lat", "st_areasha", "st_lengths", "corrected_covid_positive", "cases", "cases_pm", "percentage", "discrete_percentage"]
@@ -50,4 +52,6 @@ if not os.path.isfile(fn):
     json.dump(d,fp,indent=2)
   processdata(tdir)
   processdata_reg(tdir)
+  updatenewcases()
+  processnewcases()
   Popen("rsync -a zoemapdata zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
