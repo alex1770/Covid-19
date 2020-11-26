@@ -44,16 +44,22 @@ def processnewcases():
   # Infer least squares best hidden variables
   x,resid,rank,sing=np.linalg.lstsq(a,b,rcond=-1)
   
-  output=[(daytodate(days[i]-offset), "%9.1f"%nn[i], "%9.1f"%x[period+i-1]) for i in range(n)]
+  output=[[(daytodate(days[i]-offset-period//2), "%9.1f"%nn[i]) for i in range(n)],
+          [(daytodate(days[i]-offset), "%9.1f"%x[period+i-1]) for i in range(n)]]
   
   import csv
   from subprocess import Popen,PIPE
-  
+
+  d0=dict(output[0])
+  d1=dict(output[1])
+  s=set(d0);s.update(set(d1))
   csvfn=join(tdir,'zoenewcasesdeconvolve.csv')
   with open(csvfn,'w') as fp:
     writer=csv.writer(fp)
     writer.writerow(['Date','Original Total','Deconvolved'])
-    for row in output: writer.writerow(row)
+    for dt in sorted(list(s)):
+      row=[dt,d0.get(dt," "*9),d1.get(dt," "*9)]
+      writer.writerow(row)
     print("Written",csvfn)
   
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
@@ -79,13 +85,12 @@ def processnewcases():
     write('set grid xtics ytics lc rgb "#dddddd" lt 1')
     write('set ylabel "New cases per day"')
     s='plot '
-    s+='"-" using 1:2 with linespoints lw 3 title "Cases per day over %d-day period (x-axis date is end of period)", '%period
+    s+='"-" using 1:2 with linespoints lw 3 title "Cases per day over %d-day period (x-axis date is centre of period)", '%period
     s+='"-" using 1:2 with linespoints lw 3 title "Soft-deconvolved cases per day"'
     write(s)
-    for row in output: write(row[0],row[1])
-    write("e")
-    for row in output: write(row[0],row[2])
-    write("e")
+    for data in output:
+      for row in data: write(row[0],row[1])
+      write("e")
     p.close()
     po.wait()
     print("Written %s"%graphfn)
