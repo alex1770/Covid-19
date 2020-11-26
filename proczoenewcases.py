@@ -58,35 +58,37 @@ def processnewcases():
   
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
-  
-  graphfn='zoenewcasesdeconvolve.png'
-  p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
-  write('set terminal pngcairo font "sans,13" size 2560,1280')
-  write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
-  write('set output "%s"'%graphfn)
-  write('set key left')
-  title="Zoe-estimated new cases per day across the UK from app+swab tests"
-  title+="\\nData source: https://covid.joinzoe.com/data"
-  write('set title "%s"'%title)
-  write('set xdata time')
-  write('set format x "%Y-%m-%d"')
-  write('set timefmt "%Y-%m-%d"')
-  write('set tics scale 3,0.5')
-  write('set xtics nomirror')
-  write('set xtics "2020-01-06", 86400*7')
-  write('set xtics rotate by 45 right offset 0.5,0')
-  write('set grid xtics ytics lc rgb "#dddddd" lt 1')
-  write('set ylabel "New cases per day"')
-  s='plot '
-  s+='"-" using 1:2 with linespoints lw 3 title "Cases per day over %d-day period (x-axis date is end of period)", '%period
-  s+='"-" using 1:2 with linespoints lw 3 title "Soft-deconvolved cases per day"'
-  write(s)
-  for row in output: write(row[0],row[1])
-  write("e")
-  for row in output: write(row[0],row[2])
-  write("e")
-  p.close()
-  print("Written %s"%graphfn)
+
+  for (size,graphfn) in [(2560,'zoenewcasesdeconvolve.png'), (1280,'zoenewcasesdeconvolve.small.png')]:
+    po=Popen("gnuplot",shell=True,stdin=PIPE)
+    p=po.stdin
+    write('set terminal pngcairo font "sans,%d" size %d,%d'%(8+size//426,size,size//2))
+    write('set bmargin 6;set lmargin 14;set rmargin %d;set tmargin 5'%(size//256-1))
+    write('set output "%s"'%graphfn)
+    #write('set key left')
+    title="Zoe-estimated new cases per day across the UK from app+swab tests"
+    title+="\\nData source: https://covid.joinzoe.com/data"
+    write('set title "%s"'%title)
+    write('set xdata time')
+    write('set format x "%Y-%m-%d"')
+    write('set timefmt "%Y-%m-%d"')
+    write('set tics scale 3,0.5')
+    write('set xtics nomirror')
+    write('set xtics "2020-01-06", 86400*7')
+    write('set xtics rotate by 45 right offset 0.5,0')
+    write('set grid xtics ytics lc rgb "#dddddd" lt 1')
+    write('set ylabel "New cases per day"')
+    s='plot '
+    s+='"-" using 1:2 with linespoints lw 3 title "Cases per day over %d-day period (x-axis date is end of period)", '%period
+    s+='"-" using 1:2 with linespoints lw 3 title "Soft-deconvolved cases per day"'
+    write(s)
+    for row in output: write(row[0],row[1])
+    write("e")
+    for row in output: write(row[0],row[2])
+    write("e")
+    p.close()
+    po.wait()
+    print("Written %s"%graphfn)
 
 if __name__=="__main__":
   processnewcases()
