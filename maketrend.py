@@ -1,4 +1,4 @@
-import csv,sys,getdata
+import csv,sys,getdata,time
 from subprocess import Popen,PIPE
 if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 
@@ -14,7 +14,7 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Argentina","Israel","Costa Rica","Switzerland","Netherlands","Czech Republic"]
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Argentina","Israel","Switzerland","Netherlands","Czech Republic","Armenia"]
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Israel","Switzerland","Netherlands","Czech Republic","Armenia","Slovenia"]
-selectcountries=["UK","USA","Italy","Sweden","Germany","S. Korea","Belgium","France","Israel","Switzerland","Czech Republic","Slovenia","Austria","Georgia","Bosnia and Herzegovina"]
+selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Switzerland","Czech Republic","Slovenia","Austria","Georgia","Bosnia and Herzegovina"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
@@ -135,65 +135,75 @@ else:
 
 data=getdata.getallsimpledata(source=source)
 cases,deaths,maxdate=processdata(selectcountries,data,period=period,perhead=perhead)
+now=datetoday(time.strftime('%Y-%m-%d',time.localtime()))
+zoomdays=60
 
-for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
-  countries=sorted(list(stats))
+for zoomstate in [0,1]:
+  for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
+    countries=sorted(list(stats))
+
+    if zoomstate==0:
+      trendfn=trendfn0+'_'+desc+'.png'
+      p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
+      write('set terminal pngcairo font "sans,13" size 2560,1280')
+      write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
+      write('set output "%s"'%trendfn)
+      write('set for [i=9:16] linetype i dashtype (20,7)')
+      write('set key left')
+      write('set logscale y')
+      title=("Average new "+desc+perstring+" over last %d day%s, starting when total "+desc+" to date"+perstring+" reached %g")%(period,"" if period==1 else "s",thr)
+      title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
+      write('set title "%s"'%title)
+      write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
+      write('set grid ytics lc rgb "#dddddd" lt 1')
+      s='plot '
+      for country in countries:
+        if s!='plot ': s+=', '
+        s+='"-" using 1 with lines lw 2 title "%s"'%country
+      write(s)
+      for country in countries:
+        (t0,vv)=stats[country]
+        for v in vv[t0:]: write(v)
+        write("e")
+      p.close()
+      print("Written trend graph to %s"%trendfn)
   
-  trendfn=trendfn0+'_'+desc+'.png'
-  p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
-  write('set terminal pngcairo font "sans,13" size 2560,1280')
-  write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
-  write('set output "%s"'%trendfn)
-  write('set for [i=9:16] linetype i dashtype (20,7)')
-  write('set key left')
-  write('set logscale y')
-  title=("Average new "+desc+perstring+" over last %d day%s, starting when total "+desc+" to date"+perstring+" reached %g")%(period,"" if period==1 else "s",thr)
-  title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
-  write('set title "%s"'%title)
-  write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
-  write('set grid ytics lc rgb "#dddddd" lt 1')
-  s='plot '
-  for country in countries:
-    if s!='plot ': s+=', '
-    s+='"-" using 1 with lines lw 2 title "%s"'%country
-  write(s)
-  for country in countries:
-    (t0,vv)=stats[country]
-    for v in vv[t0:]: write(v)
-    write("e")
-  p.close()
-  print("Written trend graph to %s"%trendfn)
-
-  trendfn=trendfn1+'_'+desc+'.png'
-  p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
-  write('set terminal pngcairo font "sans,13" size 2560,1280')
-  write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
-  write('set output "%s"'%trendfn)
-  write('set for [i=9:16] linetype i dashtype (20,7)')
-  write('set key left')
-  write('set logscale y')
-  title=("Average new "+desc+perstring+" over last %d day%s, aligned by date")%(period,"" if period==1 else "s")
-  title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
-  write('set title "%s"'%title)
-  #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
-  write('set xdata time')
-  write('set format x "%Y-%m-%d"')
-  write('set timefmt "%Y-%m-%d"')
-  write('set tics scale 2,0.5')
-  write('set xtics "2020-01-06", 604800')#%startdate)# Date labels on Mondays
-  write('set xtics rotate by 45 right offset 0.5,0')
-  write('set grid xtics ytics lc rgb "#dddddd" lt 1')
-  s='plot '
-  for country in countries:
-    if s!='plot ': s+=', '
-    s+='"-" using 1:2 with lines lw 2 title "%s"'%country
-  write(s)
-  for country in countries:
-    (t0,vv)=stats[country]
-    for (i,v) in enumerate(vv): write(daytodate(startday+i),v)
-    write("e")
-  p.close()
-  print("Written trend graph to %s"%trendfn)
+    trendfn=trendfn1+'_'+desc+'_zoom'*zoomstate+'.png'
+    p=Popen("gnuplot",shell=True,stdin=PIPE).stdin
+    write('set terminal pngcairo font "sans,13" size %d,1280'%(2560-640*zoomstate))
+    write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
+    write('set output "%s"'%trendfn)
+    write('set for [i=9:16] linetype i dashtype (20,7)')
+    write('set key left')
+    write('set logscale y')
+    title=("Average new "+desc+perstring+" over last %d day%s, aligned by date")%(period,"" if period==1 else "s")
+    title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
+    write('set title "%s"'%title)
+    #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
+    write('set xdata time')
+    write('set format x "%Y-%m-%d"')
+    write('set timefmt "%Y-%m-%d"')
+    write('set tics scale 2,0.5')
+    write('set xtics "2020-01-06", 604800')#%startdate)# Date labels on Mondays
+    write('set xtics rotate by 45 right offset 0.5,0')
+    write('set grid xtics ytics lc rgb "#dddddd" lt 1')
+    s='plot [:] '
+    if zoomstate:
+      if desc=='cases': s+='[20:2000] '
+      else: s+='[0.1:50] '
+    first=True
+    for country in countries:
+      if not first: s+=', '
+      first=False
+      s+='"-" using 1:2 with lines lw 2 title "%s"'%country
+    write(s)
+    for country in countries:
+      (t0,vv)=stats[country]
+      for i in range(max(now-startday-zoomdays,0)*zoomstate,len(vv)):
+        write(daytodate(startday+i),vv[i])
+      write("e")
+    p.close()
+    print("Written trend graph to %s"%trendfn)
 
 
 allcountries=getdata.getcountrylist(source=source)
