@@ -54,4 +54,4 @@ if not os.path.isfile(fn):
   processdata_reg(tdir)
   updatenewcases()
   processnewcases()
-  Popen("rsync -a zoemapdata zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
+  Popen("rsync -a zoemapdata zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png zoenewcasesdeconvolve.png zoenewcasesdeconvolve.small.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
