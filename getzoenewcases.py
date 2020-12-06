@@ -4,7 +4,7 @@ from os.path import join
 
 def convdate(x):
   t=time.strptime(x,'%d %B %Y')
-  return time.strftime('%Y-%m-%e',t)
+  return time.strftime('%Y-%m-%d',t)
 
 tdir='zoedatapage'
 
