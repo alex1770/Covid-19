@@ -1,0 +1,43 @@
+set output "Rgraph.png"
+set terminal pngcairo font "sans,12" size 1920,960
+set tics font "sans,11"
+set datafile separator ","
+set xdata time
+set format x "%Y-%m-%d"
+set timefmt "%Y-%m-%d"
+set xtics "2020-01-06", 86400*7
+set xtics rotate by 45 right offset 0.5,-0.2
+set tics scale 1.5, 0.5
+set tics front
+#set grid xtics ytics lc rgb "#dddddd" lt 1
+
+set style rect fc lt -1 fs solid 0.4 noborder
+set obj rect from "2020-03-23",-100 to "2020-06-01",100
+
+set style rect fc lt -1 fs solid 0.2 noborder
+set obj rect from "2020-06-01",-100 to "2020-09-14",100
+
+set style rect fc lt -1 fs solid 0.25 noborder
+set obj rect from "2020-09-14",-100 to "2020-10-15",100
+
+set style rect fc lt -1 fs solid 0.3 noborder
+set obj rect from "2020-10-14",-100 to "2020-11-05",100
+
+set style rect fc lt -1 fs solid 0.4 noborder
+set obj rect from "2020-11-05",-100 to "2020-12-02",100
+
+set style rect fc lt -1 fs solid 0.3 noborder
+set obj rect from "2020-12-02",-100 to "2020-12-23",100
+
+set xtics nomirror
+set ytics nomirror
+set y2tics 0, 0.1
+#plot "mobility_uk.csv" u 8:12 w lines lw 3 title "", "../R_SAGE.csv" u 1:2 w lines lw 3 axis x1y2
+#plot "GoogleMobilityData/mobility_uk.csv" u 8:12 w lines lw 4 title "", "R_SAGE.csv" u 1:2 w lines lw 4 axis x1y2, "hospR" u 1:2 w lines lw 4 axis x1y2, "R_cases.csv" u 1:2 w lines lw 4 axis x1y2, 1 lw 2 axis x1y2
+set label at "2020-04-20",-9.4 "Lockdown 1"
+set label at "2020-07-09",-9.4 "Lockdown easing"
+set label at "2020-09-20",-9.4 "Rule of 6 etc"
+set label at "2020-10-22",-9.4 "Tiers"
+set label at "2020-11-10",-9.4 "Lockdown 2"
+set key at "2020-10-10",8
+plot "GoogleMobilityData/mobility_uk.csv" u 8:12 w lines lw 4 title "Transit station traffic (Google Mobility, left scale)", "R_SAGE.csv" u 1:2 w lines lw 4 title "R (SAGE est, -30 day shift, right scale)" axis x1y2, "R_cases.csv" u 1:2 w lines lw 4 title "R (Case count est, Using infection time \\~ Γ(1.991,0.336), -7 day shift, right scale)" axis x1y2, 1 lw 2 title "R=1 (right scale)" axis x1y2
