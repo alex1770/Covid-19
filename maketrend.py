@@ -134,6 +134,11 @@ else:
   perstring=''
 
 data=getdata.getallsimpledata(source=source)
+
+# Censor last 7 days of Sweden's data, because their case and death number are indexed by occurrence
+# not by reporting date, so are retrospectively updated for about 7 days.
+data['Sweden']=data['Sweden'][:-7]
+
 cases,deaths,maxdate=processdata(selectcountries,data,period=period,perhead=perhead)
 now=datetoday(time.strftime('%Y-%m-%d',time.localtime()))
 zoomdays=60
@@ -174,7 +179,7 @@ for zoomstate in [0,1]:
     write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
     write('set output "%s"'%trendfn)
     write('set for [i=9:16] linetype i dashtype (20,7)')
-    write('set key left')
+    write('set key bottom')
     write('set logscale y')
     title=("Average new "+desc+perstring+" over last %d day%s, aligned by date")%(period,"" if period==1 else "s")
     title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
