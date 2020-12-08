@@ -135,13 +135,15 @@ else:
 
 data=getdata.getallsimpledata(source=source)
 
-# Censor last 7 days of Sweden's data, because their case and death number are indexed by occurrence
-# not by reporting date, so are retrospectively updated for about 7 days.
-data['Sweden']=data['Sweden'][:-7]
-
 cases,deaths,maxdate=processdata(selectcountries,data,period=period,perhead=perhead)
 now=datetoday(time.strftime('%Y-%m-%d',time.localtime()))
 zoomdays=60
+
+# Censor last 7 days of Sweden's case counts and last 12 days of their death counts because they are updated
+# retrospectively for about this long. For deaths this is mostly due to them being allocated to their date of
+# occurrence rather than their date of reporting. (https://ourworldindata.org/covid-sweden-death-reporting)
+cases['Sweden']=(cases['Sweden'][0],cases['Sweden'][1][:-7])
+deaths['Sweden']=(deaths['Sweden'][0],deaths['Sweden'][1][:-12])
 
 for zoomstate in [0,1]:
   for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
@@ -210,7 +212,7 @@ for zoomstate in [0,1]:
     p.close()
     print("Written trend graph to %s"%trendfn)
 
-
+# Previously used selected countries. Now fetch data for all countries with more than 'minpop' inhabitants.
 allcountries=getdata.getcountrylist(source=source)
 countries=[x for x in allcountries if x in pop and pop[x]>=minpop]
 cases,deaths,maxdate=processdata(countries,data,period=period,perhead=perhead)
