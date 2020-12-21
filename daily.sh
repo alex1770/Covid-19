@@ -22,3 +22,4 @@ rsync -pt Traffic/trafficlevels Traffic/trafficgraph.png Traffic/trafficgraph.sm
 now=`date -Iminutes`
 google-chrome-stable --headless --disable-gpu --disable-features=NetworkService --dump-dom 'https://covid.joinzoe.com/data' > zoedatapage/data.$now 2>> zoedatapage/errors
 google-chrome-stable --headless --disable-gpu --disable-features=NetworkService --dump-dom 'https://covid-assets.joinzoe.com/latest/incidence_map.html?v=1.1' > zoedatapage/incidence.$now 2>> zoedatapage/errors
+wget -nv https://covid-assets.joinzoe.com/latest/covid_symptom_study_report.pdf -O zoedatapage/covid_symptom_study_report.$now.pdf 2>> zoedatapage/errors
