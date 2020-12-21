@@ -34,12 +34,12 @@ from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
 # and https://population.un.org/wpp/Download/Metadata/Documentation/ for country names
-countrycode='UK';countryname='United Kingdom'
+#countrycode='UK';countryname='United Kingdom'
 #countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 #countrycode='CZ';countryname='Czechia'
 #countrycode='IT';countryname='Italy'
-#countrycode='SE';countryname='Sweden'
+countrycode='SE';countryname='Sweden'
 meanyears=range(2015,2020)
 agerange=(0,150)
 targetyear=2020
@@ -375,7 +375,7 @@ else:
     graphlabel='cumulative excess deaths'
   else:
     graphlabel='excess deaths per week'
-write('plot 0 title "Baseline", "-" using 1:2 w lines title "'+mode+' ('+graphlabel+')"')
+write('plot 0 lw 3 title "Baseline", "-" using 1:2 w lines lw 3 title "'+mode+' ('+graphlabel+')"')
 if mode=="rASMR": source=[x*100 for x in rASMR]
 if mode=="eASMR": source=eASMR
 if mode=="rcASMR": source=[x*100 for x in rcASMR]
