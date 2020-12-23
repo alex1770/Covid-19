@@ -1,15 +1,18 @@
 # Quick and dirty conversion of Zoe incidence files to regional new case numbers (ranges)
 
-import os
+import sys,os
 from math import sqrt
 
 def mid(a,b):
   #return sqrt(a*b)
   return a**.55*b**.45
 
-for fn in sorted(os.listdir('.')):
+if len(sys.argv)>1: indir=sys.argv[1]
+else: indir='.'
+
+for fn in sorted(os.listdir(indir)):
   if fn[:10]!='incidence.': continue
-  with open(fn,'r') as fp:
+  with open(os.path.join(indir,fn),'r') as fp:
     for x in fp:
       if x[:1].isdigit() and '-' in x:
         y=x.split('-')

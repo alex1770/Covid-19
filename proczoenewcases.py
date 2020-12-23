@@ -71,7 +71,7 @@ def processnewcases(pubdate):
   d0=dict(output[0])
   d1=dict(output[1])
   s=set(d0);s.update(set(d1))
-  csvfn=join(tdir,name+'deconvolve.csv')
+  csvfn=join(tdir,name+'.deconvolve.csv')
   with open(csvfn,'w') as fp:
     writer=csv.writer(fp)
     writer.writerow(['Date','Original Total','Deconvolved'])
@@ -83,7 +83,7 @@ def processnewcases(pubdate):
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-  for (size,graphfn) in [(2560,name+'deconvolve.png'), (1280,name+'deconvolve.small.png')]:
+  for (size,graphfn) in [(2560,name+'.deconvolve.png'), (1280,name+'.deconvolve.small.png')]:
     lw=size//640-1
     po=Popen("gnuplot",shell=True,stdin=PIPE)
     p=po.stdin
