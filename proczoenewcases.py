@@ -57,7 +57,7 @@ def processnewcases(pubdate):
 
   period=14
   offset=4
-  sameweight=0.2
+  sameweight=0.0821
   
   # Hidden variables x[0],...,x[n+period-2], where x[period-1+i] represents the new cases on day days[i]-offset
   x=deconvolve(nn,period,sameweight)
