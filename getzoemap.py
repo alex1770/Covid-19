@@ -50,4 +50,5 @@ if not os.path.isfile(fn):
     json.dump(d,fp,indent=2)
   processdata(tdir)
   processdata_reg(tdir)
-  Popen("rsync -a zoemapdata zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
+  Popen("rsync -a zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
+  Popen("rsync -a zoemapdata sonorous@sonorouschocolate.com:public_html",shell=True).wait()
