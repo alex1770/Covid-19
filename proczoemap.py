@@ -36,7 +36,8 @@ def processdata(tdir):
           for x in keys:
             tot[x]+=d[x]
             if d["region"]=="London": totlon[x]+=d[x]
-      shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+      #shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+      shdate=date# Change to simple recording by publication date. Adjust for lag later in the pipeline.
       row=[shdate]
       shifteddates.append(shdate)
       for loc in locs:
@@ -71,7 +72,7 @@ def processdata(tdir):
   write('set for [i=9:16] linetype i dashtype (20,7)')
   write('set key left')
   #write('set logscale y')
-  title="Zoe-estimated active cases per 1000 people"
+  title="Zoe-estimated active cases per 1000 people, against publication date"
   write('set title "%s"'%title)
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
   write('set xdata time')

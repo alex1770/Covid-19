@@ -1,3 +1,4 @@
+# Instead of proczoemap_reg.py
 import json,csv,time,calendar
 from subprocess import Popen,PIPE
 
@@ -9,12 +10,10 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
-#keys=["respondent", "population", "corrected_covid_positive"]
-
 zoetrendfn='zoeregions.csv'
 
 mapfile='zoemapdata/2020-12-01'# Use any map output to get the area codes and positions/countries
-csvfile='zoedatapage/latest_lad_prevalence_table.csv'
+csvfile='zoedatapage/prevalence.csv'
 startdate='2020-09-06'
 
 def processdata_reg():
@@ -92,6 +91,7 @@ def processdata_reg():
     write("e")
   p.close()
   print("Written %s"%trendfn)
+  #print(pop)
   
 if __name__=="__main__":
   processdata_reg()

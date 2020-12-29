@@ -48,7 +48,8 @@ def processdata_reg(tdir):
           for x in keys:
             tot[x]+=d[x]
             totreg[region][x]+=d[x]
-      shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+      #shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+      shdate=date# Change to simple recording by publication date. Adjust for lag later in the pipeline.
       sr=sorted(list(totreg))
       if sortedregions==None:
         sortedregions=sr
@@ -77,7 +78,7 @@ def processdata_reg(tdir):
   write('set for [i=9:16] linetype i dashtype (20,7)')
   write('set key left')
   #write('set logscale y')
-  title="Zoe-estimated active cases per 1000 people"
+  title="Zoe-estimated active cases per 1000 people, against publication date"
   write('set title "%s"'%title)
   #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
   write('set xdata time')

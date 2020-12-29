@@ -110,8 +110,11 @@ def processnewcases():
   x=deconvolve(nn,kernel,sameweight)
 
   offset=0
+#  output=[#[(daytodate(days[i]-offset), "%9.2f"%nn[i]) for i in range(n)],
+#          [(daytodate(days[i]-offset-0.5), "%9.3f"%(x[i])) for i in range(n)]]
+  
   output=[#[(daytodate(days[i]-offset), "%9.2f"%nn[i]) for i in range(n)],
-          [(daytodate(days[i]-offset-0.5), "%9.3f"%(x[i])) for i in range(n)]]
+          [(daytodate(days[i]-offset), "%9.3f"%(x[i])) for i in range(n)]]
   
   import csv
   from subprocess import Popen,PIPE
@@ -122,7 +125,8 @@ def processnewcases():
   csvfn=join(tdir,name+'.deconvolve.csv')
   with open(csvfn,'w') as fp:
     writer=csv.writer(fp)
-    writer.writerow(['Date']+['Col%d'%i for i in range(1,len(dd)+1)])
+    #writer.writerow(['Date']+['Col%d'%i for i in range(1,len(dd)+1)])
+    writer.writerow(['Date']+[loc])# alter
     for dt in sorted(list(s)):
       row=[dt]+[d.get(dt," "*9) for d in dd]
       writer.writerow(row)

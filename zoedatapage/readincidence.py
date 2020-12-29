@@ -4,8 +4,8 @@ import sys,os
 from math import sqrt
 
 def mid(a,b):
-  #return sqrt(a*b)
-  return a**.55*b**.45
+  return sqrt(a*b)
+  #return a**.55*b**.45
 
 if len(sys.argv)>1: indir=sys.argv[1]
 else: indir='.'

@@ -1,14 +1,14 @@
 #/usr/bin/env python3
 
-import os,ast,json
+import sys,os,ast,json
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-from proczoemap import processdata
-from proczoemap_reg import processdata_reg
+#from proczoemap import processdata
+#from proczoemap_reg import processdata_reg
 from subprocess import Popen
 
 floatkeys=["long", "lat", "st_areasha", "st_lengths", "corrected_covid_positive", "cases", "cases_pm", "percentage", "discrete_percentage"]
@@ -48,7 +48,8 @@ if not os.path.isfile(fn):
     d[e["lad16nm"]]=e
   with open(fn,'w') as fp:
     json.dump(d,fp,indent=2)
-  processdata(tdir)
-  processdata_reg(tdir)
-  Popen("rsync -a zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
-  Popen("rsync -a zoemapdata sonorous@sonorouschocolate.com:public_html",shell=True).wait()
+  #processdata(tdir)
+  #processdata_reg(tdir)
+  #Popen("rsync -a zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
+  sys.exit(0)
+sys.exit(1)

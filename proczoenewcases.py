@@ -48,6 +48,7 @@ def deconvolve(nn,period,sameweight):
   
   return x
 
+# Alter pubdate handling
 def processnewcases(pubdate):
   l=loadnewcases()
   n=len(l)
@@ -57,17 +58,18 @@ def processnewcases(pubdate):
 
   period=14
   offset=4
-  sameweight=0.0821
+  sameweight=0.2
   
   # Hidden variables x[0],...,x[n+period-2], where x[period-1+i] represents the new cases on day days[i]-offset
   x=deconvolve(nn,period,sameweight)
 
-  output=[[(daytodate(days[i]-offset-period//2), "%9.1f"%nn[i]) for i in range(n)],
-          [(daytodate(days[i]-offset), "%9.1f"%x[period-1+i]) for i in range(n)]]
+  output=[[(daytodate(days[i]-period//2), "%9.1f"%nn[i]) for i in range(n)],
+          [(daytodate(days[i]), "%9.1f"%x[period-1+i]) for i in range(n)]]
   
   import csv
   from subprocess import Popen,PIPE
 
+  # Alter
   d0=dict(output[0])
   d1=dict(output[1])
   s=set(d0);s.update(set(d1))
@@ -108,7 +110,7 @@ def processnewcases(pubdate):
     s+=('"-" using 1:2 with linespoints lw %d title "Soft-deconvolved cases '+norm+'per day (end of graph less reliable)"')%lw
     write(s)
     for data in output:
-      for row in data: write(row[0],row[1])
+      for row in data: write(daytodate(datetoday(row[0])-offset),row[1])
       write("e")
     p.close()
     po.wait()

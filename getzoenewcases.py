@@ -25,4 +25,4 @@ def updatenewcases():
   return False
   
 if __name__=="__main__":
-  sys.exit(updatenewcases())
+  sys.exit(not updatenewcases())
