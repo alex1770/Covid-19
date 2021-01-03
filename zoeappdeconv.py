@@ -104,7 +104,7 @@ def processnewcases():
   days=[x[0] for x in l]
   nn=[x[1] for x in l]
   kernel=getkernel()
-  sameweight=0#1
+  sameweight=1
   
   # Get x[i] = new cases between day days[i-1]-offset and days[i]-offset
   x=deconvolve(nn,kernel,sameweight)
