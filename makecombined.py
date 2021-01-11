@@ -3,10 +3,9 @@ import csv,time,calendar
 import numpy as np
 from subprocess import Popen,PIPE
 
-# (file, columnfrom0)
-inp=["zoedatapage/symptomnewcases.deconvolve.csv",# Zoe swab new cases
-     "zoedatapage/zoeincidence.deconvolve.csv",1),
-     ("confirmed.csv",1)]
+inp=["zoedatapage/symptomnewcases.deconvolve.csv",
+     "zoedatapage/zoeincidence.deconvolve.csv",# Zoe swab new cases
+     "confirmed.csv"]
 
 # For the moment:
 # Treat appnewacses as broadly the correct level
@@ -28,24 +27,52 @@ def daytofloatdate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d-%H-%M',t)
 
-data=[]
-lastday=-1
-for (fn,col) in inp:
-  with open(fn,'r') as fp:
-    r=csv.reader(fp)
-    headings=next(r)
-    loc=headings[col]
-    l=[];startday=None
-    for x in r:
-      if x[col].strip()!='':
-        day=datetoday(x[0])
-        if startday==None: startday=day
-        if day>lastday: lastday=day
-        l.append(float(x[col]))
-    data.append([startday,l])
+pop={
+  'England':                   55903504,
+  'Wales':                     3138631,
+  'South East':                8839864,
+  'London':                    8886600,
+  'Scotland':                  5438100,
+  'East of England':           6486032,
+  'Midlands':                  10537679,
+  'South West':                5601058,
+  'North East and Yorkshire':  8560188,
+  'North West':                6992083,
+  'Northern Ireland':          1881639,
+  'United Kingdom':            66361874,
+  'East Midlands':             4761918,
+  'West Midlands':             5849119,
+  'North East':                2632042,
+  'Yorkshire and The Humber':  5428656
+}
 
-loc='London'#alter
-    
+recipes=[
+  ('England', ('South East', 'London', 'East of England', 'Midlands', 'South West', 'North East and Yorkshire', 'North West')),
+  ('UK', ('England', 'Northern Ireland', 'Scotland','Wales')),
+  ('Midlands', ('West Midlands', 'East Midlands')),
+  ('North East and Yorkshire', ('Yorkshire and the Humber', 'North East'))
+]
+  
+data=[]
+startday=1e9
+endday=-1
+fnum=0;out={}
+for fn in inp:
+  out[fnum]={loc:{} for loc in pop}
+  with open(fn,'r') as fp:
+    reader=csv.reader(fp)
+    headings=next(reader)
+    l=[];startday=None
+    for row in reader:
+      day=datetoday(row[0])
+      if day<startday: startday=day
+      if day>endday: endday=day
+      for (loc,num) in zip(headings[1:],row[1:]):
+        if num.strip()=='': continue
+        out[fnum][loc][day]=float(num)
+    data.append([startday,l])
+  fnum+=1
+
 # Smooth the confirmed case data
 l=[]
 n=len(data[2][1])
@@ -58,7 +85,7 @@ data[2][1]=l
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-minday=lastday-60
+minday=endday-60
 size=2048
 graphfn='combined.London.png'
 lw=3

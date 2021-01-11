@@ -119,6 +119,6 @@ if __name__ == "__main__":
       writer=csv.writer(fp)
       l=sorted(list(dates))
       writer.writerow(['Date']+locs1)
-      for loc in locs1: print(output[loc])
+      #for loc in locs1: print(output[loc])
       for date in l:
         writer.writerow([date]+[output[loc].get(date,0) for loc in locs1])

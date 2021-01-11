@@ -67,7 +67,7 @@ def deconvolve(nn,period,sameweight):
   x,resid,rank,sing=np.linalg.lstsq(a,b,rcond=-1)
   x=np.maximum(x,0)
   
-  return x
+  return x[period-1:]
 
 if __name__=="__main__":
   days,l=loadnewcases()
