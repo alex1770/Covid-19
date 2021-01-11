@@ -1,6 +1,6 @@
 from typing import Iterable, Dict, Union, List
 from json import dumps
-import sys,requests,json
+import sys,requests,json,csv
 from http import HTTPStatus
 
 StructureType = Dict[str, Union[dict, str]]
@@ -63,11 +63,31 @@ def get_paginated_dataset(filters: FiltersType, structure: StructureType) -> API
 
 
 if __name__ == "__main__":
-    query_filters = [
-        f"areaType=region",
-        f"areaName=London"
+    
+    locs=[
+        ("nation","England"),
+        ("nation","Northern Ireland"),
+        ("nation","Scotland"),
+        ("nation","Wales"),
+        ("region","East Midlands"),
+        ("region","East of England"),
+        ("region","London"),
+        ("region","North East"),
+        ("region","North West"),
+        ("region","South East"),
+        ("region","South West"),
+        ("region","West Midlands"),
+        ("region","Yorkshire and The Humber"),
     ]
-
+    locs1=[y for (x,y) in locs]
+    
+    try:
+        with open('confirmed.csv','r') as fp:
+            a=json.load(fp)
+            olddate=a[0]['date']
+    except:
+        olddate='0000-00-00'
+        
     query_structure = {
         "date": "date",
         "name": "areaName",
@@ -75,24 +95,30 @@ if __name__ == "__main__":
         "daily": "newCasesByPublishDate",
     }
 
-    json_data = get_paginated_dataset(query_filters, query_structure)
+    output={}
+    dates=set()
+    for (atype,aname) in locs:
+      query_filters = [
+        f"areaType="+atype,
+        f"areaName="+aname
+      ]
+  
+      json_data = get_paginated_dataset(query_filters, query_structure)
+      if json_data[0]['date']<=olddate: sys.exit(1)
+      #with open('confirmed.json','w') as fp: json.dump(json_data,fp,indent=2)
 
-    try:
-        with open('confirmed.json','r') as fp:
-            a=json.load(fp)
-            olddate=a[0]['date']
-    except:
-        olddate='0000-00-00'
-
-    if json_data[0]['date']<=olddate: sys.exit(1)
-    
-    with open('confirmed.json','w') as fp:
-        json.dump(json_data,fp,indent=2)
-    
+      output[aname]={}
+      start=0
+      for x in json_data[::-1]:
+        if x['daily']: start=1
+        if start: 
+          dates.add(x['date'])
+          output[aname][x['date']]=x['daily']
+      
     with open('confirmed.csv','w') as fp:
-        pop=8831917# Use Zoe figure for London population
-        start=0
-        print("Date,London",file=fp)
-        for x in json_data[::-1]:
-            if x['daily']: start=1
-            if start: print(x['date']+",","%7.1f"%(x['daily']/pop*1e6),file=fp)
+      writer=csv.writer(fp)
+      l=sorted(list(dates))
+      writer.writerow(['Date']+locs1)
+      for loc in locs1: print(output[loc])
+      for date in l:
+        writer.writerow([date]+[output[loc].get(date,0) for loc in locs1])

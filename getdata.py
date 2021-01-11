@@ -5,9 +5,9 @@ if sys.version_info[0]<3: print("Requires Python 3");sys.exit(1)
 
 def getcountrydata(country,thr=0,smoothlevel=0,region="",source="worldometer"):
   """
-  Gets (dates, confirmed, deaths, recovered) lists for the specified country.
+  Returns (dates, totalconfirmed, totaldeaths, recovered (if available), active (if available), newcases, newdeaths)
+  for the specified country.
   Optionally set thr to ignore initial values with fewer than thr confirmed cases.
-  Returns (dates, confirmed, deaths, recovered, active, new).
   """
   
   equivnames={}

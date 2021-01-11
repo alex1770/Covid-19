@@ -4,8 +4,8 @@ import numpy as np
 from subprocess import Popen,PIPE
 
 # (file, columnfrom0)
-inp=[("zoedatapage/zoenewcases.London.deconvolve.csv",2),# Zoe swab new cases
-     ("zoedatapage/appnewcases.deconvolve.csv",1),
+inp=["zoedatapage/symptomnewcases.deconvolve.csv",# Zoe swab new cases
+     "zoedatapage/zoeincidence.deconvolve.csv",1),
      ("confirmed.csv",1)]
 
 # For the moment:
@@ -58,7 +58,7 @@ data[2][1]=l
 # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
 def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-minday=lastday-90
+minday=lastday-60
 size=2048
 graphfn='combined.London.png'
 lw=3

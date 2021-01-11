@@ -25,9 +25,28 @@ def daytodate(r):
   return time.strftime('%Y-%m-%d',t)
 
 tdir='zoedatapage'
-name='appnewcases'
-datafile='zoeregions.csv';place=3
-#datafile='zoeselected.csv';place=8
+name='symptomnewcases'
+datafile=join(tdir,'zoesymptomprevalence.csv')
+#datafile='zoeselected.csv'
+
+pop={
+  'England':                   55903504,
+  'Wales':                     3138631,
+  'South East':                8839864,
+  'London':                    8886600,
+  'Scotland':                  5438100,
+  'East of England':           6486032,
+  'Midlands':                  10537679,
+  'South West':                5601058,
+  'North East and Yorkshire':  8560188,
+  'North West':                6992083,
+  'Northern Ireland':          1881639,
+  'United Kingdom':            66361874,
+  'East Midlands':             4761918,
+  'West Midlands':             5849119,
+  'North East':                2632042,
+  'Yorkshire and The Humber':  5428656
+}
 
 # Make recovery kernel: kernel[i] = P(recovery time > i+0.5 days)
 def getkernel(shape=2.595, scale=4.48):
@@ -38,23 +57,26 @@ def getkernel(shape=2.595, scale=4.48):
     if x<1e-3: break
   return np.array(kernel)
 
-# Returns list of (day-of-reporting, est symtomatic cases on this day)
+# Returns map: loc -> list (list of (day-of-reporting, est symtomatic cases on this day)
 def loadnewcases():
-  l=[]
+  days=[]
   with open(datafile,'r') as fp:
-    r=csv.reader(fp)
-    headings=next(r)
-    loc=headings[place]
-    for x in r:
-      l.append((datetoday(x[0]),float(x[place])*1000))# Convert from cases/thousand to cases/million
-  days=[x[0] for x in l]
+    reader=csv.reader(fp)
+    locs=next(reader)[1:]
+    out={loc:[] for loc in locs}
+    for row in reader:
+      days.append(datetoday(row[0]))
+      for (loc,x) in zip(locs,row[1:]):
+        out[loc].append(float(x))
   # Interpolate missing entries
-  for i in range(len(days)-1):
-    d0=days[i];d1=days[i+1]
-    for day in range(d0+1,d1):
-      l.append((day,(l[i][1]*(d1-day)+l[i+1][1]*(day-d0))/(d1-d0)))
-  l.sort()
-  return loc,l
+  for loc in locs:
+    for i in range(len(days)-1):
+      d0=days[i];d1=days[i+1]
+      for day in range(d0+1,d1):
+        for (a,b) in zip(out[loc][i],out[loc][i+1]):
+          out[loc].append((a*(d1-day)+b*(day-d0))/(d1-d0))
+    out[loc].sort()
+  return days,out
 
 # Given nn[0,...,n-1], find x[-nkern+1,...,n-1] such that
 # nn[i] ~= x[i]*kernel[0] + x[i-1]*kernel[1] + ... + x[i-nkern+1]*kernel[nkern-1] for i=0,...n-1
@@ -98,37 +120,31 @@ def geterr(nn,kernel,sameweight):
   return sqrt(err/n)
 
 def processnewcases():
-  loc,l=loadnewcases()
-  n=len(l)
+  days,l=loadnewcases()
+  locs=list(l);locs.sort()
+  n=len(days)
   
-  days=[x[0] for x in l]
-  nn=[x[1] for x in l]
-  kernel=getkernel()
-  sameweight=1
-  
-  # Get x[i] = new cases between day days[i-1]-offset and days[i]-offset
-  x=deconvolve(nn,kernel,sameweight)
-
+  output={}
   offset=0
-#  output=[#[(daytodate(days[i]-offset), "%9.2f"%nn[i]) for i in range(n)],
-#          [(daytodate(days[i]-offset-0.5), "%9.3f"%(x[i])) for i in range(n)]]
-  
-  output=[#[(daytodate(days[i]-offset), "%9.2f"%nn[i]) for i in range(n)],
-          [(daytodate(days[i]-offset), "%9.3f"%(x[i])) for i in range(n)]]
-  
+  for loc in locs:
+    nn=l[loc]
+    kernel=getkernel()
+    sameweight=1
+    # Get x[i] = new cases between day days[i-1]-offset and days[i]-offset
+    x=deconvolve(nn,kernel,sameweight)
+    output[loc]=[(daytodate(days[i]-offset), x[i]) for i in range(n)]
+
   import csv
   from subprocess import Popen,PIPE
 
-  dd=[dict(o) for o in output]
-  s=set()
-  for d in dd: s.update(set(d))
+  dd={loc: dict(output[loc]) for loc in output}# map: location -> {map: date -> value}
   csvfn=join(tdir,name+'.deconvolve.csv')
   with open(csvfn,'w') as fp:
     writer=csv.writer(fp)
-    #writer.writerow(['Date']+['Col%d'%i for i in range(1,len(dd)+1)])
-    writer.writerow(['Date']+[loc])# alter
-    for dt in sorted(list(s)):
-      row=[dt]+[d.get(dt," "*9) for d in dd]
+    writer.writerow(['Date']+locs)
+    for day in days:
+      dt=daytodate(day)
+      row=[dt]+[("%.1f"%(dd[loc][dt]) if dt in dd[loc] else " "*9) for loc in locs]
       writer.writerow(row)
     print("Written",csvfn)
   
@@ -136,15 +152,15 @@ def processnewcases():
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
   for (size,graphfn) in [(2560,name+'.deconvolve.png'), (1280,name+'.deconvolve.small.png')]:
-    lw=size//640-1
+    lw=size//1280-1
     po=Popen("gnuplot",shell=True,stdin=PIPE)
     p=po.stdin
     write('set terminal pngcairo font "sans,%d" size %d,%d'%(8+size//426,size,size//2))
     write('set bmargin 6;set lmargin 14;set rmargin %d;set tmargin 5'%(9))#size//256-1))
     write('set output "%s"'%graphfn)
-    write('set key top center')
-    title="Zoe-estimated symptomatic cases from app in %s, and soft-deconvolved estimate of new cases per day"%loc
-    title+="\\nData source: https://covid.joinzoe.com/data as published "+daytodate(days[-1])
+    write('set key bottom right')
+    title="Zoe-estimated symptomatic cases from app in regions/nations, and soft-deconvolved estimate of new cases per million per day"
+    title+="\\nEnd of graphs are less reliable.  Data source: https://covid.joinzoe.com/data as published "+daytodate(days[-1])
     write('set title "%s"'%title)
     write('set xdata time')
     write('set format x "%Y-%m-%d"')
@@ -158,11 +174,14 @@ def processnewcases():
     #write('set ytics 0.1, 10')
     write('set ylabel "Cases per million per day"')
     write('set logscale y 10')
-    s='plot '
-    s+=('"-" using 1:2 with linespoints lw %d title "Derived estimate of new cases per million per day (end of graph less reliable)"')%lw
+    s='plot ';first=True
+    for loc in locs:
+      if not first: s+=", "
+      s+=('"-" using 1:2 with linespoints lw %d title "%s"')%(lw,loc)
+      first=False
     write(s)
-    for data in output:
-      for row in data: write(row[0],row[1])
+    for loc in locs:
+      for row in output[loc]: write(row[0],row[1]/pop[loc]*1e6)
       write("e")
     p.close()
     po.wait()

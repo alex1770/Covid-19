@@ -10,10 +10,10 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
-zoetrendfn='zoeregions.csv'
 
 mapfile='zoemapdata/2020-12-01'# Use any map output to get the area codes and positions/countries
-csvfile='zoedatapage/prevalence.csv'
+incsvfile='zoedatapage/prevalence.csv'
+outcsvfile='zoedatapage/zoesymptomprevalence.csv'
 startdate='2020-09-06'
 
 def processdata_reg():
@@ -35,7 +35,7 @@ def processdata_reg():
 
   # Read bulk csv data
   dat={};enddate=''
-  with open(csvfile,'r') as fp:
+  with open(incsvfile,'r') as fp:
     reader=csv.reader(fp)
     for row in reader:
       if row[0][0] not in 'NEWS' or row[4]<startdate: continue
@@ -49,13 +49,13 @@ def processdata_reg():
   regions=sorted(list(regions))
 
   # Write regional csv data
-  with open(zoetrendfn,'w') as fp:
+  with open(outcsvfile,'w') as fp:
     writer=csv.writer(fp)
     writer.writerow(['Date']+regions)
     for day in range(startday,endday+1):
       date=daytodate(day)
-      writer.writerow([date]+["%.4g"%(dat[reg,date]/pop[reg]*1e3) for reg in regions])
-  print("Written %s"%zoetrendfn)
+      writer.writerow([date]+["%d"%(dat[reg,date]) for reg in regions])
+  print("Written %s"%outcsvfile)
 
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))

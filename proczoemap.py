@@ -44,9 +44,9 @@ def processdata(tdir):
         if loc=="London": src=totlon
         elif loc=="UK": src=tot
         else: src=dd[loc]
-        v=src["corrected_covid_positive"]/src["population"]*1e3
-        row.append("%.4g"%v)
-        data[loc].append(v)
+        v=src["corrected_covid_positive"]#/src["population"]*1e3
+        row.append("%d"%v)
+        data[loc].append(v/src["population"]*1e3)
         if date==dates[-1]: pop[loc]=src['population']
       writer.writerow(row)
   print("Written %s"%zoetrendfn)

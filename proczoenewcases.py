@@ -1,4 +1,4 @@
-import time,calendar,sys
+import time,calendar,sys,csv
 from os.path import join
 import numpy as np
 
@@ -10,21 +10,42 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
-tdir='zoedatapage'
-name='zoenewcases'
-loc='across the UK'
-norm=''
+pop={
+  'England':                   55903504,
+  'Wales':                     3138631,
+  'South East':                8839864,
+  'London':                    8886600,
+  'Scotland':                  5438100,
+  'East of England':           6486032,
+  'Midlands':                  10537679,
+  'South West':                5601058,
+  'North East and Yorkshire':  8560188,
+  'North West':                6992083,
+  'Northern Ireland':          1881639,
+  'United Kingdom':            66361874,
+  'East Midlands':             4761918,
+  'West Midlands':             5849119,
+  'North East':                2632042,
+  'Yorkshire and The Humber':  5428656
+}
 
-# Returns list of (day-of-reporting, average number of new cases over 14 day period ending at day-of-reporting-4)
+tdir='zoedatapage'
+incsv='zoeincidence.csv'
+outname='zoeincidence.deconvolve'
+
 def loadnewcases():
   l=[]
-  with open(join(tdir,name),'r') as fp:
-    for x in fp:
-      y=x.strip().split()
-      l.append((datetoday(y[0]),float(y[1])))
-  days=[x[0] for x in l]
+  with open(join(tdir,incsv),'r') as fp:
+    reader=csv.reader(fp)
+    locs=next(reader)[1:]
+    out={loc:[] for loc in locs}
+    days=[]
+    for row in reader:
+      days.append(datetoday(row[0]))
+      for (loc,x) in zip(locs,row[1:]):
+        out[loc].append(float(x))
   assert days==list(range(days[0],days[-1]+1))# check contiguous
-  return l
+  return days,out
 
 # Find x[0,...,n+period-2] such that nn[i] ~= x[i]+x[i+1]+...+x[i+period-1], and x[] doesn't jump too much
 def deconvolve(nn,period,sameweight):
@@ -48,44 +69,39 @@ def deconvolve(nn,period,sameweight):
   
   return x
 
-# Alter pubdate handling
-def processnewcases(pubdate):
-  l=loadnewcases()
-  n=len(l)
+if __name__=="__main__":
+  days,l=loadnewcases()
+  n=len(days)
+  locs=list(l)
+  output={}
   
-  days=[x[0] for x in l]
-  nn=[x[1] for x in l]
-
-  period=14
-  offset=4
-  sameweight=0.2
-  
-  # Hidden variables x[0],...,x[n+period-2], where x[period-1+i] represents the new cases on day days[i]-offset
-  x=deconvolve(nn,period,sameweight)
-
-  output=[[(daytodate(days[i]-period//2), "%9.1f"%nn[i]) for i in range(n)],
-          [(daytodate(days[i]), "%9.1f"%x[period-1+i]) for i in range(n)]]
-  
-  import csv
+  for loc in locs:
+    nn=l[loc]
+    period=14
+    offset=4
+    sameweight=0.2
+    
+    # Hidden variables x[0],...,x[n+period-2], where x[period-1+i] represents the new cases on day days[i]-offset
+    x=deconvolve(nn,period,sameweight)
+    output[loc]=[(daytodate(days[i]), x[i]) for i in range(n)]
+    
   from subprocess import Popen,PIPE
-
-  # Alter
-  d0=dict(output[0])
-  d1=dict(output[1])
-  s=set(d0);s.update(set(d1))
-  csvfn=join(tdir,name+'.deconvolve.csv')
+  dd={loc: dict(output[loc]) for loc in output}# map: location -> {map: date -> value}
+  csvfn=join(tdir,outname+'.csv')
   with open(csvfn,'w') as fp:
     writer=csv.writer(fp)
-    writer.writerow(['Date','Original Total','Deconvolved'])
-    for dt in sorted(list(s)):
-      row=[dt,d0.get(dt," "*9),d1.get(dt," "*9)]
+    writer.writerow(['Date']+locs)
+    for day in days:
+      dt=daytodate(day)
+      row=[dt]+[("%.1f"%(dd[loc][dt]) if dt in dd[loc] else " "*9) for loc in locs]
       writer.writerow(row)
     print("Written",csvfn)
   
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
   def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
 
-  for (size,graphfn) in [(2560,name+'.deconvolve.png'), (1280,name+'.deconvolve.small.png')]:
+  name=loc.replace(' ','_')
+  for (size,graphfn) in [(2560,outname+'.png'), (1280,outname+'.small.png')]:
     lw=size//640-1
     po=Popen("gnuplot",shell=True,stdin=PIPE)
     p=po.stdin
@@ -93,8 +109,8 @@ def processnewcases(pubdate):
     write('set bmargin 6;set lmargin 14;set rmargin %d;set tmargin 5'%(size//256-1))
     write('set output "%s"'%graphfn)
     write('set key top center')
-    title="Zoe-estimated new cases "+norm+"per day "+loc+" from app+swab tests, and soft-deconvolved version of this"
-    title+="\\nData source: https://covid.joinzoe.com/data as published "+pubdate
+    title="Soft deconvolved version of Zoe-estimated new cases per million per day from app+swab tests"
+    title+="\\nData source: https://covid.joinzoe.com/data as published on "+daytodate(days[-1])
     write('set title "%s"'%title)
     write('set xdata time')
     write('set format x "%Y-%m-%d"')
@@ -104,20 +120,17 @@ def processnewcases(pubdate):
     write('set xtics "2020-01-06", 86400*7')
     write('set xtics rotate by 45 right offset 0.5,0')
     write('set grid xtics ytics lc rgb "#dddddd" lt 1')
-    write('set ylabel "New cases '+norm+'per day"')
+    write('set ylabel "New cases per million per day"')
     s='plot '
-    s+=('"-" using 1:2 with linespoints lw %d title "Cases '+norm+'per day over %d-day period (x-axis date is centre of period)", ')%(lw,period)
-    s+=('"-" using 1:2 with linespoints lw %d title "Soft-deconvolved cases '+norm+'per day (end of graph less reliable)"')%lw
+    s='plot ';first=True
+    for loc in locs:
+      if not first: s+=", "
+      s+=('"-" using 1:2 with linespoints lw %d title "%s"')%(lw,loc)
+      first=False
     write(s)
-    for data in output:
-      for row in data: write(daytodate(datetoday(row[0])-offset),row[1])
+    for loc in locs:
+      for row in output[loc]: write(row[0],row[1]/pop[loc]*1e6)
       write("e")
     p.close()
     po.wait()
     print("Written %s"%graphfn)
-
-if __name__=="__main__":
-  if len(sys.argv)>2: name=sys.argv[2]
-  if len(sys.argv)>3: loc=sys.argv[3]
-  if len(sys.argv)>4: norm=sys.argv[4]
-  processnewcases(sys.argv[1])
