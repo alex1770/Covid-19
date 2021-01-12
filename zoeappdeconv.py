@@ -69,13 +69,14 @@ def loadnewcases():
       for (loc,x) in zip(locs,row[1:]):
         out[loc].append(float(x))
   # Interpolate missing entries
-  for loc in locs:
-    for i in range(len(days)-1):
-      d0=days[i];d1=days[i+1]
-      for day in range(d0+1,d1):
-        for (a,b) in zip(out[loc][i],out[loc][i+1]):
-          out[loc].append((a*(d1-day)+b*(day-d0))/(d1-d0))
-    out[loc].sort()
+  #for loc in locs:
+  #  for i in range(len(days)-1):
+  #    d0=days[i];d1=days[i+1]
+  #    for day in range(d0+1,d1):
+  #      poipoi
+  #      for (a,b) in zip(out[loc][i],out[loc][i+1]):
+  #        out[loc].append((a*(d1-day)+b*(day-d0))/(d1-d0))
+  #  #out[loc].sort()# No
   return days,out
 
 # Given nn[0,...,n-1], find x[-nkern+1,...,n-1] such that
