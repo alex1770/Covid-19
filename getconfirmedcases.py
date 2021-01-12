@@ -83,8 +83,10 @@ if __name__ == "__main__":
     
     try:
         with open('confirmed.csv','r') as fp:
-            a=json.load(fp)
-            olddate=a[0]['date']
+            reader=csv.reader(fp)
+            for row in reader:
+                pass
+            olddate=row[0]
     except:
         olddate='0000-00-00'
         

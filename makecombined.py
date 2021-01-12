@@ -120,7 +120,7 @@ for loc in locs:
   write('set bmargin 6;set lmargin 14;set rmargin 8;set tmargin 5')
   write('set output "%s"'%graphfn)
   write('set key top center')
-  title="Three estimates of new cases per million per day in "+loc+" based on processed Zoe data and confirmed case counts"
+  title="Three estimates of new cases per million per day in "+loc+" based on processed Zoe data and confirmed case counts. Last few values are less reliable."
   title+="\\nData sources: https://covid.joinzoe.com/data, https://coronavirus.data.gov.uk as published on or before "+daytodate(endday)
   write('set title "%s"'%title)
   write('set xdata time')
