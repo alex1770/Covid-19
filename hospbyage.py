@@ -91,14 +91,18 @@ for age in ['18_to_64', '65_to_84', '85+']:
     'title': age.replace('_',' '),
     'values': [(d['date'],d[age]) for d in smoothed]
   })
-title='Hospital admissions by age group. Source: https://coronavirus.data.gov.uk/ at '+date
+title='Hospital admissions for Covid-19 in England by age group. Source: https://coronavirus.data.gov.uk/ at '+date
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
 
-title='Hospital admissions - proportions by age group. Source: https://coronavirus.data.gov.uk/ at '+date
+title='Hospital admissions for Covid-19 in England - proportions by age group. Source: https://coronavirus.data.gov.uk/ at '+date
 data=[]
 for age in ['18_to_64', '65_to_84', '85+']:
   data.append({
-    'title': age.replace('_',' '),
+    'title': age.replace('_',' ')+' out of all ages',
     'values': [(d['date'],d[age]/sum(d[a] for a in ages)*100) for d in smoothed]
   })
-makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage admitted of age group', outfn='hospitaladmissionsbyage-rel.png')
+data.append({
+  'title': '85+ out of 18-64 and 85+',
+  'values': [(d['date'],d['85+']/(d['18_to_64']+d['85+'])*100) for d in smoothed]
+})
+makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage admitted', outfn='hospitaladmissionsbyage-rel.png')
