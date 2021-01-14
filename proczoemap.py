@@ -19,8 +19,7 @@ zoetrendfn='zoeselected.csv'
 
 tdir='zoemapdata'
 def processdata(tdir):
-  dates=os.listdir(tdir)
-  dates.sort()
+  dates=sorted(x for x in os.listdir(tdir) if x[:2]=="20")
   data={loc:[] for loc in locs}
   pop={}
   shifteddates=[]

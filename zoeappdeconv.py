@@ -57,7 +57,7 @@ def getkernel(shape=2.595, scale=4.48):
     if x<1e-3: break
   return np.array(kernel)
 
-# Returns map: loc -> list (list of (day-of-reporting, est symtomatic cases on this day)
+# Returns map: loc -> list (list of (day-of-reporting, est symptomatic cases on this day)
 def loadnewcases():
   days=[]
   with open(datafile,'r') as fp:

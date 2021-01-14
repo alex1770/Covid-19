@@ -30,26 +30,25 @@ def convdate(ds):
 tdir='zoemapdata'
 date=convdate(ast.literal_eval(res[0])['data_status'])
 fn=os.path.join(tdir,date)
-if not os.path.isfile(fn):
-  d={}
-  for r in res:
-    e=ast.literal_eval(r)
-    for k in list(e):
-      if k in floatkeys:
-        try:
-          e[k]=float(e[k])
-        except:
-          del e[k]
-      elif k in intkeys:
-        try:
-          e[k]=int(e[k])
-        except:
-          del e[k]
-    d[e["lad16nm"]]=e
-  with open(fn,'w') as fp:
-    json.dump(d,fp,indent=2)
-  #processdata(tdir)
-  #processdata_reg(tdir)
-  #Popen("rsync -a zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
-  sys.exit(0)
-sys.exit(1)
+if os.path.isfile(fn): sys.exit(1)
+d={}
+for r in res:
+  e=ast.literal_eval(r)
+  for k in list(e):
+    if k in floatkeys:
+      try:
+        e[k]=float(e[k])
+      except:
+        del e[k]
+    elif k in intkeys:
+      try:
+        e[k]=int(e[k])
+      except:
+        del e[k]
+  d[e["lad16nm"]]=e
+with open(fn,'w') as fp:
+  json.dump(d,fp,indent=2)
+#processdata(tdir)
+#processdata_reg(tdir)
+#Popen("rsync -a zoeselected.csv zoeselected.png zoeregions.csv zoeregions.png sonorous@sonorouschocolate.com:public_html/zoe",shell=True).wait()
+sys.exit(0)
