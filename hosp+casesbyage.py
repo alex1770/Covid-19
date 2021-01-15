@@ -46,7 +46,7 @@ for (d,e) in zip(newmale,newfemale):
   for age in d: f[age]=d[age]+e[age]
   f['date']=d['date']
   newcases.append(f)
-newcases=newcases[:-1]# Last entry seems unreliable, I think because it using specimin date and there are biases with recent entries
+newcases=newcases[:-1]# Last entry seems unreliable, I think because it using specimen date and there are biases with recent entries
 
 def smooth(data):
   ages=[x for x in data[0].keys() if x!='date']
@@ -54,15 +54,16 @@ def smooth(data):
   smoothed=[]
   for i in range(n):
     d={'date': data[i]['date']}
-    r=min(3,i,n-1-i)
+    j0=max(i-3,0)
+    j1=min(i+4,n)
     for age in ages:
-      d[age]=sum(data[j][age] for j in range(i-r,i+r+1))/(2*r+1)
+      d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
     smoothed.append(d)
   return smoothed
 
 hosp=smooth(newhosp)
 cases=smooth(newcases)
-  
+
 def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png'):
   po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
   
@@ -113,10 +114,10 @@ for age in ['18_to_64', '65_to_84', '85+']:
     'title': age.replace('_',' '),
     'values': [(d['date'],d[age]) for d in hosp]
   })
-title='Hospital admissions for Covid-19 in England by age group. Source: https://coronavirus.data.gov.uk/ at '+date
+title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+date
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
 
-title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Source: https://coronavirus.data.gov.uk/ at '+date
+title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+date
 cutoff0=65
 cutoff1=80
 lowages=[age for age in caseages if parseage(age)[0]>=cutoff0 and parseage(age)[1]<cutoff1]
