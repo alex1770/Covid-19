@@ -36,9 +36,10 @@ def get_data(req):
 
 req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';               hospdata=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}'; casedata=get_data(req)
+updatedate=casedata[-1]['date']
 
 # Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
-fn=os.path.join('apidata',casedata[-1]['date'])
+fn=os.path.join('apidata',updatedate)
 if os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
 os.makedirs('apidata', exist_ok=True)
 with open(fn,'w') as fp:
@@ -113,8 +114,8 @@ def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
   return tuple(int(y) for y in x.split("_to_"))
   
-date=max(hosp[-1]['date'],cases[-1]['date'])
-mindate=daytodate(datetoday(date)-90)
+#date=max(hosp[-1]['date'],cases[-1]['date'])
+mindate=daytodate(datetoday(updatedate)-90)
 hospages=sorted((x for x in hosp[0] if x!='date'),key=lambda x:parseage(x)[0])
 caseages=sorted((x for x in cases[0] if x!='date'),key=lambda x:parseage(x)[0])
 
@@ -124,27 +125,32 @@ for age in ['18_to_64', '65_to_84', '85+']:
     'title': age.replace('_',' '),
     'values': [(d['date'],d[age]) for d in hosp]
   })
-title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+date
+title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+updatedate
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
 
-title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+date
+title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+updatedate
 cutoff0=65
 cutoff1=80
 lowages=[age for age in caseages if parseage(age)[0]>=cutoff0 and parseage(age)[1]<cutoff1]
 highages=[age for age in caseages if parseage(age)[0]>=cutoff1]
 data=[]
-#data.append({
-#  'title': 'Hospital admissions: #(aged 65+) / #(all ages)',
-#  'values': [(d['date'],(d['65_to_84']+0*d['85+'])/sum(d[a] for a in hospages)*100) for d in hosp]
-#})
+
+if 0:
+  data.append({
+    'title': 'Hospital admissions: #(aged 65+) / #(all ages)',
+    'values': [(d['date'],(d['65_to_84']+0*d['85+'])/sum(d[a] for a in hospages)*100) for d in hosp]
+  })
+  
 data.append({
   'title': 'Hospital admissions: #(aged 85+) / #(aged 18-64 or 85+)',
   'values': [(d['date'],d['85+']/(d['18_to_64']+d['85+'])*100) for d in hosp]
 })
+
 data.append({
   'title': 'Confirmed cases: #(aged %d+) / #(aged %d+)'%(cutoff1,cutoff0),
   'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages+highages)*100) for d in cases if d['date']>=mindate]
 })
+
 if 0:
   num=[a for a in caseages if parseage(a)[0]>=85]
   denom=[a for a in caseages if parseage(a)[0]>=20 and parseage(a)[1]<=64 or parseage(a)[0]>=85]
@@ -152,4 +158,5 @@ if 0:
     'title': 'Confirmed cases: #(aged 85+) / #(aged 20-64 or 85+)',
     'values': [(d['date'],sum(d[a] for a in num)/sum(d[a] for a in denom)*100) for d in cases if d['date']>=mindate]
   })
+  
 makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage', outfn='admissionandcaseageratios.png')
