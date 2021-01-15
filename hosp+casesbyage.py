@@ -1,4 +1,4 @@
-import time,calendar
+import time,calendar,os,json,sys
 from requests import get
 from subprocess import Popen,PIPE
 
@@ -10,43 +10,53 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
-def get_data(url):
-  response = get(url, timeout=10)
-  if response.status_code >= 400:
+def get_data(req):
+  url='https://api.coronavirus.data.gov.uk/v1/data?'
+  response = get(url+req, timeout=10)
+  if not response.ok:
     raise RuntimeError(f'Request failed: { response.text }')
-  return response.json()
-
-url='https://api.coronavirus.data.gov.uk/v1/data?'
-req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}'; hospdata=get_data(url+req)['data']
-req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"maleCases"}';          maledata=get_data(url+req)['data']
-req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"femaleCases"}';        femaledata=get_data(url+req)['data']
-
-def getdiff(data):
-  newdata=[]
+  date=time.strftime('%Y-%m-%d',time.strptime(response.headers['Last-Modified'],'%a, %d %b %Y %H:%M:%S %Z'))# Not currently used
+  data=response.json()['data']
+  
+  # Convert from list form to dictionary keyed by age
   day=datetoday(data[0]['date'])
   n=1
   while n<len(data) and datetoday(data[n]['date'])==day-n: n+=1# Find maximal contiguous date range
+  data1=[]
   for i in range(n-1,-1,-1):
-    l={}
-    for d in data[i]['blah']: l[d['age']]=d['value']
-    if i<n-1:
-      newage={age: l[age]-pl[age] for age in l}
-      newage['date']=data[i]['date']
-      newdata.append(newage)
-    pl=l
+    d=data[i]
+    e={'date':d['date']}
+    for x in d:
+      if x!='date':
+        for y in d[x]:
+          e[y['age']]=e.get(y['age'],0)+y['value']
+    data1.append(e)
+
+  return data1
+
+req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';               hospdata=get_data(req)
+req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}'; casedata=get_data(req)
+
+# Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
+fn=os.path.join('apidata',casedata[-1]['date'])
+if os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
+os.makedirs('apidata', exist_ok=True)
+with open(fn,'w') as fp:
+  json.dump(casedata,fp,indent=2)
+
+def getdiff(data):
+  n=len(data)
+  newdata=[]
+  for i in range(1,n):
+    l={'date':data[i]['date']}
+    for age in data[i]:
+      if age!='date': l[age]=data[i][age]-data[i-1][age]
+    newdata.append(l)
   return newdata
 
 newhosp=getdiff(hospdata)
-newmale=getdiff(maledata)
-newfemale=getdiff(femaledata)
-assert(len(newmale)==len(newfemale) and newmale[0]['date']==newfemale[0]['date'])
-newcases=[]
-for (d,e) in zip(newmale,newfemale):
-  f={}
-  for age in d: f[age]=d[age]+e[age]
-  f['date']=d['date']
-  newcases.append(f)
-newcases=newcases[:-1]# Last entry seems unreliable, I think because it using specimen date and there are biases with recent entries
+newcases=getdiff(casedata)
+newcases=newcases[:-1]# Last entry seems particularly unreliable, I think because it using specimen date and there are biases with recent entries
 
 def smooth(data):
   ages=[x for x in data[0].keys() if x!='date']
