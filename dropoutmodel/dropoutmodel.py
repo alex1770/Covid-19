@@ -4,13 +4,15 @@
 # as transcribed at https://github.com/theosanderson/theo.io/blob/master/content/post/2021-01-22-ons-data/ons_ct.csv
 
 # Model:
-# If q = probability of dropout for gene X (N, OR or S), then log(q/(1-q)) = b*(Ct-a_X)
-# If p = p(Region,t) = prevalence of B.1.1.7, then l(Region,t) = log(p/(1-p)) = g*(t-l0_{Region})
+# Let logistic(x)=exp(x)/(1+exp(x))
+# Choose a uniform random number Z in [-5,5], which is fixed for the three genes.
+# Then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct+Z-a_X))
+# and prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
 # Parameters (14):
 #   a_X         : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
 #   b           : 1 parameter encoding dependence of dropout probability on Ct
 #   g           : 1 parameter for the relative growth of B.1.1.7 compared to other variants
-#   l0_{Region} : 9 parameters, one for each region, encoding takeover time of B.1.1.7
+#   l(Region)   : 9 parameters, one for each region, encoding takeover time of B.1.1.7
 
 import sys,time,calendar,csv
 from math import log,exp
@@ -75,16 +77,19 @@ for i in range(5,14): xx[i]=90;bounds[i]=(30,180)
 
 # Work out expected dropout matrix
 def estimatedropoutmatrix(r,d,xx):
-  p=1/(1+exp(-xx[4]*(d.t-xx[5+r])))# Relative prevalence of B.1.1.7
-  dp=[1/(1+exp(-xx[3]*(d.Ct-a))) for a in xx[:3]]# Probability of dropout for each gene
-  dp[2]=p+(1-p)*dp[2]# Can treat B.1.1.7 as something that increases probability of S gene dropout
-  c=np.zeros([2,2,2])
-  for i in range(2):
-    for j in range(2):
-      for k in range(2):
-        c[i,j,k]=(dp[0] if i==0 else 1-dp[0])*(dp[1] if j==0 else 1-dp[1])*(dp[2] if k==0 else 1-dp[2])
-  c[0,0,0]=0;c=c/c.sum()# Remove all-dropout and renormalise
-  return c
+  tc=np.zeros([2,2,2])
+  for offset in range(-5,6):# Integrate over viral load
+    p=1/(1+exp(-xx[4]*(d.t-xx[5+r])))# Relative prevalence of B.1.1.7
+    dp=[1/(1+exp(-xx[3]*(d.Ct-a+offset))) for a in xx[:3]]# Probability of dropout for each gene
+    dp[2]=p+(1-p)*dp[2]# Can treat B.1.1.7 as something that increases probability of S gene dropout
+    c=np.zeros([2,2,2])
+    for i in range(2):
+      for j in range(2):
+        for k in range(2):
+          c[i,j,k]=(dp[0] if i==0 else 1-dp[0])*(dp[1] if j==0 else 1-dp[1])*(dp[2] if k==0 else 1-dp[2])
+    tc+=c
+  tc[0,0,0]=0;tc=tc/tc.sum()# Remove all-dropout and renormalise
+  return tc
       
 # Calculate modelling error associated with parameters xx
 def err(xx):
@@ -97,12 +102,13 @@ def err(xx):
       E+=((c-d.p)**2).sum()
   return E
 
-res=minimize(err,xx,method="SLSQP",bounds=bounds)
+res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
 
 print(res.message)
 if not res.success: sys.exit(1)
-
+print("Error =",res.fun)
 print()
+
 now=time.strftime('%Y-%m-%d',time.localtime())
 tnow=datetoday(now)-datetoday(date0)
 xx=res.x
@@ -112,9 +118,9 @@ print("Robustness of S  = %.1f"%xx[2])
 print("Dependence of dropout on Ct = %.3f"%xx[3])
 print("Relative growth rate per day of B.1.1.7 = %.2f%%"%(xx[4]*100))
 print()
-print("Region                    Est'd crossover     Extrapolated relative")
-print("------                    date of B.1.1.7     %prevalence on",now)
-print("                          ---------------     -------------------------")
+print("Region                    Est'd crossover     Extrapolated %relative")
+print("------                    date of B.1.1.7     prevalence on",now)
+print("                          ---------------     ------------------------")
 for (r,region) in enumerate(regions):
   p=1/(1+exp(-xx[4]*(tnow-xx[5+r])))
   print("%-24s  %s        %6.1f"%(region,daytodate(datetoday(date0)+xx[5+r]+.5),p*100))
@@ -124,8 +130,11 @@ def printdropouts(m):
   for t in [(1,0,0),(0,1,0),(0,0,1),(1,1,0),(0,1,1),(1,0,1),(1,1,1)]:
     print(" %5.1f"%(m[t]*100),end="")
 
+print("                                                           Actual                                        Estimate                 ")
+print("                                         ------------------------------------------     ------------------------------------------")
+print("                  Region       Date         N    OR     S  OR+N  OR+S   N+S  OR+N+S        N    OR     S  OR+N  OR+S   N+S  OR+N+S")
 for (r,region) in enumerate(regions):
-  if region!="London": continue
+  #if region!="London": continue
   for d in data[region]:
     print("%24s"%region,d.date,end="    ")
     printdropouts(d.p)
