@@ -65,23 +65,23 @@ for row in tab.find_all("tr"):
             r=re.search(r"Highcharts.chart\((.*?),",text)
             if r!=None:
               name=r.group(1)
-              r=re.search(r"xAxis:\s*{\s*categories:\s*\[(.*?)\s*\]\s*}", text)
-              if r!=None:
-                year=2020;dates=[]
-                for x in r.group(1).strip().split(","):
-                  x=x.strip('"')
-                  if x=="Jan 01": year+=1
-                  dates.append(isofy(year,x))
-              else: dates=[]
-              r=re.search(r"series.*data:\s*\[(.*?)\]\s*}", text)
-              if r!=None: values=r.group(1).strip().split(",")
-              else: values=[]
               if name in keys:
+                r=re.search(r"xAxis:\s*{\s*categories:\s*\[(.*?)\s*\]\s*}", text)
+                if r!=None:
+                  year=2020;dates=[]
+                  for x in r.group(1).strip().split(","):
+                    x=x.strip('"')
+                    if x=="Jan 01": year+=1
+                    dates.append(isofy(year,x))
+                else: dates=[]
+                r=re.search(r"series.*data:\s*\[(.*?)\]\s*}", text)
+                if r!=None: values=r.group(1).strip().split(",")
+                else: values=[]
                 p=keys.index(name)
                 for (dt,vl) in zip(dates,values):
                   if dt not in d: d[dt]=[-1]*4
                   d[dt][p]=int(vl)
-              #assert len(dates)==len(values)
+                #assert len(dates)==len(values)
           for dt in d:
             if d[dt][0]>=0 and d[dt][1]>=0 and d[dt][3]>=0: d[dt][2]=d[dt][0]-d[dt][1]-d[dt][3]
           # Possibly add one more entry from the "Latest Updates" section, but be cautious
