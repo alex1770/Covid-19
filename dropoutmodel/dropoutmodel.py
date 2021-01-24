@@ -98,8 +98,10 @@ def err(xx):
     #if region!="London": continue
     for d in data[region]:
       c=estimatedropoutmatrix(r,d,xx)
-      # Compare estimated and actual dropout matrices
-      E+=((c-d.p)**2).sum()
+      c[0,0,0]=1e-100
+      # -log(likelihood of actual dropout matrix if true probs are from estimated dropout matrix)
+      # Would like to multiply by the number of tests done, but this information is not available
+      E-=(d.p*np.log(c)+(1-d.p)*np.log(1-c)).sum()
   return E
 
 res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
@@ -107,7 +109,7 @@ res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
 print(res.message)
 if not res.success: sys.exit(1)
 n=sum(len(data[region]) for region in regions)*7
-print("RMS error = %.1f%%"%(sqrt(res.fun/n)*100))
+print("Mean error = %.3f"%(res.fun/n))
 print()
 
 now=time.strftime('%Y-%m-%d',time.localtime())
