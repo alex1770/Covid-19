@@ -5,9 +5,9 @@
 
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
-# Choose a uniform random number Z in [-5,5], which is fixed for the three genes.
-# Then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct+Z-a_X))
-# and prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
+# Prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
+# Choose a uniform random number Z in [-5,5], which is fixed for the three genes,
+# then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct+Z-a_X)).
 # Parameters (14):
 #   a_X         : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
 #   b           : 1 parameter encoding dependence of dropout probability on Ct
@@ -15,7 +15,7 @@
 #   l(Region)   : 9 parameters, one for each region, encoding takeover time of B.1.1.7
 
 import sys,time,calendar,csv
-from math import log,exp
+from math import log,exp,sqrt
 import numpy as np
 from scipy.optimize import minimize
 
@@ -71,7 +71,7 @@ regions=sorted(list(data))
 # Initial parameter values and bounds
 xx=np.zeros(14);bounds=[[None,None] for i in range(14)]
 xx[0]=xx[1]=xx[2]=30;  bounds[0]=bounds[1]=bounds[2]=(10,50)
-xx[3]=0.1;             bounds[3]=(-1,3)
+xx[3]=1.0;             bounds[3]=(-1,3)
 xx[4]=0.05;            bounds[4]=(-0.1,0.5)
 for i in range(5,14): xx[i]=90;bounds[i]=(30,180)
 
@@ -80,7 +80,7 @@ def estimatedropoutmatrix(r,d,xx):
   tc=np.zeros([2,2,2])
   for offset in range(-5,6):# Integrate over viral load
     p=1/(1+exp(-xx[4]*(d.t-xx[5+r])))# Relative prevalence of B.1.1.7
-    dp=[1/(1+exp(-xx[3]*(d.Ct-a+offset))) for a in xx[:3]]# Probability of dropout for each gene
+    dp=[1/(1+exp(-xx[3]*(d.Ct-a+offset*1.0))) for a in xx[:3]]# Probability of dropout for each gene
     dp[2]=p+(1-p)*dp[2]# Can treat B.1.1.7 as something that increases probability of S gene dropout
     c=np.zeros([2,2,2])
     for i in range(2):
@@ -91,7 +91,7 @@ def estimatedropoutmatrix(r,d,xx):
   tc[0,0,0]=0;tc=tc/tc.sum()# Remove all-dropout and renormalise
   return tc
       
-# Calculate modelling error associated with parameters xx
+# Calculate modelling error associated with parameters xx[]
 def err(xx):
   E=0
   for (r,region) in enumerate(regions):
@@ -106,7 +106,8 @@ res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
 
 print(res.message)
 if not res.success: sys.exit(1)
-print("Error =",res.fun)
+n=sum(len(data[region]) for region in regions)*7
+print("RMS error = %.1f%%"%(sqrt(res.fun/n)*100))
 print()
 
 now=time.strftime('%Y-%m-%d',time.localtime())
