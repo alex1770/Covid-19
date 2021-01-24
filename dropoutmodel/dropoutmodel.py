@@ -6,8 +6,8 @@
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
 # Prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
-# Choose a uniform random number Z in [-5,5], which is fixed for the three genes,
-# then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct+Z-a_X)).
+# Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load
+# then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
 # Parameters (14):
 #   a_X         : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
 #   b           : 1 parameter encoding dependence of dropout probability on Ct
@@ -68,14 +68,7 @@ with open("ons_ct.csv","r") as fp:
 
 regions=sorted(list(data))
 
-# Initial parameter values and bounds
-xx=np.zeros(14);bounds=[[None,None] for i in range(14)]
-xx[0]=xx[1]=xx[2]=30;  bounds[0]=bounds[1]=bounds[2]=(10,50)
-xx[3]=1.0;             bounds[3]=(-1,3)
-xx[4]=0.05;            bounds[4]=(-0.1,0.5)
-for i in range(5,14): xx[i]=90;bounds[i]=(30,180)
-
-# Work out expected dropout matrix
+# Work out expected dropout matrix for region r, dropout matrix d[], model parameters xx[]
 def estimatedropoutmatrix(r,d,xx):
   tc=np.zeros([2,2,2])
   for offset in range(-5,6):# Integrate over viral load
@@ -95,14 +88,20 @@ def estimatedropoutmatrix(r,d,xx):
 def err(xx):
   E=0
   for (r,region) in enumerate(regions):
-    #if region!="London": continue
     for d in data[region]:
       c=estimatedropoutmatrix(r,d,xx)
       c[0,0,0]=1e-100
       # -log(likelihood of actual dropout matrix if true probs are from estimated dropout matrix)
-      # Would like to multiply by the number of tests done, but this information is not available
+      # (Would like to multiply by the number of tests done, but that information is not available)
       E-=(d.p*np.log(c)+(1-d.p)*np.log(1-c)).sum()
   return E
+
+# Initial parameter values and bounds
+xx=np.zeros(14);bounds=[[None,None] for i in range(14)]
+xx[0]=xx[1]=xx[2]=30;  bounds[0]=bounds[1]=bounds[2]=(10,50)
+xx[3]=1.0;             bounds[3]=(-1,3)
+xx[4]=0.05;            bounds[4]=(-0.1,0.5)
+for i in range(5,14): xx[i]=90;bounds[i]=(30,180)
 
 res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
 
@@ -137,7 +136,6 @@ print("                                                           Actual        
 print("                                         ------------------------------------------     ------------------------------------------")
 print("                  Region       Date         N    OR     S  OR+N  OR+S   N+S  OR+N+S        N    OR     S  OR+N  OR+S   N+S  OR+N+S")
 for (r,region) in enumerate(regions):
-  #if region!="London": continue
   for d in data[region]:
     print("%24s"%region,d.date,end="    ")
     printdropouts(d.p)
