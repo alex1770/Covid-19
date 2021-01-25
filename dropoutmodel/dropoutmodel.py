@@ -5,7 +5,7 @@
 
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
-# Prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
+# Relative prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
 # Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load
 # then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
 # Parameters (14):
@@ -68,7 +68,7 @@ with open("ons_ct.csv","r") as fp:
 
 regions=sorted(list(data))
 
-# Work out expected dropout matrix for region r, dropout matrix d[], model parameters xx[]
+# Work out expected dropout matrix for region r, dropout matrix, date and Ct value d, model parameters xx[]
 def estimatedropoutmatrix(r,d,xx):
   tc=np.zeros([2,2,2])
   for offset in range(-5,6):# Integrate over viral load
@@ -84,7 +84,7 @@ def estimatedropoutmatrix(r,d,xx):
   tc[0,0,0]=0;tc=tc/tc.sum()# Remove all-dropout and renormalise
   return tc
       
-# Calculate modelling error associated with parameters xx[]
+# Calculate modelling error (cross entropy) associated with parameters xx[]
 def err(xx):
   E=0
   for (r,region) in enumerate(regions):
@@ -96,24 +96,36 @@ def err(xx):
       E-=(d.p*np.log(c)+(1-d.p)*np.log(1-c)).sum()
   return E
 
+# Baseline error to convert cross entropy into KL divergence
+def err0(xx):
+  E=0
+  for (r,region) in enumerate(regions):
+    for d in data[region]:
+      E-=(d.p*np.log(d.p+1e-100)+(1-d.p)*np.log(1-d.p+1e-100)).sum()
+  return E
+
 # Initial parameter values and bounds
 xx=np.zeros(14);bounds=[[None,None] for i in range(14)]
 xx[0]=xx[1]=xx[2]=30;  bounds[0]=bounds[1]=bounds[2]=(10,50)
 xx[3]=1.0;             bounds[3]=(-1,3)
 xx[4]=0.05;            bounds[4]=(-0.1,0.5)
 for i in range(5,14): xx[i]=90;bounds[i]=(30,180)
+print("Initial total KL divergence = %.1f bits"%((err(xx)-err0(xx))/log(2)))
 
 res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
 
 print(res.message)
 if not res.success: sys.exit(1)
-n=sum(len(data[region]) for region in regions)*7
-print("Mean error = %.3f"%(res.fun/n))
+
+xx=res.x
+KL=res.fun-err0(xx)
+n=sum(len(data[region]) for region in regions)
+print("Total KL divergence = %.1f bits"%(KL/log(2)))
+print("Average KL divergence = %.3f bits"%(KL/n/log(2)))
 print()
 
 now=time.strftime('%Y-%m-%d',time.localtime())
 tnow=datetoday(now)-datetoday(date0)
-xx=res.x
 print("Robustness of N  = %.1f"%xx[0])
 print("Robustness of OR = %.1f"%xx[1])
 print("Robustness of S  = %.1f"%xx[2])
@@ -127,6 +139,15 @@ for (r,region) in enumerate(regions):
   p=1/(1+exp(-xx[4]*(tnow-xx[5+r])))
   print("%-24s  %s        %6.1f"%(region,daytodate(datetoday(date0)+xx[5+r]+.5),p*100))
 print()
+
+with open('graph','w') as fp:
+  print("#Date        "+"   ".join(regions),file=fp)
+  for t in range(datetoday(date0),datetoday(now)+1):
+    print(daytodate(t),end="",file=fp)
+    for r in range(len(regions)):
+      p=1/(1+exp(-xx[4]*(t-datetoday(date0)-xx[5+r])))
+      print("   %*.4f"%(len(regions[r]),p),end="",file=fp)
+    print(file=fp)
 
 def printdropouts(m):
   for t in [(1,0,0),(0,1,0),(0,0,1),(1,1,0),(0,1,1),(1,0,1),(1,1,1)]:
