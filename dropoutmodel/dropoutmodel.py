@@ -85,23 +85,22 @@ def estimatedropoutmatrix(r,d,xx):
   return tc
       
 # Calculate modelling error (cross entropy) associated with parameters xx[]
+# Would really like to multiply cross entropy for each (region,week) by the number of tests done, but that information is not available.
 def err(xx):
   E=0
   for (r,region) in enumerate(regions):
     for d in data[region]:
       c=estimatedropoutmatrix(r,d,xx)
-      c[0,0,0]=1e-100
       # -log(likelihood of actual dropout matrix if true probs are from estimated dropout matrix)
-      # (Would like to multiply by the number of tests done, but that information is not available)
-      E-=(d.p*np.log(c)+(1-d.p)*np.log(1-c)).sum()
+      E-=(d.p*np.log(c+1e-100)).sum()
   return E
 
 # Baseline error to convert cross entropy into KL divergence
-def err0(xx):
+def err0():
   E=0
   for (r,region) in enumerate(regions):
     for d in data[region]:
-      E-=(d.p*np.log(d.p+1e-100)+(1-d.p)*np.log(1-d.p+1e-100)).sum()
+      E-=(d.p*np.log(d.p+1e-100)).sum()
   return E
 
 # Initial parameter values and bounds
@@ -110,7 +109,7 @@ xx[0]=xx[1]=xx[2]=30;  bounds[0]=bounds[1]=bounds[2]=(10,50)
 xx[3]=1.0;             bounds[3]=(-1,3)
 xx[4]=0.05;            bounds[4]=(-0.1,0.5)
 for i in range(5,14): xx[i]=90;bounds[i]=(30,180)
-print("Initial total KL divergence = %.1f bits"%((err(xx)-err0(xx))/log(2)))
+print("Initial total KL divergence = %.1f bits"%((err(xx)-err0())/log(2)))
 
 res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
 
@@ -118,10 +117,10 @@ print(res.message)
 if not res.success: sys.exit(1)
 
 xx=res.x
-KL=res.fun-err0(xx)
+KL=res.fun-err0()
 n=sum(len(data[region]) for region in regions)
-print("Total KL divergence = %.1f bits"%(KL/log(2)))
-print("Average KL divergence = %.3f bits"%(KL/n/log(2)))
+print("Total KL divergence = %.1f bits (this is missing factors of number of tests done because that information isn't published, so understates the information deficit)"%(KL/log(2)))
+print("Average KL divergence = %.3f bits (ditto)"%(KL/n/log(2)))
 print()
 
 now=time.strftime('%Y-%m-%d',time.localtime())
