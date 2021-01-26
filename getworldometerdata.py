@@ -17,13 +17,13 @@ def tomorrow(x):
       m=1;y+=1
   return "%04d-%02d-%02d"%(y,m,d)
     
-# Convert e.g., "Feb 14" to 2020-02-14
-def isofy(year,x):
+# Convert e.g., "Feb 14, 2020" to 2020-02-14
+def isofy(x):
   y=x.split()
-  if len(y)!=2: return "<unrecogniseddate>"
+  if len(y)!=3: return "<unrecogniseddate>"
   f="JanFebMarAprMayJunJulAugSepOctNovDec".find(y[0])
-  if f<0 or not y[1].isdigit(): return "<unrecogniseddate>"
-  return "%4d-%02d-%02d"%(year,f//3+1,int(y[1]))
+  if f<0 or not y[1][:-1].isdigit(): return "<unrecogniseddate>"
+  return "%4d-%02d-%02d"%(int(y[2]),f//3+1,int(y[1][:-1]))
 
 keys=["'coronavirus-cases-linear'",
       "'coronavirus-deaths-linear'",
@@ -68,11 +68,10 @@ for row in tab.find_all("tr"):
               if name in keys:
                 r=re.search(r"xAxis:\s*{\s*categories:\s*\[(.*?)\s*\]\s*}", text)
                 if r!=None:
-                  year=2020;dates=[]
-                  for x in r.group(1).strip().split(","):
-                    x=x.strip('"')
-                    if x=="Jan 01": year+=1
-                    dates.append(isofy(year,x))
+                  dates=[]
+                  for x in re.split(r',(?= *")',r.group(1).strip()):
+                    x=x.strip().strip('"')
+                    dates.append(isofy(x))
                 else: dates=[]
                 r=re.search(r"series.*data:\s*\[(.*?)\]\s*}", text)
                 if r!=None: values=r.group(1).strip().split(",")
