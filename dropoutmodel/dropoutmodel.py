@@ -139,13 +139,13 @@ for (r,region) in enumerate(regions):
   print("%-24s  %s        %6.1f"%(region,daytodate(datetoday(date0)+xx[5+r]+.5),p*100))
 print()
 
-with open('graph','w') as fp:
-  print("#Date        "+"   ".join(regions),file=fp)
+with open('dropoutmodel.csv','w') as fp:
+  print(", ".join(["date"]+regions),file=fp)
   for t in range(datetoday(date0),datetoday(now)+1):
     print(daytodate(t),end="",file=fp)
     for r in range(len(regions)):
       p=1/(1+exp(-xx[4]*(t-datetoday(date0)-xx[5+r])))
-      print("   %*.4f"%(len(regions[r]),p),end="",file=fp)
+      print(", %.4f"%(p),end="",file=fp)
     print(file=fp)
 
 def printdropouts(m):
