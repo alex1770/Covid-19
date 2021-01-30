@@ -9,9 +9,11 @@
 # Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load
 # then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
 # Parameters (4+nregions*ndates):
-#   a_X     : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
-#   b       : 1 parameter encoding dependence of dropout probability on Ct
-#   logodds : nregions*ndates parameters encoding logodds in region r and date index t
+#   a_X        : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
+#   b          : 1 parameter encoding dependence of dropout probability on Ct
+#   logodds0   : nregions parameters encoding logodds in region r at time index 0
+#   ddlogodds  : nregions*(ndates-1) parameters encoding delta^2 logodds in region r and date index t: ddlogodds[t]=dlogodds[t]-dlogodds[t-1],
+#                where dlogodds[-1]=0 and dlogodds[t]=logodds[t+1]-logodds[t] (t=0,...,ndates-2)
 
 import sys,time,calendar,csv
 from math import log,exp,sqrt
@@ -44,9 +46,24 @@ class testdata:
 def paramnames(xx):
   robustness=xx[:3]
   ctmult=xx[3:4]
-  logodds=xx[4:4+nregions*ndates].reshape((nregions,ndates))
+  logodds0=xx[4:4+nregions]
+  ddlogodds=xx[4+nregions:].reshape((nregions,ndates-1))
+  logodds=np.zeros((nregions,ndates),dtype=float)
+  logodds[:,0]+=logodds0
+  dlogodds=np.zeros(nregions)
+  for c in range(ndates-1):
+    dlogodds+=ddlogodds[:,c]
+    logodds[:,c+1]=logodds[:,c]+dlogodds
   return (robustness,ctmult,logodds)
-    
+
+def paramnames2(xx):
+  robustness=xx[:3]
+  ctmult=xx[3:4]
+  logodds0=xx[4:4+nregions]
+  dlogodds0=xx[4+nregions::ndates]
+  ddlogodds=xx[4+nregions:].reshape((nregions,ndates-1))[:,1:]
+  return (robustness,ctmult,logodds0,dlogodds0,ddlogodds)
+  
 # csv headings:
 # 0             1       2               3       4       5       6       7       8       9       10
 # RegionType	Region	Week started	N only	OR only	S only	OR+N	OR+S	N+S	OR+N+S	Mean
@@ -106,10 +123,8 @@ def err(xx):
       c=estimatedropoutmatrix(r,d,xx)
       # -log(likelihood of actual dropout matrix if true probs are from estimated dropout matrix)
       E-=(d.p*np.log(c+1e-100)).sum()
-  (robustness,ctmult,logodds)=paramnames(xx)
-  a=logodds[:,1:]-logodds[:,:-1]
-  b=a[:,1:]-a[:,:-1]
-  return E+smoothness*(b*b).sum()
+  (robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames2(xx)
+  return E+smoothness*(ddlogodds*ddlogodds).sum()
 
 # Baseline error to convert cross entropy into KL divergence
 def err0():
@@ -119,24 +134,44 @@ def err0():
       E-=(d.p*np.log(d.p+1e-100)).sum()
   return E
 
+def expand(xx0):
+  xx=np.zeros(nparams)
+  (robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames2(xx)
+  xx[:4+nregions]=xx0[:4+nregions]
+  dlogodds0[:]=xx0[4+nregions:4+2*nregions]
+  ddlogodds[:,:]=xx0[4+2*nregions:][np.newaxis,:]
+  return xx
+
 # Initial parameter values and bounds
-xx=np.zeros(nparams);(robustness,ctmult,logodds)=paramnames(xx)
-lbound=np.zeros(nparams);(lbound_r,lbound_c,lbound_l)=paramnames(lbound)
-ubound=np.zeros(nparams);(ubound_r,ubound_c,ubound_l)=paramnames(ubound)
+# alter
+xx=np.zeros(nparams);(robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames2(xx)
+lbound=np.zeros(nparams);(lbound_r,lbound_c,lbound_l,lbound_d0,lbound_dd)=paramnames2(lbound)
+ubound=np.zeros(nparams);(ubound_r,ubound_c,ubound_l,ubound_d0,ubound_dd)=paramnames2(ubound)
 robustness.fill(28);lbound_r.fill(10);ubound_r.fill(50)
 ctmult[0]=1.5;lbound_c[0]=-1;ubound_c[0]=3
-for r in range(nregions):
-  for t in range(ndates):
-    logodds[r,t]=(t-ndates/2-2)*0.08*4
-#logodds.fill(0.08);lbound_l.fill(-0.1);ubound_l.fill(0.5)
-bounds=list(zip(lbound,ubound))[:4]+[(None,None)]*(nregions*ndates)
+logodds0.fill(-10);lbound_l.fill(-30);ubound_l.fill(30)
+dlogodds0+=0.0;lbound_d0.fill(-1);ubound_d0.fill(1)
+ddlogodds.fill(-0.04);lbound_dd.fill(-1);ubound_dd.fill(1)
+bounds=list(zip(lbound,ubound))
 
-print("Initial total KL divergence + prior on 2nd diffs = %.1f bits"%((err(xx)-err0())/log(2)))
+def err_phase0(xx0): return err(expand(xx0))
+xx0=np.zeros(4+nregions*2+ndates-2)
+xx0[:3]=28;xx0[3]=1.5
+print("Initial total KL divergence + prior on 2nd diffs = %.1f bits"%((err_phase0(xx0)-err0())/log(2)))
 print("Using smoothness coefficient %.3f"%smoothness)
 
-if 1:
+res=minimize(err_phase0,xx0,method="SLSQP",options={"maxiter":1000})
+print("Primal total KL divergence + prior on 2nd diffs = %.1f bits"%((err_phase0(res.x)-err0())/log(2)))
+
+xx=expand(res.x)
+
+if 0:
   res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
-else:
+  print(res.message)
+  if not res.success: sys.exit(1)
+  xx=res.x
+
+if 0:
   while 1:
     res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":5})
     print(res.message)
@@ -152,11 +187,8 @@ else:
     print("-------------")
     print()
     if res.success: break
+  xx=res.x
 
-print(res.message)
-if not res.success: sys.exit(1)
-
-xx=res.x
 (robustness,ctmult,logodds)=paramnames(xx)
 KL=res.fun-err0()
 n=sum(len(data[region]) for region in regions)
