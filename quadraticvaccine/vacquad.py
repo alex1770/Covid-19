@@ -11,8 +11,8 @@ import numpy as np
 #        [ S_N ]          [ (1-p)S_N   pS_N ] [ I_N ]         [ 0 ]
 #
 # Aim to work out I_V, I_N to second order in t in order to get expressions of the form
-# I_V(t) = I_V0*exp(L_V1*t+(1/2)L_V2*t^2)
-# I_N(t) = I_N0*exp(L_N1*t+(1/2)L_N2*t^2)
+# I_V(t) = I_V0*exp( L_V1*t + (1/2)L_V2*t^2 + O(t^3) )
+# I_N(t) = I_N0*exp( L_N1*t + (1/2)L_N2*t^2 + O(t^3) )
 
 
 I_N0=0.02
@@ -25,7 +25,7 @@ alpha=0.006*67/3
 
 print("#    p           L_V1          L_V2          L_N1          L_N2")
 
-for p in [0.1*x for x in range(11)]:
+for p in [0.02*x for x in range(25,51)]:
   
   # First work out S_V, S_N to first order in t
   # S_V = S_V0 + S_V1.t + ...
@@ -56,16 +56,3 @@ for p in [0.1*x for x in range(11)]:
   L_V0=log(I_V0);L_V1=I_V1/I_V0;L_V2=I_V2/I_V0-(I_V1/I_V0)**2
   L_N0=log(I_N0);L_N1=I_N1/I_N0;L_N2=I_N2/I_N0-(I_N1/I_N0)**2
   print("%6.3f   %12.8f  %12.8f  %12.8f  %12.8f"%(p,L_V1,L_V2,L_N1,L_N2))
-  if 0:
-    print("B:")
-    print(B)
-    print()
-    print("C:")
-    print(C)
-    print()
-    print("B^2-C:")
-    print(np.matmul(B,B)-C)
-    print()
-    print("--------------------")
-    print()
-  
