@@ -2,6 +2,8 @@
 # Following on from Theo Sanderson's analysis at https://theo.io/post/2021-01-22-ons-data/.
 # Data from tabs 6a, 6b of spreadsheet here https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/bulletins/coronaviruscovid19infectionsurveypilot/22january2021/relateddata
 # as transcribed at https://github.com/theosanderson/theo.io/blob/master/content/post/2021-01-22-ons-data/ons_ct.csv
+# and updated with data from subsequent ONS infection surveys.
+# This differs from dropoutmodel.py in that it doesn't assume constant logistic growth.
 
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
@@ -30,7 +32,7 @@ from math import log,exp,sqrt
 import numpy as np
 from scipy.optimize import minimize
 
-date0="2020-10-01"
+mindate="2020-10-01"
 
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
@@ -79,13 +81,17 @@ def getlogodds(xx):
 # 10th Percentile  25th Percentile	50th Percentile	75th Percentile	90th Percentile
 
 data={}
+date0=None
 with open("ons_ct.csv","r") as fp:
   reader=csv.reader(fp)
   headings=next(reader)
   for row in reader:
     if row[0]=="EnglandRegion":
-      d=testdata(time.strftime("%Y-%m-%d",time.strptime(row[2],"%d %B %Y")))
-      if d.t>=0:
+      date=time.strftime("%Y-%m-%d",time.strptime(row[2],"%d %B %Y"))
+      if date>=mindate:
+        if date0==None: date0=date
+        d=testdata(date)
+        assert d.t>=0 and d.t%7==0
         d.p[1][0][0]=float(row[3])# N
         d.p[0][1][0]=float(row[4])# OR
         d.p[0][0][1]=float(row[5])# S
@@ -172,10 +178,10 @@ now=time.strftime('%Y-%m-%d',time.localtime())
 day0=datetoday(date0)
 tnow=datetoday(now)-day0
 
-# Interpolate logodds
+# Interpolate/extrapolate logodds
 logodds_i=np.zeros((nregions,tnow+1),dtype=float)
 for r in range(nregions):
-  g=(logodds[r][ndates-1]-logodds[r][ndates-6])/(5*7)
+  g=(logodds[r][ndates-1]-logodds[r][ndates-2])/(1*7)
   for t in range(tnow+1):
     if t<7*(ndates-1):
       l=((7-t%7)*logodds[r][t//7]+(t%7)*logodds[r][t//7+1])/7
@@ -206,7 +212,7 @@ with open('dropoutmodel.csv','w') as fp:
     print(daytodate(day0+t),end="",file=fp)
     for r in range(len(regions)):
       p=1/(1+exp(-logodds_i[r][t]))
-      print(", %.4f"%(p),end="",file=fp)
+      print(", %10.4g"%(p),end="",file=fp)
     print(file=fp)
 
 def printdropouts(m):
