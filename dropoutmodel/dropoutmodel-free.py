@@ -60,7 +60,7 @@ def paramnames2(xx):
   robustness=xx[:3]
   ctmult=xx[3:4]
   logodds0=xx[4:4+nregions]
-  dlogodds0=xx[4+nregions::ndates]
+  dlogodds0=xx[4+nregions::ndates-1]
   ddlogodds=xx[4+nregions:].reshape((nregions,ndates-1))[:,1:]
   return (robustness,ctmult,logodds0,dlogodds0,ddlogodds)
   
