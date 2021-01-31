@@ -7,12 +7,12 @@
 
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
-# Relative prevalence of B.1.1.7 = logistic(g*(t-l(Region)))
+# Relative prevalence of B.1.1.7 = logistic(logodds(r,t)), where r=region and logodds(r,t) has approx constant growth in t (see below for how logodds(r,t) is defined in terms of parameters)
 # Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load
 # then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
 # Parameters (4+2*nregions+ndates-2):
 #   a_X        : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
-#   b          : 1 parameter encoding dependence of dropout probability on Ct
+#   b          : 1 parameter ("ctmult") encoding dependence of dropout probability on Ct
 #   logodds0   : nregions parameters encoding logodds in region r at time index 0
 #   dlogodds0  : nregions parameters encoding dlogodds in region r at time index 0
 #   ddlogodds  : ndates-2 parameters encoding difference in dlogodds at time index t (independent of region)
