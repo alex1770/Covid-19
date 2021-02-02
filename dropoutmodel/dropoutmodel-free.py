@@ -8,8 +8,9 @@
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
 # Relative prevalence of B.1.1.7 = logistic(logodds(r,t)), where r=region and logodds(r,t) has approx constant growth in t (see below for how logodds(r,t) is defined in terms of parameters)
-# Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load
-# then probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
+# Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load,
+# then the probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
+# The probability of SGTF (mandatory S dropout, assumed to be due to B.1.1.7) is exp(logodds[r,t]) with logodds[r,t] given as below:
 # Parameters (4+2*nregions+ndates-2):
 #   a_X        : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
 #   b          : 1 parameter ("ctmult") encoding dependence of dropout probability on Ct
@@ -108,7 +109,7 @@ nregions=len(regions)
 x=set(len(x) for x in data.values());assert len(x)==1
 ndates=x.pop()
 nparams=3+1+nregions*2+ndates-2
-smoothness=1.0
+smoothness=5.0
 
 # Work out expected dropout matrix for region r, dropout matrix, date and Ct value d, model parameters xx[]
 def estimatedropoutmatrix(r,d,robustness,ctmult,logodds):
@@ -178,6 +179,9 @@ now=time.strftime('%Y-%m-%d',time.localtime())
 day0=datetoday(date0)
 tnow=datetoday(now)-day0
 
+# Determine max growth
+gmax=np.max(logodds[:,1:]-logodds[:,:-1],axis=1)/7
+
 # Interpolate/extrapolate logodds
 logodds_i=np.zeros((nregions,tnow+1),dtype=float)
 for r in range(nregions):
@@ -193,17 +197,17 @@ print("Robustness of N  = %.1f"%robustness[0])
 print("Robustness of OR = %.1f"%robustness[1])
 print("Robustness of S  = %.1f"%robustness[2])
 print("Dependence of dropout on Ct = %.3f"%ctmult[0])
-#print("Relative growth rate per day of B.1.1.7 =",logodds)
 print()
 print("Region                    Est'd crossover     Extrapolated %relative")
-print("------                    date of B.1.1.7     prevalence on",now)
-print("                          ---------------     ------------------------")
+print("------                    date of B.1.1.7     prevalence on",now,"   Maximum growth rate")
+print("                          ---------------     ------------------------    -------------------")
 for (r,region) in enumerate(regions):
   for t in range(tnow):
     if logodds_i[r][t]<0 and logodds_i[r][t+1]>=0: tc=t+logodds_i[r][t+1]/(logodds_i[r][t+1]-logodds_i[r][t]);break
   else: tc=None
   p=1/(1+exp(-logodds_i[r][tnow]))
-  print("%-24s  %s        %6.1f"%(region,daytodate(day0+tc) if tc!=None else "????-??-??",p*100))
+  print("%-24s  %s        %6.1f                       %6.3f"%(region,daytodate(day0+tc) if tc!=None else "????-??-??",p*100,gmax[r]))
+
 print()
 
 with open('dropoutmodel.csv','w') as fp:
