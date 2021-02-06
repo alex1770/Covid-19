@@ -5,6 +5,8 @@
 # and updated with data from subsequent ONS infection surveys.
 # This differs from dropoutmodel.py in that it doesn't assume constant logistic growth.
 
+# See https://www.medrxiv.org/content/10.1101/2020.10.25.20219048v1
+
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
 # Relative prevalence of B.1.1.7 = logistic(logodds(r,t)), where r=region and logodds(r,t) has approx constant growth in t (see below for how logodds(r,t) is defined in terms of parameters)
@@ -87,7 +89,7 @@ with open("ons_ct.csv","r") as fp:
   reader=csv.reader(fp)
   headings=next(reader)
   for row in reader:
-    if row[0]=="EnglandRegion":
+    if row[0]=="EnglandRegion":# or row[0]=="Country":
       date=time.strftime("%Y-%m-%d",time.strptime(row[2],"%d %B %Y"))
       if date>=mindate:
         if date0==None: date0=date
@@ -198,15 +200,15 @@ print("Robustness of OR = %.1f"%robustness[1])
 print("Robustness of S  = %.1f"%robustness[2])
 print("Dependence of dropout on Ct = %.3f"%ctmult[0])
 print()
-print("Region                    Est'd crossover     Extrapolated %relative")
-print("------                    date of B.1.1.7     prevalence on",now,"   Maximum growth rate")
-print("                          ---------------     ------------------------    -------------------")
+print("Region                    Est'd crossover     Extrapolated %relative                            Approx R factor")
+print("------                    date of B.1.1.7     prevalence on",now,"   Maximum growth rate   assuming same gen time")
+print("                          ---------------     ------------------------    -------------------   ----------------------")
 for (r,region) in enumerate(regions):
   for t in range(tnow):
     if logodds_i[r][t]<0 and logodds_i[r][t+1]>=0: tc=t+logodds_i[r][t+1]/(logodds_i[r][t+1]-logodds_i[r][t]);break
   else: tc=None
   p=1/(1+exp(-logodds_i[r][tnow]))
-  print("%-24s  %s        %6.1f                       %6.3f"%(region,daytodate(day0+tc) if tc!=None else "????-??-??",p*100,gmax[r]))
+  print("%-24s  %s        %6.1f                       %6.3f                %5.2f"%(region,daytodate(day0+tc) if tc!=None else "????-??-??",p*100,gmax[r],exp(4.7*gmax[r])))
 
 print()
 
