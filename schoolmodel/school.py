@@ -82,13 +82,23 @@ D = np.array([[C[0,0]*beta[0,0], C[0,0]*beta[0,1], 0],
 
 NN=np.array([N[0], N[0], N[1]])
 
+print('"Child1" means Children infected by children')
+print('"Child2" means Children infected by adults')
+print()
+print("Susceptibilities (child, adult):",suscep)
+print("Transmissibilities (child1, child2, adult):",transm)
+print("Non-isolation probabilities (child1, child2, adult):",nonisolate)
+print()
+print("Simple contact matrix:")
+print(C)
+print()
 print("Derived contact matrix:")
 print(D)
 print()
 
 print("I_c1 = Children infected by children, as a proportion of all children")
 print("I_c1 = Children infected by adults, as a proportion of all children")
-print("I_a  = Adults infected, as a proportion of all adults")
+print("I_a  = Infected adults, as a proportion of all adults")
 print()
 print(" Day   I_c1 %%       I_c2 %%       I_a %%")
 
