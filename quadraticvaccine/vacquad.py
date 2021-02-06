@@ -2,18 +2,24 @@ from math import log,exp,sqrt
 import numpy as np
 
 # Two population (V=to-be-vaccinated, N=not-to-be-vaccinated) SIR with vaccine term (alpha)
-# Assume a simple contact matrix C = k.[p  1-p].[v     ]
-#                                      [1-p  p] [   1-v]
+# Assume a simple contact matrix C = k.[p  (1-p)(1-v)]
+#                                      [(1-p)v      p]
 #
-# where v is the proportion of people in the vaccinated group, and k is a scale factor, 1/(p/2+sqrt(p^2/4-(2p-1)v(1-v))), chosen so that
-# k.[p  1-p].[v    0] has its largest eigenvalue equal to 1, so that R_0=beta/gamma as usual.
-#   [1-p  p] [0  1-v]
+# where v is the proportion of people in the vaccinated group (assumed small), 1/2 <= p <= 1, and k is a scale factor, chosen so that
+# C has its largest eigenvalue equal to 1, so that R_0=beta/gamma as usual.
+#
+# Note that this is a definite assumption. The general normalised contact matrix would have three parameters
+# (just restricting biggest eigenvalue to be 1) whereas we're only using two (p and v).
+# It's because we're restricting to contact matrices where a member of V tends to meet
+# a similar (for non-extreme p) number of members of V to those of N.
+# (Which implies a member of N tends to meet only a small number of members of V, because v is small.)
+#
 #
 # I_V, S_V, I_N, S_N represent proportions of their respective populations (so between 0 and 1)
 #
 # Force term:
-#        [ F_V ] = beta.k.[ p   1-p ].[v     ].[ I_V ] = beta.C.[ I_V ]
-#        [ F_N ]          [ 1-p   p ] [   1-v] [ I_N ]          [ I_N ]
+#        [ F_V ] = beta.C.[ I_V ]
+#        [ F_N ]          [ I_N ]
 #
 #
 # (d/dt) [ I_V ] =   [ F_V.S_V ] - gamma.[ I_V ]
@@ -37,11 +43,11 @@ alpha=0.006/v
 
 print("#    p           L_V1          L_V2          L_N1          L_N2")
 
-#for p in [0.02*x for x in range(25,51)]:
-for p in [0.9]:
+for p in [0.01*x for x in range(50,101)]:
 
-  C=np.array([[p*v,(1-p)*(1-v)],[(1-p)*v,p*(1-v)]])
-  C*=1/(p/2+sqrt(p**2/4-(2*p-1)*v*(1-v)))
+  C=np.array([[p,(1-p)*(1-v)],[(1-p)*v,p]])
+  e=np.sort(np.abs(np.linalg.eigvals(C)))[1]# Largest eigenvalue of C
+  C/=e
   
   # First work out S_V, S_N to first order in t
   # S_V = S_V0 + S_V1.t + ...
@@ -49,8 +55,8 @@ for p in [0.9]:
   F0=beta*np.matmul(C,[I_V0,I_N0])
   [S_V1, S_N1] = -([S_V0,S_N0]*F0) - np.array([alpha,0])
   
-  # (d/dt) [I_V] = ( beta.[ S_V     ].C - gamma.[ 1    ] ).[I_V] = (say) (A + Bt + O(t^2)).[I_V]
-  #        [I_N]          [     S_N ]           [    1 ]   [I_N]                           [I_N]
+  # (d/dt) [I_V] = ( beta.[ S_V     ].C - gamma.[ 1    ] ).[I_V] = (A + Bt + O(t^2)).[I_V]
+  #        [I_N]          [     S_N ]           [    1 ]   [I_N]                     [I_N]
   #
   A=beta*np.matmul([[S_V0,0],[0,S_N0]],C) - gamma*np.array([[1,0],[0,1]])
   B=beta*np.matmul([[S_V1,0],[0,S_N1]],C)
@@ -72,7 +78,8 @@ for p in [0.9]:
   L_N0=log(I_N0);L_N1=I_N1/I_N0;L_N2=I_N2/I_N0-(I_N1/I_N0)**2
   print("%6.3f   %12.8f  %12.8f  %12.8f  %12.8f"%(p,L_V1,L_V2,L_N1,L_N2))
 
-  if 1:
+  # Check
+  if 0:
     (I_V,S_V,I_N,S_N)=(I_V0,S_V0,I_N0,S_N0)
     delta=1/1000
     for it in range(1001):
@@ -82,9 +89,7 @@ for p in [0.9]:
       I_N+=delta*(T[1]-gamma*I_N)
       S_V+=-delta*(T[0]+alpha)
       S_N+=-delta*T[1]
-      print(log(I_V/I_V0)/(delta*(it+1)))
-      if it==50: x=log(I_V/I_V0)
-      if it==100: y=log(I_V/I_V0)
-    print("Check:",10*(x*4-y),400*(y-2*x))
+      z=log(I_V/I_V0)/(delta*(it+1))
+      print(z,(z-L_V1)/(delta*(it+2))*2)
     print()
     
