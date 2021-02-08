@@ -1,4 +1,4 @@
-import time,calendar,os,json,sys
+import time,calendar,os,json,sys,datetime
 from requests import get
 from subprocess import Popen,PIPE
 
@@ -37,10 +37,11 @@ def get_data(req):
 req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';               hospdata=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}'; casedata=get_data(req)
 updatedate=casedata[-1]['date']
+now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
 # Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
 fn=os.path.join('apidata',updatedate)
-if os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
+if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
 os.makedirs('apidata', exist_ok=True)
 with open(fn,'w') as fp:
   json.dump(casedata,fp,indent=2)
@@ -75,7 +76,7 @@ def smooth(data):
 hosp=smooth(newhosp)
 cases=smooth(newcases)
 
-def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png'):
+def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[]):
   po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
   
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
@@ -96,6 +97,7 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
   write('set xtics rotate by 45 right offset 0.5,0')
   write('set grid xtics ytics lc rgb "#dddddd" lt 1')
   write('set xtics nomirror')
+  for x in extra: write(x)
   s='plot '
   first=True
   for dat in data:
@@ -125,10 +127,21 @@ for age in ['18_to_64', '65_to_84', '85+']:
     'title': age.replace('_',' '),
     'values': [(d['date'],d[age]) for d in hosp]
   })
-title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+updatedate
+title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
 
-title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+updatedate
+data=[]
+for ageband in range(0,90,10):
+  if ageband<80: lim=ageband+10;name="%d - %d"%(ageband,lim)
+  else: lim=999;name="%d+"%ageband
+  data.append({
+    'title': name,
+    'values': [(d['date'],sum(d[age] for age in caseages if parseage(age)[0]>=ageband and parseage(age)[1]<=lim)) for d in cases]
+  })
+title='Confirmed cases per day for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
+makegraph(title=title, data=data, mindate=mindate, ylabel='Number of cases per day', outfn='confirmedcasesbyage-abs.png')#, extra=['set logscale y'])
+
+title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
 cutoff0=65
 cutoff1=80
 lowages=[age for age in caseages if parseage(age)[0]>=cutoff0 and parseage(age)[1]<cutoff1]
@@ -160,3 +173,4 @@ if 0:
   })
   
 makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage', outfn='admissionandcaseageratios.png')
+
