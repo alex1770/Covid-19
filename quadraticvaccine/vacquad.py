@@ -39,7 +39,7 @@ S_N0=0.8
 S_V0=0.9
 beta=0.09
 gamma=0.09
-alpha=0.006/v
+alpha=0.01
 
 print("#    p           L_V1          L_V2          L_N1          L_N2")
 
