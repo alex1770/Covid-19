@@ -1,0 +1,330 @@
+LAD20CD,LAD20NM,STP20CD,STP20NM
+E06000001,Hartlepool,E54000050,Cumbria and North East
+E06000002,Middlesbrough,E54000050,Cumbria and North East
+E06000003,Redcar and Cleveland,E54000050,Cumbria and North East
+E06000004,Stockton-on-Tees,E54000050,Cumbria and North East
+E06000005,Darlington,E54000050,Cumbria and North East
+E06000006,Halton,E54000008,Cheshire and Merseyside
+E06000007,Warrington,E54000008,Cheshire and Merseyside
+E06000008,Blackburn with Darwen,E54000048,Healthier Lancashire and South Cumbria
+E06000009,Blackpool,E54000048,Healthier Lancashire and South Cumbria
+E06000010,"Kingston upon Hull, City of",E54000051,"Humber, Coast and Vale"
+E06000011,East Riding of Yorkshire,E54000051,"Humber, Coast and Vale"
+E06000012,North East Lincolnshire,E54000051,"Humber, Coast and Vale"
+E06000013,North Lincolnshire,E54000051,"Humber, Coast and Vale"
+E06000014,York,E54000051,"Humber, Coast and Vale"
+E06000015,Derby,E54000012,Joined Up Care Derbyshire
+E06000016,Leicester,E54000015,"Leicester, Leicestershire and Rutland"
+E06000017,Rutland,E54000015,"Leicester, Leicestershire and Rutland"
+E06000018,Nottingham,E54000014,Nottingham and Nottinghamshire Health and Care
+E06000019,"Herefordshire, County of",E54000019,Herefordshire and Worcestershire
+E06000020,Telford and Wrekin,E54000011,Shropshire and Telford and Wrekin
+E06000021,Stoke-on-Trent,E54000010,Staffordshire and Stoke on Trent
+E06000022,Bath and North East Somerset,E54000040,"Bath and North East Somerset, Swindon and Wiltshire"
+E06000023,"Bristol, City of",E54000039,"Bristol, North Somerset and South Gloucestershire"
+E06000024,North Somerset,E54000039,"Bristol, North Somerset and South Gloucestershire"
+E06000025,South Gloucestershire,E54000039,"Bristol, North Somerset and South Gloucestershire"
+E06000026,Plymouth,E54000037,Devon
+E06000027,Torbay,E54000037,Devon
+E06000030,Swindon,E54000040,"Bath and North East Somerset, Swindon and Wiltshire"
+E06000031,Peterborough,E54000021,Cambridgeshire and Peterborough
+E06000032,Luton,E54000024,"Bedfordshire, Luton and Milton Keynes"
+E06000033,Southend-on-Sea,E54000026,Mid and South Essex
+E06000034,Thurrock,E54000026,Mid and South Essex
+E06000035,Medway,E54000032,Kent and Medway
+E06000036,Bracknell Forest,E54000034,Frimley Health and Care ICS
+E06000037,West Berkshire,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E06000038,Reading,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E06000039,Slough,E54000034,Frimley Health and Care ICS
+E06000040,Windsor and Maidenhead,E54000034,Frimley Health and Care ICS
+E06000041,Wokingham,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E06000042,Milton Keynes,E54000024,"Bedfordshire, Luton and Milton Keynes"
+E06000043,Brighton and Hove,E54000053,Sussex and East Surrey Health and Care Partnership
+E06000044,Portsmouth,E54000042,Hampshire and the Isle of Wight
+E06000045,Southampton,E54000042,Hampshire and the Isle of Wight
+E06000046,Isle of Wight,E54000042,Hampshire and the Isle of Wight
+E06000047,County Durham,E54000050,Cumbria and North East
+E06000049,Cheshire East,E54000008,Cheshire and Merseyside
+E06000050,Cheshire West and Chester,E54000008,Cheshire and Merseyside
+E06000051,Shropshire,E54000011,Shropshire and Telford and Wrekin
+E06000052,Cornwall,E54000036,Cornwall and the Isles of Scilly Health and Social Care Partnership
+E06000053,Isles of Scilly,E54000036,Cornwall and the Isles of Scilly Health and Social Care Partnership
+E06000054,Wiltshire,E54000040,"Bath and North East Somerset, Swindon and Wiltshire"
+E06000055,Bedford,E54000024,"Bedfordshire, Luton and Milton Keynes"
+E06000056,Central Bedfordshire,E54000024,"Bedfordshire, Luton and Milton Keynes"
+E06000057,Northumberland,E54000050,Cumbria and North East
+E06000058,"Bournemouth, Christchurch and Poole",E54000041,Dorset
+E06000059,Dorset,E54000041,Dorset
+E06000060,Buckinghamshire,E54000024,"Bedfordshire, Luton and Milton Keynes"
+E06000060,Buckinghamshire,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E07000008,Cambridge,E54000021,Cambridgeshire and Peterborough
+E07000009,East Cambridgeshire,E54000021,Cambridgeshire and Peterborough
+E07000010,Fenland,E54000021,Cambridgeshire and Peterborough
+E07000011,Huntingdonshire,E54000021,Cambridgeshire and Peterborough
+E07000012,South Cambridgeshire,E54000021,Cambridgeshire and Peterborough
+E07000026,Allerdale,E54000050,Cumbria and North East
+E07000027,Barrow-in-Furness,E54000048,Healthier Lancashire and South Cumbria
+E07000028,Carlisle,E54000050,Cumbria and North East
+E07000029,Copeland,E54000048,Healthier Lancashire and South Cumbria
+E07000029,Copeland,E54000050,Cumbria and North East
+E07000030,Eden,E54000050,Cumbria and North East
+E07000031,South Lakeland,E54000048,Healthier Lancashire and South Cumbria
+E07000032,Amber Valley,E54000012,Joined Up Care Derbyshire
+E07000033,Bolsover,E54000012,Joined Up Care Derbyshire
+E07000034,Chesterfield,E54000012,Joined Up Care Derbyshire
+E07000035,Derbyshire Dales,E54000012,Joined Up Care Derbyshire
+E07000036,Erewash,E54000012,Joined Up Care Derbyshire
+E07000037,High Peak,E54000007,Greater Manchester Health and Social Care Partnership
+E07000037,High Peak,E54000012,Joined Up Care Derbyshire
+E07000038,North East Derbyshire,E54000012,Joined Up Care Derbyshire
+E07000039,South Derbyshire,E54000012,Joined Up Care Derbyshire
+E07000040,East Devon,E54000037,Devon
+E07000041,Exeter,E54000037,Devon
+E07000042,Mid Devon,E54000037,Devon
+E07000043,North Devon,E54000037,Devon
+E07000044,South Hams,E54000037,Devon
+E07000045,Teignbridge,E54000037,Devon
+E07000046,Torridge,E54000037,Devon
+E07000047,West Devon,E54000037,Devon
+E07000061,Eastbourne,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000062,Hastings,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000063,Lewes,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000064,Rother,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000065,Wealden,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000066,Basildon,E54000026,Mid and South Essex
+E07000067,Braintree,E54000026,Mid and South Essex
+E07000068,Brentwood,E54000026,Mid and South Essex
+E07000069,Castle Point,E54000026,Mid and South Essex
+E07000070,Chelmsford,E54000026,Mid and South Essex
+E07000071,Colchester,E54000023,Suffolk and North East Essex
+E07000072,Epping Forest,E54000025,Hertfordshire and West Essex
+E07000073,Harlow,E54000025,Hertfordshire and West Essex
+E07000074,Maldon,E54000026,Mid and South Essex
+E07000075,Rochford,E54000026,Mid and South Essex
+E07000076,Tendring,E54000023,Suffolk and North East Essex
+E07000077,Uttlesford,E54000025,Hertfordshire and West Essex
+E07000078,Cheltenham,E54000043,Gloucestershire
+E07000079,Cotswold,E54000043,Gloucestershire
+E07000080,Forest of Dean,E54000043,Gloucestershire
+E07000081,Gloucester,E54000043,Gloucestershire
+E07000082,Stroud,E54000043,Gloucestershire
+E07000083,Tewkesbury,E54000043,Gloucestershire
+E07000084,Basingstoke and Deane,E54000042,Hampshire and the Isle of Wight
+E07000085,East Hampshire,E54000042,Hampshire and the Isle of Wight
+E07000086,Eastleigh,E54000042,Hampshire and the Isle of Wight
+E07000087,Fareham,E54000042,Hampshire and the Isle of Wight
+E07000088,Gosport,E54000042,Hampshire and the Isle of Wight
+E07000089,Hart,E54000034,Frimley Health and Care ICS
+E07000089,Hart,E54000042,Hampshire and the Isle of Wight
+E07000090,Havant,E54000042,Hampshire and the Isle of Wight
+E07000091,New Forest,E54000042,Hampshire and the Isle of Wight
+E07000092,Rushmoor,E54000034,Frimley Health and Care ICS
+E07000093,Test Valley,E54000042,Hampshire and the Isle of Wight
+E07000094,Winchester,E54000042,Hampshire and the Isle of Wight
+E07000095,Broxbourne,E54000025,Hertfordshire and West Essex
+E07000096,Dacorum,E54000025,Hertfordshire and West Essex
+E07000098,Hertsmere,E54000025,Hertfordshire and West Essex
+E07000099,North Hertfordshire,E54000021,Cambridgeshire and Peterborough
+E07000099,North Hertfordshire,E54000025,Hertfordshire and West Essex
+E07000102,Three Rivers,E54000025,Hertfordshire and West Essex
+E07000103,Watford,E54000025,Hertfordshire and West Essex
+E07000105,Ashford,E54000032,Kent and Medway
+E07000106,Canterbury,E54000032,Kent and Medway
+E07000107,Dartford,E54000032,Kent and Medway
+E07000108,Dover,E54000032,Kent and Medway
+E07000109,Gravesham,E54000032,Kent and Medway
+E07000110,Maidstone,E54000032,Kent and Medway
+E07000111,Sevenoaks,E54000032,Kent and Medway
+E07000112,Folkestone and Hythe,E54000032,Kent and Medway
+E07000113,Swale,E54000032,Kent and Medway
+E07000114,Thanet,E54000032,Kent and Medway
+E07000115,Tonbridge and Malling,E54000032,Kent and Medway
+E07000116,Tunbridge Wells,E54000032,Kent and Medway
+E07000117,Burnley,E54000048,Healthier Lancashire and South Cumbria
+E07000118,Chorley,E54000048,Healthier Lancashire and South Cumbria
+E07000119,Fylde,E54000048,Healthier Lancashire and South Cumbria
+E07000120,Hyndburn,E54000048,Healthier Lancashire and South Cumbria
+E07000121,Lancaster,E54000048,Healthier Lancashire and South Cumbria
+E07000122,Pendle,E54000048,Healthier Lancashire and South Cumbria
+E07000123,Preston,E54000048,Healthier Lancashire and South Cumbria
+E07000124,Ribble Valley,E54000048,Healthier Lancashire and South Cumbria
+E07000125,Rossendale,E54000048,Healthier Lancashire and South Cumbria
+E07000126,South Ribble,E54000048,Healthier Lancashire and South Cumbria
+E07000127,West Lancashire,E54000048,Healthier Lancashire and South Cumbria
+E07000128,Wyre,E54000048,Healthier Lancashire and South Cumbria
+E07000129,Blaby,E54000015,"Leicester, Leicestershire and Rutland"
+E07000130,Charnwood,E54000015,"Leicester, Leicestershire and Rutland"
+E07000131,Harborough,E54000015,"Leicester, Leicestershire and Rutland"
+E07000132,Hinckley and Bosworth,E54000015,"Leicester, Leicestershire and Rutland"
+E07000133,Melton,E54000015,"Leicester, Leicestershire and Rutland"
+E07000134,North West Leicestershire,E54000015,"Leicester, Leicestershire and Rutland"
+E07000135,Oadby and Wigston,E54000015,"Leicester, Leicestershire and Rutland"
+E07000136,Boston,E54000013,Lincolnshire
+E07000137,East Lindsey,E54000013,Lincolnshire
+E07000138,Lincoln,E54000013,Lincolnshire
+E07000139,North Kesteven,E54000013,Lincolnshire
+E07000140,South Holland,E54000013,Lincolnshire
+E07000141,South Kesteven,E54000013,Lincolnshire
+E07000142,West Lindsey,E54000013,Lincolnshire
+E07000143,Breckland,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000144,Broadland,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000145,Great Yarmouth,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000146,King's Lynn and West Norfolk,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000147,North Norfolk,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000148,Norwich,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000149,South Norfolk,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000150,Corby,E54000020,Northamptonshire
+E07000151,Daventry,E54000020,Northamptonshire
+E07000152,East Northamptonshire,E54000020,Northamptonshire
+E07000152,East Northamptonshire,E54000021,Cambridgeshire and Peterborough
+E07000153,Kettering,E54000020,Northamptonshire
+E07000154,Northampton,E54000020,Northamptonshire
+E07000155,South Northamptonshire,E54000020,Northamptonshire
+E07000156,Wellingborough,E54000020,Northamptonshire
+E07000163,Craven,E54000048,Healthier Lancashire and South Cumbria
+E07000163,Craven,E54000054,West Yorkshire and Harrogate (Health and Care Partnership)
+E07000164,Hambleton,E54000051,"Humber, Coast and Vale"
+E07000165,Harrogate,E54000051,"Humber, Coast and Vale"
+E07000166,Richmondshire,E54000051,"Humber, Coast and Vale"
+E07000167,Ryedale,E54000051,"Humber, Coast and Vale"
+E07000168,Scarborough,E54000051,"Humber, Coast and Vale"
+E07000169,Selby,E54000051,"Humber, Coast and Vale"
+E07000170,Ashfield,E54000014,Nottingham and Nottinghamshire Health and Care
+E07000171,Bassetlaw,E54000009,South Yorkshire and Bassetlaw
+E07000172,Broxtowe,E54000014,Nottingham and Nottinghamshire Health and Care
+E07000173,Gedling,E54000014,Nottingham and Nottinghamshire Health and Care
+E07000174,Mansfield,E54000014,Nottingham and Nottinghamshire Health and Care
+E07000175,Newark and Sherwood,E54000014,Nottingham and Nottinghamshire Health and Care
+E07000176,Rushcliffe,E54000014,Nottingham and Nottinghamshire Health and Care
+E07000177,Cherwell,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E07000178,Oxford,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E07000179,South Oxfordshire,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E07000180,Vale of White Horse,E54000040,"Bath and North East Somerset, Swindon and Wiltshire"
+E07000180,Vale of White Horse,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E07000181,West Oxfordshire,E54000044,"Buckinghamshire, Oxfordshire and Berkshire West"
+E07000187,Mendip,E54000038,Somerset
+E07000188,Sedgemoor,E54000038,Somerset
+E07000189,South Somerset,E54000038,Somerset
+E07000192,Cannock Chase,E54000010,Staffordshire and Stoke on Trent
+E07000193,East Staffordshire,E54000010,Staffordshire and Stoke on Trent
+E07000194,Lichfield,E54000010,Staffordshire and Stoke on Trent
+E07000195,Newcastle-under-Lyme,E54000010,Staffordshire and Stoke on Trent
+E07000196,South Staffordshire,E54000010,Staffordshire and Stoke on Trent
+E07000197,Stafford,E54000010,Staffordshire and Stoke on Trent
+E07000198,Staffordshire Moorlands,E54000010,Staffordshire and Stoke on Trent
+E07000199,Tamworth,E54000010,Staffordshire and Stoke on Trent
+E07000200,Babergh,E54000023,Suffolk and North East Essex
+E07000202,Ipswich,E54000023,Suffolk and North East Essex
+E07000203,Mid Suffolk,E54000023,Suffolk and North East Essex
+E07000207,Elmbridge,E54000052,Surrey Heartlands Health and Care Partnership
+E07000208,Epsom and Ewell,E54000052,Surrey Heartlands Health and Care Partnership
+E07000209,Guildford,E54000034,Frimley Health and Care ICS
+E07000209,Guildford,E54000052,Surrey Heartlands Health and Care Partnership
+E07000210,Mole Valley,E54000052,Surrey Heartlands Health and Care Partnership
+E07000211,Reigate and Banstead,E54000052,Surrey Heartlands Health and Care Partnership
+E07000212,Runnymede,E54000034,Frimley Health and Care ICS
+E07000212,Runnymede,E54000052,Surrey Heartlands Health and Care Partnership
+E07000213,Spelthorne,E54000052,Surrey Heartlands Health and Care Partnership
+E07000214,Surrey Heath,E54000034,Frimley Health and Care ICS
+E07000214,Surrey Heath,E54000052,Surrey Heartlands Health and Care Partnership
+E07000215,Tandridge,E54000052,Surrey Heartlands Health and Care Partnership
+E07000216,Waverley,E54000034,Frimley Health and Care ICS
+E07000216,Waverley,E54000052,Surrey Heartlands Health and Care Partnership
+E07000217,Woking,E54000052,Surrey Heartlands Health and Care Partnership
+E07000218,North Warwickshire,E54000018,Coventry and Warwickshire
+E07000219,Nuneaton and Bedworth,E54000018,Coventry and Warwickshire
+E07000220,Rugby,E54000018,Coventry and Warwickshire
+E07000221,Stratford-on-Avon,E54000018,Coventry and Warwickshire
+E07000222,Warwick,E54000018,Coventry and Warwickshire
+E07000223,Adur,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000224,Arun,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000225,Chichester,E54000052,Surrey Heartlands Health and Care Partnership
+E07000225,Chichester,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000226,Crawley,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000227,Horsham,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000228,Mid Sussex,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000229,Worthing,E54000053,Sussex and East Surrey Health and Care Partnership
+E07000234,Bromsgrove,E54000019,Herefordshire and Worcestershire
+E07000235,Malvern Hills,E54000019,Herefordshire and Worcestershire
+E07000236,Redditch,E54000019,Herefordshire and Worcestershire
+E07000237,Worcester,E54000019,Herefordshire and Worcestershire
+E07000238,Wychavon,E54000019,Herefordshire and Worcestershire
+E07000239,Wyre Forest,E54000019,Herefordshire and Worcestershire
+E07000240,St Albans,E54000025,Hertfordshire and West Essex
+E07000241,Welwyn Hatfield,E54000025,Hertfordshire and West Essex
+E07000242,East Hertfordshire,E54000025,Hertfordshire and West Essex
+E07000243,Stevenage,E54000025,Hertfordshire and West Essex
+E07000244,East Suffolk,E54000022,Norfolk and Waveney Health and Care Partnership
+E07000244,East Suffolk,E54000023,Suffolk and North East Essex
+E07000245,West Suffolk,E54000023,Suffolk and North East Essex
+E07000246,Somerset West and Taunton,E54000038,Somerset
+E08000001,Bolton,E54000007,Greater Manchester Health and Social Care Partnership
+E08000002,Bury,E54000007,Greater Manchester Health and Social Care Partnership
+E08000003,Manchester,E54000007,Greater Manchester Health and Social Care Partnership
+E08000004,Oldham,E54000007,Greater Manchester Health and Social Care Partnership
+E08000005,Rochdale,E54000007,Greater Manchester Health and Social Care Partnership
+E08000006,Salford,E54000007,Greater Manchester Health and Social Care Partnership
+E08000007,Stockport,E54000007,Greater Manchester Health and Social Care Partnership
+E08000008,Tameside,E54000007,Greater Manchester Health and Social Care Partnership
+E08000009,Trafford,E54000007,Greater Manchester Health and Social Care Partnership
+E08000010,Wigan,E54000007,Greater Manchester Health and Social Care Partnership
+E08000011,Knowsley,E54000008,Cheshire and Merseyside
+E08000012,Liverpool,E54000008,Cheshire and Merseyside
+E08000013,St. Helens,E54000008,Cheshire and Merseyside
+E08000014,Sefton,E54000008,Cheshire and Merseyside
+E08000015,Wirral,E54000008,Cheshire and Merseyside
+E08000016,Barnsley,E54000009,South Yorkshire and Bassetlaw
+E08000017,Doncaster,E54000009,South Yorkshire and Bassetlaw
+E08000018,Rotherham,E54000009,South Yorkshire and Bassetlaw
+E08000019,Sheffield,E54000009,South Yorkshire and Bassetlaw
+E08000021,Newcastle upon Tyne,E54000050,Cumbria and North East
+E08000022,North Tyneside,E54000050,Cumbria and North East
+E08000023,South Tyneside,E54000050,Cumbria and North East
+E08000024,Sunderland,E54000050,Cumbria and North East
+E08000025,Birmingham,E54000016,The Black Country and West Birmingham
+E08000025,Birmingham,E54000017,Birmingham and Solihull
+E08000026,Coventry,E54000018,Coventry and Warwickshire
+E08000027,Dudley,E54000016,The Black Country and West Birmingham
+E08000028,Sandwell,E54000016,The Black Country and West Birmingham
+E08000029,Solihull,E54000017,Birmingham and Solihull
+E08000030,Walsall,E54000016,The Black Country and West Birmingham
+E08000031,Wolverhampton,E54000016,The Black Country and West Birmingham
+E08000032,Bradford,E54000054,West Yorkshire and Harrogate (Health and Care Partnership)
+E08000033,Calderdale,E54000054,West Yorkshire and Harrogate (Health and Care Partnership)
+E08000034,Kirklees,E54000054,West Yorkshire and Harrogate (Health and Care Partnership)
+E08000035,Leeds,E54000054,West Yorkshire and Harrogate (Health and Care Partnership)
+E08000036,Wakefield,E54000054,West Yorkshire and Harrogate (Health and Care Partnership)
+E08000037,Gateshead,E54000050,Cumbria and North East
+E09000001,City of London,E54000029,East London Health and Care Partnership
+E09000002,Barking and Dagenham,E54000029,East London Health and Care Partnership
+E09000003,Barnet,E54000028,North London Partners in Health and Care
+E09000004,Bexley,E54000030,Our Healthier South East London
+E09000005,Brent,E54000027,North West London Health and Care Partnership
+E09000006,Bromley,E54000030,Our Healthier South East London
+E09000007,Camden,E54000028,North London Partners in Health and Care
+E09000008,Croydon,E54000031,South West London Health and Care Partnership
+E09000009,Ealing,E54000027,North West London Health and Care Partnership
+E09000010,Enfield,E54000028,North London Partners in Health and Care
+E09000011,Greenwich,E54000030,Our Healthier South East London
+E09000012,Hackney,E54000029,East London Health and Care Partnership
+E09000013,Hammersmith and Fulham,E54000027,North West London Health and Care Partnership
+E09000014,Haringey,E54000028,North London Partners in Health and Care
+E09000015,Harrow,E54000027,North West London Health and Care Partnership
+E09000016,Havering,E54000029,East London Health and Care Partnership
+E09000017,Hillingdon,E54000027,North West London Health and Care Partnership
+E09000018,Hounslow,E54000027,North West London Health and Care Partnership
+E09000019,Islington,E54000028,North London Partners in Health and Care
+E09000020,Kensington and Chelsea,E54000027,North West London Health and Care Partnership
+E09000021,Kingston upon Thames,E54000031,South West London Health and Care Partnership
+E09000022,Lambeth,E54000030,Our Healthier South East London
+E09000023,Lewisham,E54000030,Our Healthier South East London
+E09000024,Merton,E54000031,South West London Health and Care Partnership
+E09000025,Newham,E54000029,East London Health and Care Partnership
+E09000026,Redbridge,E54000029,East London Health and Care Partnership
+E09000027,Richmond upon Thames,E54000031,South West London Health and Care Partnership
+E09000028,Southwark,E54000030,Our Healthier South East London
+E09000029,Sutton,E54000031,South West London Health and Care Partnership
+E09000030,Tower Hamlets,E54000029,East London Health and Care Partnership
+E09000031,Waltham Forest,E54000029,East London Health and Care Partnership
+E09000032,Wandsworth,E54000031,South West London Health and Care Partnership
+E09000033,Westminster,E54000027,North West London Health and Care Partnership
