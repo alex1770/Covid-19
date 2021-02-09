@@ -39,11 +39,23 @@ def loadnewcases():
     reader=csv.reader(fp)
     locs=next(reader)[1:]
     out={loc:[] for loc in locs}
-    days=[]
+    days=[];rowvals=[]
     for row in reader:
-      days.append(datetoday(row[0]))
-      for (loc,x) in zip(locs,row[1:]):
-        out[loc].append(float(x))
+      rowval=[float(x) for x in row[1:]]
+      day=datetoday(row[0])
+      if len(days)>0 and day>days[-1]+1:
+        # Interpolate missing entries
+        prevval=rowvals[-1]
+        for d in range(days[-1]+1,day):
+          a,b=d-days[-1],day-d
+          vals=[(b*n0+a*n1)/(a+b) for (n0,n1) in zip(prevval,rowval)]
+          rowvals.append(vals)
+          days.append(d)
+      rowvals.append(rowval)
+      days.append(day)
+    for rowval in rowvals:
+      for (loc,x) in zip(locs,rowval):
+        out[loc].append(x)
   assert days==list(range(days[0],days[-1]+1))# check contiguous
   return days,out
 
