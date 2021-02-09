@@ -1,43 +1,43 @@
-Region,STP20NM,16-69,70-74,75-79,80+,16+
-East of England,"Bedfordshire, Luton and Milton Keynes",634513,39718,27097,39719,741047
-East of England,Cambridgeshire and Peterborough,596448,44394,30087,44805,715734
-East of England,Hertfordshire and West Essex,984836,66699,47016,76667,1175218
-East of England,Mid and South Essex,788624,64862,43086,63659,960231
-East of England,Norfolk and Waveney Health and Care Partnership,661686,70158,48789,71315,851948
-East of England,Suffolk and North East Essex,639626,61996,42435,61887,805944
-London,East London Health and Care Partnership,1435451,51198,36008,57517,1580174
-London,North London Partners in Health and Care,1079153,46739,33389,51226,1210507
-London,North West London Health and Care Partnership,1477676,69815,50001,77033,1674525
-London,Our Healthier South East London,1305228,54280,38296,60667,1458471
-London,South West London Health and Care Partnership,1052311,51514,35616,55290,1194731
-Midlands,Birmingham and Solihull,790116,44743,33394,52675,920928
-Midlands,Coventry and Warwickshire,645601,45434,33337,47260,771632
-Midlands,Herefordshire and Worcestershire,515630,49825,35135,49360,649950
-Midlands,Joined Up Care Derbyshire,687077,57781,40309,55588,840755
-Midlands,"Leicester, Leicestershire and Rutland",748061,53282,36599,52800,890742
-Midlands,Lincolnshire,498312,50193,34919,46502,629926
-Midlands,Northamptonshire,489893,37716,24302,32724,584635
-Midlands,Nottingham and Nottinghamshire Health and Care,716927,49994,34933,49762,851616
-Midlands,Shropshire and Telford and Wrekin,332361,30228,21663,28641,412893
-Midlands,Staffordshire and Stoke on Trent,758519,64899,47146,60825,931389
-Midlands,The Black Country and West Birmingham,914144,55966,45029,64262,1079401
-North East and Yorkshire,Cumbria and North East,2020975,164992,111394,161087,2458448
-North East and Yorkshire,"Humber, Coast and Vale",1132740,102626,69247,101037,1405650
-North East and Yorkshire,South Yorkshire and Bassetlaw,1037161,75813,53611,75152,1241737
-North East and Yorkshire,West Yorkshire and Harrogate (Health and Care Partnership),1606660,108468,73961,107139,1896228
-North West,Cheshire and Merseyside,1679148,132827,93612,135334,2040921
-North West,Greater Manchester Health and Social Care Partnership,1952039,124386,86854,118241,2281520
-North West,Healthier Lancashire and South Cumbria,1122874,97364,67229,92501,1379968
-South East,"Buckinghamshire, Oxfordshire and Berkshire West",1142448,81494,58760,88381,1371083
-South East,Frimley Health and Care ICS,498988,31460,22473,34113,587034
-South East,Hampshire and the Isle of Wight,1215263,102600,70771,106379,1495013
-South East,Kent and Medway,1225528,101394,68600,97936,1493458
-South East,Surrey Heartlands Health and Care Partnership,690431,51850,37027,60642,839950
-South East,Sussex and East Surrey Health and Care Partnership,1123772,102425,70996,111804,1408997
-South West,"Bath and North East Somerset, Swindon and Wiltshire",614288,49002,34272,50326,747888
-South West,"Bristol, North Somerset and South Gloucestershire",662511,43688,31584,47355,785138
-South West,Cornwall and the Isles of Scilly Health and Social Care Partnership,370074,40857,27029,36571,474531
-South West,Devon,785114,79389,55021,79525,999049
-South West,Dorset,498729,52759,36918,57579,645985
-South West,Gloucestershire,421525,36815,26321,37389,522050
-South West,Somerset,360845,37683,26420,38289,463237
+Region,STP20NM,16-69,70-74,75-79,80+
+East of England,"Bedfordshire, Luton and Milton Keynes",634513,39718,27097,39719
+East of England,Cambridgeshire and Peterborough,596448,44394,30087,44805
+East of England,Hertfordshire and West Essex,984836,66699,47016,76667
+East of England,Mid and South Essex,788624,64862,43086,63659
+East of England,Norfolk and Waveney Health and Care Partnership,661686,70158,48789,71315
+East of England,Suffolk and North East Essex,639626,61996,42435,61887
+London,East London Health and Care Partnership,1435451,51198,36008,57517
+London,North London Partners in Health and Care,1079153,46739,33389,51226
+London,North West London Health and Care Partnership,1477676,69815,50001,77033
+London,Our Healthier South East London,1305228,54280,38296,60667
+London,South West London Health and Care Partnership,1052311,51514,35616,55290
+Midlands,Birmingham and Solihull,790116,44743,33394,52675
+Midlands,Coventry and Warwickshire,645601,45434,33337,47260
+Midlands,Herefordshire and Worcestershire,515630,49825,35135,49360
+Midlands,Joined Up Care Derbyshire,687077,57781,40309,55588
+Midlands,"Leicester, Leicestershire and Rutland",748061,53282,36599,52800
+Midlands,Lincolnshire,498312,50193,34919,46502
+Midlands,Northamptonshire,489893,37716,24302,32724
+Midlands,Nottingham and Nottinghamshire Health and Care,716927,49994,34933,49762
+Midlands,Shropshire and Telford and Wrekin,332361,30228,21663,28641
+Midlands,Staffordshire and Stoke on Trent,758519,64899,47146,60825
+Midlands,The Black Country and West Birmingham,914144,55966,45029,64262
+North East and Yorkshire,Cumbria and North East,2020975,164992,111394,161087
+North East and Yorkshire,"Humber, Coast and Vale",1132740,102626,69247,101037
+North East and Yorkshire,South Yorkshire and Bassetlaw,1037161,75813,53611,75152
+North East and Yorkshire,West Yorkshire and Harrogate (Health and Care Partnership),1606660,108468,73961,107139
+North West,Cheshire and Merseyside,1679148,132827,93612,135334
+North West,Greater Manchester Health and Social Care Partnership,1952039,124386,86854,118241
+North West,Healthier Lancashire and South Cumbria,1122874,97364,67229,92501
+South East,"Buckinghamshire, Oxfordshire and Berkshire West",1142448,81494,58760,88381
+South East,Frimley Health and Care ICS,498988,31460,22473,34113
+South East,Hampshire and the Isle of Wight,1215263,102600,70771,106379
+South East,Kent and Medway,1225528,101394,68600,97936
+South East,Surrey Heartlands Health and Care Partnership,690431,51850,37027,60642
+South East,Sussex and East Surrey Health and Care Partnership,1123772,102425,70996,111804
+South West,"Bath and North East Somerset, Swindon and Wiltshire",614288,49002,34272,50326
+South West,"Bristol, North Somerset and South Gloucestershire",662511,43688,31584,47355
+South West,Cornwall and the Isles of Scilly Health and Social Care Partnership,370074,40857,27029,36571
+South West,Devon,785114,79389,55021,79525
+South West,Dorset,498729,52759,36918,57579
+South West,Gloucestershire,421525,36815,26321,37389
+South West,Somerset,360845,37683,26420,38289
