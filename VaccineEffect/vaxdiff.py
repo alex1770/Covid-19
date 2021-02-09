@@ -69,11 +69,11 @@ with open('LTLAtoSTP20','r') as fp:
   for x in r:
     LTLAtoSTP[x[i0]]=x[i1]
 
-# Need to modify conversion to use LAD19CD, because vaccination database (NIMS) uses a mixture of LAD19 and STP20
+# Need to modify conversion to use LAD19CD, because government api uses LAD19 but vaccination database (NIMS) uses STP20
 for x in ['E07000004', 'E07000005', 'E07000006', 'E07000007']:
   LTLAtoSTP[x]=LTLAtoSTP['E06000060']
 
-# Convert LTLA case data to STP and save    
+# Convert new LTLA case data to STP and save    
 os.makedirs(stpdatadir,exist_ok=True)
 for day in range(startday,endday):
   date=daytodate(day)
@@ -104,7 +104,7 @@ for day in range(startday,endday):
   with open(fnstp,'r') as fp:
     stpcases.append(json.load(fp))
 
-# Load STP population data
+# Load STP population size data
 stppop={}
 with open('STPpopulations.csv','r') as fp:
   r=csv.reader(fp)
@@ -141,31 +141,28 @@ with open('2021-01-17-vaxdata.csv','r') as fp:
 # Check STP names are compatible
 assert set(vaxnum)==set(stppop.keys())
 
+# Pro tem
 day0=datetoday('2021-01-10')
 day1=endday-1
 
 from scipy.optimize import minimize
 import numpy as np
 
+# Add up values in l corresponding to intervals contained in [rmin,rmax)
+def totrange(l,rmin,rmax):
+  return sum(x[2] for x in l if x[0]>=rmin and x[1]<=rmax)
+
 def sc(ff,eff):
   err=0
   for stp in STPNM:
     for (amin,amax),f in zip(vaxagebands,ff):
-      t0=0
-      for (a,b,c) in stpcases[day0-startday][stp]:
-        if a>=amin and b<=amax: t0+=c
-      t1=0
-      for (a,b,c) in stpcases[day1-startday][stp]:
-        if a>=amin and b<=amax: t1+=c
-      vax=0
-      for (a,b,c) in vaxnum[stp]:
-        if a>=amin and b<=amax: vax+=c
-      pop=0
-      for (a,b,c) in stppop[stp]:
-        if a>=amin and b<=amax: pop+=c
+      t0=totrange(stpcases[day0-startday][stp],amin,amax)
+      t1=totrange(stpcases[day1-startday][stp],amin,amax)
+      vax=totrange(vaxnum[stp],amin,amax)
+      pop=totrange(stppop[stp],amin,amax)
       v=vax/pop
       t2=t0*f*(1-v*eff)
-      #print("%-20s   %3d %3d       %5.3f     %6d  %6d  %6.1f"%(stp[:20],amin,amax,v,t0,t1,t2))
+      #print("%-20s   %3d %3d       %5.3f     %6d  %6d  %6.1f"%(stp[:20].replace(' ','_'),amin,amax,v,t0,t1,t2))
       err+=(log((t2+1e-9)/(t1+1e-9)))**2
       #err+=(t2-t1)**2
   return err
@@ -179,3 +176,6 @@ eff=0.5
 xx=ff+[eff]
 res=minimize(sc0,xx,method="SLSQP",bounds=[(0,1),(0,1),(0,1)],options={"maxiter":1000})
 print(res.message)
+if not res.success: sys.exit(1)
+print(res.fun)
+print(res.x)
