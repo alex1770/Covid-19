@@ -1,4 +1,5 @@
 import time,calendar,os,json,sys,datetime,csv
+from math import log
 from requests import get
 from subprocess import Popen,PIPE
 
@@ -121,6 +122,7 @@ with open('STPpopulations.csv','r') as fp:
 
 # Check STP names are compatible
 assert set(stppop.keys())==set(LTLAtoSTP.values())
+STPNM=set(LTLAtoSTP.values())
 
 # Load vaccination data
 # Weekly data from https://www.england.nhs.uk/statistics/statistical-work-areas/covid-19-vaccinations/
@@ -128,6 +130,7 @@ assert set(stppop.keys())==set(LTLAtoSTP.values())
 # Hard code this particular week for the moment.
 # vaxnum[STP name] = list of (agemin, agemax, count)
 vaxnum={}
+vaxagebands=[(0,80),(80,150)]
 with open('2021-01-17-vaxdata.csv','r') as fp:
   r=csv.reader(fp)
   headings=next(r)
@@ -135,3 +138,44 @@ with open('2021-01-17-vaxdata.csv','r') as fp:
   for x in r:
     vaxnum[x[1]]=[(0,80,int(x[2])),(80,150,int(x[3]))]
 
+# Check STP names are compatible
+assert set(vaxnum)==set(stppop.keys())
+
+day0=datetoday('2021-01-10')
+day1=endday-1
+
+from scipy.optimize import minimize
+import numpy as np
+
+def sc(ff,eff):
+  err=0
+  for stp in STPNM:
+    for (amin,amax),f in zip(vaxagebands,ff):
+      t0=0
+      for (a,b,c) in stpcases[day0-startday][stp]:
+        if a>=amin and b<=amax: t0+=c
+      t1=0
+      for (a,b,c) in stpcases[day1-startday][stp]:
+        if a>=amin and b<=amax: t1+=c
+      vax=0
+      for (a,b,c) in vaxnum[stp]:
+        if a>=amin and b<=amax: vax+=c
+      pop=0
+      for (a,b,c) in stppop[stp]:
+        if a>=amin and b<=amax: pop+=c
+      v=vax/pop
+      t2=t0*f*(1-v*eff)
+      #print("%-20s   %3d %3d       %5.3f     %6d  %6d  %6.1f"%(stp[:20],amin,amax,v,t0,t1,t2))
+      err+=(log((t2+1e-9)/(t1+1e-9)))**2
+      #err+=(t2-t1)**2
+  return err
+
+def sc0(xx): return sc(xx[:2],xx[2])
+
+ff=[0.3, 0.3]
+eff=0.5
+#print(sc(ff,eff))
+
+xx=ff+[eff]
+res=minimize(sc0,xx,method="SLSQP",bounds=[(0,1),(0,1),(0,1)],options={"maxiter":1000})
+print(res.message)
