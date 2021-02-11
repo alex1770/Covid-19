@@ -57,12 +57,13 @@ for day in range(startday,endday):
     json.dump(data,fp)
     print("Wrote",fn)
 
+caseagebands=[(amin,amin+5 if amin<90 else 150) for amin in range(0,95,5)]
 enddate=daytodate(endday)
-print("Using dates",startdate,"-",enddate,"(excluding end date)")
+print("Loading case counts from",startdate,"-",enddate,"(excluding end date)")
 
 # Read LTLA->STP mapping
 LTLAtoSTP={}
-with open('LTLAtoSTP20','r') as fp:
+with open('LTLAtoSTP20.csv','r') as fp:
   r=csv.reader(fp)
   headings=next(r)
   (i0,i1)=(headings.index('LAD20CD'),headings.index('STP20NM'))
@@ -122,28 +123,47 @@ with open('STPpopulations.csv','r') as fp:
 
 # Check STP names are compatible
 assert set(stppop.keys())==set(LTLAtoSTP.values())
-STPNM=set(LTLAtoSTP.values())
+STPNM=sorted(list(set(LTLAtoSTP.values())))
+
+# Read STP -> NHS region mapping
+STPtoNHS={}
+with open('STP20toNHSER20.csv','r') as fp:
+  r=csv.reader(fp)
+  headings=next(r)
+  (i0,i1)=(headings.index('STP20NM'),headings.index('NHSER20NM'))
+  for x in r:
+    STPtoNHS[x[i0]]=x[i1]
+NHSER=sorted(list(set(STPtoNHS.values())))
 
 # Load vaccination data
 # Weekly data from https://www.england.nhs.uk/statistics/statistical-work-areas/covid-19-vaccinations/
 # Note that publication date is 4 days after date of last data. Filename uses the latter date.
-# Hard code this particular week for the moment.
+# Hard code this particular week until we decide we want to do something else.
 # vaxnum[STP name] = list of (agemin, agemax, count)
 vaxnum={}
 vaxagebands=[(0,80),(80,150)]
-with open('2021-01-17-vaxdata.csv','r') as fp:
+vaxdate='2021-01-17'
+with open(vaxdate+'-vaxdata.csv','r') as fp:
   r=csv.reader(fp)
   headings=next(r)
   # For now assume headings are: Region, STP name, 1st dose 0-80, 1st dose 80+, 2nd dose 0-80, 2nd dose 80+
   for x in r:
     vaxnum[x[1]]=[(0,80,int(x[2])),(80,150,int(x[3]))]
+print("Using vaccine data from",vaxdate)
 
 # Check STP names are compatible
 assert set(vaxnum)==set(stppop.keys())
 
-# Pro tem
-day0=datetoday('2021-01-10')
-day1=endday-1
+# Smooth cases with lagged 7 day average
+newstpcases=[]
+newstartday=startday+6
+for day in range(newstartday,endday):
+  newstpcases.append({})
+  for stp in STPNM:
+    newstpcases[-1][stp]=[(amin,amax,sum(stpcases[d-startday][stp][i][2] for d in range(day-6,day+1))/7) for (i,(amin,amax)) in enumerate(caseagebands)]
+stpcases=newstpcases
+startday=newstartday
+startdate=daytodate(startday)
 
 from scipy.optimize import minimize
 import numpy as np
@@ -152,10 +172,12 @@ import numpy as np
 def totrange(l,rmin,rmax):
   return sum(x[2] for x in l if x[0]>=rmin and x[1]<=rmax)
 
-def sc(ff,eff):
+def sc(xx):
+  ff,eff=xx[:2],xx[2]
   err=0
   for stp in STPNM:
     for (amin,amax),f in zip(vaxagebands,ff):
+      #if amin==0: continue
       t0=totrange(stpcases[day0-startday][stp],amin,amax)
       t1=totrange(stpcases[day1-startday][stp],amin,amax)
       vax=totrange(vaxnum[stp],amin,amax)
@@ -163,19 +185,73 @@ def sc(ff,eff):
       v=vax/pop
       t2=t0*f*(1-v*eff)
       #print("%-20s   %3d %3d       %5.3f     %6d  %6d  %6.1f"%(stp[:20].replace(' ','_'),amin,amax,v,t0,t1,t2))
-      err+=(log((t2+1e-9)/(t1+1e-9)))**2
-      #err+=(t2-t1)**2
+      err+=(log(t2/t1))**2
   return err
 
-def sc0(xx): return sc(xx[:2],xx[2])
+day1=endday-1
+print("Measuring changes in case counts up to",daytodate(day1),"(7 day lagged average)")
+print()
+best=(-1,)
+print("From date    Efficacy coefficient")
+for day0 in range(datetoday(vaxdate)-10,datetoday(vaxdate)+15):
+  xx0=[0.5, 0.5, 0.5]
+  res=minimize(sc,xx0,method="SLSQP",bounds=[(1e-6,1),(1e-6,1),(0,0.99)],options={"maxiter":1000})
+  if not res.success: raise RuntimeError(res.message)
+  xx=res.x
+  ff,eff=xx[:2],xx[2]
+  if eff>best[0]: best=(eff,day0,ff)
+  print(daytodate(day0),"  %5.3f"%eff)
+print()
 
-ff=[0.3, 0.3]
-eff=0.5
-#print(sc(ff,eff))
+(eff,day0,ff)=best
+print("Strongest signal in changes in case counts is from",daytodate(day0),"-",daytodate(day1),"(in both cases smoothed with 7 day lagging average)")
+print("Coefficient of efficacy : %5.3f"%eff)
+for (amin,amax),f in zip(vaxagebands,ff):
+  print("Case count factor for age band %3d - %3d : %5.3f"%(amin,amax,f))
+print()
 
-xx=ff+[eff]
-res=minimize(sc0,xx,method="SLSQP",bounds=[(0,1),(0,1),(0,1)],options={"maxiter":1000})
-print(res.message)
-if not res.success: sys.exit(1)
-print(res.fun)
-print(res.x)
+if 0:
+  for stp in STPNM:
+    for (amin,amax),f in zip(vaxagebands,ff):
+      t0=totrange(stpcases[day0-startday][stp],amin,amax)
+      t1=totrange(stpcases[day1-startday][stp],amin,amax)
+      vax=totrange(vaxnum[stp],amin,amax)
+      pop=totrange(stppop[stp],amin,amax)
+      v=vax/pop
+      print("%5d  %6.1f  %5d  %6.3f  %5.3f"%(amin,t0*f,t1,log(t1/(t0*f)),v))
+
+with open('stpcrossratios','w') as fp:
+  for stp in STPNM:
+    casethen=[]
+    casenow=[]
+    vaxrate=[]
+    for (amin,amax),f in zip(vaxagebands,ff):
+      t0=totrange(stpcases[day0-startday][stp],amin,amax)
+      t1=totrange(stpcases[day1-startday][stp],amin,amax)
+      vax=totrange(vaxnum[stp],amin,amax)
+      pop=totrange(stppop[stp],amin,amax)
+      casethen.append(t0)
+      casenow.append(t1)
+      vaxrate.append(vax/pop)
+    print('%5.3f   %6.3f  "%s"'%(vaxrate[1],log((casenow[1]/casethen[1])/(casenow[0]/casethen[0])),stp),file=fp)
+
+with open('nhscrossratios','w') as fp:
+  for reg in NHSER:
+    casethen=[]
+    casenow=[]
+    vaxrate=[]
+    for (amin,amax),f in zip(vaxagebands,ff):
+      t0=t1=vax=pop=0
+      for stp in STPNM:
+        if STPtoNHS[stp]!=reg: continue
+        t0+=totrange(stpcases[day0-startday][stp],amin,amax)
+        t1+=totrange(stpcases[day1-startday][stp],amin,amax)
+        vax+=totrange(vaxnum[stp],amin,amax)
+        pop+=totrange(stppop[stp],amin,amax)
+      casethen.append(t0)
+      casenow.append(t1)
+      vaxrate.append(vax/pop)
+    print('%5.3f   %6.3f  "%s"'%(vaxrate[1],log((casenow[1]/casethen[1])/(casenow[0]/casethen[0])),reg),file=fp)
+
+# gnuplot> plot "stpcrossratios" u 1:2:(strcol(3)[1:12]) with labels point pt 7 offset char 0,-1.2
+# gnuplot> plot "nhscrossratios" u 1:2:3 with labels point pt 7 offset char 0,-1.2
