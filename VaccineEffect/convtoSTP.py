@@ -21,7 +21,7 @@ for y in [19,20]:
     for x in r:
       s.add(tuple(x[i] for i in ii))
   
-  with open('LTLAtoSTP'+year,'w') as fp:
+  with open('LTLAtoSTP'+year+'.csv','w') as fp:
     w=csv.writer(fp)
     w.writerow(output)
     for t in sorted(list(s)):

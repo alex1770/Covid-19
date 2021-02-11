@@ -1,0 +1,43 @@
+FID,STP20CD,STP20CDH,STP20NM,NHSER20CD,NHSER20CDH,NHSER20NM
+1,E54000027,QRV,North West London Health and Care Partnership,E40000003,Y56,London
+2,E54000028,QMJ,North London Partners in Health and Care,E40000003,Y56,London
+3,E54000029,QMF,East London Health and Care Partnership,E40000003,Y56,London
+4,E54000030,QKK,Our Healthier South East London,E40000003,Y56,London
+5,E54000031,QWE,South West London Health and Care Partnership,E40000003,Y56,London
+6,E54000032,QKS,Kent and Medway,E40000005,Y59,South East
+7,E54000034,QNQ,Frimley Health and Care ICS,E40000005,Y59,South East
+8,E54000042,QRL,Hampshire and the Isle of Wight,E40000005,Y59,South East
+9,E54000044,QU9,"Buckinghamshire, Oxfordshire and Berkshire West",E40000005,Y59,South East
+10,E54000052,QXU,Surrey Heartlands Health and Care Partnership,E40000005,Y59,South East
+11,E54000053,QNX,Sussex and East Surrey Health and Care Partnership,E40000005,Y59,South East
+12,E54000036,QT6,Cornwall and the Isles of Scilly Health and Social Care Partnership,E40000006,Y58,South West
+13,E54000037,QJK,Devon,E40000006,Y58,South West
+14,E54000038,QSL,Somerset,E40000006,Y58,South West
+15,E54000039,QUY,"Bristol, North Somerset and South Gloucestershire",E40000006,Y58,South West
+16,E54000040,QOX,"Bath and North East Somerset, Swindon and Wiltshire",E40000006,Y58,South West
+17,E54000041,QVV,Dorset,E40000006,Y58,South West
+18,E54000043,QR1,Gloucestershire,E40000006,Y58,South West
+19,E54000021,QUE,Cambridgeshire and Peterborough,E40000007,Y61,East of England
+20,E54000022,QMM,Norfolk and Waveney Health and Care Partnership,E40000007,Y61,East of England
+21,E54000023,QJG,Suffolk and North East Essex,E40000007,Y61,East of England
+22,E54000024,QHG,"Bedfordshire, Luton and Milton Keynes",E40000007,Y61,East of England
+23,E54000025,QM7,Hertfordshire and West Essex,E40000007,Y61,East of England
+24,E54000026,QH8,Mid and South Essex,E40000007,Y61,East of England
+25,E54000010,QNC,Staffordshire and Stoke on Trent,E40000008,Y60,Midlands
+26,E54000011,QOC,Shropshire and Telford and Wrekin,E40000008,Y60,Midlands
+27,E54000012,QJ2,Joined Up Care Derbyshire,E40000008,Y60,Midlands
+28,E54000013,QJM,Lincolnshire,E40000008,Y60,Midlands
+29,E54000014,QT1,Nottingham and Nottinghamshire Health and Care,E40000008,Y60,Midlands
+30,E54000015,QK1,"Leicester, Leicestershire and Rutland",E40000008,Y60,Midlands
+31,E54000016,QUA,The Black Country and West Birmingham,E40000008,Y60,Midlands
+32,E54000017,QHL,Birmingham and Solihull,E40000008,Y60,Midlands
+33,E54000018,QWU,Coventry and Warwickshire,E40000008,Y60,Midlands
+34,E54000019,QGH,Herefordshire and Worcestershire,E40000008,Y60,Midlands
+35,E54000020,QPM,Northamptonshire,E40000008,Y60,Midlands
+36,E54000009,QF7,South Yorkshire and Bassetlaw,E40000009,Y63,North East and Yorkshire
+37,E54000050,QHM,Cumbria and North East,E40000009,Y63,North East and Yorkshire
+38,E54000051,QOQ,"Humber, Coast and Vale",E40000009,Y63,North East and Yorkshire
+39,E54000054,QWO,West Yorkshire and Harrogate (Health and Care Partnership),E40000009,Y63,North East and Yorkshire
+40,E54000007,QOP,Greater Manchester Health and Social Care Partnership,E40000010,Y62,North West
+41,E54000008,QYG,Cheshire and Merseyside,E40000010,Y62,North West
+42,E54000048,QE1,Healthier Lancashire and South Cumbria,E40000010,Y62,North West
