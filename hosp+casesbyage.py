@@ -29,22 +29,25 @@ def get_data(req):
     for x in d:
       if x!='date':
         for y in d[x]:
-          e[y['age']]=e.get(y['age'],0)+y['value']
+          if 'value' in y: val=y['value']
+          else: val=y['deaths']
+          e[y['age']]=e.get(y['age'],0)+val
     data1.append(e)
 
   return data1
 
-req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';               hospdata=get_data(req)
-req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}'; casedata=get_data(req)
+req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"newDeaths28DaysByDeathDateAgeDemographics"}'; mortdata=get_data(req)
+req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';                        hospdata=get_data(req)
+req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}';          casedata=get_data(req)
 updatedate=casedata[-1]['date']
 now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
 # Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
-fn=os.path.join('apidata',updatedate)
-if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
-os.makedirs('apidata', exist_ok=True)
-with open(fn,'w') as fp:
-  json.dump(casedata,fp,indent=2)
+#fn=os.path.join('apidata',updatedate)
+#if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
+#os.makedirs('apidata', exist_ok=True)
+#with open(fn,'w') as fp:
+#  json.dump(casedata,fp,indent=2)
 
 def getdiff(data):
   n=len(data)
@@ -75,6 +78,7 @@ def smooth(data):
 
 hosp=smooth(newhosp)
 cases=smooth(newcases)
+deaths=smooth(mortdata)
 
 def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[]):
   po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
@@ -103,7 +107,7 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
   for dat in data:
     if not first: s+=', '
     first=False
-    s+='"-" using 1:2 with lines lw 3 title "%s"'%(dat['title'])
+    s+='"-" using 1:2 with lines '+dat.get('extra','')+' lw 3 title "%s"'%(dat['title'])
   write(s)
   for dat in data:
     for (date,val) in dat['values']:
@@ -114,12 +118,14 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
 
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
-  return tuple(int(y) for y in x.split("_to_"))
+  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
+  return tuple(int(y) for y in x.split("_"))
   
 #date=max(hosp[-1]['date'],cases[-1]['date'])
 mindate=daytodate(datetoday(updatedate)-90)
 hospages=sorted((x for x in hosp[0] if x!='date'),key=lambda x:parseage(x)[0])
 caseages=sorted((x for x in cases[0] if x!='date'),key=lambda x:parseage(x)[0])
+deathages=sorted((x for x in deaths[0] if x!='date'),key=lambda x:parseage(x)[0])
 
 data=[]
 for age in ['18_to_64', '65_to_84', '85+']:
@@ -164,6 +170,14 @@ data.append({
   'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages+highages)*100) for d in cases if d['date']>=mindate]
 })
 
+lowages=[age for age in deathages if parseage(age)[0]>=cutoff0 and parseage(age)[1]<cutoff1]
+highages=[age for age in deathages if parseage(age)[0]>=cutoff1]
+data.append({
+  'title': 'Deaths: #(aged %d+) / #(aged %d+) - 25%%'%(cutoff1,cutoff0),
+  'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages+highages)*100-25) for d in deaths if d['date']>=mindate],
+  #'extra': 'axis x1y2'
+})
+
 if 0:
   num=[a for a in caseages if parseage(a)[0]>=85]
   denom=[a for a in caseages if parseage(a)[0]>=20 and parseage(a)[1]<=64 or parseage(a)[0]>=85]
@@ -171,6 +185,6 @@ if 0:
     'title': 'Confirmed cases: #(aged 85+) / #(aged 20-64 or 85+)',
     'values': [(d['date'],sum(d[a] for a in num)/sum(d[a] for a in denom)*100) for d in cases if d['date']>=mindate]
   })
+
   
 makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage', outfn='admissionandcaseageratios.png')
-
