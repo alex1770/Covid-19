@@ -7,6 +7,9 @@
 
 # See https://www.medrxiv.org/content/10.1101/2020.10.25.20219048v1
 
+# Can compare with PHE model from technical briefings here:
+# https://www.gov.uk/government/publications/investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
+
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
 # Relative prevalence of B.1.1.7 = logistic(logodds(r,t)), where r=region and logodds(r,t) has approx constant growth in t (see below for how logodds(r,t) is defined in terms of parameters)
