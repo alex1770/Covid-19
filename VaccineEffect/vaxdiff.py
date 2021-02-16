@@ -1,5 +1,5 @@
-import time,calendar,os,json,sys,datetime,csv
-from math import log
+import time,calendar,os,json,sys,datetime,csv,random
+from math import log,sqrt
 from requests import get
 from subprocess import Popen,PIPE
 
@@ -20,7 +20,7 @@ def getapidata(req):
   date=time.strftime('%Y-%m-%d',time.strptime(response.headers['Last-Modified'],'%a, %d %b %Y %H:%M:%S %Z'))# Not currently used
   return response.json()['data']
 
-startdate='2020-12-01'
+startdate='2020-11-01'
 
 ltladatadir='ltladatadir'
 stpdatadir='stpdatadir'
@@ -173,7 +173,7 @@ def totrange(l,rmin,rmax):
   return sum(x[2] for x in l if x[0]>=rmin and x[1]<=rmax)
 
 def sc(xx):
-  ff,eff=xx[:2],xx[2]
+  eff,ff=xx[0],xx[1:]
   err=0
   for stp in STPNM:
     for (amin,amax),f in zip(vaxagebands,ff):
@@ -183,34 +183,132 @@ def sc(xx):
       vax=totrange(vaxnum[stp],amin,amax)
       pop=totrange(stppop[stp],amin,amax)
       v=vax/pop
-      t2=t0*f*(1-v*eff)
-      #print("%-20s   %3d %3d       %5.3f     %6d  %6d  %6.1f"%(stp[:20].replace(' ','_'),amin,amax,v,t0,t1,t2))
-      err+=(log(t2/t1))**2
+      #v=randvax[(stp,amin)]
+      rawpred=t0
+      actual=t1
+      pred=f*(1-v*eff)*rawpred
+      #print("%-20s   %3d %3d       %5.3f     %6d  %6d  %6.1f"%(stp[:20].replace(' ','_'),amin,amax,v,t0,actual,pred))
+      err+=(log(pred/actual))**2
+      #err-=-pred+actual*log(pred)
   return err
 
-day1=endday-1
-print("Measuring changes in case counts up to",daytodate(day1),"(7 day lagged average)")
-print()
-best=(-1,)
-print("From date    Efficacy coefficient")
-for day0 in range(datetoday(vaxdate)-10,datetoday(vaxdate)+15):
-  xx0=[0.5, 0.5, 0.5]
-  res=minimize(sc,xx0,method="SLSQP",bounds=[(1e-6,1),(1e-6,1),(0,0.99)],options={"maxiter":1000})
-  if not res.success: raise RuntimeError(res.message)
-  xx=res.x
-  ff,eff=xx[:2],xx[2]
-  if eff>best[0]: best=(eff,day0,ff)
-  print(daytodate(day0),"  %5.3f"%eff)
-print()
+randvax={}
+#for stp in STPNM:
+#  for (amin,amax) in vaxagebands:
+#    randvax[(stp,amin)]=0.3+0.5*random.random()
+for nhs in NHSER:
+  for (amin,amax) in vaxagebands:
+    r=0.3+0.5*random.random()
+    for stp in STPNM:
+      if STPtoNHS[stp]==nhs: randvax[(stp,amin)]=r
 
-(eff,day0,ff)=best
-print("Strongest signal in changes in case counts is from",daytodate(day0),"-",daytodate(day1),"(in both cases smoothed with 7 day lagging average)")
-print("Coefficient of efficacy : %5.3f"%eff)
-for (amin,amax),f in zip(vaxagebands,ff):
-  print("Case count factor for age band %3d - %3d : %5.3f"%(amin,amax,f))
-print()
+def sc2(xx):
+  eff,f=xx[0],xx[1]
+  err=0
+  for stp in STPNM:
+    casethen=[]
+    casenow=[]
+    vaxrate=[]
+    for (amin,amax) in vaxagebands:
+      t0=totrange(stpcases[day0-startday][stp],amin,amax)
+      t1=totrange(stpcases[day1-startday][stp],amin,amax)
+      vax=totrange(vaxnum[stp],amin,amax)
+      pop=totrange(stppop[stp],amin,amax)
+      casethen.append(t0)
+      casenow.append(t1)
+      vaxrate.append(vax/pop)
+      #vaxrate.append(randvax[(stp,amin)])
+    v=vaxrate[1]
+    # Cross-ratio + Poisson model
+    pred=casenow[0]/casethen[0]*casethen[1]*f*(1-v*eff)
+    actual=casenow[1]
+    err-=-pred+actual*log(pred)# I don't think Poisson model is very good here
+    #err+=log(pred/actual)**2
+  return err
 
 if 0:
+  day1=endday-1
+  print("Measuring changes in case counts up to",daytodate(day1),"(7 day lagged average)")
+  print()
+  best=(-1,)
+  print("From date    Efficacy coefficient")
+  for day0 in range(datetoday(vaxdate)-10,datetoday(vaxdate)+15):
+    res=minimize(sc,[0.5, 0.5, 0.5],method="SLSQP",bounds=[(0,0.99),(1e-6,1),(1e-6,1)],options={"maxiter":1000})
+    #res=minimize(sc2,[0.5, 1],method="SLSQP",bounds=[(0,0.99),(1e-6,10),],options={"maxiter":1000})
+    if not res.success: raise RuntimeError(res.message)
+    xx=res.x
+    eff,ff=xx[0],xx[1:]
+    if eff>best[0]: best=(eff,day0,ff)
+    print(daytodate(day0),"  %5.3f"%eff)
+  print()
+
+if 0:
+  day1s=list(reversed(range(endday-1,datetoday('2020-11-25'),-4)))
+  print("From date  "+' '.join(daytodate(x) for x in day1s))
+  for day0 in reversed(range(endday-1,datetoday(vaxdate)-50,-2)):
+    print(daytodate(day0),end='')
+    for day1 in day1s:
+      if day1<=day0: print("           ",end='');continue
+      res=minimize(sc2,[0.5, 1],method="SLSQP",bounds=[(-9,0.99),(1e-6,10),],options={"maxiter":1000})
+      if not res.success: raise RuntimeError(res.message)
+      l0=-res.fun
+      eff,f=res.x
+      if 1:
+        eff1=eff
+      else:
+        beta=0.8
+        res=minimize(sc2,[eff*beta, f],method="SLSQP",bounds=[(eff*beta,eff*beta),(1e-6,10)],options={"maxiter":1000}) 
+        if not res.success: raise RuntimeError(res.message)
+        l1=-res.fun
+        if l0<=l1: eff1=0
+        else:
+          eff1=eff-((1-beta)*eff)/sqrt((l0-l1)/20)
+          if eff*eff1<0: eff1=0
+      print("     %6.3f"%(eff1),end='')
+    print()
+  print()
+
+if 1:
+  day1s=list(reversed(range(endday-1,datetoday('2020-11-25'),-4)))
+  print("From date  "+' '.join(daytodate(x) for x in day1s))
+  for day0 in reversed(range(endday-1,datetoday(vaxdate)-50,-2)):
+    print(daytodate(day0),end='')
+    for day1 in day1s:
+      if day1<=day0: print("           ",end='');continue
+      res=minimize(sc,[0.5, 0.5, 0.5],method="SLSQP",bounds=[(0,0.99),(1e-6,10),(1e-6,10)],options={"maxiter":1000})
+      if not res.success: raise RuntimeError(res.message)
+      l0=-res.fun
+      eff,ff=res.x[0],res.x[1:]
+      if 0:
+        eff1=eff
+      else:
+        beta=0.8
+        res=minimize(sc,[eff*beta, ff[0], ff[1]],method="SLSQP",bounds=[(eff*beta,eff*beta),(1e-6,10),(1e-6,10)],options={"maxiter":1000}) 
+        if not res.success: raise RuntimeError(res.message)
+        l1=-res.fun
+        if l0<=l1: eff1=0
+        else:
+          eff1=eff-((1-beta)*eff)/sqrt((l0-l1)/2)
+          if eff*eff1<0: eff1=0
+      print("     %6.3f"%(eff1),end='')
+    print()
+  print()
+
+if 0:
+  (eff,day0,ff)=best
+  print("Strongest signal in changes in case counts is from",daytodate(day0),"-",daytodate(day1),"(in both cases smoothed with 7 day lagging average)")
+  print("Coefficient of efficacy : %5.3f"%eff)
+  for (amin,amax),f in zip(vaxagebands,ff):
+    print("Case count factor for age band %3d - %3d : %5.3f"%(amin,amax,f))
+  print()
+
+if 0:
+  #day0=datetoday('2020-12-12')
+  #day1=datetoday('2021-01-06')
+  res=minimize(sc2,[0.5, 1],method="SLSQP",bounds=[(-9,0.99),(1e-6,10),],options={"maxiter":1000})
+  if not res.success: raise RuntimeError(res.message)
+  xx=res.x
+  eff,ff=xx[0],xx[1:]
   for stp in STPNM:
     for (amin,amax),f in zip(vaxagebands,ff):
       t0=totrange(stpcases[day0-startday][stp],amin,amax)
@@ -218,7 +316,49 @@ if 0:
       vax=totrange(vaxnum[stp],amin,amax)
       pop=totrange(stppop[stp],amin,amax)
       v=vax/pop
-      print("%5d  %6.1f  %5d  %6.3f  %5.3f"%(amin,t0*f,t1,log(t1/(t0*f)),v))
+      print("%5d  %6.1f  %5.3f  %5d  %6.3f  %d"%(amin,t0*f,v,t1,log(t1/(t0*f)),NHSER.index(STPtoNHS[stp])))
+
+if 0:
+  day0=datetoday('2021-01-24')
+  day1=endday-1
+  #day0=datetoday('2020-12-12')
+  #day1=datetoday('2021-01-06')
+  res=minimize(sc2,[0.5, 1],method="SLSQP",bounds=[(-9,0.99),(1e-6,10),],options={"maxiter":1000})
+  #res=minimize(sc2,[0, 1],method="SLSQP",bounds=[(0,0),(1e-6,10),],options={"maxiter":1000})
+  if not res.success: raise RuntimeError(res.message)
+  xx=res.x
+  eff,f=xx
+  print("eff =",eff)
+  print("f =",f)
+  totl=0
+  fp=open('temp','w')
+  for stp in STPNM:
+    casethen=[]
+    casenow=[]
+    vaxrate=[]
+    print("%25s"%(STPtoNHS[stp]),end='')
+    for (amin,amax) in vaxagebands:
+      t0=totrange(stpcases[day0-startday][stp],amin,amax)
+      t1=totrange(stpcases[day1-startday][stp],amin,amax)
+      vax=totrange(vaxnum[stp],amin,amax)
+      pop=totrange(stppop[stp],amin,amax)
+      casethen.append(t0)
+      casenow.append(t1)
+      vaxrate.append(vax/pop)
+      print("   %6d  %5.3f"%(vax,vax/pop),end='')
+    print()
+    v=vaxrate[1]
+    rawpred=casenow[0]/casethen[0]*casethen[1]
+    pred=rawpred*f*(1-v*eff)
+    actual=casenow[1]
+    #print("%6.1f  %6.1f   %d"%(pred,actual,NHSER.index(STPtoNHS[stp])))
+    l=-pred+actual*log(pred)
+    totl+=l
+    print("%6.3f  %6.3f   %6.3f   %12g %12g %12g %d   %12g"%(v,actual/rawpred,actual/pred,actual,rawpred,pred,NHSER.index(STPtoNHS[stp]),l),file=fp)
+  print("Total likelihood",totl)
+  fp.close()
+
+sys.exit(0)
 
 with open('stpcrossratios','w') as fp:
   for stp in STPNM:
@@ -253,5 +393,5 @@ with open('nhscrossratios','w') as fp:
       vaxrate.append(vax/pop)
     print('%5.3f   %6.3f  "%s"'%(vaxrate[1],log((casenow[1]/casethen[1])/(casenow[0]/casethen[0])),reg),file=fp)
 
-# gnuplot> plot "stpcrossratios" u 1:2:(strcol(3)[1:12]) with labels point pt 7 offset char 0,-1.2
+# gnuplot> plot "stpcrossratios" u 1:2:(strcol(3)[1:12]) with labels point pt 7 offset char 0,-1.0
 # gnuplot> plot "nhscrossratios" u 1:2:3 with labels point pt 7 offset char 0,-1.2
