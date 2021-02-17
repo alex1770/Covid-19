@@ -53,7 +53,9 @@ class testdata:
     self.date=date
     self.t=datetoday(date)-datetoday(date0)
     self.p=np.zeros([2,2,2])# p[whether N][whether OR][whether S] = proportion (adding to 1)
-    self.Ct=0
+    self.Ct=0# Mean Ct value (not currently used)
+    self.pp=[0.1, 0.25, 0.5, 0.75, 0.9]# 10%, 25%, 50%, 75%, 90%
+    self.qq=[0, 0, 0, 0, 0]            # 10%, 25%, 50%, 75%, 90% points of Ct distribution
   def __repr__(self):
     s=self.date+" :"
     for t in [(1,0,0),(0,1,0),(0,0,1),(1,1,0),(0,1,1),(1,0,1),(1,1,1)]: s+=" %5.1f"%(self.p[t]*100)
@@ -78,6 +80,16 @@ def getlogodds(xx):
     logodds[:,t+1]=logodds[:,t]+dlogodds
     if t<ndates-2: dlogodds+=ddlogodds[t]
   return logodds
+
+# Interpolate quantile of distribution
+# Expect: pp=[0.1, 0.25, 0.5, 0.75, 0.9]
+#         pv=[v0,  v1,   v2,  v3,   v4]
+#         Interpolate map pp->pv and evaluate on p (which should be in [0,1])
+def interp(pp,pv,p):
+  n=len(pp)
+  i=0
+  while i<n-2 and p>pp[i+1]: i+=1
+  return pv[i]+(pv[i+1]-pv[i])/(pp[i+1]-pp[i])*(p-pp[i])
 
 # csv headings:
 # 0             1       2               3       4       5       6       7       8       9       10
@@ -107,6 +119,7 @@ with open("ons_ct.csv","r") as fp:
         d.p[1][1][1]=float(row[9])# OR+N+S
         d.p=d.p/d.p.sum()
         d.Ct=float(row[10])# Mean Ct
+        d.qq=[float(row[i]) for i in range(11,16)]
         data.setdefault(row[1],[]).append(d)
 
 regions=sorted(list(data))
@@ -116,12 +129,18 @@ ndates=x.pop()
 nparams=3+1+nregions*2+ndates-2
 smoothness=5.0
 
-# Work out expected dropout matrix for region r, dropout matrix, date and Ct value d, model parameters xx[]
+# Work out expected dropout matrix for region r, dropout matrix, date and Ct distribution d, model parameters xx[]
 def estimatedropoutmatrix(r,d,robustness,ctmult,logodds):
   tc=np.zeros([2,2,2])
-  for offset in range(-5,6):# Integrate over viral load
+  # quantile loop is to integrate over possible Ct values. Ideally we'd be summing over actual Ct
+  # values and linking the predictions with actual dropout outcomes, but we're using the
+  # interpolated distribution of Ct values and linking the predictions to the distribution of
+  # dropout outcomes instead because that's the information that's available.
+  nsubdiv=10# Surprisingly 5 seemed to be enough, but using 10 to make sure
+  for quantile in range(0,nsubdiv):
+    ct=interp(d.pp,d.qq,(quantile+.5)/nsubdiv)
     p=1/(1+exp(-logodds[r][d.t//7]))# Relative prevalence of B.1.1.7
-    dp=[1/(1+exp(-ctmult[0]*(d.Ct-a+offset*1.0))) for a in robustness]# Probability of dropout for each gene
+    dp=[1/(1+exp(-ctmult[0]*(ct-a))) for a in robustness]# Probability of dropout for each gene
     dp[2]=p+(1-p)*dp[2]# Can treat B.1.1.7 as something that increases probability of S gene dropout
     c=np.zeros([2,2,2])
     for i in range(2):
@@ -164,7 +183,7 @@ dlogodds0.fill(1.0);lbound_d0.fill(-1);ubound_d0.fill(1)
 ddlogodds.fill(0.0);lbound_dd.fill(-1);ubound_dd.fill(1)
 bounds=list(zip(lbound,ubound))
 
-print("Initial total KL divergence + prior on 2nd diffs = %.1f bits"%((err(xx)-err0())/log(2)))
+print("Initial total KL divergence + prior on 2nd diffs = %.2f bits"%((err(xx)-err0())/log(2)))
 print("Using smoothness coefficient %.3f"%smoothness)
 
 res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
@@ -176,8 +195,8 @@ xx=res.x
 logodds=getlogodds(xx)
 KL=res.fun-err0()
 n=sum(len(data[region]) for region in regions)
-print("Total KL divergence + prior on 2nd diffs = %.1f bits (this is missing factors of number of tests done because that information isn't published, so understates the information deficit)"%(KL/log(2)))
-print("Average KL divergence + prior on 2nd diffs = %.3f bits (ditto)"%(KL/n/log(2)))
+print("Total KL divergence + prior on 2nd diffs = %.2f bits (this is missing factors of number of tests done because that information isn't published, so understates the information deficit)"%(KL/log(2)))
+print("Average KL divergence + prior on 2nd diffs = %.4f bits (ditto)"%(KL/n/log(2)))
 print()
 
 now=time.strftime('%Y-%m-%d',time.localtime())
@@ -198,9 +217,9 @@ for r in range(nregions):
       l=logodds[r][ndates-1]+(t-7*(ndates-1))*g
     logodds_i[r][t]=l
 
-print("Robustness of N  = %.1f"%robustness[0])
-print("Robustness of OR = %.1f"%robustness[1])
-print("Robustness of S  = %.1f"%robustness[2])
+print("Robustness of N  = %.2f"%robustness[0])
+print("Robustness of OR = %.2f"%robustness[1])
+print("Robustness of S  = %.2f"%robustness[2])
 print("Dependence of dropout on Ct = %.3f"%ctmult[0])
 print()
 print("Region                    Est'd crossover     Extrapolated %relative                            Approx R factor")
