@@ -1,4 +1,4 @@
-# Starting from ONS dropout data, try to make model predicting proportions of dropouts of OR, N, S.
+# Starting from ONS dropout data, try to make model predicting proportions of dropouts of ORF1ab (abbreviated to OR), N, S.
 # Following on from Theo Sanderson's analysis at https://theo.io/post/2021-01-22-ons-data/.
 # Data from tabs 6a, 6b of spreadsheet here https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/bulletins/coronaviruscovid19infectionsurveypilot/22january2021/relateddata
 # as transcribed at https://github.com/theosanderson/theo.io/blob/master/content/post/2021-01-22-ons-data/ons_ct.csv
@@ -13,11 +13,11 @@
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
 # Relative prevalence of B.1.1.7 = logistic(logodds(r,t)), where r=region and logodds(r,t) has approx constant growth in t (see below for how logodds(r,t) is defined in terms of parameters)
-# Choose a uniform random number Z in [-5,5], which is fixed for the three genes, representing viral load,
-# then the probability of dropout for gene X (N, OR or S) = logistic(b*(Ct-Z-a_X)).
+# Choose Ct distributed according to an interpolated version of the quantiles given in the ONS data
+# then the probability of dropout for gene X (N, ORF1ab or S) = logistic(b*(Ct-a_X)).
 # The probability of SGTF (mandatory S dropout, assumed to be due to B.1.1.7) is exp(logodds[r,t]) with logodds[r,t] given as below:
 # Parameters (4+2*nregions+ndates-2):
-#   a_X        : 3 parameters, one for each gene N, OR and S, encoding their "robustness" (lower = more fragile)
+#   a_X        : 3 parameters, one for each gene N, ORF1ab and S, encoding their "robustness" (lower = more fragile)
 #   b          : 1 parameter ("ctmult") encoding dependence of dropout probability on Ct
 #   logodds0   : nregions parameters encoding logodds in region r at time index 0
 #   dlogodds0  : nregions parameters encoding dlogodds in region r at time index 0
@@ -52,7 +52,7 @@ class testdata:
   def __init__(self,date):
     self.date=date
     self.t=datetoday(date)-datetoday(date0)
-    self.p=np.zeros([2,2,2])# p[whether N][whether OR][whether S] = proportion (adding to 1)
+    self.p=np.zeros([2,2,2])# p[whether N][whether ORF1ab][whether S] = proportion (adding to 1)
     self.Ct=0# Mean Ct value (not currently used)
     self.pp=[0.1, 0.25, 0.5, 0.75, 0.9]# 10%, 25%, 50%, 75%, 90%
     self.qq=[0, 0, 0, 0, 0]            # 10%, 25%, 50%, 75%, 90% points of Ct distribution
@@ -111,7 +111,7 @@ with open("ons_ct.csv","r") as fp:
         d=testdata(date)
         assert d.t>=0 and d.t%7==0
         d.p[1][0][0]=float(row[3])# N
-        d.p[0][1][0]=float(row[4])# OR
+        d.p[0][1][0]=float(row[4])# ORF1ab
         d.p[0][0][1]=float(row[5])# S
         d.p[1][1][0]=float(row[6])# OR+N
         d.p[0][1][1]=float(row[7])# OR+S
@@ -217,9 +217,9 @@ for r in range(nregions):
       l=logodds[r][ndates-1]+(t-7*(ndates-1))*g
     logodds_i[r][t]=l
 
-print("Robustness of N  = %.2f"%robustness[0])
-print("Robustness of OR = %.2f"%robustness[1])
-print("Robustness of S  = %.2f"%robustness[2])
+print("Robustness of N gene = %.2f"%robustness[0])
+print("Robustness of ORF1ab = %.2f"%robustness[1])
+print("Robustness of S gene = %.2f"%robustness[2])
 print("Dependence of dropout on Ct = %.3f"%ctmult[0])
 print()
 print("Region                    Est'd crossover     Extrapolated %relative                            Approx R factor")
@@ -249,7 +249,7 @@ def printdropouts(m):
 
 print("                                                           Actual                                        Estimate                 ")
 print("                                         ------------------------------------------     ------------------------------------------")
-print("                  Region       Date         N    OR     S  OR+N  OR+S   N+S  OR+N+S        N    OR     S  OR+N  OR+S   N+S  OR+N+S")
+print("                  Region       Date         N    ORF1ab S  OR+N  OR+S   N+S  OR+N+S        N    OR     S  OR+N  OR+S   N+S  OR+N+S")
 (robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames(xx)
 logodds=getlogodds(xx)
 for (r,region) in enumerate(regions):

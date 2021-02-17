@@ -103,18 +103,53 @@ for t in range(n):
       if zdates[t1]: break
     zvals[:,:,t]=((t1-t)*zvals[:,:,t0]+(t-t0)*zvals[:,:,t1])/(t1-t0)
 
-for delta in range(-40,41):
-  if delta>0:  zvals1=zvals[:,:,:-delta]
-  else:        zvals1=zvals[:,:,-delta:]
-  if delta>=0: cases1=cases[:,delta:]
-  else:        cases1=cases[:,:delta]
-  n1=n-delta
+if 0:
+  # Partial-cheat rescaling by time-independent location-dependent function
+  r=zvals.sum(2)/(cases[np.newaxis,:,:].sum(2))
+  zvals=zvals/r[:,:,np.newaxis]
+  # Helps ccp-based estimate. Doesn't seem to help pcpc-based estimate.
+
+for nk in range(20,21):
+  for delta in range(7,8):#-10,21):
+    if delta>0:  zvals1=zvals[:,:,:-delta]
+    else:        zvals1=zvals[:,:,-delta:]
+    if delta>=0: cases1=cases[:,delta:]
+    else:        cases1=cases[:,:delta]
+    n1=n-abs(delta)
+    totzvals1=zvals1.sum(axis=1)
+    totcases1=cases1.sum(axis=0)
+    
+    if 0:
+      for i in range(zvals1.shape[0]):
+        lam=np.tensordot(zvals1[i,:,:],cases1)/np.tensordot(zvals1[i,:,:],zvals1[i,:,:])
+        errmat=lam*zvals1[i,:,:]-cases1
+        err=np.tensordot(errmat,errmat)/1e6/zvals1.shape[2]
+        print("%3d  %d  %7.3f"%(delta,i,err))
   
-  # Maybe scale first by a location-dependent, time-independent function
-  for i in range(zvals1.shape[0]):
-    lam=np.tensordot(zvals1[i,:,:],cases1)/np.tensordot(zvals1[i,:,:],zvals1[i,:,:])
+    if 0:
+      nk=20
+      for i in range(zvals1.shape[0]):
+        a=np.zeros([N*(n1-nk+1),nk])
+        b=np.zeros(N*(n1-nk+1))
+        for l in range(N):
+          for t in range(nk-1,n1):
+            for u in range(nk): a[l*(n1-nk+1)+t-(nk-1),u]=zvals1[i,l,t-u]
+            #a[l*(n1-nk+1)+t-(nk-1),:nk]=np.flip(zvals1,2)[i,l,n1-1-t:n1-1-t+nk]
+            b[l*(n1-nk+1)+t-(nk-1)]=cases1[l,t]
+        kern,resid,rank,sing=np.linalg.lstsq(a,b,rcond=-1)
+        print("%3d  %d  %7.3f"%(delta,i,resid/1e3/n1))
   
-    errmat=lam*zvals1[i,:,:]-cases1
-    err=np.tensordot(errmat,errmat)/1e6/zvals1.shape[2]
-    print("%3d  %d  %7.3f"%(delta,i,err))
-  #print()
+    if 1:
+      for i in range(1,2):#zvals1.shape[0]):
+        a=np.zeros([N*(n1-nk+1),nk])
+        b=np.zeros(N*(n1-nk+1))
+        for l in range(N):
+          for t in range(nk-1,n1):
+            a[l*(n1-nk+1)+t-(nk-1),:nk]=np.flip(zvals1,2)[i,l,n1-1-t:n1-1-t+nk]
+            b[l*(n1-nk+1)+t-(nk-1)]=cases1[l,t]
+        kern,resid,rank,sing=np.linalg.lstsq(a,b,rcond=-1)
+        print("%3d  %d  %3d  %7.3f"%(delta,i,nk,resid/(N*(n1-nk+1))),["%.4f"%x for x in kern])
+        for t in range(nk-1,n1):
+          print("%3d  %7.0f  %7.0f"%(t,np.convolve(totzvals1[i,t-nk+1:t+1],kern,'valid'),totcases1[t]))
+        print()
+        

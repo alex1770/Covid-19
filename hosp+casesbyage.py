@@ -39,12 +39,14 @@ def get_data(req):
 req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"newDeaths28DaysByDeathDateAgeDemographics"}'; mortdata=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';                        hospdata=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}';          casedata=get_data(req)
+req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases"}';              malecases=get_data(req)
+req='filters=areaType=nation;areaName=england&structure={"date":"date","female":"femaleCases"}';          femalecases=get_data(req)
 updatedate=casedata[-1]['date']
 now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
 # Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
 fn=os.path.join('apidata',updatedate)
-if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
+#if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
 os.makedirs('apidata', exist_ok=True)
 with open(fn,'w') as fp:
   json.dump(casedata,fp,indent=2)
@@ -61,8 +63,12 @@ def getdiff(data):
 
 newhosp=getdiff(hospdata)
 newcases=getdiff(casedata)
+newmcases=getdiff(malecases)
+newfcases=getdiff(femalecases)
 newcases=newcases[:-1]# Last entry seems particularly unreliable, I think because it using specimen date and there are biases with recent entries
-
+newmcases=newmcases[:-1]
+newfcases=newfcases[:-1]
+                  
 def smooth(data):
   ages=[x for x in data[0].keys() if x!='date']
   n=len(data)
@@ -79,6 +85,8 @@ def smooth(data):
 hosp=smooth(newhosp)
 cases=smooth(newcases)
 deaths=smooth(mortdata)
+mcases=smooth(newmcases)
+fcases=smooth(newfcases)
 
 def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[]):
   po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
@@ -186,5 +194,12 @@ if 0:
     'values': [(d['date'],sum(d[a] for a in num)/sum(d[a] for a in denom)*100) for d in cases if d['date']>=mindate]
   })
 
-  
 makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage', outfn='admissionandcaseageratios.png')
+
+data=[]
+lowages=[age for age in caseages if parseage(age)[0]>=16 and parseage(age)[1]<65]
+data.append({
+  'title': 'Confirmed cases: #(female aged 16-65) / #(male aged 16-65)',
+  'values': [(f['date'],sum(f[a] for a in lowages)/sum(m[a] for a in lowages)) for (f,m) in zip(fcases,mcases) if f['date']>=mindate]
+})
+makegraph(title=title, data=data, mindate=mindate, ylabel='Ratio', outfn='femalemalecaseratio.png')
