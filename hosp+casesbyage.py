@@ -46,7 +46,7 @@ now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
 # Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
 fn=os.path.join('apidata',updatedate)
-#if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
+if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
 os.makedirs('apidata', exist_ok=True)
 with open(fn,'w') as fp:
   json.dump(casedata,fp,indent=2)
