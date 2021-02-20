@@ -1,8 +1,7 @@
 # Starting from ONS dropout data, try to make model predicting proportions of dropouts of ORF1ab (abbreviated to OR), N, S.
 # Following on from Theo Sanderson's analysis at https://theo.io/post/2021-01-22-ons-data/.
 # Data from tabs 6a, 6b of spreadsheet here https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/bulletins/coronaviruscovid19infectionsurveypilot/22january2021/relateddata
-# as transcribed at https://github.com/theosanderson/theo.io/blob/master/content/post/2021-01-22-ons-data/ons_ct.csv
-# and updated with data from subsequent ONS infection surveys.
+# converted to ons_ct.csv using convertfromons.py
 # This differs from dropoutmodel.py in that it doesn't assume constant logistic growth.
 
 # See https://www.medrxiv.org/content/10.1101/2020.10.25.20219048v1
@@ -222,7 +221,7 @@ print("Robustness of ORF1ab = %.2f"%robustness[1])
 print("Robustness of S gene = %.2f"%robustness[2])
 print("Dependence of dropout on Ct = %.3f"%ctmult[0])
 print()
-print("Region                    Est'd crossover     Extrapolated %relative                            Approx R factor")
+print("Region                    Est'd crossover     Extrapolated %relative                            Approx max R factor")
 print("------                    date of B.1.1.7     prevalence on",now,"   Maximum growth rate   assuming same gen time")
 print("                          ---------------     ------------------------    -------------------   ----------------------")
 for (r,region) in enumerate(regions):
@@ -249,7 +248,7 @@ def printdropouts(m):
 
 print("                                                           Actual                                        Estimate                 ")
 print("                                         ------------------------------------------     ------------------------------------------")
-print("                  Region       Date         N    ORF1ab S  OR+N  OR+S   N+S  OR+N+S        N    OR     S  OR+N  OR+S   N+S  OR+N+S")
+print("                  Region       Date         N   ORF1ab S   OR+N  OR+S   N+S  OR+N+S        N   ORF1ab S   OR+N  OR+S   N+S  OR+N+S")
 (robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames(xx)
 logodds=getlogodds(xx)
 for (r,region) in enumerate(regions):
