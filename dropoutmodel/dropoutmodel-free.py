@@ -37,6 +37,7 @@ from math import log,exp,sqrt
 import numpy as np
 from scipy.optimize import minimize
 
+mode="region"
 mindate="2020-10-01"
 
 def datetoday(x):
@@ -103,7 +104,7 @@ with open("ons_ct.csv","r") as fp:
   reader=csv.reader(fp)
   headings=next(reader)
   for row in reader:
-    if row[0]=="EnglandRegion":# or row[0]=="Country":
+    if (mode=="region" and row[0]=="EnglandRegion") or (mode!="region" and row[0]=="Country" and row[1]!="Northern Ireland"):
       date=time.strftime("%Y-%m-%d",time.strptime(row[2],"%d %B %Y"))
       if date>=mindate:
         if date0==None: date0=date
@@ -221,9 +222,9 @@ print("Robustness of ORF1ab = %.2f"%robustness[1])
 print("Robustness of S gene = %.2f"%robustness[2])
 print("Dependence of dropout on Ct = %.3f"%ctmult[0])
 print()
-print("Region                    Est'd crossover     Extrapolated %relative                            Approx max R factor")
-print("------                    date of B.1.1.7     prevalence on",now,"   Maximum growth rate   assuming same gen time")
-print("                          ---------------     ------------------------    -------------------   ----------------------")
+print("                          Est'd crossover     Extrapolated %relative                            Approx max R factor")
+print(("Region " if mode=="region" else "Country")+"                   date of B.1.1.7     prevalence on",now,"   Maximum growth rate   assuming same gen time")
+print(("------ " if mode=="region" else "-------")+"                   ---------------     ------------------------    -------------------   ----------------------")
 for (r,region) in enumerate(regions):
   for t in range(tnow):
     if logodds_i[r][t]<0 and logodds_i[r][t+1]>=0: tc=t+logodds_i[r][t+1]/(logodds_i[r][t+1]-logodds_i[r][t]);break
