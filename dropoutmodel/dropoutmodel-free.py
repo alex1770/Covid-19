@@ -59,7 +59,8 @@ class testdata:
   def __repr__(self):
     s=self.date+" :"
     for t in [(1,0,0),(0,1,0),(0,0,1),(1,1,0),(0,1,1),(1,0,1),(1,1,1)]: s+=" %5.1f"%(self.p[t]*100)
-    s+=" : %.1f"%(self.Ct)
+    s+=" : %.1f : "%(self.Ct)
+    for q in self.qq: s+="  %4.1f"%q
     return s
 
 # Convert flat array into structured parameters (lvalues)
@@ -136,10 +137,10 @@ def estimatedropoutmatrix(r,d,robustness,ctmult,logodds):
   # values and linking the predictions with actual dropout outcomes, but we're using the
   # interpolated distribution of Ct values and linking the predictions to the distribution of
   # dropout outcomes instead because that's the information that's available.
-  nsubdiv=10# Surprisingly 5 seemed to be enough, but using 10 to make sure
-  for quantile in range(0,nsubdiv):
+  nsubdiv=10# Surprisingly 5 seems to be enough, but using 10 to make sure
+  p=1/(1+exp(-logodds[r][d.t//7]))# Relative prevalence of B.1.1.7
+  for quantile in range(nsubdiv):
     ct=interp(d.pp,d.qq,(quantile+.5)/nsubdiv)
-    p=1/(1+exp(-logodds[r][d.t//7]))# Relative prevalence of B.1.1.7
     dp=[1/(1+exp(-ctmult[0]*(ct-a))) for a in robustness]# Probability of dropout for each gene
     dp[2]=p+(1-p)*dp[2]# Can treat B.1.1.7 as something that increases probability of S gene dropout
     c=np.zeros([2,2,2])
@@ -147,8 +148,13 @@ def estimatedropoutmatrix(r,d,robustness,ctmult,logodds):
       for j in range(2):
         for k in range(2):
           c[i,j,k]=(dp[0] if i==0 else 1-dp[0])*(dp[1] if j==0 else 1-dp[1])*(dp[2] if k==0 else 1-dp[2])
+    # Remove all-dropout and renormalise. It's necessary to do this inside the loop, not just to tc,
+    # because the distribution of Ct corresponds to actual positive PCR tests (for >=1 of the 3 genes).
+    # If we only normalised tc (outside the loop) then we'd effectively be weighting each c by 1-c[0,0,0],
+    # which can get very small for high quantiles, so we wouldn't be reconstructing the distribution of Ct.
+    c[0,0,0]=0;c=c/c.sum()
     tc+=c
-  tc[0,0,0]=0;tc=tc/tc.sum()# Remove all-dropout and renormalise
+  tc=tc/tc.sum()
   return tc
 
 # Calculate modelling error (cross entropy) associated with parameters xx[]
