@@ -31,6 +31,7 @@
 # Expect logistic growth to slow a little under lockdown conditions. These are (currently) England-wide so 2nd diffs are region-independent,
 # which also keeps the free parameter count down.
 # (Allowing ddlogodds to depend on r was tried and doesn't improve the fit a huge amount.)
+# (Am now revising that opinion. I think there has to be some kind of separation, perhaps hierarchical.)
 
 import sys,time,calendar,csv
 from math import log,exp,sqrt
