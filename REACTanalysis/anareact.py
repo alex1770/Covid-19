@@ -1,10 +1,13 @@
-# Analysing growth trend from REACT-1 survey, published on 21 Jan 2021, mostly covering period 5-15 Jan 2021
+# Analysing growth trend from REACT-1 survey, round 8 published on 21 Jan 2021, mostly covering period 5-15 Jan 2021
+# And subsequently round 9 published on 2021-03-04
 # Data from https://github.com/mrc-ide/reactidd
 
 import os,time,calendar,csv
 from math import log,exp,sqrt
 import numpy as np
 from scipy.optimize import minimize
+
+mindate="2021-01-29"
 
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
@@ -51,12 +54,12 @@ def Fisher(lam,g,pos,tot):
 #    0         1           2           3                   4                  5               6             7            8         9
 # [Date,] South East, North East, North West, Yorkshire and The Humber, East Midlands, West Midlands, East of England, London, South West
 
-for (regions,desc) in [(range(1,10),"England"), ([1,7,8,9],"South England"), ([2,3,4,5,6],"North and Central England")]:
+for (regions,desc) in [(range(1,10),"England"), ([1,7,8,9],"South England"), ([2,3,4,5,6],"North and Central England"), ([8],"London")]:
 
   print("REACT-1 survey:",desc)
   print()
-  pos0=load("positive.csv",regions,"2020-12-25")
-  tot0=load("total.csv",regions,"2020-12-25")
+  pos0=load("positive.csv",regions,mindate)
+  tot0=load("total.csv",regions,mindate)
   
   # Match dates in pos and tot and convert to simple list
   minday=min(x for (x,y) in pos0+tot0)
