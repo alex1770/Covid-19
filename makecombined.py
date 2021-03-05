@@ -128,7 +128,7 @@ for loc in locs:
   write('set timefmt "%Y-%m-%d"')
   write('set tics scale 3,0.5')
   write('set logscale y')
-  write('set yrange [100:3000]')
+  write('set yrange [10:3000]')
   #write('set logscale y 3.1622776601683795')
   #write('set logscale y2')
   write('set xtics nomirror')
