@@ -54,7 +54,7 @@ def Fisher(lam,g,pos,tot):
 #    0         1           2           3                   4                  5               6             7            8         9
 # [Date,] South East, North East, North West, Yorkshire and The Humber, East Midlands, West Midlands, East of England, London, South West
 
-for (regions,desc) in [(range(1,10),"England"), ([1,7,8,9],"South England"), ([2,3,4,5,6],"North and Central England"), ([8],"London")]:
+for (regions,desc) in [(range(1,10),"England"), ([1,7,8,9],"South England"), ([2,3,4,5,6],"North and Central England"), ([1], "South East"), ([2], "North East"), ([3], "North West"), ([4], "Yorkshire and the Humber"), ([5], "East Midlands"), ([6], "West Midlands"), ([7], "East of England"), ([8], "London"), ([9], "South West")]:
 
   print("REACT-1 survey:",desc)
   print()
