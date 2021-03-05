@@ -124,53 +124,108 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
   p.close();po.wait()
   print("Written graph to %s"%outfn)
 
+# Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
   x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
-  return tuple(int(y) for y in x.split("_"))
-  
+  aa=[int(y) for y in x.split("_")]
+  return (aa[0],aa[1]+1)
+
+# Convert (eg) (15,20) to "15 - 19"
+def unparse(r):
+  (a,b)=r
+  if b==150: return "%d+"%a
+  return "%d - %d"%(a,b)
+
+# Convert dictionary from using '15_19' (etc) format to (15,20) format
+# At the same time remove age brackets such as '60+' and '00_59' that strictly contain other age brackets, so avoiding overcounting
+# Return list of ages
+def convertages(dd):
+  ages0=[(x,parseage(x)) for x in dd[0] if x!='date']
+  ages1={}
+  for (x,(a,b)) in ages0:
+    for (y,(c,d)) in ages0:
+      if c>=a and d<=b and (c>a or d<b): break
+    else: ages1[x]=(a,b)
+  ee=[]
+  for d in dd:
+    e={}
+    e['date']=d['date']
+    for x in ages1:
+      e[ages1[x]]=d[x]
+    ee.append(e)
+  ages2=sorted(ages1.values())
+  return (ee,ages2)
+
 #date=max(hosp[-1]['date'],cases[-1]['date'])
 mindate=daytodate(datetoday(updatedate)-90)
-hospages=sorted((x for x in hosp[0] if x!='date'),key=lambda x:parseage(x)[0])
-caseages=sorted((x for x in cases[0] if x!='date'),key=lambda x:parseage(x)[0])
-deathages=sorted((x for x in deaths[0] if x!='date'),key=lambda x:parseage(x)[0])
+hosp,hospages=convertages(hosp)
+cases,caseages=convertages(cases)
+deaths,deathages=convertages(deaths)
+fcases,_=convertages(fcases)
+mcases,_=convertages(mcases)
 
 data=[]
-for age in ['18_to_64', '65_to_84', '85+']:
+for age in [(18,65), (65,85), (85,150)]:
   data.append({
-    'title': age.replace('_',' '),
+    'title': unparse(age),
     'values': [(d['date'],d[age]) for d in hosp]
   })
 title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
 
+# Todo when can be bothered: normalise this by number in each age group
 data=[]
 for ageband in range(0,90,10):
-  if ageband<80: lim=ageband+10;name="%d - %d"%(ageband,lim)
-  else: lim=999;name="%d+"%ageband
+  if ageband<80: lim=ageband+10
+  else: lim=150
   data.append({
-    'title': name,
-    'values': [(d['date'],sum(d[age] for age in caseages if parseage(age)[0]>=ageband and parseage(age)[1]<=lim)) for d in cases]
+    'title': unparse((ageband,lim)),
+    'values': [(d['date'],sum(d[age] for age in caseages if age[0]>=ageband and age[1]<=lim)) for d in cases]
   })
 title='Confirmed cases per day for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of cases per day', outfn='confirmedcasesbyage-abs.png')#, extra=['set logscale y'])
 
 title='Hospital admissions and confirmed cases ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
-cutoff0=65
-cutoff1=80
-lowages=[age for age in caseages if parseage(age)[0]>=cutoff0 and parseage(age)[1]<cutoff1]
-highages=[age for age in caseages if parseage(age)[0]>=cutoff1]
+cutoff0=65#25#65
+cutoff1=80#75#80
+lowages=[age for age in caseages if age[0]>=cutoff0 and age[1]<=cutoff1]
+highages=[age for age in caseages if age[0]>=cutoff1]
 data=[]
+
+if 0:
+  days=(range(330,340),[-1])
+  l=[]
+  #dd={}
+  #for end in [0,1]:
+  #  for cut in caseages+[150]:
+  #    dd[(end,cut)]=sum(cases[day][age] for day in days[end] for age in caseages if parseage(age)[
+  day0=336;day1=-1
+  for cut0 in range(20,85,5):
+    for cut1 in range(cut0+5,95,5):
+      for cut2 in range(cut1,95,5):
+        lowa=[age for age in caseages if age[0]>=cut0 and age[1]<=cut1]
+        higha=[age for age in caseages if age[0]>=cut2]
+        rr=[[sum(d[a] for a in aa) for aa in [lowa,higha]] for d in [cases[day0],cases[day1]]]
+        if min(min(rr[0]),min(rr[1]))>=100:
+          l.append((rr[0][1]/rr[0][0]/(rr[1][1]/rr[1][0]),cut0,cut1,cut2))
+          #if cut0==65 and cut1==80: print(rr[0],rr[1])
+  l.sort(reverse=True)
+  for (r,cut0,cut1,cut2) in l[:20]:
+    print(cut0,cut1,cut2,r)
+  (r,cut0,cut1,cut2)=l[0]
+  lowages=[age for age in caseages if age[0]>=cut0 and age[1]<cut1]
+  highages=[age for age in caseages if age[0]>=cut2]
 
 if 0:
   data.append({
     'title': 'Hospital admissions: #(aged 65+) / #(all ages)',
-    'values': [(d['date'],(d['65_to_84']+0*d['85+'])/sum(d[a] for a in hospages)*100) for d in hosp]
+    'values': [(d['date'],(d[(65,85)]+0*d[(85,150)])/sum(d[a] for a in hospages)*100) for d in hosp]
   })
   
 data.append({
   'title': 'Hospital admissions: #(aged 85+) / #(aged 18-64 or 85+)',
-  'values': [(d['date'],d['85+']/(d['18_to_64']+d['85+'])*100) for d in hosp]
+  'values': [(d['date'],(d[(85,150)])/(d[(18,65)]+d[(85,150)])*100) for d in hosp if d['date']>=mindate]
 })
 
 data.append({
@@ -178,8 +233,8 @@ data.append({
   'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages+highages)*100) for d in cases if d['date']>=mindate]
 })
 
-lowages=[age for age in deathages if parseage(age)[0]>=cutoff0 and parseage(age)[1]<cutoff1]
-highages=[age for age in deathages if parseage(age)[0]>=cutoff1]
+lowages=[age for age in deathages if age[0]>=cutoff0 and age[1]<=cutoff1]
+highages=[age for age in deathages if age[0]>=cutoff1]
 data.append({
   'title': 'Deaths: #(aged %d+) / #(aged %d+) - 25%%'%(cutoff1,cutoff0),
   'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages+highages)*100-25) for d in deaths if d['date']>=mindate],
@@ -187,8 +242,8 @@ data.append({
 })
 
 if 0:
-  num=[a for a in caseages if parseage(a)[0]>=85]
-  denom=[a for a in caseages if parseage(a)[0]>=20 and parseage(a)[1]<=64 or parseage(a)[0]>=85]
+  num=[a for a in caseages if a[0]>=85]
+  denom=[a for a in caseages if a[0]>=20 and a[1]<=65 or a[0]>=85]
   data.append({
     'title': 'Confirmed cases: #(aged 85+) / #(aged 20-64 or 85+)',
     'values': [(d['date'],sum(d[a] for a in num)/sum(d[a] for a in denom)*100) for d in cases if d['date']>=mindate]
@@ -197,7 +252,7 @@ if 0:
 makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage', outfn='admissionandcaseageratios.png')
 
 data=[]
-lowages=[age for age in caseages if parseage(age)[0]>=16 and parseage(age)[1]<65]
+lowages=[age for age in caseages if age[0]>=16 and age[1]<=65]
 data.append({
   'title': 'Confirmed cases: #(female aged 16-65) / #(male aged 16-65)',
   'values': [(f['date'],sum(f[a] for a in lowages)/sum(m[a] for a in lowages)) for (f,m) in zip(fcases,mcases) if f['date']>=mindate]
