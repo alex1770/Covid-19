@@ -1,7 +1,9 @@
 import time,calendar,os,json,sys,datetime
 from requests import get
 from subprocess import Popen,PIPE
-from math import sqrt
+from math import sqrt,log
+from scipy.optimize import minimize
+import numpy as np
 
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
@@ -70,7 +72,7 @@ newcases=newcases[:-1]# Last entry seems particularly unreliable, I think becaus
 newmcases=newmcases[:-1]
 newfcases=newfcases[:-1]
                   
-def smooth(data):
+def simplesmooth(data):
   ages=[x for x in data[0].keys() if x!='date']
   n=len(data)
   smoothed=[]
@@ -82,12 +84,151 @@ def smooth(data):
       d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
     smoothed.append(d)
   return smoothed
+def smooth(data):
+  return simplesmooth(data)
 
-hosp=smooth(newhosp)
-cases=smooth(newcases)
-deaths=smooth(mortdata)
-mcases=smooth(newmcases)
-fcases=smooth(newfcases)
+# Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
+def parseage(x):
+  if x[-1]=='+': return (int(x[:-1]),150)
+  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
+  aa=[int(y) for y in x.split("_")]
+  return (aa[0],aa[1]+1)
+
+# Convert (eg) (15,20) to "15 - 19"
+def unparse(r):
+  (a,b)=r
+  if b==150: return "%d+"%a
+  return "%d - %d"%(a,b)
+
+# Convert dictionary from using '15_19' (etc) format to (15,20) format
+# At the same time remove age brackets such as '60+' and '00_59' that strictly contain other age brackets, so avoiding overcounting
+# Return list of ages
+def convertages(dd):
+  ages0=[(x,parseage(x)) for x in dd[0] if x!='date']
+  ages1={}
+  for (x,(a,b)) in ages0:
+    for (y,(c,d)) in ages0:
+      if c>=a and d<=b and (c>a or d<b): break
+    else: ages1[x]=(a,b)
+  ee=[]
+  for d in dd:
+    e={}
+    e['date']=d['date']
+    for x in ages1:
+      e[ages1[x]]=d[x]
+    ee.append(e)
+  ages2=sorted(ages1.values())
+  return (ee,ages2)
+
+#date=max(hosp[-1]['date'],cases[-1]['date'])
+mindate=daytodate(datetoday(updatedate)-90)
+hosp,hospages=convertages(newhosp)
+cases,caseages=convertages(newcases)
+deaths,deathages=convertages(mortdata)
+fcases,_=convertages(newfcases)
+mcases,_=convertages(newmcases)
+
+def LL(rr,xx):
+  L=0
+  n=len(rr)
+  for i in range(7):
+    x=xx[i::7].sum()
+    w=x/(rr[i::7].sum())
+    L+=x*log(w)
+  L+=(xx*np.log(rr)).sum()
+  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
+  t=(dd*dd).sum()
+  s=(rr*rr).sum()
+  #print(s,t)
+  #L-=n*log(t/s)
+  lam=100000000;L-=lam*t
+  return -L/100000
+
+def val2(rr,xx,vv,lam):
+  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
+  return -(vv*rr).sum()+(xx*np.log(vv*rr)).sum()-lam/2*(dd*dd).sum()
+
+def magicmethod(xx):
+  n=len(xx)
+  ww=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
+  rr=np.array([xx[d]/ww[d%7] for d in range(n)])
+  rr=rr/rr.sum()
+
+  lam=1
+  
+  while 1:
+    ww=[xx[i::7].sum()/rr[i::7].sum() for i in range(7)]
+    vv=[ww[d%7] for d in range(n)]
+    print(val2(rr,xx,vv,lam))
+
+    A=np.zeros((n,n))
+    for d in range(1,n-1):
+      A[d-1,d-1]+=1
+      A[d-1,d  ]-=2
+      A[d-1,d+1]+=1
+      A[d  ,d-1]-=2
+      A[d  ,d  ]+=4
+      A[d  ,d+1]-=2
+      A[d+1,d-1]+=1
+      A[d+1,d  ]-=2
+      A[d+1,d+1]+=1
+    A=lam/2*A
+    B=vv-xx/rr
+    res=np.linalg.lstsq(A,B)
+    rr=res[0]
+    a=sqrt((rr*rr).sum()/n)
+    rr=np.maximum(rr,a/100)
+    
+    
+if 1:
+  data=cases
+  ages=[x for x in data[0].keys() if x!='date']
+  xx=np.array([sum(d[age] for age in ages) for d in data])
+  n=len(data)
+  ww=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
+  rr=np.array([xx[d]/ww[d%7] for d in range(n)])
+  rr=rr/sqrt((rr*rr).sum())
+  constr={'type':'eq', 'fun':lambda rr: (rr*rr).sum()-1}
+  res=minimize(LL,rr,args=(xx),method="SLSQP",bounds=[(1e-9,None) for i in range(n)],constraints=[constr],options={"maxiter":1000})
+  print(res.success)
+  print(res.message)
+  print(res.nit,"iterations")
+  rr=res.x
+  print(LL(rr,xx))
+  print()
+
+  n=len(xx)
+  ww=[xx[i::7].sum()/rr[i::7].sum() for i in range(7)]
+  vv=[ww[d%7] for d in range(n)]
+  print((-(vv*rr).sum()))
+  print((xx*np.log(vv*rr)).sum())
+  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
+  t=(dd*dd).sum()
+  s=(rr*rr).sum()
+  print(t,s,n*log(t/s))
+  with open('temp','w') as fp:
+    for i in range(n):
+      print("%12g %12g %12g"%(xx[i],rr[i],vv[i]),file=fp)
+  
+  #rr=magicmethod(xx)
+  
+  smoothed=[]
+  for i in range(n):
+    d={'date': data[i]['date']}
+    j0=max(i-3,0)
+    j1=min(i+4,n)
+    for age in ages:
+      d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
+    smoothed.append(d)
+  #return smoothed
+  poiopi
+
+
+hosp=smooth(hosp)
+cases=smooth(cases)
+deaths=smooth(deaths)
+mcases=smooth(mcases)
+fcases=smooth(fcases)
 
 def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[]):
   po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
@@ -125,68 +266,6 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
   p.close();po.wait()
   print("Written graph to %s"%outfn)
 
-# Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
-def parseage(x):
-  if x[-1]=='+': return (int(x[:-1]),150)
-  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
-  aa=[int(y) for y in x.split("_")]
-  return (aa[0],aa[1]+1)
-
-# Convert (eg) (15,20) to "15 - 19"
-def unparse(r):
-  (a,b)=r
-  if b==150: return "%d+"%a
-  return "%d - %d"%(a,b)
-
-# Convert dictionary from using '15_19' (etc) format to (15,20) format
-# At the same time remove age brackets such as '60+' and '00_59' that strictly contain other age brackets, so avoiding overcounting
-# Return list of ages
-def convertages(dd):
-  ages0=[(x,parseage(x)) for x in dd[0] if x!='date']
-  ages1={}
-  for (x,(a,b)) in ages0:
-    for (y,(c,d)) in ages0:
-      if c>=a and d<=b and (c>a or d<b): break
-    else: ages1[x]=(a,b)
-  ee=[]
-  for d in dd:
-    e={}
-    e['date']=d['date']
-    for x in ages1:
-      e[ages1[x]]=d[x]
-    ee.append(e)
-  ages2=sorted(ages1.values())
-  return (ee,ages2)
-
-#date=max(hosp[-1]['date'],cases[-1]['date'])
-mindate=daytodate(datetoday(updatedate)-90)
-hosp,hospages=convertages(hosp)
-cases,caseages=convertages(cases)
-deaths,deathages=convertages(deaths)
-fcases,_=convertages(fcases)
-mcases,_=convertages(mcases)
-
-data=[]
-for age in [(18,65), (65,85), (85,150)]:
-  data.append({
-    'title': unparse(age),
-    'values': [(d['date'],d[age]) for d in hosp]
-  })
-title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
-makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
-
-# Todo when can be bothered: normalise this by number in each age group
-data=[]
-for ageband in range(0,90,10):
-  if ageband<80: lim=ageband+10
-  else: lim=150
-  data.append({
-    'title': unparse((ageband,lim)),
-    'values': [(d['date'],sum(d[age] for age in caseages if age[0]>=ageband and age[1]<=lim)) for d in cases]
-  })
-title='Confirmed cases per day for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
-makegraph(title=title, data=data, mindate=mindate, ylabel='Number of cases per day', outfn='confirmedcasesbyage-abs.png')#, extra=['set logscale y'])
-
 if 0:
   days=(range(330,340),[-1])
   ll=[]
@@ -219,17 +298,45 @@ if 0:
     if cut2<=70: print("%2d %2d %2d %7.3f"%(cut0,cut1,cut2,r))
     if r<0.9*l[0][0]: break
 
+
 title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
-#cutoff0=0;cutoff1=60;cutoff2=70
+data=[]
+
+cutoff0=0;cutoff1=65;cutoff2=65
+lowages=[age for age in hospages if age[0]>=cutoff0 and age[1]<=cutoff1]
+highages=[age for age in hospages if age[0]>=cutoff2]
+data.append({
+  'title': 'Hospital admissions: 0.75 * (aged %s) / (aged %s)'%(unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
+  'values': [(d['date'],0.75*sum(d[a] for a in highages)/sum(d[a] for a in lowages)) for d in hosp if d['date']>=mindate]
+})
+
+cutoff0=0;cutoff1=60;cutoff2=70
+lowages=[age for age in caseages if age[0]>=cutoff0 and age[1]<=cutoff1]
+highages=[age for age in caseages if age[0]>=cutoff2]
+data.append({
+  'title': 'Confirmed cases: 10 * (aged %s) / (aged %s)'%(unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
+  'values': [(d['date'],10*sum(d[a] for a in highages)/sum(d[a] for a in lowages)) for d in cases if d['date']>=mindate]
+})
+
+lowages=[age for age in deathages if age[0]>=cutoff0 and age[1]<=cutoff1]
+highages=[age for age in deathages if age[0]>=cutoff2]
+data.append({
+  'title': 'Deaths: 0.1 * (aged %s) / (aged %s)'%(unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
+  'values': [(d['date'],0.1*sum(d[a] for a in highages)/sum(d[a] for a in lowages)) for d in deaths if d['date']>=mindate],
+  #'extra': 'axis x1y2'
+})
+
+makegraph(title=title, data=data, mindate=mindate, ylabel='Adjusted Ratio', outfn='admissionandcaseageratios2.png')
+
+
+#################################
+# Old graphs (14 Jan - 5 March) #
+#################################
+    
+title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
 cutoff0=65;cutoff1=150;cutoff2=80
 data=[]
 
-if 0:
-  data.append({
-    'title': 'Hospital admissions: #(aged 65+) / #(all ages)',
-    'values': [(d['date'],(d[(65,85)]+0*d[(85,150)])/sum(d[a] for a in hospages)*100) for d in hosp]
-  })
-  
 data.append({
   'title': 'Hospital admissions: (aged 85+) / (aged 18-64 or 85+)',
   'values': [(d['date'],(d[(85,150)])/(d[(18,65)]+d[(85,150)])*100) for d in hosp if d['date']>=mindate]
@@ -252,7 +359,7 @@ data.append({
 
 makegraph(title=title, data=data, mindate=mindate, ylabel='Percentage', outfn='admissionandcaseageratios.png')
 
-
+########################
 
 data=[]
 lowages=[age for age in caseages if age[0]>=16 and age[1]<=65]
@@ -261,4 +368,29 @@ data.append({
   'values': [(f['date'],sum(f[a] for a in lowages)/sum(m[a] for a in lowages)) for (f,m) in zip(fcases,mcases) if f['date']>=mindate]
 })
 makegraph(title=title, data=data, mindate=mindate, ylabel='Ratio', outfn='femalemalecaseratio.png')
+
+########################
+
+data=[]
+for age in [(18,65), (65,85), (85,150)]:
+  data.append({
+    'title': unparse(age),
+    'values': [(d['date'],d[age]) for d in hosp]
+  })
+title='Hospital admissions for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
+makegraph(title=title, data=data, mindate=mindate, ylabel='Number of age group admitted', outfn='hospitaladmissionsbyage-abs.png')
+
+########################
+
+# Todo when can be bothered: normalise this by number in each age group
+data=[]
+for ageband in range(0,90,10):
+  if ageband<80: lim=ageband+10
+  else: lim=150
+  data.append({
+    'title': unparse((ageband,lim)),
+    'values': [(d['date'],sum(d[age] for age in caseages if age[0]>=ageband and age[1]<=lim)) for d in cases]
+  })
+title='Confirmed cases per day for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
+makegraph(title=title, data=data, mindate=mindate, ylabel='Number of cases per day', outfn='confirmedcasesbyage-abs.png')#, extra=['set logscale y'])
 
