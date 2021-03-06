@@ -4,6 +4,7 @@ from subprocess import Popen,PIPE
 from math import sqrt,log
 from scipy.optimize import minimize
 import numpy as np
+np.set_printoptions(precision=3,linewidth=120)
 
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
@@ -72,21 +73,6 @@ newcases=newcases[:-1]# Last entry seems particularly unreliable, I think becaus
 newmcases=newmcases[:-1]
 newfcases=newfcases[:-1]
                   
-def simplesmooth(data):
-  ages=[x for x in data[0].keys() if x!='date']
-  n=len(data)
-  smoothed=[]
-  for i in range(n):
-    d={'date': data[i]['date']}
-    j0=max(i-3,0)
-    j1=min(i+4,n)
-    for age in ages:
-      d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
-    smoothed.append(d)
-  return smoothed
-def smooth(data):
-  return simplesmooth(data)
-
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
@@ -128,90 +114,9 @@ deaths,deathages=convertages(mortdata)
 fcases,_=convertages(newfcases)
 mcases,_=convertages(newmcases)
 
-def LL(rr,xx):
-  L=0
-  n=len(rr)
-  for i in range(7):
-    x=xx[i::7].sum()
-    w=x/(rr[i::7].sum())
-    L+=x*log(w)
-  L+=(xx*np.log(rr)).sum()
-  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
-  t=(dd*dd).sum()
-  s=(rr*rr).sum()
-  #print(s,t)
-  #L-=n*log(t/s)
-  lam=100000000;L-=lam*t
-  return -L/100000
-
-def val2(rr,xx,vv,lam):
-  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
-  return -(vv*rr).sum()+(xx*np.log(vv*rr)).sum()-lam/2*(dd*dd).sum()
-
-def magicmethod(xx):
-  n=len(xx)
-  ww=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
-  rr=np.array([xx[d]/ww[d%7] for d in range(n)])
-  rr=rr/rr.sum()
-
-  lam=1
-  
-  while 1:
-    ww=[xx[i::7].sum()/rr[i::7].sum() for i in range(7)]
-    vv=[ww[d%7] for d in range(n)]
-    print(val2(rr,xx,vv,lam))
-
-    A=np.zeros((n,n))
-    for d in range(1,n-1):
-      A[d-1,d-1]+=1
-      A[d-1,d  ]-=2
-      A[d-1,d+1]+=1
-      A[d  ,d-1]-=2
-      A[d  ,d  ]+=4
-      A[d  ,d+1]-=2
-      A[d+1,d-1]+=1
-      A[d+1,d  ]-=2
-      A[d+1,d+1]+=1
-    A=lam/2*A
-    B=vv-xx/rr
-    res=np.linalg.lstsq(A,B)
-    rr=res[0]
-    a=sqrt((rr*rr).sum()/n)
-    rr=np.maximum(rr,a/100)
-    
-    
-if 1:
-  data=cases
+def simplesmooth(data):
   ages=[x for x in data[0].keys() if x!='date']
-  xx=np.array([sum(d[age] for age in ages) for d in data])
   n=len(data)
-  ww=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
-  rr=np.array([xx[d]/ww[d%7] for d in range(n)])
-  rr=rr/sqrt((rr*rr).sum())
-  constr={'type':'eq', 'fun':lambda rr: (rr*rr).sum()-1}
-  res=minimize(LL,rr,args=(xx),method="SLSQP",bounds=[(1e-9,None) for i in range(n)],constraints=[constr],options={"maxiter":1000})
-  print(res.success)
-  print(res.message)
-  print(res.nit,"iterations")
-  rr=res.x
-  print(LL(rr,xx))
-  print()
-
-  n=len(xx)
-  ww=[xx[i::7].sum()/rr[i::7].sum() for i in range(7)]
-  vv=[ww[d%7] for d in range(n)]
-  print((-(vv*rr).sum()))
-  print((xx*np.log(vv*rr)).sum())
-  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
-  t=(dd*dd).sum()
-  s=(rr*rr).sum()
-  print(t,s,n*log(t/s))
-  with open('temp','w') as fp:
-    for i in range(n):
-      print("%12g %12g %12g"%(xx[i],rr[i],vv[i]),file=fp)
-  
-  #rr=magicmethod(xx)
-  
   smoothed=[]
   for i in range(n):
     d={'date': data[i]['date']}
@@ -220,9 +125,74 @@ if 1:
     for age in ages:
       d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
     smoothed.append(d)
-  #return smoothed
-  poiopi
+  return smoothed
 
+smoothness=1e6
+
+def LL(rr,xx,lx):
+  L=0
+  n=len(rr)
+  er=np.exp(rr)
+  for i in range(7):
+    x=xx[i::7].sum()
+    ew=x/(er[i::7].sum())
+    L+=x*log(ew)
+  # xx.lx is only a constant, but subtracting makes LL more meaningful and keeps it in a better range of values
+  L+=(xx*(rr-lx)).sum()
+  dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
+  t=(dd*dd).sum()
+  #s=(rr*rr).sum();L-=n*log(t/s)
+  L-=smoothness/2*t
+  # Seems that scaling down objective function to control precision works significantly better than reducing tolerance in SLSQP (option ftol)
+  return -L/n/300
+
+def fancysmooth1(data):
+  deb=1
+  ages=[x for x in data[0].keys() if x!='date']
+  xx=np.array([sum(d[age] for age in ages) for d in data])[:-2]
+  lx=np.log(xx)
+  n=len(xx)
+  # Convenient to optimise in the 'gauge' rr.sum()=0 because it doesn't involve xx (minimize can't handle auxiliary variables?)  but transform to other gauge afterwards
+  # (Actually, probably don't need this constraint)
+  constr={'type':'eq', 'fun':lambda rr: rr.sum()}
+  # bounds=[(-30,30) for d in range(n)]
+  res=minimize(LL,np.zeros(n),args=(xx,lx),method="SLSQP",constraints=[constr],options={"maxiter":10000})
+  if not res.success: raise RuntimeError(res.message)
+  if deb: print(res.nit,"iterations")
+  rr=res.x
+  if deb: print(LL(rr,xx,lx));print()
+
+  # Regauge to put underlying Poisson parameter on the same footing as original data
+  rr+=log(xx.sum()/np.exp(rr).sum())
+  
+  er=np.exp(rr)
+  if deb:
+    ww=[log(xx[i::7].sum()/er[i::7].sum()) for i in range(7)]
+    vv=[ww[d%7] for d in range(n)]
+    ev=np.exp(vv)
+    print((-np.exp(vv+rr).sum()))
+    print((xx*(vv+rr-lx)).sum())
+    dd=-rr[:-2]+2*rr[1:-1]-rr[2:]
+    t=(dd*dd).sum()
+    s=(rr*rr).sum()
+    print(-smoothness/2*t,n*log(t/s))
+
+    aa=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
+    bb=[aa[d%7] for d in range(n)]
+    yy=xx/bb
+    yy*=xx.sum()/yy.sum()
+
+    with open('temp','w') as fp:
+      for i in range(n):
+        print("%12g %12g %12g %12g %12g"%(xx[i],er[i],ev[i],er[i]*ev[i],yy[i]),file=fp)
+  
+  return er
+
+def smooth(data):
+  return simplesmooth(fancysmooth1(data))
+
+fancysmooth1(cases)
+poipoi
 
 hosp=smooth(hosp)
 cases=smooth(cases)
