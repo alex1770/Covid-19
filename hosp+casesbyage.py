@@ -1,7 +1,7 @@
 import time,calendar,os,json,sys,datetime
 from requests import get
 from subprocess import Popen,PIPE
-from math import sqrt,log
+from math import sqrt,log,exp
 from scipy.optimize import minimize
 import numpy as np
 np.set_printoptions(precision=3,linewidth=120)
@@ -114,19 +114,7 @@ deaths,deathages=convertages(mortdata)
 fcases,_=convertages(newfcases)
 mcases,_=convertages(newmcases)
 
-def simplesmooth(data):
-  ages=[x for x in data[0].keys() if x!='date']
-  n=len(data)
-  smoothed=[]
-  for i in range(n):
-    d={'date': data[i]['date']}
-    j0=max(i-3,0)
-    j1=min(i+4,n)
-    for age in ages:
-      d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
-    smoothed.append(d)
-  return smoothed
-
+# For fancysmooth - not currently used
 smoothness=1e6
 
 def LL(rr,xx,lx):
@@ -146,10 +134,11 @@ def LL(rr,xx,lx):
   # Seems that scaling down objective function to control precision works significantly better than reducing tolerance in SLSQP (option ftol)
   return -L/n/300
 
+# Not currently used
 def fancysmooth1(data):
-  deb=1
+  deb=0
   ages=[x for x in data[0].keys() if x!='date']
-  xx=np.array([sum(d[age] for age in ages) for d in data])[:-2]
+  xx=np.array([sum(d[age] for age in ages) for d in data])
   lx=np.log(xx)
   n=len(xx)
   # Convenient to optimise in the 'gauge' rr.sum()=0 because it doesn't involve xx (minimize can't handle auxiliary variables?)  but transform to other gauge afterwards
@@ -176,23 +165,49 @@ def fancysmooth1(data):
     t=(dd*dd).sum()
     s=(rr*rr).sum()
     print(-smoothness/2*t,n*log(t/s))
-
     aa=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
     bb=[aa[d%7] for d in range(n)]
     yy=xx/bb
     yy*=xx.sum()/yy.sum()
-
     with open('temp','w') as fp:
       for i in range(n):
         print("%12g %12g %12g %12g %12g"%(xx[i],er[i],ev[i],er[i]*ev[i],yy[i]),file=fp)
-  
-  return er
+  return
+
+def simplesmooth1(data):
+  n=len(data)
+  ages=[x for x in data[0].keys() if x!='date']
+  xx=np.array([sum(d[age] for age in ages) for d in data])
+  ww=[xx[i::7].sum()/len(xx[i::7]) for i in range(7)]
+  vv=np.array([ww[d%7] for d in range(n)])
+  vv*=(xx/vv).sum()/xx.sum()
+  smoothed=[]
+  for d in range(n):
+    di={'date': data[d]['date']}
+    for age in ages:
+      di[age]=data[d][age]/vv[d]
+    smoothed.append(di)
+  return smoothed
+
+def simplesmooth2(data):
+  ages=[x for x in data[0].keys() if x!='date']
+  n=len(data)
+  smoothed=[]
+  for i in range(n):
+    d={'date': data[i]['date']}
+    j0=max(i-3,0)
+    j1=min(i+4,n)
+    for age in ages:
+      d[age]=sum(data[j][age] for j in range(j0,j1))/(j1-j0)
+    smoothed.append(d)
+  return smoothed
+
 
 def smooth(data):
-  return simplesmooth(fancysmooth1(data))
-
-fancysmooth1(cases)
-poipoi
+  #return data
+  #return simplesmooth1(data)
+  #return simplesmooth2(data)
+  return simplesmooth2(simplesmooth1(data))
 
 hosp=smooth(hosp)
 cases=smooth(cases)
@@ -269,32 +284,22 @@ if 0:
     if r<0.9*l[0][0]: break
 
 
-title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in England. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
+title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in England. Adjusted to be 1 on 1st January 2021\\nLast few values subject to change. Source: https://coronavirus.data.gov.uk/ at '+now
 data=[]
 
-cutoff0=0;cutoff1=65;cutoff2=65
-lowages=[age for age in hospages if age[0]>=cutoff0 and age[1]<=cutoff1]
-highages=[age for age in hospages if age[0]>=cutoff2]
-data.append({
-  'title': 'Hospital admissions: 0.75 * (aged %s) / (aged %s)'%(unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
-  'values': [(d['date'],0.75*sum(d[a] for a in highages)/sum(d[a] for a in lowages)) for d in hosp if d['date']>=mindate]
-})
-
-cutoff0=0;cutoff1=60;cutoff2=70
-lowages=[age for age in caseages if age[0]>=cutoff0 and age[1]<=cutoff1]
-highages=[age for age in caseages if age[0]>=cutoff2]
-data.append({
-  'title': 'Confirmed cases: 10 * (aged %s) / (aged %s)'%(unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
-  'values': [(d['date'],10*sum(d[a] for a in highages)/sum(d[a] for a in lowages)) for d in cases if d['date']>=mindate]
-})
-
-lowages=[age for age in deathages if age[0]>=cutoff0 and age[1]<=cutoff1]
-highages=[age for age in deathages if age[0]>=cutoff2]
-data.append({
-  'title': 'Deaths: 0.1 * (aged %s) / (aged %s)'%(unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
-  'values': [(d['date'],0.1*sum(d[a] for a in highages)/sum(d[a] for a in lowages)) for d in deaths if d['date']>=mindate],
-  #'extra': 'axis x1y2'
-})
+for (desc, dat, ages, cutoff0, cutoff1, cutoff2) in [
+    ("Hospital admissions", hosp, hospages, 0, 65, 65),
+    ("Confirmed cases", cases, caseages, 0, 60, 70),
+    ("Deaths", deaths, deathages, 0, 60, 70)]:
+  lowages=[age for age in ages if age[0]>=cutoff0 and age[1]<=cutoff1]
+  highages=[age for age in ages if age[0]>=cutoff2]
+  for d in dat:
+    if d["date"]=="2021-01-01": break
+  f=sum(d[a] for a in highages)/sum(d[a] for a in lowages)
+  data.append({
+    'title': desc+":    %.2g * (aged %s) / (aged %s)"%(1/f,unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
+    'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages)/f) for d in dat if d['date']>=mindate]
+  })
 
 makegraph(title=title, data=data, mindate=mindate, ylabel='Adjusted Ratio', outfn='admissionandcaseageratios2.png')
 
