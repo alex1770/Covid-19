@@ -10,17 +10,18 @@ Country,United Kingdom,9 November 2020,16,5,0,13,1,1,65,26.8,16.7,21.1,28.7,32.5
 Country,United Kingdom,16 November 2020,11,6,0,12,2,2,67,27.8,18.5,23.5,29.7,32.7,34.1
 Country,United Kingdom,23 November 2020,15,9,0,17,1,2,56,28.3,18.3,24.4,30.4,33.2,34.3
 Country,United Kingdom,30 November 2020,20,9,0,23,1,2,45,28.7,18.3,24.3,31.2,33.6,34.7
-Country,United Kingdom,7 December 2020,19,8,0,32,1,1,39,27.3,16.9,21.8,29.5,33.3,34.6
-Country,United Kingdom,14 December 2020,10,5,0,48,1,0,36,24.2,15.0,18.0,24.4,30.6,33.3
+Country,United Kingdom,7 December 2020,19,8,0,33,1,1,39,27.3,16.9,21.8,29.5,33.3,34.6
+Country,United Kingdom,14 December 2020,10,5,0,48,1,0,36,24.2,15.0,18.0,24.4,30.7,33.3
 Country,United Kingdom,21 December 2020,9,4,0,60,1,0,26,24.3,15.3,18.3,23.9,30.8,33.3
-Country,United Kingdom,28 December 2020,15,5,0,58,0,1,22,25.8,15.6,19.6,27.0,32.2,34.1
-Country,United Kingdom,4 January 2021,13,4,0,64,0,0,18,26.0,16.3,20.9,27.6,31.4,33.4
-Country,United Kingdom,11 January 2021,15,14,0,57,1,0,13,28.3,17.3,23.7,30.9,33.4,34.6
-Country,United Kingdom,18 January 2021,19,15,0,56,1,0,9,29.1,18.5,25.7,31.6,33.7,34.8
+Country,United Kingdom,28 December 2020,15,5,0,58,0,1,22,25.8,15.6,19.6,26.9,32.1,34.1
+Country,United Kingdom,4 January 2021,13,4,0,64,0,0,18,26.0,16.2,20.9,27.6,31.4,33.4
+Country,United Kingdom,11 January 2021,15,14,0,57,1,0,13,28.3,17.4,23.7,30.9,33.4,34.6
+Country,United Kingdom,18 January 2021,18,15,0,56,1,0,9,29.1,18.5,25.7,31.5,33.7,34.8
 Country,United Kingdom,25 January 2021,20,15,0,54,0,1,9,29.4,18.5,26.5,32.1,33.8,34.9
 Country,United Kingdom,1 February 2021,29,9,0,55,0,1,6,29.5,19.6,26.8,32.0,33.7,34.7
-Country,United Kingdom,8 February 2021,28,7,0,60,0,0,5,29.4,19.0,26.5,32.0,33.8,34.8
-Country,United Kingdom,15 February 2021,27,8,0,63,0,0,2,29.0,18.5,25.5,31.8,33.5,34.5
+Country,United Kingdom,8 February 2021,28,7,0,60,0,0,4,29.4,19.0,26.4,32.0,33.8,34.8
+Country,United Kingdom,15 February 2021,26,7,0,63,0,0,4,29.0,18.7,25.6,31.7,33.4,34.5
+Country,United Kingdom,22 February 2021,25,6,0,65,0,0,3,28.8,18.9,26.1,30.8,33.2,34.6
 Country,England,21 September 2020,13,4,0,4,0,0,79,25.2,15.7,20.0,26.6,30.1,33.1
 Country,England,28 September 2020,11,2,0,10,0,1,76,24.5,15.4,19.0,24.9,30.4,32.9
 Country,England,5 October 2020,14,5,0,9,1,0,71,25.3,16.6,19.4,25.5,31.2,33.7
@@ -34,15 +35,16 @@ Country,England,23 November 2020,15,8,0,18,1,2,56,28.4,18.5,24.9,30.3,33.1,34.3
 Country,England,30 November 2020,21,8,0,25,1,2,43,28.7,18.6,24.6,31.3,33.6,34.7
 Country,England,7 December 2020,19,8,0,35,1,1,36,27.3,16.9,21.8,29.6,33.2,34.5
 Country,England,14 December 2020,10,5,0,51,1,0,33,24.0,14.8,17.7,23.9,30.7,33.3
-Country,England,21 December 2020,9,4,0,63,1,0,23,24.2,15.3,18.2,23.8,30.6,33.3
-Country,England,28 December 2020,15,5,0,60,0,1,20,25.7,15.6,19.6,26.8,32.0,34.1
-Country,England,4 January 2021,13,3,0,67,0,0,16,25.8,16.0,20.5,27.2,31.3,33.3
-Country,England,11 January 2021,15,13,0,60,1,0,12,28.2,17.3,23.5,30.7,33.3,34.5
-Country,England,18 January 2021,19,13,0,60,0,0,8,28.8,18.1,25.4,31.2,33.6,34.8
-Country,England,25 January 2021,20,13,0,57,0,1,8,29.2,18.3,26.0,32.1,33.7,34.8
-Country,England,1 February 2021,30,9,0,57,0,1,4,29.5,19.8,26.6,31.9,33.7,34.7
+Country,England,21 December 2020,9,4,0,62,1,0,24,24.2,15.3,18.2,23.8,30.6,33.3
+Country,England,28 December 2020,15,5,0,60,0,1,20,25.7,15.6,19.7,26.8,32.0,34.1
+Country,England,4 January 2021,13,3,0,67,0,0,16,25.8,16.0,20.5,27.1,31.3,33.3
+Country,England,11 January 2021,15,13,0,60,1,0,12,28.2,17.3,23.5,30.7,33.4,34.5
+Country,England,18 January 2021,19,13,0,60,0,0,8,28.8,18.0,25.4,31.2,33.6,34.8
+Country,England,25 January 2021,20,13,0,57,0,1,8,29.2,18.3,26.1,32.1,33.7,34.8
+Country,England,1 February 2021,30,9,0,57,0,1,4,29.5,19.8,26.6,32.0,33.7,34.7
 Country,England,8 February 2021,29,7,0,61,0,0,3,29.5,19.1,26.7,32.0,33.7,34.8
-Country,England,15 February 2021,26,8,0,65,0,0,1,28.8,18.0,25.1,31.6,33.4,34.6
+Country,England,15 February 2021,26,7,0,65,0,0,2,28.8,18.7,25.3,31.6,33.4,34.6
+Country,England,22 February 2021,25,7,0,65,0,0,3,29.1,19.1,26.4,31.1,33.4,34.5
 Country,Wales,5 October 2020,14,0,0,36,0,0,50,27.4,21.5,22.0,29.0,31.6,34.8
 Country,Wales,12 October 2020,11,5,0,21,5,5,53,26.8,18.0,20.9,29.5,32.1,33.5
 Country,Wales,19 October 2020,30,4,0,4,0,0,61,28.1,20.5,23.5,30.0,32.8,33.4
@@ -61,8 +63,9 @@ Country,Wales,11 January 2021,27,21,0,32,0,0,20,29.9,18.6,26.4,32.7,34.0,35.1
 Country,Wales,18 January 2021,21,21,0,40,0,1,18,30.8,24.5,29.9,32.5,33.5,34.1
 Country,Wales,25 January 2021,21,29,0,32,0,3,15,32.4,28.7,31.3,33.3,34.2,35.4
 Country,Wales,1 February 2021,32,7,0,47,0,0,14,30.7,24.8,29.1,32.4,33.6,34.7
-Country,Wales,8 February 2021,10,5,0,59,0,0,26,27.0,15.5,21.3,28.9,32.1,34.5
-Country,Wales,15 February 2021,31,10,0,48,0,0,10,32.0,28.0,31.6,33.1,33.7,34.7
+Country,Wales,8 February 2021,11,5,0,61,0,0,24,26.8,15.5,21.3,28.8,32.1,34.5
+Country,Wales,15 February 2021,29,9,0,47,0,0,15,31.6,28.0,31.5,32.9,33.7,34.6
+Country,Wales,22 February 2021,32,0,0,59,0,0,9,28.4,21.0,25.2,30.2,32.6,33.2
 Country,Northern Ireland,21 September 2020,33,0,0,33,0,0,33,30.8,30.6,30.6,30.7,31.0,31.0
 Country,Northern Ireland,12 October 2020,14,0,0,21,0,0,64,28.9,21.6,26.4,30.1,32.8,34.8
 Country,Northern Ireland,19 October 2020,24,0,0,16,0,0,60,29.3,23.0,26.2,31.0,32.8,34.6
@@ -74,7 +77,7 @@ Country,Northern Ireland,30 November 2020,18,0,0,27,0,9,45,28.4,18.2,24.3,30.0,3
 Country,Northern Ireland,28 December 2020,10,0,0,50,5,0,35,23.6,13.2,18.7,24.1,29.5,33.1
 Country,Northern Ireland,4 January 2021,8,8,0,38,0,0,46,26.5,19.3,22.9,27.3,30.5,32.0
 Country,Northern Ireland,11 January 2021,14,9,0,55,0,0,22,26.7,17.5,22.1,28.0,32.2,34.1
-Country,Northern Ireland,18 January 2021,14,25,0,42,7,0,12,30.2,21.2,28.6,32.2,33.6,34.5
+Country,Northern Ireland,18 January 2021,13,25,0,43,7,0,12,30.2,21.6,29.1,32.3,33.6,34.5
 Country,Northern Ireland,25 January 2021,16,26,0,42,0,0,16,29.5,19.1,26.4,32.5,33.9,35.6
 Country,Northern Ireland,1 February 2021,33,16,0,45,0,4,2,31.1,26.0,30.2,32.7,33.8,34.6
 Country,Northern Ireland,8 February 2021,50,5,0,40,0,0,5,31.5,23.5,31.5,33.2,34.0,34.6
@@ -88,17 +91,18 @@ Country,Scotland,9 November 2020,29,0,0,3,0,0,68,27.1,16.2,23.0,29.7,32.8,33.8
 Country,Scotland,16 November 2020,9,13,0,7,2,2,67,29.2,21.3,24.8,31.3,32.9,34.1
 Country,Scotland,23 November 2020,8,26,0,6,2,2,56,27.5,17.3,20.9,31.5,33.7,34.4
 Country,Scotland,30 November 2020,9,23,0,7,0,0,60,28.9,18.2,25.0,31.7,33.6,34.4
-Country,Scotland,7 December 2020,24,7,0,7,8,1,53,28.7,17.5,22.4,31.5,34.2,34.9
-Country,Scotland,14 December 2020,19,9,0,37,0,0,35,29.3,22.0,27.2,31.1,32.9,34.9
+Country,Scotland,7 December 2020,25,5,0,7,8,1,53,28.7,17.5,22.4,31.4,34.2,34.9
+Country,Scotland,14 December 2020,19,10,0,36,0,0,34,29.4,22.0,27.2,31.2,32.9,34.9
 Country,Scotland,21 December 2020,24,8,0,26,0,3,39,27.4,15.4,20.6,30.7,33.3,34.7
 Country,Scotland,28 December 2020,16,15,0,24,0,1,43,28.5,15.7,19.8,32.0,33.6,35.0
 Country,Scotland,4 January 2021,24,11,0,41,1,0,23,29.6,21.8,28.6,31.6,33.3,34.3
 Country,Scotland,11 January 2021,11,27,0,41,0,1,20,30.0,18.5,28.1,32.8,34.3,34.7
-Country,Scotland,18 January 2021,17,32,0,30,2,1,18,30.6,20.9,29.1,32.8,34.6,35.1
-Country,Scotland,25 January 2021,21,13,0,45,0,0,20,28.6,16.6,25.2,32.0,33.4,34.1
+Country,Scotland,18 January 2021,16,32,0,31,2,1,18,30.6,20.9,29.0,32.7,34.5,35.1
+Country,Scotland,25 January 2021,22,13,0,45,0,0,20,28.7,16.6,25.8,32.0,33.5,34.3
 Country,Scotland,1 February 2021,23,7,0,48,1,1,20,28.4,16.8,23.6,31.2,33.8,34.4
 Country,Scotland,8 February 2021,26,8,0,62,0,0,4,29.4,19.7,26.9,32.3,34.0,35.1
 Country,Scotland,15 February 2021,26,13,0,50,0,0,11,30.4,23.8,28.2,32.0,33.5,34.4
+Country,Scotland,22 February 2021,37,0,0,63,0,0,0,28.8,16.0,22.1,32.5,34.0,35.1
 EnglandRegion,North East,21 September 2020,3,3,0,3,0,0,90,23.1,15.0,19.4,23.9,26.7,30.8
 EnglandRegion,North East,28 September 2020,4,0,0,8,0,0,88,21.6,14.2,17.2,21.0,26.4,29.6
 EnglandRegion,North East,5 October 2020,8,0,0,6,0,0,86,22.8,15.8,17.2,22.4,27.4,31.2
@@ -120,7 +124,8 @@ EnglandRegion,North East,18 January 2021,13,28,0,45,0,0,13,30.5,20.0,29.0,32.2,3
 EnglandRegion,North East,25 January 2021,15,10,0,67,0,0,8,28.4,17.5,23.8,31.0,33.3,34.3
 EnglandRegion,North East,1 February 2021,22,0,0,66,0,0,13,29.6,18.7,27.7,32.1,33.7,34.4
 EnglandRegion,North East,8 February 2021,18,14,0,64,0,0,4,30.4,23.4,27.4,32.2,33.7,34.4
-EnglandRegion,North East,15 February 2021,32,9,0,59,0,0,0,28.7,16.0,23.3,32.7,33.8,34.6
+EnglandRegion,North East,15 February 2021,26,6,0,68,0,0,0,28.6,16.9,20.9,32.6,33.7,34.6
+EnglandRegion,North East,22 February 2021,14,7,0,79,0,0,0,28.6,22.5,26.4,28.6,31.9,34.3
 EnglandRegion,North West,21 September 2020,13,1,0,0,0,0,86,24.3,15.5,18.6,25.6,29.9,31.8
 EnglandRegion,North West,28 September 2020,11,2,0,7,1,1,79,22.9,14.2,17.5,22.3,29.1,32.4
 EnglandRegion,North West,5 October 2020,4,5,0,6,1,0,83,23.8,16.1,19.1,23.5,29.0,31.9
@@ -141,8 +146,9 @@ EnglandRegion,North West,11 January 2021,10,19,0,49,1,1,20,28.1,16.9,23.4,30.9,3
 EnglandRegion,North West,18 January 2021,11,14,0,60,0,0,15,26.7,16.9,20.6,27.9,32.7,34.4
 EnglandRegion,North West,25 January 2021,20,8,0,66,0,0,7,27.5,15.5,21.6,31.0,33.3,34.4
 EnglandRegion,North West,1 February 2021,21,7,0,66,1,0,5,28.0,17.7,23.5,30.2,33.3,34.6
-EnglandRegion,North West,8 February 2021,26,6,0,60,0,0,8,28.9,18.3,25.8,31.5,33.6,35.0
-EnglandRegion,North West,15 February 2021,21,8,0,69,0,0,2,28.5,19.2,25.0,31.0,32.9,34.2
+EnglandRegion,North West,8 February 2021,26,5,0,61,0,0,8,28.9,18.3,25.8,31.5,33.6,35.0
+EnglandRegion,North West,15 February 2021,21,8,0,67,0,0,4,28.6,19.5,25.0,31.0,33.0,34.2
+EnglandRegion,North West,22 February 2021,26,2,0,70,0,0,2,27.6,15.5,24.3,31.5,33.0,34.5
 EnglandRegion,Yorkshire and The Humber,21 September 2020,15,7,0,0,0,0,78,25.2,16.7,20.6,26.6,29.2,33.1
 EnglandRegion,Yorkshire and The Humber,28 September 2020,10,0,0,6,0,0,84,24.1,16.7,19.0,23.2,29.1,31.9
 EnglandRegion,Yorkshire and The Humber,5 October 2020,4,5,0,13,1,0,77,24.3,15.5,18.4,25.4,29.8,31.3
@@ -164,7 +170,8 @@ EnglandRegion,Yorkshire and The Humber,18 January 2021,14,20,0,51,0,0,16,29.8,20
 EnglandRegion,Yorkshire and The Humber,25 January 2021,19,9,0,57,1,2,12,27.3,16.8,20.5,29.5,33.6,34.7
 EnglandRegion,Yorkshire and The Humber,1 February 2021,18,9,0,61,2,3,8,27.6,18.8,22.7,29.7,33.1,34.6
 EnglandRegion,Yorkshire and The Humber,8 February 2021,23,5,0,64,0,0,7,29.2,19.3,25.5,31.9,33.7,34.7
-EnglandRegion,Yorkshire and The Humber,15 February 2021,22,13,0,63,0,0,2,28.7,17.7,24.0,31.8,33.5,35.1
+EnglandRegion,Yorkshire and The Humber,15 February 2021,22,11,0,59,0,0,7,28.3,17.7,23.8,31.6,33.5,35.0
+EnglandRegion,Yorkshire and The Humber,22 February 2021,22,13,0,57,0,0,9,26.8,15.4,17.6,28.9,33.7,34.8
 EnglandRegion,East Midlands,21 September 2020,40,0,0,10,0,0,50,29.1,20.9,27.4,30.0,32.1,34.9
 EnglandRegion,East Midlands,28 September 2020,26,0,0,10,0,0,65,27.6,20.2,22.7,28.8,32.1,34.6
 EnglandRegion,East Midlands,5 October 2020,5,6,0,3,2,0,84,23.5,16.9,19.3,22.8,27.6,32.0
@@ -186,7 +193,8 @@ EnglandRegion,East Midlands,18 January 2021,18,14,0,54,0,0,15,29.2,20.1,26.6,31.
 EnglandRegion,East Midlands,25 January 2021,25,9,0,54,0,1,10,27.3,15.8,21.0,29.9,33.9,34.9
 EnglandRegion,East Midlands,1 February 2021,22,9,0,59,0,0,10,27.5,17.6,21.7,30.8,33.1,34.4
 EnglandRegion,East Midlands,8 February 2021,26,9,0,57,0,2,6,29.2,17.6,26.8,31.1,33.0,34.4
-EnglandRegion,East Midlands,15 February 2021,26,3,0,71,0,0,0,27.4,14.5,20.4,31.8,33.1,34.6
+EnglandRegion,East Midlands,15 February 2021,23,3,0,69,0,0,5,27.7,14.5,22.6,31.4,33.1,34.6
+EnglandRegion,East Midlands,22 February 2021,36,0,0,50,0,0,14,28.8,18.9,25.0,31.0,33.5,35.0
 EnglandRegion,West Midlands,28 September 2020,3,6,0,8,0,3,81,25.2,16.2,19.5,26.4,30.2,32.1
 EnglandRegion,West Midlands,5 October 2020,14,2,0,7,2,0,76,25.1,15.5,18.4,25.3,32.0,33.6
 EnglandRegion,West Midlands,12 October 2020,12,2,1,6,1,0,78,25.4,16.9,20.5,25.7,29.9,33.9
@@ -207,7 +215,8 @@ EnglandRegion,West Midlands,18 January 2021,24,6,0,58,0,0,11,29.2,18.0,26.8,31.1
 EnglandRegion,West Midlands,25 January 2021,15,16,0,56,0,1,12,28.9,18.5,23.5,31.6,33.7,35.0
 EnglandRegion,West Midlands,1 February 2021,23,7,0,64,0,0,6,28.5,17.5,24.6,30.9,33.2,34.7
 EnglandRegion,West Midlands,8 February 2021,23,5,0,71,0,0,2,28.5,18.1,25.1,31.2,33.6,34.6
-EnglandRegion,West Midlands,15 February 2021,27,12,0,59,0,2,0,28.7,20.5,22.5,31.6,33.6,34.7
+EnglandRegion,West Midlands,15 February 2021,28,12,0,59,0,2,0,29.0,20.5,25.6,31.9,33.5,35.0
+EnglandRegion,West Midlands,22 February 2021,30,7,0,60,0,0,3,31.3,27.0,29.9,32.3,33.8,34.7
 EnglandRegion,East of England,21 September 2020,9,9,0,9,9,0,64,26.0,13.1,21.3,27.5,32.2,33.3
 EnglandRegion,East of England,28 September 2020,21,4,0,17,0,0,58,26.2,15.9,20.6,27.6,33.3,34.2
 EnglandRegion,East of England,5 October 2020,53,12,0,6,0,0,29,30.0,19.0,27.4,33.1,34.1,35.1
@@ -221,7 +230,7 @@ EnglandRegion,East of England,23 November 2020,16,6,0,33,0,3,42,27.1,18.1,22.2,2
 EnglandRegion,East of England,30 November 2020,17,1,0,37,0,3,41,27.6,19.1,22.3,29.4,32.2,34.3
 EnglandRegion,East of England,7 December 2020,8,2,0,53,0,2,35,25.0,16.9,20.7,26.0,29.6,31.6
 EnglandRegion,East of England,14 December 2020,6,4,0,68,1,0,22,23.1,14.5,16.7,22.3,30.1,32.7
-EnglandRegion,East of England,21 December 2020,11,1,0,73,1,0,15,24.1,14.8,17.8,24.7,30.5,32.5
+EnglandRegion,East of England,21 December 2020,11,1,0,73,1,0,15,24.1,14.8,17.8,24.9,30.4,32.5
 EnglandRegion,East of England,28 December 2020,16,1,0,70,0,0,13,24.8,16.4,19.0,25.1,30.1,33.8
 EnglandRegion,East of England,4 January 2021,8,3,0,77,1,1,12,24.8,15.8,18.8,26.2,30.0,32.2
 EnglandRegion,East of England,11 January 2021,23,13,0,54,1,0,8,29.4,18.4,26.1,32.2,34.2,35.0
@@ -229,7 +238,8 @@ EnglandRegion,East of England,18 January 2021,21,11,0,62,1,1,4,29.1,18.5,26.5,31
 EnglandRegion,East of England,25 January 2021,16,21,0,50,0,2,11,30.6,19.8,29.5,32.9,34.2,35.1
 EnglandRegion,East of England,1 February 2021,38,11,0,49,0,1,1,31.5,24.3,31.1,32.9,34.2,35.1
 EnglandRegion,East of England,8 February 2021,38,3,0,59,0,0,0,30.1,19.9,29.2,32.4,33.9,34.9
-EnglandRegion,East of England,15 February 2021,24,9,0,68,0,0,0,28.0,16.3,24.4,30.1,32.9,34.2
+EnglandRegion,East of England,15 February 2021,24,8,0,68,0,0,0,28.4,16.3,25.4,32.0,32.9,34.3
+EnglandRegion,East of England,22 February 2021,18,12,0,67,0,0,3,29.0,17.5,27.8,30.5,33.7,35.0
 EnglandRegion,London,21 September 2020,9,0,0,12,0,0,79,26.6,20.2,21.6,28.2,29.8,33.1
 EnglandRegion,London,28 September 2020,10,3,0,18,0,2,67,26.8,17.9,23.2,27.5,32.1,33.5
 EnglandRegion,London,5 October 2020,29,3,0,15,0,1,52,28.3,18.2,22.9,31.1,33.7,34.6
@@ -243,15 +253,16 @@ EnglandRegion,London,23 November 2020,4,5,0,34,0,1,55,26.4,17.2,21.1,28.0,31.1,3
 EnglandRegion,London,30 November 2020,12,5,0,40,0,1,42,25.9,16.3,20.0,26.9,32.6,33.8
 EnglandRegion,London,7 December 2020,10,3,0,58,0,1,28,24.8,15.4,18.4,25.5,31.2,33.4
 EnglandRegion,London,14 December 2020,6,3,0,70,0,0,20,22.7,13.9,16.5,22.3,28.9,32.5
-EnglandRegion,London,21 December 2020,5,2,0,79,1,0,13,22.9,15.3,18.0,22.3,28.0,32.0
-EnglandRegion,London,28 December 2020,13,2,0,75,0,0,9,24.9,15.5,19.6,25.7,30.9,33.1
+EnglandRegion,London,21 December 2020,5,2,0,79,1,0,13,22.9,15.3,18.0,22.3,28.1,32.0
+EnglandRegion,London,28 December 2020,13,2,0,75,0,0,9,24.9,15.5,19.6,25.6,30.8,33.1
 EnglandRegion,London,4 January 2021,13,3,0,76,0,0,7,26.6,16.8,22.1,28.4,31.4,33.1
 EnglandRegion,London,11 January 2021,16,9,0,68,0,0,6,28.1,17.2,23.5,30.5,33.1,34.6
-EnglandRegion,London,18 January 2021,22,9,0,64,0,0,4,28.9,18.1,25.1,31.6,33.5,34.8
+EnglandRegion,London,18 January 2021,22,9,0,65,0,0,4,28.9,18.1,25.0,31.6,33.4,34.8
 EnglandRegion,London,25 January 2021,23,13,0,57,0,1,5,30.2,20.8,28.6,32.3,33.7,34.8
-EnglandRegion,London,1 February 2021,34,10,0,54,0,0,3,30.0,20.5,28.3,32.3,33.8,34.8
-EnglandRegion,London,8 February 2021,34,6,0,57,0,0,2,30.1,22.5,27.4,32.4,33.7,34.7
-EnglandRegion,London,15 February 2021,35,3,0,61,0,0,1,29.2,18.9,26.4,31.6,33.7,34.8
+EnglandRegion,London,1 February 2021,34,9,0,54,0,0,3,30.0,20.5,28.3,32.3,33.7,34.8
+EnglandRegion,London,8 February 2021,34,6,0,57,0,0,2,30.1,22.5,27.5,32.4,33.7,34.7
+EnglandRegion,London,15 February 2021,34,3,0,63,0,0,1,29.2,19.7,25.9,31.6,33.7,34.8
+EnglandRegion,London,22 February 2021,22,9,0,68,0,0,1,29.5,21.3,27.4,31.1,33.1,33.9
 EnglandRegion,South East,21 September 2020,40,0,0,10,0,0,50,27.8,16.7,23.4,30.0,34.9,35.7
 EnglandRegion,South East,28 September 2020,10,14,0,19,0,0,57,28.6,17.0,27.8,30.9,32.6,33.7
 EnglandRegion,South East,5 October 2020,45,13,0,13,0,0,30,30.7,23.1,27.6,33.3,34.2,35.4
@@ -273,7 +284,8 @@ EnglandRegion,South East,18 January 2021,19,13,0,63,0,0,4,28.7,17.7,25.4,31.0,33
 EnglandRegion,South East,25 January 2021,24,14,0,57,0,1,4,29.8,18.2,28.5,32.5,33.7,34.9
 EnglandRegion,South East,1 February 2021,37,10,0,51,0,0,2,30.1,22.9,27.9,32.3,33.7,34.6
 EnglandRegion,South East,8 February 2021,30,8,0,62,0,0,0,29.3,18.6,25.7,32.1,34.1,34.9
-EnglandRegion,South East,15 February 2021,18,13,0,67,0,0,2,29.7,22.3,26.3,31.7,33.4,34.4
+EnglandRegion,South East,15 February 2021,20,11,0,67,0,0,2,29.8,22.7,26.9,31.7,33.3,34.4
+EnglandRegion,South East,22 February 2021,32,6,0,61,0,0,0,30.2,21.9,28.6,31.9,33.7,34.3
 EnglandRegion,South West,21 September 2020,29,29,0,0,0,0,43,30.4,18.2,26.7,32.7,34.5,34.8
 EnglandRegion,South West,28 September 2020,12,4,0,16,0,0,68,27.6,18.7,22.6,29.8,32.3,34.8
 EnglandRegion,South West,5 October 2020,31,3,0,24,0,0,41,27.8,17.9,23.4,28.8,34.2,35.3
@@ -290,9 +302,10 @@ EnglandRegion,South West,14 December 2020,24,7,0,33,0,0,36,26.0,15.3,18.8,27.1,3
 EnglandRegion,South West,21 December 2020,33,7,0,30,4,0,26,28.5,19.7,25.9,30.0,33.5,34.3
 EnglandRegion,South West,28 December 2020,26,10,0,45,0,3,16,28.5,17.0,23.3,31.3,34.1,34.9
 EnglandRegion,South West,4 January 2021,18,4,0,66,0,0,11,24.8,14.7,18.2,25.8,32.0,33.8
-EnglandRegion,South West,11 January 2021,10,15,0,55,0,0,20,27.8,16.5,23.7,30.2,33.1,34.4
-EnglandRegion,South West,18 January 2021,20,23,0,48,0,0,9,30.7,21.8,29.4,32.6,34.0,34.9
-EnglandRegion,South West,25 January 2021,19,21,0,48,0,0,12,30.3,21.2,27.8,32.7,33.9,35.2
+EnglandRegion,South West,11 January 2021,10,15,0,55,0,0,20,28.0,17.7,24.0,30.4,33.1,34.4
+EnglandRegion,South West,18 January 2021,20,22,0,49,0,0,9,30.5,19.5,29.3,32.6,34.0,34.9
+EnglandRegion,South West,25 January 2021,18,21,0,49,0,0,12,30.4,21.2,27.9,32.6,33.9,35.2
 EnglandRegion,South West,1 February 2021,30,7,0,55,1,2,4,30.6,24.9,29.4,32.2,33.9,34.7
 EnglandRegion,South West,8 February 2021,33,10,0,57,0,0,0,30.4,21.5,29.6,31.9,33.9,35.4
 EnglandRegion,South West,15 February 2021,22,4,0,74,0,0,0,28.4,18.1,23.9,30.4,32.7,34.0
+EnglandRegion,South West,22 February 2021,25,0,0,75,0,0,0,29.0,23.1,25.7,29.5,32.4,34.1
