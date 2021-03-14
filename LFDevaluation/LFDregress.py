@@ -1,5 +1,5 @@
 import sys,csv,time,calendar
-from math import log
+from math import log,sqrt
 import numpy as np
 from scipy.optimize import minimize
 from scipy.special import gammaln
@@ -55,6 +55,14 @@ def err(xx):
     LL+=a*log(lam)-lam
   return LL0-LL
 
+# Return second derivative of log(likelihood) wrt xx[0]/scale0 (Fisher information)
+def LL2(xx):
+  ll2=0
+  for (a,b,c) in zip(dd['LFDpos'],dd['LFDnum'],cases):
+    lam=(xx[0]/scale0+xx[1]*c/population)*b
+    ll2+=a/lam**2*b**2
+  return ll2
+
 best=(-1e9,)
 for offset in range(-2,10):
   cases=[]
@@ -65,16 +73,19 @@ for offset in range(-2,10):
   res=minimize(err,[1,1],method="SLSQP",bounds=[(1e-9,scale0),(1e-9,100)],options={"maxiter":1000})
   if not res.success: raise RuntimeError(res.message)
   LL=-res.fun
+  fisher=LL2(res.x)
   print("Offset %2d. Log likelihood = %g"%(offset,LL))
-  if LL>best[0]: best=(LL,offset,res)
+  if LL>best[0]: best=(LL,offset,res,fisher)
 print()
 
-(LL,offset,res)=best
+(LL,offset,res,fisher)=best
 print("Best offset %d. Log likelihood = %g"%(offset,LL))
 date=dd["WeekEnding"][-1]
 day=datetoday(date)-6
 print("Offset %d means LFD numbers for week %s - %s are related to national case numbers in the week %s - %s"%(offset,daytodate(day),date,daytodate(day+offset),daytodate(day+offset+6)))
 xx=res.x
+fpr=xx[0]/scale0*100
+error=1.96/sqrt(fisher)*100
 print("Best estimate: LFDpos/LFDnum = %.3g + %.3g*(weekly case rate)"%(xx[0]/scale0,xx[1]))
 print("               where (weekly case rate) = (number of confirmed cases in a week) / %g"%population)
-print("False positive rate estimate: %.3g%%"%(xx[0]/scale0*100))
+print("False positive rate estimate: %.2g%% (%.2g%% - %.2g%%)"%(fpr,fpr-error,fpr+error))
