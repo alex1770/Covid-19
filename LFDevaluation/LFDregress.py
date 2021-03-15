@@ -15,33 +15,38 @@ def daytodate(r):
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaCode=E92000001&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&metric=newCasesBySpecimenDate&format=csv' -O engcasesbyspecimen.csv
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv' -O casesbypublication.csv
 
-def loadcsv(fn,ignorestart=0):
+def loadcsv(fn,keephalfterm=True):
   dd={}
   with open(fn,"r") as fp:
     reader=csv.reader(fp)
     headings=[x.strip() for x in next(reader)]
     for row in reader:
-      for (name,x) in zip(headings,row):
-        x=x.strip()
-        if x.isdigit(): x=int(x)
-        dd.setdefault(name,[]).append(x)
-  for x in dd: dd[x]=dd[x][ignorestart:]
+      if keephalfterm or row[0]!='2021-02-17':
+        for (name,x) in zip(headings,row):
+          x=x.strip()
+          if x.isdigit(): x=int(x)
+          dd.setdefault(name,[]).append(x)
   return dd
 
-ignore=0# Ignore the first 'ignore' weeks
-if ignore>0: print("Ignoring the first %d week%s of data"%(ignore,"s" if ignore!=1 else ""))
-
 print("Using LFD school numbers from table 6 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/968462/tests_conducted_2021_03_11.ods")
-dd=loadcsv("LFDschooltests.csv",ignore)
+dd=loadcsv("LFDschooltests.csv",keephalfterm=True)
 #cases=dd["Cases"]
 
-# cc=loadcsv("engcasesbyspecimen.csv",ignore)
+# cc=loadcsv("engcasesbyspecimen.csv")
 # datetocases=dict(zip(cc['date'],cc['newCasesBySpecimenDate']))
 # print("Using England cases by specimen date")
 
-cc=loadcsv("casesbypublication.csv")
-datetocases=dict(zip(cc['date'],cc['newCasesByPublishDate']))
-print("Using UK cases by publication date from https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv")
+#cc=loadcsv("casesbypublication.csv")
+#datetocases=dict(zip(cc['date'],cc['newCasesByPublishDate']))
+#print("Using UK cases by publication date from https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv")
+#print()
+
+
+cc=loadcsv("casesbyage.csv")
+cumdatetocases={}
+for (date,metric,age,value) in zip(cc['date'],cc['metric'],cc['age'],cc['value']):
+  if age=="10_to_14" or age=="15_to_19": cumdatetocases[date]=cumdatetocases.get(date,0)+value
+print("Using England cases by age from https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaName=England&metric=maleCases&metric=femaleCases&format=csv")
 print()
 
 # Work out Poisson denominator. It doesn't affect the optimisation, but it makes the log likelihood output more meaningful
@@ -49,7 +54,7 @@ LL0=sum(gammaln(a+1) for a in dd['LFDpos'])
 
 # SLSQP seems to be happier if the variables we are optimising over are of order 1, so use scale factors
 scale0=1e4
-population=67e6
+population=6.3e6# Estimated population of age 10-19 in England
 
 # Return -log(likelihood)
 def err(xx):
@@ -67,11 +72,12 @@ def LL2(xx):
   return ll2
 
 best=(-1e9,)
-for offset in range(-2,10):
+for offset in range(-15,7):
   cases=[]
   for date in dd["WeekEnding"]:
     day=datetoday(date)
-    cases.append(sum(datetocases[daytodate(d)] for d in range(day+offset-6,day+offset+1)))
+    #cases.append(sum(datetocases[daytodate(d)] for d in range(day+offset-6,day+offset+1)))
+    cases.append(cumdatetocases[daytodate(day+offset)]-cumdatetocases[daytodate(day+offset-7)])
   if 0:# Sensitivity check, to check that the correlation between LFDpos and cases is not due to LFDpos feeding directly into cases
     for i in range(len(cases)): cases[i]-=dd['LFDpos'][i]
   
@@ -79,7 +85,7 @@ for offset in range(-2,10):
   if not res.success: raise RuntimeError(res.message)
   LL=-res.fun
   fisher=LL2(res.x)
-  print("Offset %2d. Log likelihood = %g"%(offset,LL))
+  print("Offset %3d. Log likelihood = %g"%(offset,LL))
   if LL>best[0]: best=(LL,offset,res,fisher,cases)
 print()
 
