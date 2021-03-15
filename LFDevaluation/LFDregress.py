@@ -14,6 +14,7 @@ def daytodate(r):
 
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaCode=E92000001&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&metric=newCasesBySpecimenDate&format=csv' -O engcasesbyspecimen.csv
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv' -O casesbypublication.csv
+# wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaName=England&metric=maleCases&metric=femaleCases&format=csv' -O casesbyage.csv
 
 def loadcsv(fn,keephalfterm=True):
   dd={}
@@ -36,11 +37,10 @@ dd=loadcsv("LFDschooltests.csv",keephalfterm=True)
 # datetocases=dict(zip(cc['date'],cc['newCasesBySpecimenDate']))
 # print("Using England cases by specimen date")
 
-#cc=loadcsv("casesbypublication.csv")
-#datetocases=dict(zip(cc['date'],cc['newCasesByPublishDate']))
-#print("Using UK cases by publication date from https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv")
-#print()
-
+# cc=loadcsv("casesbypublication.csv")
+# datetocases=dict(zip(cc['date'],cc['newCasesByPublishDate']))
+# print("Using UK cases by publication date from https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv")
+# print()
 
 cc=loadcsv("casesbyage.csv")
 cumdatetocases={}

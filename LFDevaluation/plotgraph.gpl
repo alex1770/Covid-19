@@ -1,11 +1,11 @@
 set terminal pngcairo font "sans,13" size 1920,1280
 set bmargin 5;set lmargin 15;set rmargin 10;set tmargin 5
 set output "lfdcases.png"
-set title "Comparison of LFD positivity rate in schools with number of PCR-confirmed cases in the UK"
+set title "Comparison of LFD positivity rate among secondary schools students with the rate of age 10-19 confirmed cases across England"
 set xtics nomirror
-set xlabel "Total new PCR cases in the UK over corresponding week-long period, as a percentage of the population"
-set ylabel "Total new LFD positive tests in secondary schools and colleges as a percentage of tests taken"
-plot [0:0.7] "graph" u (100*($3)/67e6):(100*($1)/($2)) lw 12 title "%LFD positivity over a week vs %new cases nationally in a corresponding week"
+set xlabel "Total new confirmed cases age 10-19 in England over corresponding week-long period, as a percentage of the age 10-19 population"
+set ylabel "Total new LFD positive tests in secondary school students as a percentage of tests taken"
+plot [0:0.55] [0:] "graph" u (100*($3)/6.3e6):(100*($1)/($2)) lw 12 title "%LFD student positivity over a week vs %new cases age 10-19 in England in a corresponding week"
 
 set output "lfdcaseswithfit.png"
-plot [0:0.7] "graph" u (100*($3)/67e6):(100*($1)/($2)):(100*($4)/($2)) with errorbars lw 3 title "%LFD positivity over a week vs %new cases nationally in a corresponding week", 0.544*x+0.0132 lw 3
+plot [0:0.55] [0:] "graph" u (100*($3)/6.3e6):(100*($1)/($2)):(100*($4)/($2)) with errorbars lw 3 title "%LFD student positivity over a week vs %new cases age 10-19 in England in a corresponding week", 0.777*x+0.0115 lw 3
