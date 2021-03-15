@@ -284,7 +284,7 @@ if 0:
     if r<0.9*l[0][0]: break
 
 
-title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in England. Adjusted to be 1 on 1st January 2021\\nLast few values subject to change. Source: https://coronavirus.data.gov.uk/ at '+now
+title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in England, adjusted to be 1 on 1st January 2021\\nLast few values subject to change. Source: https://coronavirus.data.gov.uk/ at '+now
 data=[]
 
 for (desc, dat, ages, cutoff0, cutoff1, cutoff2) in [
