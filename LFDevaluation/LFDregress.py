@@ -15,7 +15,7 @@ def daytodate(r):
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaCode=E92000001&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&metric=newCasesBySpecimenDate&format=csv' -O engcasesbyspecimen.csv
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv' -O casesbypublication.csv
 
-def loadcsv(fn):
+def loadcsv(fn,ignorestart=0):
   dd={}
   with open(fn,"r") as fp:
     reader=csv.reader(fp)
@@ -25,13 +25,17 @@ def loadcsv(fn):
         x=x.strip()
         if x.isdigit(): x=int(x)
         dd.setdefault(name,[]).append(x)
+  for x in dd: dd[x]=dd[x][ignorestart:]
   return dd
 
+ignore=0# Ignore the first 'ignore' weeks
+if ignore>0: print("Ignoring the first %d week%s of data"%(ignore,"s" if ignore!=1 else ""))
+
 print("Using LFD school numbers from table 6 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/968462/tests_conducted_2021_03_11.ods")
-dd=loadcsv("LFDschooltests.csv")
+dd=loadcsv("LFDschooltests.csv",ignore)
 #cases=dd["Cases"]
 
-# cc=loadcsv("engcasesbyspecimen.csv")
+# cc=loadcsv("engcasesbyspecimen.csv",ignore)
 # datetocases=dict(zip(cc['date'],cc['newCasesBySpecimenDate']))
 # print("Using England cases by specimen date")
 
@@ -55,7 +59,7 @@ def err(xx):
     LL+=a*log(lam)-lam
   return LL0-LL
 
-# Return second derivative of log(likelihood) wrt xx[0]/scale0 (Fisher information)
+# Return negative second derivative of log(likelihood) wrt xx[0]/scale0 (observed Fisher information)
 def LL2(xx):
   ll2=0
   for (a,b,c) in zip(dd['LFDpos'],dd['LFDnum'],cases):
