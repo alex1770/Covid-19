@@ -84,8 +84,9 @@ for offset in range(-15,7):
   res=minimize(err,[1,1],method="SLSQP",bounds=[(1e-9,scale0),(1e-9,100)],options={"maxiter":1000})
   if not res.success: raise RuntimeError(res.message)
   LL=-res.fun
-  fisher=LL2(res.x)
-  print("Offset %3d. Log likelihood = %g"%(offset,LL))
+  xx=res.x
+  fisher=LL2(xx)
+  print("Offset %3d. Log likelihood = %8.3f. al = %6.4f%% . be = %8.3f"%((offset,LL,xx[0]/scale0*100,xx[1])))
   if LL>best[0]: best=(LL,offset,res,fisher,cases)
 print()
 
