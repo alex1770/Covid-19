@@ -1,4 +1,4 @@
-# Instead of proczoemap_reg.py
+# Uses Zoe's prevalence measure which on large regions is derived from swab tests + sickness measure
 import json,csv,time,calendar
 from subprocess import Popen,PIPE
 
@@ -13,7 +13,7 @@ def daytodate(r):
 
 mapfile='zoemapdata/2020-12-01'# Use any map output to get the area codes and positions/countries
 incsvfile='zoedatapage/prevalence.csv'
-outcsvfile='zoedatapage/zoesymptomprevalence.csv'
+outcsvfile='zoedatapage/zoecorrectedprevalence.csv'
 startdate='2020-09-06'
 
 def processdata_reg():
