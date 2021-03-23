@@ -1,4 +1,4 @@
-import apitools,json,os,time,calendar
+import json,os,time,calendar,requests
 import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import gamma as gammadist
@@ -15,21 +15,25 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
+# https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=newCasesByPublishDate&format=json
+# https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&areaName=Barnet&metric=newCasesByPublishDate&format=json
+
+def apicall(params):
+  endpoint="https://api.coronavirus.data.gov.uk/v2/data"
+  response = requests.get(endpoint, params=params, timeout=20)
+  json=response.json()
+  if not response.ok: raise RuntimeError(json["messsage"])
+  return json["body"]
+
 def getcasedata():
   cdir="casedata"
   os.makedirs(cdir,exist_ok=True)
   laststored=max((x for x in os.listdir(cdir) if x[:2]=="20"),default="0000-00-00")
-  query_structure = {
-    "date": "date",
-    "name": "areaName",
-    "code": "areaCode",
-    "cases": "newCasesByPublishDate",
-  }
   # Small test query to get the latest date
-  data = apitools.get_paginated_dataset(["areaType=ltla","areaName=Barnet"],query_structure)
+  data=apicall({"areaType":"ltla", "areaName":"Barnet", "metric":"newCasesByPublishDate", "format":"json"})
   lastavail=data[0]['date']
   if lastavail>laststored:
-    data = apitools.get_paginated_dataset(["areaType=ltla"], query_structure)
+    data=apicall({"areaType":"ltla", "metric":"newCasesByPublishDate", "format":"json"})
     with open(os.path.join(cdir,lastavail),'w') as fp:
       json.dump(data,fp,indent=2)
   else:
@@ -43,7 +47,7 @@ data=getcasedata()
 with open('zoemapdata/2021-01-17','r') as fp: zm=json.load(fp)
 
 zoepl=dict((pl['lad16cd'],pl['lad16nm']) for pl in zm.values())
-offpl=dict((x['code'],x['name']) for x in data)
+offpl=dict((x['areaCode'],x['areaName']) for x in data)
 
 if 0:
   print("Different names, same lad16cd")
@@ -70,7 +74,7 @@ mindate='2020-10-01'
 
 dates=set(x['date'] for x in data if x['date']>=mindate)
 lastdate=max(dates)
-both=set((x['date'],x['code']) for x in data if x['date']>=mindate)
+both=set((x['date'],x['areaCode']) for x in data if x['date']>=mindate)
 r=0
 for date in sorted(list(dates)):
   for loc in list(locs):
@@ -91,7 +95,7 @@ cases=np.zeros([N,n],dtype=int)
 zdates=np.zeros(n,dtype=bool)
 for d in data:
   t=datetoday(d['date'])-minday
-  if t>=0 and d['code'] in locind: cases[locind[d['code']],t]=d['cases']
+  if t>=0 and d['areaCode'] in locind: cases[locind[d['areaCode']],t]=d['newCasesByPublishDate']
 for date in os.listdir('zoemapdata'):
   if date[:2]=='20' and date>=mindate and date<=lastdate:
     with open(os.path.join('zoemapdata',date),'r') as fp:
