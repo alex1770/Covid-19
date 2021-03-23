@@ -3,7 +3,14 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import gamma as gammadist
 from scipy.special import gammaln
-  
+
+locationsize="ltla"# Either "ltla" or "region"
+if locationsize!="ltla" and locationsize!="region": raise RuntimeError("Unknown locationsize: "+locationsize)
+
+mindate='2020-10-01'
+
+print("Using locations:",locationsize)
+
 np.set_printoptions(precision=3,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=100000)
 
@@ -15,9 +22,6 @@ def daytodate(r):
   t=time.gmtime(r*86400)
   return time.strftime('%Y-%m-%d',t)
 
-# https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=newCasesByPublishDate&format=json
-# https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&areaName=Barnet&metric=newCasesByPublishDate&format=json
-
 def apicall(params):
   endpoint="https://api.coronavirus.data.gov.uk/v2/data"
   response = requests.get(endpoint, params=params, timeout=20)
@@ -25,7 +29,7 @@ def apicall(params):
   if not response.ok: raise RuntimeError(json["messsage"])
   return json["body"]
 
-def getcasedata():
+def getdata_ltla(mindate):
   cdir="casedata"
   os.makedirs(cdir,exist_ok=True)
   laststored=max((x for x in os.listdir(cdir) if x[:2]=="20"),default="0000-00-00")
@@ -39,85 +43,141 @@ def getcasedata():
   else:
     with open(os.path.join(cdir,laststored),'r') as fp:
       data=json.load(fp)
-  return data
 
-print("Loading data")
-data=getcasedata()
-
-with open('zoemapdata/2021-01-17','r') as fp: zm=json.load(fp)
-
-zoepl=dict((pl['lad16cd'],pl['lad16nm']) for pl in zm.values())
-offpl=dict((x['areaCode'],x['areaName']) for x in data)
-
-if 0:
-  print("Different names, same lad16cd")
-  for pl in zoepl:
-    if pl in offpl:
-      if zoepl[pl]!=offpl[pl]: print(pl,zoepl[pl],"/",offpl[pl])
-  print()
+  # Load example map file to get location data
+  with open('zoemapdata/2021-01-17','r') as fp: zm=json.load(fp)
   
-  print("lad16cd in Zoe, not in Official")
-  for pl in zoepl:
-    if pl not in offpl: print(pl,zoepl[pl])
-  print()
+  zoepl=dict((pl['lad16cd'],pl['lad16nm']) for pl in zm.values())
+  offpl=dict((x['areaCode'],x['areaName']) for x in data)
   
-  print("lad16cd in Official, not in Zoe")
-  for pl in offpl:
-    if pl not in zoepl: print(pl,offpl[pl])
-  print()
-
-# For the moment only use the places that are consistent between Zoe and Official
-locs=set(zoepl).intersection(set(offpl))
-locs.remove('E09000012')# Hackney vs Hackney and City of London
-
-mindate='2020-10-01'
-
-dates=set(x['date'] for x in data if x['date']>=mindate)
-lastdate=max(dates)
-both=set((x['date'],x['areaCode']) for x in data if x['date']>=mindate)
-r=0
-for date in sorted(list(dates)):
-  for loc in list(locs):
-    if (date,loc) not in both and loc in locs: locs.remove(loc);r+=1
-if r>0: print("Removed %d locations that didn't have up to date case counts"%r)
-
-locs=sorted(list(locs))
-locind=dict((loc,i) for (i,loc) in enumerate(locs))
-
-# Convert Zoe and Official data into convenient sequences
-# zvals[ location, day ]     N x n
-# cases[ location, day ]
-N=len(locs)
-minday=datetoday(mindate)
-n=datetoday(lastdate)-minday+1
-zvals=np.zeros([N,n])# (predicted cases)/(respondents)*(population)  # , (corrected covid positive)
-cases=np.zeros([N,n],dtype=int)
-zdates=np.zeros(n,dtype=bool)
-for d in data:
-  t=datetoday(d['date'])-minday
-  if t>=0 and d['areaCode'] in locind: cases[locind[d['areaCode']],t]=d['newCasesByPublishDate']
-for date in os.listdir('zoemapdata'):
-  if date[:2]=='20' and date>=mindate and date<=lastdate:
-    with open(os.path.join('zoemapdata',date),'r') as fp:
-      zm=json.load(fp)
-      t=datetoday(date)-minday
-      zdates[t]=1
-      for d in zm.values():
-        if d['lad16cd'] in locind:
-          i=locind[d['lad16cd']]
-          zvals[i,t]=d['predicted_covid_positive_count']/d['respondent']*d['population']
-          #zvals[i,t]=d['corrected_covid_positive']
-# Interpolate missing dates
-for t in range(n):
-  if not zdates[t]:
-    for t0 in range(t-1,-1,-1):
-      if zdates[t0]: break
-    else: raise RuntimeError("Missing Zoe entry at start")
-    for t1 in range(t+1,n):
-      if zdates[t1]: break
-    else: raise RuntimeError("Missing Zoe entry at end")
-    zvals[:,t]=((t1-t)*zvals[:,t0]+(t-t0)*zvals[:,t1])/(t1-t0)
+  if 0:
+    print("Different names, same lad16cd")
+    for pl in zoepl:
+      if pl in offpl:
+        if zoepl[pl]!=offpl[pl]: print(pl,zoepl[pl],"/",offpl[pl])
+    print()
     
+    print("lad16cd in Zoe, not in Official")
+    for pl in zoepl:
+      if pl not in offpl: print(pl,zoepl[pl])
+    print()
+    
+    print("lad16cd in Official, not in Zoe")
+    for pl in offpl:
+      if pl not in zoepl: print(pl,offpl[pl])
+    print()
+  
+  # For the moment only use the places that are consistent between Zoe and Official
+  locs=set(zoepl).intersection(set(offpl))
+  locs.remove('E09000012')# Hackney vs Hackney and City of London
+
+  dates=sorted(list(set(x['date'] for x in data if x['date']>=mindate)))
+  lastdate=dates[-1]
+  both=set((x['date'],x['areaCode']) for x in data if x['date']>=mindate)
+  r=0
+  for date in dates:
+    for loc in list(locs):
+      if (date,loc) not in both and loc in locs: locs.remove(loc);r+=1
+  if r>0: print("Removed %d locations that didn't have up to date case counts"%r)
+  
+  locs=sorted(list(locs))
+  locind=dict((loc,i) for (i,loc) in enumerate(locs))
+  
+  # Convert Zoe and Official data into convenient sequences
+  # zvals[ location, day ]     N x n
+  # cases[ location, day ]
+  N=len(locs)
+  minday=datetoday(mindate)
+  n=datetoday(lastdate)-minday+1
+  zvals=np.zeros([N,n])# (predicted cases)/(respondents)*(population)  # , (corrected covid positive)
+  cases=np.zeros([N,n],dtype=int)
+  zdates=np.zeros(n,dtype=bool)
+  for d in data:
+    t=datetoday(d['date'])-minday
+    if t>=0 and d['areaCode'] in locind: cases[locind[d['areaCode']],t]=d['newCasesByPublishDate']
+  for date in os.listdir('zoemapdata'):
+    if date[:2]=='20' and date>=mindate and date<=lastdate:
+      with open(os.path.join('zoemapdata',date),'r') as fp:
+        zm=json.load(fp)
+        t=datetoday(date)-minday
+        zdates[t]=1
+        for d in zm.values():
+          if d['lad16cd'] in locind:
+            i=locind[d['lad16cd']]
+            zvals[i,t]=d['predicted_covid_positive_count']/d['respondent']*d['population']
+            #zvals[i,t]=d['corrected_covid_positive']
+  # Interpolate missing dates
+  for t in range(n):
+    if not zdates[t]:
+      for t0 in range(t-1,-1,-1):
+        if zdates[t0]: break
+      else: raise RuntimeError("Missing Zoe entry at start")
+      for t1 in range(t+1,n):
+        if zdates[t1]: break
+      else: raise RuntimeError("Missing Zoe entry at end")
+      zvals[:,t]=((t1-t)*zvals[:,t0]+(t-t0)*zvals[:,t1])/(t1-t0)
+  
+  return [offpl[loc] for loc in locs],dates,zvals,cases
+            
+
+def getdata_region(mindate):
+  data=apicall({"areaType":"region", "metric":"newCasesByPublishDate", "format":"json"})
+  
+  # Load example map file to get location data
+  with open('zoemapdata/2021-01-17','r') as fp: zm=json.load(fp)
+  
+  zoepl=set(pl['region'] for pl in zm.values() if pl['country']=='England')
+  offpl=set(x['areaName'] for x in data)
+  assert zoepl==offpl
+  locs=sorted(list(offpl))
+  locind=dict((loc,i) for (i,loc) in enumerate(locs))
+  dates=sorted(list(set(x['date'] for x in data if x['date']>=mindate)))
+  lastdate=dates[-1]
+  
+  # Convert Zoe and Official data into convenient sequences
+  # zvals[ location, day ]     N x n
+  # cases[ location, day ]
+  N=len(locs)
+  minday=datetoday(mindate)
+  n=datetoday(lastdate)-minday+1
+  zvals=np.zeros([N,n])# (predicted cases)/(respondents)*(population)  # , (corrected covid positive)
+  cases=np.zeros([N,n],dtype=int)
+  zdates=np.zeros(n,dtype=bool)
+  for d in data:
+    t=datetoday(d['date'])-minday
+    if t>=0 and d['areaName'] in locind: cases[locind[d['areaName']],t]=d['newCasesByPublishDate']
+  for date in os.listdir('zoemapdata'):
+    if date[:2]=='20' and date>=mindate and date<=lastdate:
+      with open(os.path.join('zoemapdata',date),'r') as fp:
+        zm=json.load(fp)
+        t=datetoday(date)-minday
+        zdates[t]=1
+        for d in zm.values():
+          if d['country']=='England' and d['region'] in locind:
+            i=locind[d['region']]
+            zvals[i,t]+=d['predicted_covid_positive_count']/d['respondent']*d['population']
+            #zvals[i,t]+=d['corrected_covid_positive']
+  # Interpolate missing dates
+  for t in range(n):
+    if not zdates[t]:
+      for t0 in range(t-1,-1,-1):
+        if zdates[t0]: break
+      else: raise RuntimeError("Missing Zoe entry at start")
+      for t1 in range(t+1,n):
+        if zdates[t1]: break
+      else: raise RuntimeError("Missing Zoe entry at end")
+      zvals[:,t]=((t1-t)*zvals[:,t0]+(t-t0)*zvals[:,t1])/(t1-t0)
+  
+  return locs,dates,zvals,cases
+
+if locationsize=="ltla": locs,dates,zvals,cases=getdata_ltla(mindate)
+elif locationsize=="region": locs,dates,zvals,cases=getdata_region(mindate)
+else: assert 0  
+
+N=len(locs)
+n=len(dates)
+assert zvals.shape==cases.shape==(N,n)
+
 if 0:
   # Partial-cheat rescaling by time-independent location-dependent function
   r=zvals.sum(1)/(cases[:,:].sum(1))
