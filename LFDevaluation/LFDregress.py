@@ -4,6 +4,8 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.special import gammaln
 
+keephalfterm=True
+
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
   return calendar.timegm(t)//86400
@@ -29,9 +31,11 @@ def loadcsv(fn,keephalfterm=True):
           dd.setdefault(name,[]).append(x)
   return dd
 
-print("Using LFD school numbers from table 6 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/968462/tests_conducted_2021_03_11.ods")
-dd=loadcsv("LFDschooltests.csv",keephalfterm=True)
-#cases=dd["Cases"]
+print("Using LFD school numbers from table 7 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/973128/tests_conducted_2021_03_25.ods")
+if keephalfterm: print("Keeping half term 14 - 20 February")
+else: print("Discarding half term 14 - 20 February")
+dd=loadcsv("LFDschooltests.csv",keephalfterm=keephalfterm)
+dd['LFDnum']=list(map(sum,zip(dd['LFDpos'],dd['LFDneg'])))# Denominator = positive tests + negative tests (ignore unknown/void tests)
 
 # cc=loadcsv("engcasesbyspecimen.csv")
 # datetocases=dict(zip(cc['date'],cc['newCasesBySpecimenDate']))
