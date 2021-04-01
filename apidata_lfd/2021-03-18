@@ -1,0 +1,2900 @@
+[
+  {
+    "date": "2020-01-30",
+    "newCasesBySpecimenDate": 2,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-01-31",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-01",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-02",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-03",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-04",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-05",
+    "newCasesBySpecimenDate": 1,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-06",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-07",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-08",
+    "newCasesBySpecimenDate": 4,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-09",
+    "newCasesBySpecimenDate": 1,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-10",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-11",
+    "newCasesBySpecimenDate": 1,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-12",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-13",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-14",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-15",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-16",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-17",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-18",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-19",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-20",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-21",
+    "newCasesBySpecimenDate": 1,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-22",
+    "newCasesBySpecimenDate": 0,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-23",
+    "newCasesBySpecimenDate": 1,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-24",
+    "newCasesBySpecimenDate": 2,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-25",
+    "newCasesBySpecimenDate": 5,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-26",
+    "newCasesBySpecimenDate": 4,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-27",
+    "newCasesBySpecimenDate": 7,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-28",
+    "newCasesBySpecimenDate": 11,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-02-29",
+    "newCasesBySpecimenDate": 5,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-01",
+    "newCasesBySpecimenDate": 20,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-02",
+    "newCasesBySpecimenDate": 38,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-03",
+    "newCasesBySpecimenDate": 54,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-04",
+    "newCasesBySpecimenDate": 49,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-05",
+    "newCasesBySpecimenDate": 46,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-06",
+    "newCasesBySpecimenDate": 73,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-07",
+    "newCasesBySpecimenDate": 55,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-08",
+    "newCasesBySpecimenDate": 50,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-09",
+    "newCasesBySpecimenDate": 125,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-10",
+    "newCasesBySpecimenDate": 227,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-11",
+    "newCasesBySpecimenDate": 353,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-12",
+    "newCasesBySpecimenDate": 414,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-13",
+    "newCasesBySpecimenDate": 392,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-14",
+    "newCasesBySpecimenDate": 315,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-15",
+    "newCasesBySpecimenDate": 396,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-16",
+    "newCasesBySpecimenDate": 544,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-17",
+    "newCasesBySpecimenDate": 680,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-18",
+    "newCasesBySpecimenDate": 906,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-19",
+    "newCasesBySpecimenDate": 929,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-20",
+    "newCasesBySpecimenDate": 1083,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-21",
+    "newCasesBySpecimenDate": 1032,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-22",
+    "newCasesBySpecimenDate": 1207,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-23",
+    "newCasesBySpecimenDate": 2016,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-24",
+    "newCasesBySpecimenDate": 2026,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-25",
+    "newCasesBySpecimenDate": 2258,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-26",
+    "newCasesBySpecimenDate": 2617,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-27",
+    "newCasesBySpecimenDate": 2653,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-28",
+    "newCasesBySpecimenDate": 2370,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-29",
+    "newCasesBySpecimenDate": 2438,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-30",
+    "newCasesBySpecimenDate": 3515,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-03-31",
+    "newCasesBySpecimenDate": 3782,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-01",
+    "newCasesBySpecimenDate": 4125,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-02",
+    "newCasesBySpecimenDate": 4068,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-03",
+    "newCasesBySpecimenDate": 4074,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-04",
+    "newCasesBySpecimenDate": 3379,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-05",
+    "newCasesBySpecimenDate": 3081,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-06",
+    "newCasesBySpecimenDate": 4378,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-07",
+    "newCasesBySpecimenDate": 4568,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-08",
+    "newCasesBySpecimenDate": 4285,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-09",
+    "newCasesBySpecimenDate": 4055,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-10",
+    "newCasesBySpecimenDate": 3580,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-11",
+    "newCasesBySpecimenDate": 3066,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-12",
+    "newCasesBySpecimenDate": 2943,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-13",
+    "newCasesBySpecimenDate": 3427,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-14",
+    "newCasesBySpecimenDate": 3546,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-15",
+    "newCasesBySpecimenDate": 4222,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-16",
+    "newCasesBySpecimenDate": 4352,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-17",
+    "newCasesBySpecimenDate": 4070,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-18",
+    "newCasesBySpecimenDate": 4114,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-19",
+    "newCasesBySpecimenDate": 3475,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-20",
+    "newCasesBySpecimenDate": 3679,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-21",
+    "newCasesBySpecimenDate": 3976,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-22",
+    "newCasesBySpecimenDate": 4807,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-23",
+    "newCasesBySpecimenDate": 4565,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-24",
+    "newCasesBySpecimenDate": 4352,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-25",
+    "newCasesBySpecimenDate": 3373,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-26",
+    "newCasesBySpecimenDate": 3135,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-27",
+    "newCasesBySpecimenDate": 4028,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-28",
+    "newCasesBySpecimenDate": 4116,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-29",
+    "newCasesBySpecimenDate": 4733,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-04-30",
+    "newCasesBySpecimenDate": 4309,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-01",
+    "newCasesBySpecimenDate": 4093,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-02",
+    "newCasesBySpecimenDate": 2747,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-03",
+    "newCasesBySpecimenDate": 2629,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-04",
+    "newCasesBySpecimenDate": 2840,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-05",
+    "newCasesBySpecimenDate": 3135,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-06",
+    "newCasesBySpecimenDate": 3264,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-07",
+    "newCasesBySpecimenDate": 3205,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-08",
+    "newCasesBySpecimenDate": 2617,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-09",
+    "newCasesBySpecimenDate": 1796,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-10",
+    "newCasesBySpecimenDate": 2006,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-11",
+    "newCasesBySpecimenDate": 3063,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-12",
+    "newCasesBySpecimenDate": 2925,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-13",
+    "newCasesBySpecimenDate": 2884,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-14",
+    "newCasesBySpecimenDate": 2210,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-15",
+    "newCasesBySpecimenDate": 2131,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-16",
+    "newCasesBySpecimenDate": 1773,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-17",
+    "newCasesBySpecimenDate": 1590,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-18",
+    "newCasesBySpecimenDate": 2214,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-19",
+    "newCasesBySpecimenDate": 2589,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-20",
+    "newCasesBySpecimenDate": 2347,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-21",
+    "newCasesBySpecimenDate": 2275,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-22",
+    "newCasesBySpecimenDate": 1794,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-23",
+    "newCasesBySpecimenDate": 1302,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-24",
+    "newCasesBySpecimenDate": 1198,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-25",
+    "newCasesBySpecimenDate": 1381,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-26",
+    "newCasesBySpecimenDate": 1454,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-27",
+    "newCasesBySpecimenDate": 1611,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-28",
+    "newCasesBySpecimenDate": 1573,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-29",
+    "newCasesBySpecimenDate": 1371,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-30",
+    "newCasesBySpecimenDate": 998,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-05-31",
+    "newCasesBySpecimenDate": 986,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-01",
+    "newCasesBySpecimenDate": 1313,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-02",
+    "newCasesBySpecimenDate": 1352,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-03",
+    "newCasesBySpecimenDate": 1241,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-04",
+    "newCasesBySpecimenDate": 1146,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-05",
+    "newCasesBySpecimenDate": 1020,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-06",
+    "newCasesBySpecimenDate": 723,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-07",
+    "newCasesBySpecimenDate": 663,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-08",
+    "newCasesBySpecimenDate": 987,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-09",
+    "newCasesBySpecimenDate": 1057,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-10",
+    "newCasesBySpecimenDate": 1082,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-11",
+    "newCasesBySpecimenDate": 916,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-12",
+    "newCasesBySpecimenDate": 939,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-13",
+    "newCasesBySpecimenDate": 784,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-14",
+    "newCasesBySpecimenDate": 745,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-15",
+    "newCasesBySpecimenDate": 941,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-16",
+    "newCasesBySpecimenDate": 993,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-17",
+    "newCasesBySpecimenDate": 911,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-18",
+    "newCasesBySpecimenDate": 945,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-19",
+    "newCasesBySpecimenDate": 808,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-20",
+    "newCasesBySpecimenDate": 626,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-21",
+    "newCasesBySpecimenDate": 551,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-22",
+    "newCasesBySpecimenDate": 812,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-23",
+    "newCasesBySpecimenDate": 728,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-24",
+    "newCasesBySpecimenDate": 728,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-25",
+    "newCasesBySpecimenDate": 638,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-26",
+    "newCasesBySpecimenDate": 642,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-27",
+    "newCasesBySpecimenDate": 502,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-28",
+    "newCasesBySpecimenDate": 411,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-29",
+    "newCasesBySpecimenDate": 665,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-06-30",
+    "newCasesBySpecimenDate": 572,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-01",
+    "newCasesBySpecimenDate": 604,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-02",
+    "newCasesBySpecimenDate": 559,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-03",
+    "newCasesBySpecimenDate": 537,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-04",
+    "newCasesBySpecimenDate": 383,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-05",
+    "newCasesBySpecimenDate": 539,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-06",
+    "newCasesBySpecimenDate": 656,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-07",
+    "newCasesBySpecimenDate": 558,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-08",
+    "newCasesBySpecimenDate": 672,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-09",
+    "newCasesBySpecimenDate": 680,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-10",
+    "newCasesBySpecimenDate": 518,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-11",
+    "newCasesBySpecimenDate": 419,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-12",
+    "newCasesBySpecimenDate": 352,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-13",
+    "newCasesBySpecimenDate": 692,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-14",
+    "newCasesBySpecimenDate": 652,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-15",
+    "newCasesBySpecimenDate": 724,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-16",
+    "newCasesBySpecimenDate": 639,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-17",
+    "newCasesBySpecimenDate": 546,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-18",
+    "newCasesBySpecimenDate": 467,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-19",
+    "newCasesBySpecimenDate": 413,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-20",
+    "newCasesBySpecimenDate": 754,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-21",
+    "newCasesBySpecimenDate": 690,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-22",
+    "newCasesBySpecimenDate": 749,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-23",
+    "newCasesBySpecimenDate": 731,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-24",
+    "newCasesBySpecimenDate": 713,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-25",
+    "newCasesBySpecimenDate": 492,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-26",
+    "newCasesBySpecimenDate": 515,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-27",
+    "newCasesBySpecimenDate": 809,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-28",
+    "newCasesBySpecimenDate": 780,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-29",
+    "newCasesBySpecimenDate": 972,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-30",
+    "newCasesBySpecimenDate": 855,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-07-31",
+    "newCasesBySpecimenDate": 625,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-01",
+    "newCasesBySpecimenDate": 493,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-02",
+    "newCasesBySpecimenDate": 512,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-03",
+    "newCasesBySpecimenDate": 936,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-04",
+    "newCasesBySpecimenDate": 918,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-05",
+    "newCasesBySpecimenDate": 942,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-06",
+    "newCasesBySpecimenDate": 978,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-07",
+    "newCasesBySpecimenDate": 864,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-08",
+    "newCasesBySpecimenDate": 636,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-09",
+    "newCasesBySpecimenDate": 557,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-10",
+    "newCasesBySpecimenDate": 1352,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-11",
+    "newCasesBySpecimenDate": 1211,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-12",
+    "newCasesBySpecimenDate": 1094,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-13",
+    "newCasesBySpecimenDate": 1017,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-14",
+    "newCasesBySpecimenDate": 1035,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-15",
+    "newCasesBySpecimenDate": 643,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-16",
+    "newCasesBySpecimenDate": 528,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-17",
+    "newCasesBySpecimenDate": 1136,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-18",
+    "newCasesBySpecimenDate": 925,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-19",
+    "newCasesBySpecimenDate": 1072,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-20",
+    "newCasesBySpecimenDate": 1219,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-21",
+    "newCasesBySpecimenDate": 1007,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-22",
+    "newCasesBySpecimenDate": 715,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-23",
+    "newCasesBySpecimenDate": 695,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-24",
+    "newCasesBySpecimenDate": 1132,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-25",
+    "newCasesBySpecimenDate": 1059,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-26",
+    "newCasesBySpecimenDate": 1138,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-27",
+    "newCasesBySpecimenDate": 1325,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-28",
+    "newCasesBySpecimenDate": 1382,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-29",
+    "newCasesBySpecimenDate": 1039,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-30",
+    "newCasesBySpecimenDate": 977,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-08-31",
+    "newCasesBySpecimenDate": 1259,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-01",
+    "newCasesBySpecimenDate": 1925,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-02",
+    "newCasesBySpecimenDate": 2616,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-03",
+    "newCasesBySpecimenDate": 2665,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-04",
+    "newCasesBySpecimenDate": 2592,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-05",
+    "newCasesBySpecimenDate": 2189,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-06",
+    "newCasesBySpecimenDate": 2058,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-07",
+    "newCasesBySpecimenDate": 3464,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-08",
+    "newCasesBySpecimenDate": 3001,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-09",
+    "newCasesBySpecimenDate": 2851,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-10",
+    "newCasesBySpecimenDate": 3098,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-11",
+    "newCasesBySpecimenDate": 2858,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-12",
+    "newCasesBySpecimenDate": 2208,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-13",
+    "newCasesBySpecimenDate": 1710,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-14",
+    "newCasesBySpecimenDate": 2897,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-15",
+    "newCasesBySpecimenDate": 3041,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-16",
+    "newCasesBySpecimenDate": 3746,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-17",
+    "newCasesBySpecimenDate": 3939,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-18",
+    "newCasesBySpecimenDate": 4271,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-19",
+    "newCasesBySpecimenDate": 4176,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-20",
+    "newCasesBySpecimenDate": 4627,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-21",
+    "newCasesBySpecimenDate": 4697,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-22",
+    "newCasesBySpecimenDate": 5359,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-23",
+    "newCasesBySpecimenDate": 5892,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-24",
+    "newCasesBySpecimenDate": 6296,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-25",
+    "newCasesBySpecimenDate": 6043,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-26",
+    "newCasesBySpecimenDate": 5655,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-27",
+    "newCasesBySpecimenDate": 6026,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-28",
+    "newCasesBySpecimenDate": 8588,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-29",
+    "newCasesBySpecimenDate": 8728,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-09-30",
+    "newCasesBySpecimenDate": 10525,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-01",
+    "newCasesBySpecimenDate": 11309,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-02",
+    "newCasesBySpecimenDate": 11579,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-03",
+    "newCasesBySpecimenDate": 9709,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-04",
+    "newCasesBySpecimenDate": 9835,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-05",
+    "newCasesBySpecimenDate": 14046,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-06",
+    "newCasesBySpecimenDate": 14314,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-07",
+    "newCasesBySpecimenDate": 15204,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-08",
+    "newCasesBySpecimenDate": 15270,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-09",
+    "newCasesBySpecimenDate": 13014,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-10",
+    "newCasesBySpecimenDate": 10158,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-11",
+    "newCasesBySpecimenDate": 9657,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-12",
+    "newCasesBySpecimenDate": 16203,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-13",
+    "newCasesBySpecimenDate": 15449,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-14",
+    "newCasesBySpecimenDate": 16447,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-15",
+    "newCasesBySpecimenDate": 15248,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-16",
+    "newCasesBySpecimenDate": 14545,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-17",
+    "newCasesBySpecimenDate": 12356,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-18",
+    "newCasesBySpecimenDate": 11858,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-19",
+    "newCasesBySpecimenDate": 22115,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-20",
+    "newCasesBySpecimenDate": 21333,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-21",
+    "newCasesBySpecimenDate": 21496,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-22",
+    "newCasesBySpecimenDate": 19626,
+    "newLFDTests": 3,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-23",
+    "newCasesBySpecimenDate": 18112,
+    "newLFDTests": 7,
+    "newCasesLFDOnlyBySpecimenDate": 1,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-24",
+    "newCasesBySpecimenDate": 13519,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-25",
+    "newCasesBySpecimenDate": 13167,
+    "newLFDTests": 1,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-26",
+    "newCasesBySpecimenDate": 22763,
+    "newLFDTests": 5,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-27",
+    "newCasesBySpecimenDate": 20497,
+    "newLFDTests": 2,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-28",
+    "newCasesBySpecimenDate": 20240,
+    "newLFDTests": 47,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-29",
+    "newCasesBySpecimenDate": 19980,
+    "newLFDTests": 6,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-30",
+    "newCasesBySpecimenDate": 19644,
+    "newLFDTests": 68,
+    "newCasesLFDOnlyBySpecimenDate": 1,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-10-31",
+    "newCasesBySpecimenDate": 14351,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-11-01",
+    "newCasesBySpecimenDate": 13367,
+    "newLFDTests": 0,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-11-02",
+    "newCasesBySpecimenDate": 27930,
+    "newLFDTests": 14,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-11-03",
+    "newCasesBySpecimenDate": 22313,
+    "newLFDTests": 113,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-11-04",
+    "newCasesBySpecimenDate": 20687,
+    "newLFDTests": 157,
+    "newCasesLFDOnlyBySpecimenDate": 0,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1
+  },
+  {
+    "date": "2020-11-05",
+    "newCasesBySpecimenDate": 20877,
+    "newLFDTests": 115,
+    "newCasesLFDOnlyBySpecimenDate": 1,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  },
+  {
+    "date": "2020-11-06",
+    "newCasesBySpecimenDate": 20825,
+    "newLFDTests": 4233,
+    "newCasesLFDOnlyBySpecimenDate": 22,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 6
+  },
+  {
+    "date": "2020-11-07",
+    "newCasesBySpecimenDate": 16626,
+    "newLFDTests": 7410,
+    "newCasesLFDOnlyBySpecimenDate": 24,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 6
+  },
+  {
+    "date": "2020-11-08",
+    "newCasesBySpecimenDate": 17961,
+    "newLFDTests": 6456,
+    "newCasesLFDOnlyBySpecimenDate": 56,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 4
+  },
+  {
+    "date": "2020-11-09",
+    "newCasesBySpecimenDate": 28102,
+    "newLFDTests": 9334,
+    "newCasesLFDOnlyBySpecimenDate": 48,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 3
+  },
+  {
+    "date": "2020-11-10",
+    "newCasesBySpecimenDate": 24480,
+    "newLFDTests": 12535,
+    "newCasesLFDOnlyBySpecimenDate": 44,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 8
+  },
+  {
+    "date": "2020-11-11",
+    "newCasesBySpecimenDate": 24646,
+    "newLFDTests": 12739,
+    "newCasesLFDOnlyBySpecimenDate": 68,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 4
+  },
+  {
+    "date": "2020-11-12",
+    "newCasesBySpecimenDate": 21963,
+    "newLFDTests": 10870,
+    "newCasesLFDOnlyBySpecimenDate": 59,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 11
+  },
+  {
+    "date": "2020-11-13",
+    "newCasesBySpecimenDate": 21658,
+    "newLFDTests": 10010,
+    "newCasesLFDOnlyBySpecimenDate": 88,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 6
+  },
+  {
+    "date": "2020-11-14",
+    "newCasesBySpecimenDate": 16044,
+    "newLFDTests": 7072,
+    "newCasesLFDOnlyBySpecimenDate": 56,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 5
+  },
+  {
+    "date": "2020-11-15",
+    "newCasesBySpecimenDate": 14231,
+    "newLFDTests": 5627,
+    "newCasesLFDOnlyBySpecimenDate": 48,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 7
+  },
+  {
+    "date": "2020-11-16",
+    "newCasesBySpecimenDate": 23738,
+    "newLFDTests": 10445,
+    "newCasesLFDOnlyBySpecimenDate": 59,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 13
+  },
+  {
+    "date": "2020-11-17",
+    "newCasesBySpecimenDate": 20349,
+    "newLFDTests": 10178,
+    "newCasesLFDOnlyBySpecimenDate": 63,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 4
+  },
+  {
+    "date": "2020-11-18",
+    "newCasesBySpecimenDate": 18232,
+    "newLFDTests": 8274,
+    "newCasesLFDOnlyBySpecimenDate": 39,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 6
+  },
+  {
+    "date": "2020-11-19",
+    "newCasesBySpecimenDate": 15513,
+    "newLFDTests": 8692,
+    "newCasesLFDOnlyBySpecimenDate": 42,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 7
+  },
+  {
+    "date": "2020-11-20",
+    "newCasesBySpecimenDate": 14688,
+    "newLFDTests": 8795,
+    "newCasesLFDOnlyBySpecimenDate": 46,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 12
+  },
+  {
+    "date": "2020-11-21",
+    "newCasesBySpecimenDate": 10625,
+    "newLFDTests": 6865,
+    "newCasesLFDOnlyBySpecimenDate": 19,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 8
+  },
+  {
+    "date": "2020-11-22",
+    "newCasesBySpecimenDate": 10042,
+    "newLFDTests": 5733,
+    "newCasesLFDOnlyBySpecimenDate": 16,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 8
+  },
+  {
+    "date": "2020-11-23",
+    "newCasesBySpecimenDate": 16219,
+    "newLFDTests": 12148,
+    "newCasesLFDOnlyBySpecimenDate": 32,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 22
+  },
+  {
+    "date": "2020-11-24",
+    "newCasesBySpecimenDate": 14036,
+    "newLFDTests": 8626,
+    "newCasesLFDOnlyBySpecimenDate": 27,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 30
+  },
+  {
+    "date": "2020-11-25",
+    "newCasesBySpecimenDate": 13926,
+    "newLFDTests": 9449,
+    "newCasesLFDOnlyBySpecimenDate": 26,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 25
+  },
+  {
+    "date": "2020-11-26",
+    "newCasesBySpecimenDate": 12280,
+    "newLFDTests": 9281,
+    "newCasesLFDOnlyBySpecimenDate": 30,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 17
+  },
+  {
+    "date": "2020-11-27",
+    "newCasesBySpecimenDate": 12273,
+    "newLFDTests": 11416,
+    "newCasesLFDOnlyBySpecimenDate": 59,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 27
+  },
+  {
+    "date": "2020-11-28",
+    "newCasesBySpecimenDate": 9206,
+    "newLFDTests": 6545,
+    "newCasesLFDOnlyBySpecimenDate": 18,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 26
+  },
+  {
+    "date": "2020-11-29",
+    "newCasesBySpecimenDate": 8912,
+    "newLFDTests": 6869,
+    "newCasesLFDOnlyBySpecimenDate": 19,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 18
+  },
+  {
+    "date": "2020-11-30",
+    "newCasesBySpecimenDate": 15056,
+    "newLFDTests": 29710,
+    "newCasesLFDOnlyBySpecimenDate": 58,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 35
+  },
+  {
+    "date": "2020-12-01",
+    "newCasesBySpecimenDate": 13533,
+    "newLFDTests": 29418,
+    "newCasesLFDOnlyBySpecimenDate": 48,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 43
+  },
+  {
+    "date": "2020-12-02",
+    "newCasesBySpecimenDate": 13469,
+    "newLFDTests": 27732,
+    "newCasesLFDOnlyBySpecimenDate": 49,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 34
+  },
+  {
+    "date": "2020-12-03",
+    "newCasesBySpecimenDate": 12544,
+    "newLFDTests": 34883,
+    "newCasesLFDOnlyBySpecimenDate": 49,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 44
+  },
+  {
+    "date": "2020-12-04",
+    "newCasesBySpecimenDate": 12924,
+    "newLFDTests": 43537,
+    "newCasesLFDOnlyBySpecimenDate": 89,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 53
+  },
+  {
+    "date": "2020-12-05",
+    "newCasesBySpecimenDate": 10195,
+    "newLFDTests": 27239,
+    "newCasesLFDOnlyBySpecimenDate": 102,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 42
+  },
+  {
+    "date": "2020-12-06",
+    "newCasesBySpecimenDate": 10900,
+    "newLFDTests": 20913,
+    "newCasesLFDOnlyBySpecimenDate": 57,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 53
+  },
+  {
+    "date": "2020-12-07",
+    "newCasesBySpecimenDate": 17421,
+    "newLFDTests": 34677,
+    "newCasesLFDOnlyBySpecimenDate": 79,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 75
+  },
+  {
+    "date": "2020-12-08",
+    "newCasesBySpecimenDate": 16679,
+    "newLFDTests": 36542,
+    "newCasesLFDOnlyBySpecimenDate": 65,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 75
+  },
+  {
+    "date": "2020-12-09",
+    "newCasesBySpecimenDate": 17496,
+    "newLFDTests": 39095,
+    "newCasesLFDOnlyBySpecimenDate": 99,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 104
+  },
+  {
+    "date": "2020-12-10",
+    "newCasesBySpecimenDate": 18559,
+    "newLFDTests": 21242,
+    "newCasesLFDOnlyBySpecimenDate": 77,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 86
+  },
+  {
+    "date": "2020-12-11",
+    "newCasesBySpecimenDate": 19881,
+    "newLFDTests": 28942,
+    "newCasesLFDOnlyBySpecimenDate": 90,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 114
+  },
+  {
+    "date": "2020-12-12",
+    "newCasesBySpecimenDate": 16025,
+    "newLFDTests": 11862,
+    "newCasesLFDOnlyBySpecimenDate": 28,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 88
+  },
+  {
+    "date": "2020-12-13",
+    "newCasesBySpecimenDate": 18122,
+    "newLFDTests": 9411,
+    "newCasesLFDOnlyBySpecimenDate": 28,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 83
+  },
+  {
+    "date": "2020-12-14",
+    "newCasesBySpecimenDate": 29528,
+    "newLFDTests": 22702,
+    "newCasesLFDOnlyBySpecimenDate": 73,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 177
+  },
+  {
+    "date": "2020-12-15",
+    "newCasesBySpecimenDate": 29111,
+    "newLFDTests": 19380,
+    "newCasesLFDOnlyBySpecimenDate": 79,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 192
+  },
+  {
+    "date": "2020-12-16",
+    "newCasesBySpecimenDate": 30126,
+    "newLFDTests": 20753,
+    "newCasesLFDOnlyBySpecimenDate": 105,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 238
+  },
+  {
+    "date": "2020-12-17",
+    "newCasesBySpecimenDate": 29603,
+    "newLFDTests": 23699,
+    "newCasesLFDOnlyBySpecimenDate": 122,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 245
+  },
+  {
+    "date": "2020-12-18",
+    "newCasesBySpecimenDate": 31828,
+    "newLFDTests": 32043,
+    "newCasesLFDOnlyBySpecimenDate": 133,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 291
+  },
+  {
+    "date": "2020-12-19",
+    "newCasesBySpecimenDate": 21744,
+    "newLFDTests": 21864,
+    "newCasesLFDOnlyBySpecimenDate": 156,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 267
+  },
+  {
+    "date": "2020-12-20",
+    "newCasesBySpecimenDate": 28959,
+    "newLFDTests": 23452,
+    "newCasesLFDOnlyBySpecimenDate": 139,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 295
+  },
+  {
+    "date": "2020-12-21",
+    "newCasesBySpecimenDate": 42617,
+    "newLFDTests": 39614,
+    "newCasesLFDOnlyBySpecimenDate": 277,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 517
+  },
+  {
+    "date": "2020-12-22",
+    "newCasesBySpecimenDate": 40938,
+    "newLFDTests": 49103,
+    "newCasesLFDOnlyBySpecimenDate": 308,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 541
+  },
+  {
+    "date": "2020-12-23",
+    "newCasesBySpecimenDate": 37705,
+    "newLFDTests": 62242,
+    "newCasesLFDOnlyBySpecimenDate": 451,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 517
+  },
+  {
+    "date": "2020-12-24",
+    "newCasesBySpecimenDate": 28735,
+    "newLFDTests": 42843,
+    "newCasesLFDOnlyBySpecimenDate": 340,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 329
+  },
+  {
+    "date": "2020-12-25",
+    "newCasesBySpecimenDate": 12680,
+    "newLFDTests": 5698,
+    "newCasesLFDOnlyBySpecimenDate": 53,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 57
+  },
+  {
+    "date": "2020-12-26",
+    "newCasesBySpecimenDate": 36708,
+    "newLFDTests": 7896,
+    "newCasesLFDOnlyBySpecimenDate": 104,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 210
+  },
+  {
+    "date": "2020-12-27",
+    "newCasesBySpecimenDate": 42477,
+    "newLFDTests": 20478,
+    "newCasesLFDOnlyBySpecimenDate": 284,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 434
+  },
+  {
+    "date": "2020-12-28",
+    "newCasesBySpecimenDate": 40068,
+    "newLFDTests": 28731,
+    "newCasesLFDOnlyBySpecimenDate": 293,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 513
+  },
+  {
+    "date": "2020-12-29",
+    "newCasesBySpecimenDate": 72563,
+    "newLFDTests": 57142,
+    "newCasesLFDOnlyBySpecimenDate": 552,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1090
+  },
+  {
+    "date": "2020-12-30",
+    "newCasesBySpecimenDate": 62930,
+    "newLFDTests": 58790,
+    "newCasesLFDOnlyBySpecimenDate": 538,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 946
+  },
+  {
+    "date": "2020-12-31",
+    "newCasesBySpecimenDate": 46735,
+    "newLFDTests": 53431,
+    "newCasesLFDOnlyBySpecimenDate": 532,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 837
+  },
+  {
+    "date": "2021-01-01",
+    "newCasesBySpecimenDate": 28229,
+    "newLFDTests": 15551,
+    "newCasesLFDOnlyBySpecimenDate": 166,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 297
+  },
+  {
+    "date": "2021-01-02",
+    "newCasesBySpecimenDate": 54234,
+    "newLFDTests": 48712,
+    "newCasesLFDOnlyBySpecimenDate": 480,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1124
+  },
+  {
+    "date": "2021-01-03",
+    "newCasesBySpecimenDate": 49574,
+    "newLFDTests": 53232,
+    "newCasesLFDOnlyBySpecimenDate": 453,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1139
+  },
+  {
+    "date": "2021-01-04",
+    "newCasesBySpecimenDate": 69187,
+    "newLFDTests": 112195,
+    "newCasesLFDOnlyBySpecimenDate": 632,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1721
+  },
+  {
+    "date": "2021-01-05",
+    "newCasesBySpecimenDate": 58115,
+    "newLFDTests": 104356,
+    "newCasesLFDOnlyBySpecimenDate": 631,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1531
+  },
+  {
+    "date": "2021-01-06",
+    "newCasesBySpecimenDate": 51375,
+    "newLFDTests": 100873,
+    "newCasesLFDOnlyBySpecimenDate": 581,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1218
+  },
+  {
+    "date": "2021-01-07",
+    "newCasesBySpecimenDate": 46890,
+    "newLFDTests": 124388,
+    "newCasesLFDOnlyBySpecimenDate": 606,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1291
+  },
+  {
+    "date": "2021-01-08",
+    "newCasesBySpecimenDate": 42396,
+    "newLFDTests": 139377,
+    "newCasesLFDOnlyBySpecimenDate": 630,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1299
+  },
+  {
+    "date": "2021-01-09",
+    "newCasesBySpecimenDate": 35471,
+    "newLFDTests": 68868,
+    "newCasesLFDOnlyBySpecimenDate": 405,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 945
+  },
+  {
+    "date": "2021-01-10",
+    "newCasesBySpecimenDate": 32872,
+    "newLFDTests": 75742,
+    "newCasesLFDOnlyBySpecimenDate": 389,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 970
+  },
+  {
+    "date": "2021-01-11",
+    "newCasesBySpecimenDate": 52101,
+    "newLFDTests": 222542,
+    "newCasesLFDOnlyBySpecimenDate": 755,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1927
+  },
+  {
+    "date": "2021-01-12",
+    "newCasesBySpecimenDate": 44742,
+    "newLFDTests": 175299,
+    "newCasesLFDOnlyBySpecimenDate": 604,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1442
+  },
+  {
+    "date": "2021-01-13",
+    "newCasesBySpecimenDate": 41217,
+    "newLFDTests": 164664,
+    "newCasesLFDOnlyBySpecimenDate": 566,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1322
+  },
+  {
+    "date": "2021-01-14",
+    "newCasesBySpecimenDate": 38585,
+    "newLFDTests": 177612,
+    "newCasesLFDOnlyBySpecimenDate": 549,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1199
+  },
+  {
+    "date": "2021-01-15",
+    "newCasesBySpecimenDate": 36834,
+    "newLFDTests": 185121,
+    "newCasesLFDOnlyBySpecimenDate": 531,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1134
+  },
+  {
+    "date": "2021-01-16",
+    "newCasesBySpecimenDate": 27680,
+    "newLFDTests": 87580,
+    "newCasesLFDOnlyBySpecimenDate": 368,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 878
+  },
+  {
+    "date": "2021-01-17",
+    "newCasesBySpecimenDate": 26249,
+    "newLFDTests": 109069,
+    "newCasesLFDOnlyBySpecimenDate": 351,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 905
+  },
+  {
+    "date": "2021-01-18",
+    "newCasesBySpecimenDate": 40799,
+    "newLFDTests": 311805,
+    "newCasesLFDOnlyBySpecimenDate": 592,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1619
+  },
+  {
+    "date": "2021-01-19",
+    "newCasesBySpecimenDate": 36044,
+    "newLFDTests": 234924,
+    "newCasesLFDOnlyBySpecimenDate": 542,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1309
+  },
+  {
+    "date": "2021-01-20",
+    "newCasesBySpecimenDate": 31827,
+    "newLFDTests": 220807,
+    "newCasesLFDOnlyBySpecimenDate": 511,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1099
+  },
+  {
+    "date": "2021-01-21",
+    "newCasesBySpecimenDate": 28813,
+    "newLFDTests": 240292,
+    "newCasesLFDOnlyBySpecimenDate": 471,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 978
+  },
+  {
+    "date": "2021-01-22",
+    "newCasesBySpecimenDate": 26987,
+    "newLFDTests": 237048,
+    "newCasesLFDOnlyBySpecimenDate": 449,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 922
+  },
+  {
+    "date": "2021-01-23",
+    "newCasesBySpecimenDate": 19924,
+    "newLFDTests": 101850,
+    "newCasesLFDOnlyBySpecimenDate": 343,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 641
+  },
+  {
+    "date": "2021-01-24",
+    "newCasesBySpecimenDate": 15509,
+    "newLFDTests": 167570,
+    "newCasesLFDOnlyBySpecimenDate": 287,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 669
+  },
+  {
+    "date": "2021-01-25",
+    "newCasesBySpecimenDate": 27196,
+    "newLFDTests": 367630,
+    "newCasesLFDOnlyBySpecimenDate": 558,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 1195
+  },
+  {
+    "date": "2021-01-26",
+    "newCasesBySpecimenDate": 24510,
+    "newLFDTests": 284368,
+    "newCasesLFDOnlyBySpecimenDate": 462,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 913
+  },
+  {
+    "date": "2021-01-27",
+    "newCasesBySpecimenDate": 23319,
+    "newLFDTests": 379470,
+    "newCasesLFDOnlyBySpecimenDate": 752,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 632
+  },
+  {
+    "date": "2021-01-28",
+    "newCasesBySpecimenDate": 21913,
+    "newLFDTests": 366359,
+    "newCasesLFDOnlyBySpecimenDate": 804,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 595
+  },
+  {
+    "date": "2021-01-29",
+    "newCasesBySpecimenDate": 19737,
+    "newLFDTests": 288216,
+    "newCasesLFDOnlyBySpecimenDate": 662,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 468
+  },
+  {
+    "date": "2021-01-30",
+    "newCasesBySpecimenDate": 15018,
+    "newLFDTests": 114284,
+    "newCasesLFDOnlyBySpecimenDate": 452,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 329
+  },
+  {
+    "date": "2021-01-31",
+    "newCasesBySpecimenDate": 13776,
+    "newLFDTests": 357190,
+    "newCasesLFDOnlyBySpecimenDate": 536,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 577
+  },
+  {
+    "date": "2021-02-01",
+    "newCasesBySpecimenDate": 20190,
+    "newLFDTests": 478732,
+    "newCasesLFDOnlyBySpecimenDate": 831,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 766
+  },
+  {
+    "date": "2021-02-02",
+    "newCasesBySpecimenDate": 17730,
+    "newLFDTests": 307535,
+    "newCasesLFDOnlyBySpecimenDate": 675,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 543
+  },
+  {
+    "date": "2021-02-03",
+    "newCasesBySpecimenDate": 17476,
+    "newLFDTests": 454417,
+    "newCasesLFDOnlyBySpecimenDate": 760,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 596
+  },
+  {
+    "date": "2021-02-04",
+    "newCasesBySpecimenDate": 16231,
+    "newLFDTests": 418257,
+    "newCasesLFDOnlyBySpecimenDate": 702,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 461
+  },
+  {
+    "date": "2021-02-05",
+    "newCasesBySpecimenDate": 14038,
+    "newLFDTests": 310478,
+    "newCasesLFDOnlyBySpecimenDate": 582,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 387
+  },
+  {
+    "date": "2021-02-06",
+    "newCasesBySpecimenDate": 10609,
+    "newLFDTests": 121361,
+    "newCasesLFDOnlyBySpecimenDate": 355,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 249
+  },
+  {
+    "date": "2021-02-07",
+    "newCasesBySpecimenDate": 10195,
+    "newLFDTests": 363781,
+    "newCasesLFDOnlyBySpecimenDate": 411,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 509
+  },
+  {
+    "date": "2021-02-08",
+    "newCasesBySpecimenDate": 13933,
+    "newLFDTests": 464915,
+    "newCasesLFDOnlyBySpecimenDate": 692,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 516
+  },
+  {
+    "date": "2021-02-09",
+    "newCasesBySpecimenDate": 12300,
+    "newLFDTests": 291808,
+    "newCasesLFDOnlyBySpecimenDate": 527,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 380
+  },
+  {
+    "date": "2021-02-10",
+    "newCasesBySpecimenDate": 11898,
+    "newLFDTests": 424985,
+    "newCasesLFDOnlyBySpecimenDate": 552,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 453
+  },
+  {
+    "date": "2021-02-11",
+    "newCasesBySpecimenDate": 11262,
+    "newLFDTests": 400501,
+    "newCasesLFDOnlyBySpecimenDate": 504,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 327
+  },
+  {
+    "date": "2021-02-12",
+    "newCasesBySpecimenDate": 10601,
+    "newLFDTests": 293767,
+    "newCasesLFDOnlyBySpecimenDate": 433,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 283
+  },
+  {
+    "date": "2021-02-13",
+    "newCasesBySpecimenDate": 7765,
+    "newLFDTests": 110579,
+    "newCasesLFDOnlyBySpecimenDate": 284,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 164
+  },
+  {
+    "date": "2021-02-14",
+    "newCasesBySpecimenDate": 7564,
+    "newLFDTests": 208408,
+    "newCasesLFDOnlyBySpecimenDate": 291,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 296
+  },
+  {
+    "date": "2021-02-15",
+    "newCasesBySpecimenDate": 12516,
+    "newLFDTests": 287496,
+    "newCasesLFDOnlyBySpecimenDate": 562,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 387
+  },
+  {
+    "date": "2021-02-16",
+    "newCasesBySpecimenDate": 10845,
+    "newLFDTests": 209842,
+    "newCasesLFDOnlyBySpecimenDate": 504,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 292
+  },
+  {
+    "date": "2021-02-17",
+    "newCasesBySpecimenDate": 10053,
+    "newLFDTests": 240192,
+    "newCasesLFDOnlyBySpecimenDate": 452,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 330
+  },
+  {
+    "date": "2021-02-18",
+    "newCasesBySpecimenDate": 9927,
+    "newLFDTests": 243936,
+    "newCasesLFDOnlyBySpecimenDate": 458,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 269
+  },
+  {
+    "date": "2021-02-19",
+    "newCasesBySpecimenDate": 8930,
+    "newLFDTests": 225164,
+    "newCasesLFDOnlyBySpecimenDate": 432,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 230
+  },
+  {
+    "date": "2021-02-20",
+    "newCasesBySpecimenDate": 6914,
+    "newLFDTests": 116798,
+    "newCasesLFDOnlyBySpecimenDate": 319,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 138
+  },
+  {
+    "date": "2021-02-21",
+    "newCasesBySpecimenDate": 6835,
+    "newLFDTests": 371058,
+    "newCasesLFDOnlyBySpecimenDate": 338,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 300
+  },
+  {
+    "date": "2021-02-22",
+    "newCasesBySpecimenDate": 9941,
+    "newLFDTests": 521100,
+    "newCasesLFDOnlyBySpecimenDate": 661,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 341
+  },
+  {
+    "date": "2021-02-23",
+    "newCasesBySpecimenDate": 8198,
+    "newLFDTests": 315084,
+    "newCasesLFDOnlyBySpecimenDate": 422,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 237
+  },
+  {
+    "date": "2021-02-24",
+    "newCasesBySpecimenDate": 7325,
+    "newLFDTests": 428547,
+    "newCasesLFDOnlyBySpecimenDate": 451,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 237
+  },
+  {
+    "date": "2021-02-25",
+    "newCasesBySpecimenDate": 6656,
+    "newLFDTests": 427975,
+    "newCasesLFDOnlyBySpecimenDate": 442,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 207
+  },
+  {
+    "date": "2021-02-26",
+    "newCasesBySpecimenDate": 5700,
+    "newLFDTests": 315901,
+    "newCasesLFDOnlyBySpecimenDate": 357,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 152
+  },
+  {
+    "date": "2021-02-27",
+    "newCasesBySpecimenDate": 4122,
+    "newLFDTests": 112710,
+    "newCasesLFDOnlyBySpecimenDate": 193,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 97
+  },
+  {
+    "date": "2021-02-28",
+    "newCasesBySpecimenDate": 3985,
+    "newLFDTests": 357334,
+    "newCasesLFDOnlyBySpecimenDate": 257,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 186
+  },
+  {
+    "date": "2021-03-01",
+    "newCasesBySpecimenDate": 5948,
+    "newLFDTests": 584057,
+    "newCasesLFDOnlyBySpecimenDate": 479,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 253
+  },
+  {
+    "date": "2021-03-02",
+    "newCasesBySpecimenDate": 5708,
+    "newLFDTests": 402965,
+    "newCasesLFDOnlyBySpecimenDate": 415,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 221
+  },
+  {
+    "date": "2021-03-03",
+    "newCasesBySpecimenDate": 5150,
+    "newLFDTests": 568452,
+    "newCasesLFDOnlyBySpecimenDate": 453,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 241
+  },
+  {
+    "date": "2021-03-04",
+    "newCasesBySpecimenDate": 4860,
+    "newLFDTests": 750057,
+    "newCasesLFDOnlyBySpecimenDate": 545,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 185
+  },
+  {
+    "date": "2021-03-05",
+    "newCasesBySpecimenDate": 4659,
+    "newLFDTests": 704312,
+    "newCasesLFDOnlyBySpecimenDate": 475,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 190
+  },
+  {
+    "date": "2021-03-06",
+    "newCasesBySpecimenDate": 3731,
+    "newLFDTests": 183438,
+    "newCasesLFDOnlyBySpecimenDate": 249,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 183
+  },
+  {
+    "date": "2021-03-07",
+    "newCasesBySpecimenDate": 3588,
+    "newLFDTests": 660572,
+    "newCasesLFDOnlyBySpecimenDate": 387,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 272
+  },
+  {
+    "date": "2021-03-08",
+    "newCasesBySpecimenDate": 5763,
+    "newLFDTests": 1501832,
+    "newCasesLFDOnlyBySpecimenDate": 838,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 418
+  },
+  {
+    "date": "2021-03-09",
+    "newCasesBySpecimenDate": 5343,
+    "newLFDTests": 1197232,
+    "newCasesLFDOnlyBySpecimenDate": 703,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 345
+  },
+  {
+    "date": "2021-03-10",
+    "newCasesBySpecimenDate": 5133,
+    "newLFDTests": 1294679,
+    "newCasesLFDOnlyBySpecimenDate": 722,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 359
+  },
+  {
+    "date": "2021-03-11",
+    "newCasesBySpecimenDate": 4811,
+    "newLFDTests": 1393197,
+    "newCasesLFDOnlyBySpecimenDate": 665,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 333
+  },
+  {
+    "date": "2021-03-12",
+    "newCasesBySpecimenDate": 4709,
+    "newLFDTests": 1194636,
+    "newCasesLFDOnlyBySpecimenDate": 640,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 341
+  },
+  {
+    "date": "2021-03-13",
+    "newCasesBySpecimenDate": 3460,
+    "newLFDTests": 181233,
+    "newCasesLFDOnlyBySpecimenDate": 251,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 281
+  },
+  {
+    "date": "2021-03-14",
+    "newCasesBySpecimenDate": 3617,
+    "newLFDTests": 837219,
+    "newCasesLFDOnlyBySpecimenDate": 535,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 482
+  },
+  {
+    "date": "2021-03-15",
+    "newCasesBySpecimenDate": 5519,
+    "newLFDTests": 1509265,
+    "newCasesLFDOnlyBySpecimenDate": 999,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 465
+  },
+  {
+    "date": "2021-03-16",
+    "newCasesBySpecimenDate": 4587,
+    "newLFDTests": 1072834,
+    "newCasesLFDOnlyBySpecimenDate": 924,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 198
+  },
+  {
+    "date": "2021-03-17",
+    "newCasesBySpecimenDate": 3485,
+    "newLFDTests": 1369844,
+    "newCasesLFDOnlyBySpecimenDate": 1407,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 27
+  },
+  {
+    "date": "2021-03-18",
+    "newCasesBySpecimenDate": 1641,
+    "newLFDTests": 1114388,
+    "newCasesLFDOnlyBySpecimenDate": 1125,
+    "newCasesLFDConfirmedPCRBySpecimenDate": 0
+  }
+]
