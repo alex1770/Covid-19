@@ -16,13 +16,12 @@ dirname='apidata_lfd'
 
 # https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaCode=E92000001&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&metric=newCasesBySpecimenDate&format=csv
 
-req='filters=areaType=nation;areaName=england&structure={"date":"date","PCRcases":"newCasesBySpecimenDate","LFDtests":"newLFDTests","LFDcasesnoPCR":"newCasesLFDOnlyBySpecimenDate","LFDcasesPCRpos":"newCasesLFDConfirmedPCRBySpecimenDate"}'
+req='filters=areaType=nation;areaName=england&structure={"date":"date","newCasesBySpecimenDate":"newCasesBySpecimenDate","newLFDTests":"newLFDTests","newCasesLFDOnlyBySpecimenDate":"newCasesLFDOnlyBySpecimenDate","newCasesLFDConfirmedPCRBySpecimenDate":"newCasesLFDConfirmedPCRBySpecimenDate"}'
 
 data=get_data(req)
 
 updatedate=data[-1]['date']
 
-# Save case data because we might want to artificially implement cases-by-publication-date-and-age. (newCasesByPublishDateAgeDemographics not working)
 fn=os.path.join(dirname,updatedate)
 if len(sys.argv)==1 and os.path.isfile(fn): sys.exit(1)# Exit signalling no update needs to be done
 os.makedirs(dirname, exist_ok=True)
