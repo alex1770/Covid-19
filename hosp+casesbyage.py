@@ -107,7 +107,8 @@ def convertages(dd):
   return (ee,ages2)
 
 #date=max(hosp[-1]['date'],cases[-1]['date'])
-mindate=daytodate(datetoday(updatedate)-90)
+#mindate=daytodate(datetoday(updatedate)-90)
+mindate='2020-12-30'#daytodate(datetoday(updatedate)-90)
 hosp,hospages=convertages(newhosp)
 cases,caseages=convertages(newcases)
 deaths,deathages=convertages(mortdata)
