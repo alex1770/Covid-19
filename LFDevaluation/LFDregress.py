@@ -5,6 +5,8 @@ from scipy.optimize import minimize
 from scipy.special import gammaln
 
 keephalfterm=True
+#maxdate='9999-99-99'
+maxdate='2021-03-08'
 
 def datetoday(x):
   t=time.strptime(x+'UTC','%Y-%m-%d%Z')
@@ -18,13 +20,13 @@ def daytodate(r):
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=overview&metric=newCasesByPublishDate&format=csv' -O casesbypublication.csv
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaName=England&metric=maleCases&metric=femaleCases&format=csv' -O casesbyage.csv
 
-def loadcsv(fn,keephalfterm=True):
+def loadcsv(fn,keephalfterm=True,maxdate='9999-99-99'):
   dd={}
   with open(fn,"r") as fp:
     reader=csv.reader(fp)
     headings=[x.strip() for x in next(reader)]
     for row in reader:
-      if keephalfterm or row[0]!='2021-02-17':
+      if (keephalfterm or row[0]!='2021-02-17') and row[0]<=maxdate:
         for (name,x) in zip(headings,row):
           x=x.strip()
           if x.isdigit(): x=int(x)
@@ -32,9 +34,9 @@ def loadcsv(fn,keephalfterm=True):
   return dd
 
 print("Using LFD school numbers from table 7 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/973128/tests_conducted_2021_03_25.ods")
-if keephalfterm: print("Keeping half term 14 - 20 February")
-else: print("Discarding half term 14 - 20 February")
-dd=loadcsv("LFDschooltests.csv",keephalfterm=keephalfterm)
+if keephalfterm: print("Keeping half term 14-20 February")
+else: print("Discarding half term 14-20 February")
+dd=loadcsv("LFDschooltests.csv",keephalfterm=keephalfterm,maxdate=maxdate)
 dd['LFDnum']=list(map(sum,zip(dd['LFDpos'],dd['LFDneg'])))# Denominator = positive tests + negative tests (ignore unknown/void tests)
 
 # cc=loadcsv("engcasesbyspecimen.csv")
@@ -49,7 +51,9 @@ dd['LFDnum']=list(map(sum,zip(dd['LFDpos'],dd['LFDneg'])))# Denominator = positi
 cc=loadcsv("casesbyage.csv")
 cumdatetocases={}
 for (date,metric,age,value) in zip(cc['date'],cc['metric'],cc['age'],cc['value']):
-  if age=="10_to_14" or age=="15_to_19": cumdatetocases[date]=cumdatetocases.get(date,0)+value
+  #if age=="10_to_14" or age=="15_to_19": cumdatetocases[date]=cumdatetocases.get(date,0)+value
+  if age=="15_to_19": cumdatetocases[date]=cumdatetocases.get(date,0)+value
+  #if age=="5_to_9": cumdatetocases[date]=cumdatetocases.get(date,0)-value*.5
 print("Using England cases by age from https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaName=England&metric=maleCases&metric=femaleCases&format=csv")
 print()
 
@@ -76,14 +80,15 @@ def LL2(xx):
   return ll2
 
 best=(-1e9,)
-for offset in range(-15,7):
+for offset in range(0,5):# -15,7):
   cases=[]
   for date in dd["WeekEnding"]:
     day=datetoday(date)
     #cases.append(sum(datetocases[daytodate(d)] for d in range(day+offset-6,day+offset+1)))
     cases.append(cumdatetocases[daytodate(day+offset)]-cumdatetocases[daytodate(day+offset-7)])
-  if 0:# Sensitivity check, to check that the correlation between LFDpos and cases is not due to LFDpos feeding directly into cases
-    for i in range(len(cases)): cases[i]-=dd['LFDpos'][i]
+  #cases=cases[1:]+[cases[-1]*0.95]#alter
+  if 0:# Sensitivity check, to check that the correlation between LFDpos and cases is not due to LFDpos feeding directly into cases, or possibly a correction term
+    for i in range(len(cases)): cases[i]-=dd['LFDpos'][i]*0.3
   
   res=minimize(err,[1,1],method="SLSQP",bounds=[(1e-9,scale0),(1e-9,100)],options={"maxiter":1000})
   if not res.success: raise RuntimeError(res.message)
@@ -91,6 +96,11 @@ for offset in range(-15,7):
   xx=res.x
   fisher=LL2(xx)
   print("Offset %3d. Log likelihood = %8.3f. al = %6.4f%% . be = %8.3f"%((offset,LL,xx[0]/scale0*100,xx[1])))
+  if 1:
+    for (a,b,c,w) in zip(dd['LFDpos'],dd['LFDnum'],cases,dd['WeekEnding']):
+      lam=(xx[0]/scale0+xx[1]*c/population)*b
+      print("   w/e %s %8.3f  %6d"%(w,a*log(lam)-lam-gammaln(a+1),c))
+    print()
   if LL>best[0]: best=(LL,offset,res,fisher,cases)
 print()
 
