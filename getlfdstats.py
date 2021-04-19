@@ -2,11 +2,11 @@ import os,json,sys
 from requests import get
 
 def get_data(req):
-  url='https://api.coronavirus.data.gov.uk/v1/data?'
+  url='https://api.coronavirus.data.gov.uk/v2/data?'
   response = get(url+req, timeout=10)
   if not response.ok:
     raise RuntimeError(f'Request failed: { response.text }')
-  data=response.json()['data'][::-1]
+  data=response.json()['body'][::-1]
   for d in data:
     for x in d:
       if d[x]==None: d[x]=0
@@ -14,9 +14,7 @@ def get_data(req):
 
 dirname='apidata_lfd'
 
-# https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaCode=E92000001&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&metric=newCasesBySpecimenDate&format=csv
-
-req='filters=areaType=nation;areaName=england&structure={"date":"date","newCasesBySpecimenDate":"newCasesBySpecimenDate","newLFDTests":"newLFDTests","newCasesLFDOnlyBySpecimenDate":"newCasesLFDOnlyBySpecimenDate","newCasesLFDConfirmedPCRBySpecimenDate":"newCasesLFDConfirmedPCRBySpecimenDate"}'
+req='areaType=nation&areaName=England&metric=newCasesBySpecimenDate&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&format=json'
 
 data=get_data(req)
 
