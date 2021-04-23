@@ -61,7 +61,7 @@ def getdiff(data):
   for i in range(1,n):
     l={'date':data[i]['date']}
     for age in data[i]:
-      if age!='date': l[age]=data[i][age]-data[i-1][age]
+      if age!='date': l[age]=data[i][age]-data[i-1].get(age,0)
     newdata.append(l)
   return newdata
 
@@ -90,7 +90,7 @@ def unparse(r):
 # At the same time remove age brackets such as '60+' and '00_59' that strictly contain other age brackets, so avoiding overcounting
 # Return list of ages
 def convertages(dd):
-  ages0=[(x,parseage(x)) for x in dd[0] if x!='date']
+  ages0=[(x,parseage(x)) for x in dd[-1] if x!='date']
   ages1={}
   for (x,(a,b)) in ages0:
     for (y,(c,d)) in ages0:
@@ -101,7 +101,7 @@ def convertages(dd):
     e={}
     e['date']=d['date']
     for x in ages1:
-      e[ages1[x]]=d[x]
+      e[ages1[x]]=d.get(x,0)
     ee.append(e)
   ages2=sorted(ages1.values())
   return (ee,ages2)
