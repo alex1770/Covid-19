@@ -20,7 +20,12 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Israel","Czech Republic","Slovenia","Ireland","Lithuania","Netherlands","South Africa"]
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","South Africa","Slovakia","Portugal"]
 #selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","South Africa","Slovakia","Portugal"]
-selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Portugal"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Portugal"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Brazil"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Hungary","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Brazil"]
+#selectcountries=["UK","USA","Italy","Sweden","Germany","Hungary","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Uruguay","Brazil"]
+#selectcountries=["UK","USA","Sweden","Germany","Hungary","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile"]
+selectcountries=["UK","USA","Sweden","Germany","Hungary","S. Korea","France","Israel","Turkey","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
@@ -222,6 +227,9 @@ for zoomstate in [0,1]:
 allcountries=getdata.getcountrylist(source=source)
 countries=[x for x in allcountries if x in pop and pop[x]>=minpop]
 cases,deaths,maxdate=processdata(countries,data,period=period,perhead=perhead)
+# See above for why Sweden data is truncated early
+cases['Sweden']=(cases['Sweden'][0],cases['Sweden'][1][:-7])
+deaths['Sweden']=(deaths['Sweden'][0],deaths['Sweden'][1][:-12])
 
 for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
   countries=[x for x in stats if stats[x][1][-1]!='-']
