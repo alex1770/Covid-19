@@ -1,4 +1,5 @@
 # Estimate how many (non-Covid) deaths that would normally have occurred on a given day from the confirmed cases between day-27 and day
+# (remembering of course that confirmed cases is less than actual cases by some factor)
 import time,calendar,os,json,sys
 from stuff import *
 from requests import get
@@ -132,15 +133,24 @@ for (desc,dr) in [('m',deathrates['MaleDeathRate']),('f',deathrates['FemaleDeath
       w*=1-dr[a]
     adr[desc][age]=w1/w0
 
-for day in range(datetoday(mindate),datetoday(deaths[-1]['date'])):
+print("      Date      D      E     E/D   D/C*28   E/C*28")
+for day in range(datetoday(mindate),datetoday(deaths[-1]['date'])-1):
   caseind=day-datetoday(mcases[0]['date'])
   deathind=day-datetoday(deaths[0]['date'])
   totdeathind=day-datetoday(totdeaths[0]['date'])
   # Estimate background number of deaths that would have occurred in the confirmed cases from day-27 to day
-  totd=0
+  totc=totd=0
   for (xcases,dr) in [(mcases,adr['m']),(fcases,adr['f'])]:
     for back in range(28):
       for age in ages:
+        totc+=xcases[caseind-back][age]
         totd+=xcases[caseind-back][age]*dr[age]/365.2425
   td=totdeaths[totdeathind]['deaths']
-  print(daytodate(day),"%6d  %5.1f  %4.1f%%"%(td,totd,totd/td*100))
+  print(daytodate(day),"%6d  %5.1f   %4.1f%%   %5.3f%%   %5.3f%%"%(td,totd,totd/td*100,td/totc*28*100,totd/totc*28*100))
+print("      Date      D      E     E/D   D/C*28   E/C*28")
+print()
+print("D = Number of Covid deaths on this day")
+print("E = Expected number of deaths by natural casues on this day from the confirmed cases within the last 28 days")
+print("C = Confirmed cases within last 28 days")
+print("D/C*28 = CFR")
+print("E/C*28 = Natural-cause-IFR")
