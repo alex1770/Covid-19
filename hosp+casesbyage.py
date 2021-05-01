@@ -37,14 +37,22 @@ def get_data(req):
           else: val=y['deaths']
           e[y['age']]=e.get(y['age'],0)+val
     data1.append(e)
-
   return data1
 
 req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"newDeaths28DaysByDeathDateAgeDemographics"}'; mortdata=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"cumAdmissionsByAge"}';                        hospdata=get_data(req)
-req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases","female":"femaleCases"}';          casedata=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases"}';              malecases=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","female":"femaleCases"}';          femalecases=get_data(req)
+
+casedata=[]
+for (m,f) in zip(malecases,femalecases):
+  d={'date': m['date']}
+  assert m['date']==f['date']
+  for s in [m,f]:
+    for x in s:
+      if x!='date': d[x]=d.get(x,0)+s[x]
+  casedata.append(d)
+
 updatedate=casedata[-1]['date']
 now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
