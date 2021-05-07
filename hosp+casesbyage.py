@@ -297,17 +297,19 @@ title='Hospital admissions and confirmed cases/deaths ratios for Covid-19 in Eng
 data=[]
 
 for (desc, dat, ages, cutoff0, cutoff1, cutoff2) in [
-    ("Hospital admissions", hosp, hospages, 0, 65, 65),
-    ("Confirmed cases", cases, caseages, 0, 60, 70),
-    ("Deaths", deaths, deathages, 0, 60, 70)]:
+    ("Hospital admissions", hosp, hospages, 0, 18, 65),
+    ("Confirmed cases", cases, caseages, 0, 50, 55),
+    ("Deaths", deaths, deathages, 0, 50, 55)]:
   lowages=[age for age in ages if age[0]>=cutoff0 and age[1]<=cutoff1]
   highages=[age for age in ages if age[0]>=cutoff2]
   for d in dat:
     if d["date"]=="2021-01-01": break
   f=sum(d[a] for a in highages)/sum(d[a] for a in lowages)
+  if desc=="Deaths": maxdate="2021-03-29"
+  else: maxdate="9999-99-99"
   data.append({
     'title': desc+":    %.2g * (aged %s) / (aged %s)"%(1/f,unparse((highages[0][0],highages[-1][1])),unparse((lowages[0][0],lowages[-1][1]))),
-    'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages)/f) for d in dat if d['date']>=mindate]
+    'values': [(d['date'],sum(d[a] for a in highages)/sum(d[a] for a in lowages)/f) for d in dat if d['date']>=mindate and d['date']<=maxdate]
   })
 
 makegraph(title=title, data=data, mindate=mindate, ylabel='Adjusted Ratio', outfn='admissionandcaseageratios2.png')
