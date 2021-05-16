@@ -1,9 +1,9 @@
 import csv,time,calendar,os,json,sys,datetime
 
 # Returns map: {headings} -> [list of entries]
-def loadcsv(fn):
+def loadcsv(fn,sep=","):
   with open(fn,'r') as fp:
-    reader=csv.reader(fp)
+    reader=csv.reader(fp,delimiter=sep)
     headings=next(reader)
     out={}
     for (i,h) in enumerate(headings):

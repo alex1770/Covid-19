@@ -1,0 +1,180 @@
+Region,week,S gene detection result,case count,percent,perc_95CI_low,perc_95CI_high
+East Midlands,03/03/2021,S gene positive,21,1.5,1.0,2.4
+East Midlands,03/03/2021,SGTF,1360,98.5,97.6,99.0
+East Midlands,10/03/2021,S gene positive,28,1.1,0.8,1.6
+East Midlands,10/03/2021,SGTF,2461,98.9,98.4,99.2
+East Midlands,17/03/2021,S gene positive,6,0.2,0.1,0.6
+East Midlands,17/03/2021,SGTF,2457,99.8,99.4,99.9
+East Midlands,24/03/2021,S gene positive,4,0.2,0.1,0.5
+East Midlands,24/03/2021,SGTF,2068,99.8,99.5,99.9
+East Midlands,31/03/2021,S gene positive,21,1.5,0.9,2.3
+East Midlands,31/03/2021,SGTF,1410,98.5,97.7,99.1
+East Midlands,07/04/2021,S gene positive,23,3,2.0,4.5
+East Midlands,07/04/2021,SGTF,745,97,95.5,98.0
+East Midlands,14/04/2021,S gene positive,46,5.9,4.4,7.8
+East Midlands,14/04/2021,SGTF,735,94.1,92.2,95.6
+East Midlands,21/04/2021,S gene positive,64,13.3,10.5,16.8
+East Midlands,21/04/2021,SGTF,416,86.7,83.2,89.5
+East Midlands,28/04/2021,S gene positive,82,13.9,11.2,17.0
+East Midlands,28/04/2021,SGTF,509,86.1,83.0,88.8
+East Midlands,05/05/2021,S gene positive,178,22.2,19.4,25.2
+East Midlands,05/05/2021,SGTF,625,77.8,74.8,80.6
+East of England,03/03/2021,S gene positive,22,2,1.3,3.1
+East of England,03/03/2021,SGTF,1066,98,96.9,98.7
+East of England,10/03/2021,S gene positive,18,1.2,0.7,1.9
+East of England,10/03/2021,SGTF,1476,98.8,98.1,99.3
+East of England,17/03/2021,S gene positive,17,1.2,0.7,2.0
+East of England,17/03/2021,SGTF,1403,98.8,98.0,99.3
+East of England,24/03/2021,S gene positive,9,0.9,0.4,1.7
+East of England,24/03/2021,SGTF,1043,99.1,98.3,99.6
+East of England,31/03/2021,S gene positive,14,1.8,1.1,3.2
+East of England,31/03/2021,SGTF,745,98.2,96.8,98.9
+East of England,07/04/2021,S gene positive,21,4.9,3.1,7.5
+East of England,07/04/2021,SGTF,406,95.1,92.5,96.9
+East of England,14/04/2021,S gene positive,23,5.1,3.4,7.7
+East of England,14/04/2021,SGTF,424,94.9,92.3,96.6
+East of England,21/04/2021,S gene positive,39,12.3,9.0,16.5
+East of England,21/04/2021,SGTF,279,87.7,83.5,91.0
+East of England,28/04/2021,S gene positive,99,23.7,19.7,28.1
+East of England,28/04/2021,SGTF,319,76.3,71.9,80.3
+East of England,05/05/2021,S gene positive,165,35.9,31.5,40.5
+East of England,05/05/2021,SGTF,295,64.1,59.5,68.5
+London,03/03/2021,S gene positive,48,3.9,2.9,5.2
+London,03/03/2021,SGTF,1170,96.1,94.8,97.1
+London,10/03/2021,S gene positive,64,5.2,4.1,6.7
+London,10/03/2021,SGTF,1159,94.8,93.3,95.9
+London,17/03/2021,S gene positive,39,3.7,2.7,5.0
+London,17/03/2021,SGTF,1023,96.3,95.0,97.3
+London,24/03/2021,S gene positive,27,4.5,3.0,6.5
+London,24/03/2021,SGTF,576,95.5,93.5,97.0
+London,31/03/2021,S gene positive,46,11.2,8.4,14.8
+London,31/03/2021,SGTF,364,88.8,85.2,91.6
+London,07/04/2021,S gene positive,70,16.7,13.4,20.8
+London,07/04/2021,SGTF,348,83.3,79.2,86.6
+London,14/04/2021,S gene positive,100,24.2,20.2,28.6
+London,14/04/2021,SGTF,314,75.8,71.4,79.8
+London,21/04/2021,S gene positive,94,34.3,28.8,40.3
+London,21/04/2021,SGTF,180,65.7,59.7,71.2
+London,28/04/2021,S gene positive,137,50.9,44.8,57.0
+London,28/04/2021,SGTF,132,49.1,43.0,55.2
+London,05/05/2021,S gene positive,203,53.7,48.5,58.8
+London,05/05/2021,SGTF,175,46.3,41.2,51.5
+North East,03/03/2021,S gene positive,5,0.3,0.1,0.8
+North East,03/03/2021,SGTF,1533,99.7,99.2,99.9
+North East,10/03/2021,S gene positive,4,0.3,0.1,0.7
+North East,10/03/2021,SGTF,1481,99.7,99.3,99.9
+North East,17/03/2021,S gene positive,3,0.2,0.1,0.7
+North East,17/03/2021,SGTF,1305,99.8,99.3,99.9
+North East,24/03/2021,SGTF,1010,100,99.5,100.0
+North East,31/03/2021,S gene positive,4,0.6,0.2,1.6
+North East,31/03/2021,SGTF,683,99.4,98.4,99.8
+North East,07/04/2021,S gene positive,1,0.3,0.0,1.7
+North East,07/04/2021,SGTF,373,99.7,98.3,100.0
+North East,14/04/2021,S gene positive,4,1.8,0.6,4.7
+North East,14/04/2021,SGTF,223,98.2,95.3,99.4
+North East,21/04/2021,S gene positive,5,2,0.7,4.8
+North East,21/04/2021,SGTF,246,98,95.2,99.3
+North East,28/04/2021,S gene positive,11,10.8,5.8,18.9
+North East,28/04/2021,SGTF,91,89.2,81.1,94.2
+North East,05/05/2021,S gene positive,6,10.7,4.4,22.6
+North East,05/05/2021,SGTF,50,89.3,77.4,95.6
+North West,03/03/2021,S gene positive,35,0.9,0.7,1.3
+North West,03/03/2021,SGTF,3706,99.1,98.7,99.3
+North West,10/03/2021,S gene positive,32,0.8,0.6,1.2
+North West,10/03/2021,SGTF,3785,99.2,98.8,99.4
+North West,17/03/2021,S gene positive,27,0.8,0.5,1.1
+North West,17/03/2021,SGTF,3487,99.2,98.9,99.5
+North West,24/03/2021,S gene positive,29,1,0.7,1.4
+North West,24/03/2021,SGTF,2886,99,98.6,99.3
+North West,31/03/2021,S gene positive,25,1.4,0.9,2.0
+North West,31/03/2021,SGTF,1826,98.6,98.0,99.1
+North West,07/04/2021,S gene positive,30,2.2,1.5,3.2
+North West,07/04/2021,SGTF,1335,97.8,96.8,98.5
+North West,14/04/2021,S gene positive,49,4.7,3.5,6.2
+North West,14/04/2021,SGTF,999,95.3,93.8,96.5
+North West,21/04/2021,S gene positive,130,12,10.1,14.1
+North West,21/04/2021,SGTF,955,88,85.9,89.9
+North West,28/04/2021,S gene positive,391,31.6,29.1,34.3
+North West,28/04/2021,SGTF,845,68.4,65.7,70.9
+North West,05/05/2021,S gene positive,903,56.6,54.1,59.1
+North West,05/05/2021,SGTF,692,43.4,40.9,45.9
+South East,03/03/2021,S gene positive,23,1.8,1.2,2.7
+South East,03/03/2021,SGTF,1248,98.2,97.3,98.8
+South East,10/03/2021,S gene positive,15,1.3,0.7,2.1
+South East,10/03/2021,SGTF,1164,98.7,97.9,99.3
+South East,17/03/2021,S gene positive,13,1.2,0.7,2.1
+South East,17/03/2021,SGTF,1072,98.8,97.9,99.3
+South East,24/03/2021,S gene positive,5,0.8,0.3,1.9
+South East,24/03/2021,SGTF,628,99.2,98.1,99.7
+South East,31/03/2021,S gene positive,27,5.5,3.7,8.0
+South East,31/03/2021,SGTF,466,94.5,92.0,96.3
+South East,07/04/2021,S gene positive,21,4.8,3.1,7.3
+South East,07/04/2021,SGTF,418,95.2,92.7,96.9
+South East,14/04/2021,S gene positive,52,12.9,9.8,16.6
+South East,14/04/2021,SGTF,352,87.1,83.4,90.2
+South East,21/04/2021,S gene positive,35,17.2,12.5,23.3
+South East,21/04/2021,SGTF,168,82.8,76.7,87.5
+South East,28/04/2021,S gene positive,41,20.1,15.0,26.4
+South East,28/04/2021,SGTF,163,79.9,73.6,85.0
+South East,05/05/2021,S gene positive,66,30,24.1,36.6
+South East,05/05/2021,SGTF,154,70,63.4,75.9
+South West,03/03/2021,S gene positive,6,1.4,0.6,3.2
+South West,03/03/2021,SGTF,413,98.6,96.8,99.4
+South West,10/03/2021,S gene positive,3,1.1,0.3,3.5
+South West,10/03/2021,SGTF,268,98.9,96.5,99.7
+South West,17/03/2021,S gene positive,4,2.1,0.7,5.6
+South West,17/03/2021,SGTF,188,97.9,94.4,99.3
+South West,24/03/2021,S gene positive,3,1.5,0.4,4.8
+South West,24/03/2021,SGTF,193,98.5,95.2,99.6
+South West,31/03/2021,S gene positive,9,6.2,3.1,11.9
+South West,31/03/2021,SGTF,135,93.8,88.1,96.9
+South West,07/04/2021,S gene positive,5,4.3,1.6,10.2
+South West,07/04/2021,SGTF,112,95.7,89.8,98.4
+South West,14/04/2021,S gene positive,5,9.4,3.5,21.4
+South West,14/04/2021,SGTF,48,90.6,78.6,96.5
+South West,21/04/2021,S gene positive,13,31,18.1,47.2
+South West,21/04/2021,SGTF,29,69,52.8,81.9
+South West,28/04/2021,S gene positive,11,45.8,26.2,66.8
+South West,28/04/2021,SGTF,13,54.2,33.2,73.8
+South West,05/05/2021,S gene positive,13,61.9,38.7,81.0
+South West,05/05/2021,SGTF,8,38.1,19.0,61.3
+West Midlands,03/03/2021,S gene positive,25,1.8,1.2,2.7
+West Midlands,03/03/2021,SGTF,1347,98.2,97.3,98.8
+West Midlands,10/03/2021,S gene positive,30,1.3,0.9,1.9
+West Midlands,10/03/2021,SGTF,2209,98.7,98.1,99.1
+West Midlands,17/03/2021,S gene positive,33,1.6,1.1,2.3
+West Midlands,17/03/2021,SGTF,2001,98.4,97.7,98.9
+West Midlands,24/03/2021,S gene positive,24,1.5,1.0,2.3
+West Midlands,24/03/2021,SGTF,1531,98.5,97.7,99.0
+West Midlands,31/03/2021,S gene positive,24,2.1,1.4,3.1
+West Midlands,31/03/2021,SGTF,1139,97.9,96.9,98.6
+West Midlands,07/04/2021,S gene positive,15,1.7,1.0,2.9
+West Midlands,07/04/2021,SGTF,860,98.3,97.1,99.0
+West Midlands,14/04/2021,S gene positive,26,3.6,2.4,5.2
+West Midlands,14/04/2021,SGTF,705,96.4,94.8,97.6
+West Midlands,21/04/2021,S gene positive,51,8.9,6.7,11.6
+West Midlands,21/04/2021,SGTF,525,91.1,88.4,93.3
+West Midlands,28/04/2021,S gene positive,64,12.9,10.2,16.3
+West Midlands,28/04/2021,SGTF,431,87.1,83.7,89.8
+West Midlands,05/05/2021,S gene positive,72,16.3,13.0,20.1
+West Midlands,05/05/2021,SGTF,370,83.7,79.9,87.0
+Yorkshire and Humber,03/03/2021,S gene positive,36,0.9,0.6,1.2
+Yorkshire and Humber,03/03/2021,SGTF,4050,99.1,98.8,99.4
+Yorkshire and Humber,10/03/2021,S gene positive,14,0.3,0.2,0.5
+Yorkshire and Humber,10/03/2021,SGTF,4582,99.7,99.5,99.8
+Yorkshire and Humber,17/03/2021,S gene positive,19,0.4,0.2,0.6
+Yorkshire and Humber,17/03/2021,SGTF,4841,99.6,99.4,99.8
+Yorkshire and Humber,24/03/2021,S gene positive,17,0.4,0.2,0.7
+Yorkshire and Humber,24/03/2021,SGTF,4118,99.6,99.3,99.8
+Yorkshire and Humber,31/03/2021,S gene positive,16,0.6,0.3,0.9
+Yorkshire and Humber,31/03/2021,SGTF,2853,99.4,99.1,99.7
+Yorkshire and Humber,07/04/2021,S gene positive,11,0.5,0.2,0.9
+Yorkshire and Humber,07/04/2021,SGTF,2319,99.5,99.1,99.8
+Yorkshire and Humber,14/04/2021,S gene positive,17,1,0.6,1.6
+Yorkshire and Humber,14/04/2021,SGTF,1745,99,98.4,99.4
+Yorkshire and Humber,21/04/2021,S gene positive,26,1.5,1.0,2.2
+Yorkshire and Humber,21/04/2021,SGTF,1757,98.5,97.8,99.0
+Yorkshire and Humber,28/04/2021,S gene positive,27,5.1,3.4,7.4
+Yorkshire and Humber,28/04/2021,SGTF,505,94.9,92.6,96.6
+Yorkshire and Humber,05/05/2021,S gene positive,24,8.2,5.4,12.1
+Yorkshire and Humber,05/05/2021,SGTF,270,91.8,87.9,94.6

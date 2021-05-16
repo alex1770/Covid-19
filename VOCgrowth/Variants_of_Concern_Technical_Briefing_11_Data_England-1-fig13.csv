@@ -1,0 +1,318 @@
+week,phec.name,ltla.code,ltla.name,Number classifiable cases,Number S gene cases,Percent S gene cases,Percent_tests TaqPath
+02/05/2021,North West,E08000001,Bolton,404,350,86.6,53.4
+02/05/2021,North West,E06000008,Blackburn with Darwen,128,110,85.9,59.5
+02/05/2021,North West,E08000014,Sefton,116,105,90.5,69.3
+02/05/2021,East of England,E06000055,Bedford,84,71,84.5,33.5
+02/05/2021,East Midlands,E06000018,Nottingham,73,52,71.2,68.7
+02/05/2021,East Midlands,E06000016,Leicester,91,33,36.3,62.0
+02/05/2021,North West,E08000010,Wigan,60,29,48.3,43.4
+02/05/2021,East Midlands,E07000155,South Northamptonshire,32,25,78.1,40.2
+02/05/2021,North West,E08000005,Rochdale,83,23,27.7,61.6
+02/05/2021,London,E09000017,Hillingdon,26,23,88.5,28.5
+02/05/2021,London,E09000018,Hounslow,27,21,77.8,18.0
+02/05/2021,East of England,E06000056,Central Bedfordshire,36,19,52.8,46.3
+02/05/2021,North West,E08000006,Salford,60,15,25,40.3
+02/05/2021,London,E09000005,Brent,27,15,55.6,20.8
+02/05/2021,North West,E07000118,Chorley,21,13,61.9,66.8
+02/05/2021,West Midlands,E08000031,Wolverhampton,30,13,43.3,57.3
+02/05/2021,North West,E08000003,Manchester,155,13,8.4,50.3
+02/05/2021,North West,E08000012,Liverpool,38,12,31.6,69.6
+02/05/2021,North West,E08000002,Bury,23,12,52.2,57.4
+02/05/2021,London,E09000007,Camden,16,12,75,17.3
+02/05/2021,West Midlands,E08000025,Birmingham,83,11,13.3,48.4
+02/05/2021,East Midlands,E07000152,East Northamptonshire,15,11,73.3,42.5
+02/05/2021,East of England,E07000070,Chelmsford,12,11,91.7,30.4
+02/05/2021,North West,E07000117,Burnley,20,10,50,61.5
+02/05/2021,West Midlands,E08000030,Walsall,39,10,25.6,54.6
+02/05/2021,Yorkshire and Humber,E08000034,Kirklees,52,10,19.2,50.3
+02/05/2021,London,E09000008,Croydon,13,10,76.9,21.3
+02/05/2021,West Midlands,E08000026,Coventry,63,9,14.3,61.0
+02/05/2021,North West,E07000122,Pendle,23,9,39.1,58.4
+02/05/2021,East of England,E06000032,Luton,41,9,22,40.8
+02/05/2021,South East,E07000106,Canterbury,10,9,90,16.1
+02/05/2021,East Midlands,E07000173,Gedling,24,8,33.3,66.8
+02/05/2021,North West,E07000123,Preston,17,8,47.1,56.7
+02/05/2021,East of England,E07000241,Welwyn Hatfield,12,8,66.7,54.9
+02/05/2021,London,E09000010,Enfield,19,8,42.1,31.7
+02/05/2021,London,E09000006,Bromley,12,8,66.7,27.0
+02/05/2021,London,E09000011,Greenwich,15,8,53.3,26.6
+02/05/2021,North West,E08000008,Tameside,39,7,17.9,63.2
+02/05/2021,West Midlands,E06000019,"Herefordshire, County of",21,7,33.3,59.7
+02/05/2021,West Midlands,E08000028,Sandwell,44,7,15.9,54.5
+02/05/2021,London,E09000030,Tower Hamlets,22,7,31.8,42.4
+02/05/2021,East of England,E07000103,Watford,29,7,24.1,35.9
+02/05/2021,London,E09000025,Newham,13,7,53.8,34.2
+02/05/2021,London,E09000004,Bexley,15,7,46.7,21.6
+02/05/2021,London,E09000026,Redbridge,18,6,33.3,63.5
+02/05/2021,North West,E07000127,West Lancashire,8,6,75,62.2
+02/05/2021,East of England,E06000042,Milton Keynes,24,6,25,52.7
+02/05/2021,Yorkshire and Humber,E08000019,Sheffield,55,6,10.9,50.9
+02/05/2021,London,E09000031,Waltham Forest,14,6,42.9,32.2
+02/05/2021,London,E09000023,Lewisham,12,6,50,28.3
+02/05/2021,East Midlands,E07000154,Northampton,47,5,10.6,45.4
+02/05/2021,South East,E06000038,Reading,7,5,71.4,21.4
+02/05/2021,London,E09000009,Ealing,11,5,45.5,16.8
+02/05/2021,South East,E07000092,Rushmoor,5,5,100,14.1
+02/05/2021,South East,E06000039,Slough,5,5,100,12.6
+02/05/2021,East Midlands,E07000172,Broxtowe,16,4,25,70.5
+02/05/2021,Yorkshire and Humber,E06000013,North Lincolnshire,11,4,36.4,61.2
+02/05/2021,North West,E07000124,Ribble Valley,8,4,50,54.6
+02/05/2021,North West,E08000007,Stockport,66,4,6.1,54.4
+02/05/2021,North West,E08000009,Trafford,42,4,9.5,52.4
+02/05/2021,Yorkshire and Humber,E08000032,Bradford,53,4,7.5,39.9
+02/05/2021,Yorkshire and Humber,E08000035,Leeds,63,4,6.3,36.8
+02/05/2021,London,E09000016,Havering,7,4,57.1,32.7
+02/05/2021,London,E09000003,Barnet,9,4,44.4,25.8
+02/05/2021,South West,E06000054,Wiltshire,5,4,80,21.8
+02/05/2021,South East,E06000036,Bracknell Forest,6,4,66.7,21.2
+02/05/2021,South East,E07000107,Dartford,4,4,100,20.9
+02/05/2021,London,E09000012,Hackney,12,4,33.3,18.1
+02/05/2021,South East,E07000089,Hart,4,4,100,14.2
+02/05/2021,London,E09000032,Wandsworth,9,4,44.4,13.6
+02/05/2021,North West,E08000015,Wirral,12,3,25,68.5
+02/05/2021,West Midlands,E07000236,Redditch,6,3,50,66.0
+02/05/2021,West Midlands,E07000220,Rugby,33,3,9.1,63.2
+02/05/2021,North West,E08000013,St. Helens,8,3,37.5,61.4
+02/05/2021,North West,E08000004,Oldham,50,3,6,60.0
+02/05/2021,West Midlands,E08000027,Dudley,29,3,10.3,58.4
+02/05/2021,East Midlands,E07000130,Charnwood,11,3,27.3,57.3
+02/05/2021,North West,E07000125,Rossendale,7,3,42.9,57.2
+02/05/2021,East Midlands,E07000176,Rushcliffe,6,3,50,56.8
+02/05/2021,East Midlands,E07000135,Oadby and Wigston,7,3,42.9,39.3
+02/05/2021,East of England,E07000242,East Hertfordshire,4,3,75,37.7
+02/05/2021,London,E09000002,Barking and Dagenham,6,3,50,35.9
+02/05/2021,East of England,E07000066,Basildon,4,3,75,27.0
+02/05/2021,London,E09000015,Harrow,4,3,75,25.6
+02/05/2021,South West,E06000030,Swindon,5,3,60,25.4
+02/05/2021,London,E09000024,Merton,5,3,60,15.2
+02/05/2021,London,E09000020,Kensington and Chelsea,8,3,37.5,13.5
+02/05/2021,South East,E06000040,Windsor and Maidenhead,5,3,60,7.5
+02/05/2021,West Midlands,E07000219,Nuneaton and Bedworth,24,2,8.3,73.2
+02/05/2021,East Midlands,E07000037,High Peak,20,2,10,68.3
+02/05/2021,West Midlands,E07000197,Stafford,9,2,22.2,65.6
+02/05/2021,North West,E08000011,Knowsley,8,2,25,63.1
+02/05/2021,East Midlands,E06000015,Derby,24,2,8.3,61.4
+02/05/2021,North West,E06000049,Cheshire East,34,2,5.9,59.5
+02/05/2021,North West,E06000050,Cheshire West and Chester,9,2,22.2,58.4
+02/05/2021,West Midlands,E07000237,Worcester,4,2,50,56.4
+02/05/2021,East of England,E07000243,Stevenage,3,2,66.7,53.5
+02/05/2021,North West,E07000119,Fylde,9,2,22.2,52.5
+02/05/2021,North West,E06000006,Halton,13,2,15.4,45.2
+02/05/2021,East of England,E07000095,Broxbourne,2,2,100,34.6
+02/05/2021,South East,E07000179,South Oxfordshire,2,2,100,30.0
+02/05/2021,East of England,E07000071,Colchester,7,2,28.6,27.5
+02/05/2021,East of England,E07000148,Norwich,7,2,28.6,26.4
+02/05/2021,South East,E07000093,Test Valley,3,2,66.7,25.8
+02/05/2021,North East,E08000022,North Tyneside,8,2,25,23.2
+02/05/2021,South East,E06000041,Wokingham,3,2,66.7,21.6
+02/05/2021,North East,E06000005,Darlington,3,2,66.7,21.4
+02/05/2021,East of England,E07000008,Cambridge,9,2,22.2,21.1
+02/05/2021,South East,E06000045,Southampton,12,2,16.7,18.0
+02/05/2021,London,E09000022,Lambeth,4,2,50,17.4
+02/05/2021,South East,E07000105,Ashford,6,2,33.3,14.6
+02/05/2021,South East,E07000006,South Bucks,2,2,100,11.5
+02/05/2021,South East,E07000116,Tunbridge Wells,4,2,50,10.9
+02/05/2021,Yorkshire and Humber,E06000014,York,6,2,33.3,10.8
+02/05/2021,South East,E07000213,Spelthorne,2,2,100,6.0
+02/05/2021,South East,E07000228,Mid Sussex,2,2,100,3.8
+02/05/2021,South East,E06000043,Brighton and Hove,6,2,33.3,3.4
+02/05/2021,South West,E07000081,Gloucester,2,2,100,1.3
+02/05/2021,East Midlands,E07000036,Erewash,191,1,0.5,83.4
+02/05/2021,West Midlands,E06000020,Telford and Wrekin,6,1,16.7,71.5
+02/05/2021,West Midlands,E07000235,Malvern Hills,1,1,100,63.5
+02/05/2021,East Midlands,E07000132,Hinckley and Bosworth,19,1,5.3,63.4
+02/05/2021,East Midlands,E07000038,North East Derbyshire,9,1,11.1,63.3
+02/05/2021,North West,E07000126,South Ribble,9,1,11.1,62.6
+02/05/2021,Yorkshire and Humber,E06000010,"Kingston upon Hull, City of",14,1,7.1,60.1
+02/05/2021,North West,E07000121,Lancaster,37,1,2.7,58.4
+02/05/2021,East Midlands,E07000129,Blaby,14,1,7.1,54.6
+02/05/2021,North West,E07000128,Wyre,13,1,7.7,53.4
+02/05/2021,East Midlands,E07000137,East Lindsey,16,1,6.2,51.4
+02/05/2021,North West,E06000009,Blackpool,19,1,5.3,50.2
+02/05/2021,East Midlands,E07000153,Kettering,20,1,5,44.6
+02/05/2021,West Midlands,E08000029,Solihull,16,1,6.2,43.4
+02/05/2021,East of England,E07000096,Dacorum,10,1,10,43.3
+02/05/2021,East Midlands,E07000150,Corby,24,1,4.2,39.5
+02/05/2021,East of England,E07000098,Hertsmere,7,1,14.3,38.7
+02/05/2021,East of England,E07000102,Three Rivers,14,1,7.1,36.6
+02/05/2021,Yorkshire and Humber,E06000011,East Riding of Yorkshire,13,1,7.7,33.8
+02/05/2021,East of England,E07000202,Ipswich,2,1,50,31.4
+02/05/2021,South East,E07000180,Vale of White Horse,7,1,14.3,29.1
+02/05/2021,South East,E06000044,Portsmouth,4,1,25,28.3
+02/05/2021,London,E09000014,Haringey,7,1,14.3,23.5
+02/05/2021,South East,E06000037,West Berkshire,5,1,20,22.6
+02/05/2021,North East,E08000021,Newcastle upon Tyne,13,1,7.7,22.0
+02/05/2021,East of England,E07000149,South Norfolk,8,1,12.5,21.6
+02/05/2021,London,E09000028,Southwark,3,1,33.3,20.3
+02/05/2021,North East,E06000004,Stockton-on-Tees,16,1,6.2,19.8
+02/05/2021,South East,E07000094,Winchester,1,1,100,19.3
+02/05/2021,North East,E06000047,County Durham,15,1,6.7,18.6
+02/05/2021,London,E09000019,Islington,9,1,11.1,18.5
+02/05/2021,North East,E06000002,Middlesbrough,13,1,7.7,18.0
+02/05/2021,North East,E08000023,South Tyneside,2,1,50,17.5
+02/05/2021,South East,E07000111,Sevenoaks,2,1,50,16.4
+02/05/2021,London,E09000033,Westminster,8,1,12.5,14.1
+02/05/2021,London,E09000013,Hammersmith and Fulham,4,1,25,11.8
+02/05/2021,South East,E07000110,Maidstone,8,1,12.5,11.7
+02/05/2021,South East,E07000112,Folkestone and Hythe,2,1,50,11.6
+02/05/2021,South East,E07000226,Crawley,3,1,33.3,11.1
+02/05/2021,South East,E07000211,Reigate and Banstead,2,1,50,10.7
+02/05/2021,South East,E07000217,Woking,2,1,50,9.1
+02/05/2021,South East,E07000210,Mole Valley,1,1,100,8.3
+02/05/2021,South East,E07000207,Elmbridge,4,1,25,8.1
+02/05/2021,London,E09000027,Richmond upon Thames,2,1,50,8.0
+02/05/2021,South East,E07000208,Epsom and Ewell,1,1,100,7.7
+02/05/2021,South East,E07000215,Tandridge,6,1,16.7,6.8
+02/05/2021,South West,E06000059,Dorset,2,1,50,5.8
+02/05/2021,South West,E06000023,"Bristol, City of",2,1,50,5.8
+02/05/2021,South West,E06000022,Bath and North East Somerset,1,1,100,3.4
+02/05/2021,South West,E06000024,North Somerset,1,1,100,2.5
+02/05/2021,South West,E07000078,Cheltenham,1,1,100,2.0
+02/05/2021,South West,E06000026,Plymouth,1,1,100,1.2
+02/05/2021,South West,E06000027,Torbay,2,1,50,0.5
+02/05/2021,West Midlands,E07000198,Staffordshire Moorlands,14,0,0,72.9
+02/05/2021,West Midlands,E06000021,Stoke-on-Trent,38,0,0,70.3
+02/05/2021,East Midlands,E07000034,Chesterfield,6,0,0,70.1
+02/05/2021,East Midlands,E07000170,Ashfield,2,0,0,69.5
+02/05/2021,East Midlands,E07000033,Bolsover,0,0,NA,69.5
+02/05/2021,West Midlands,E07000239,Wyre Forest,1,0,0,69.1
+02/05/2021,East Midlands,E07000138,Lincoln,24,0,0,67.5
+02/05/2021,East Midlands,E07000175,Newark and Sherwood,15,0,0,67.4
+02/05/2021,West Midlands,E07000218,North Warwickshire,7,0,0,67.1
+02/05/2021,West Midlands,E07000195,Newcastle-under-Lyme,5,0,0,67.0
+02/05/2021,East Midlands,E07000032,Amber Valley,1,0,0,66.6
+02/05/2021,East Midlands,E07000139,North Kesteven,13,0,0,65.4
+02/05/2021,East Midlands,E07000039,South Derbyshire,3,0,0,63.8
+02/05/2021,West Midlands,E07000193,East Staffordshire,7,0,0,62.7
+02/05/2021,East Midlands,E07000142,West Lindsey,4,0,0,62.7
+02/05/2021,East Midlands,E07000171,Bassetlaw,4,0,0,62.3
+02/05/2021,East Midlands,E07000035,Derbyshire Dales,1,0,0,62.1
+02/05/2021,West Midlands,E06000051,Shropshire,26,0,0,61.2
+02/05/2021,East Midlands,E07000174,Mansfield,11,0,0,60.9
+02/05/2021,North West,E07000120,Hyndburn,21,0,0,60.6
+02/05/2021,East Midlands,E07000133,Melton,13,0,0,60.2
+02/05/2021,West Midlands,E07000234,Bromsgrove,1,0,0,59.9
+02/05/2021,Yorkshire and Humber,E06000012,North East Lincolnshire,6,0,0,59.5
+02/05/2021,West Midlands,E07000238,Wychavon,2,0,0,59.0
+02/05/2021,West Midlands,E07000222,Warwick,4,0,0,58.6
+02/05/2021,West Midlands,E07000192,Cannock Chase,2,0,0,58.5
+02/05/2021,Yorkshire and Humber,E07000165,Harrogate,1,0,0,58.3
+02/05/2021,West Midlands,E07000221,Stratford-on-Avon,3,0,0,57.5
+02/05/2021,West Midlands,E07000199,Tamworth,2,0,0,57.1
+02/05/2021,West Midlands,E07000196,South Staffordshire,2,0,0,56.6
+02/05/2021,East Midlands,E06000017,Rutland,1,0,0,55.6
+02/05/2021,East Midlands,E07000134,North West Leicestershire,5,0,0,54.7
+02/05/2021,North West,E07000026,Allerdale,0,0,NA,53.7
+02/05/2021,North West,E07000027,Barrow-in-Furness,0,0,NA,52.9
+02/05/2021,East Midlands,E07000131,Harborough,26,0,0,52.9
+02/05/2021,East of England,E07000099,North Hertfordshire,1,0,0,51.7
+02/05/2021,North West,E07000029,Copeland,2,0,0,51.3
+02/05/2021,Yorkshire and Humber,E08000033,Calderdale,29,0,0,51.3
+02/05/2021,North West,E07000030,Eden,0,0,NA,50.7
+02/05/2021,North West,E07000028,Carlisle,0,0,NA,50.5
+02/05/2021,North West,E07000031,South Lakeland,1,0,0,50.3
+02/05/2021,Yorkshire and Humber,E08000017,Doncaster,33,0,0,50.0
+02/05/2021,Yorkshire and Humber,E08000016,Barnsley,20,0,0,49.7
+02/05/2021,Yorkshire and Humber,E08000018,Rotherham,12,0,0,49.2
+02/05/2021,East Midlands,E07000141,South Kesteven,9,0,0,47.1
+02/05/2021,Yorkshire and Humber,E08000036,Wakefield,34,0,0,47.0
+02/05/2021,South East,E07000004,Aylesbury Vale,11,0,0,46.3
+02/05/2021,East Midlands,E07000151,Daventry,8,0,0,43.8
+02/05/2021,East of England,E07000240,St Albans,3,0,0,43.7
+02/05/2021,East Midlands,E07000156,Wellingborough,24,0,0,43.1
+02/05/2021,West Midlands,E07000194,Lichfield,2,0,0,43.1
+02/05/2021,South East,E07000007,Wycombe,9,0,0,39.7
+02/05/2021,Yorkshire and Humber,E07000163,Craven,1,0,0,39.6
+02/05/2021,East of England,E07000245,West Suffolk,18,0,0,36.5
+02/05/2021,North West,E06000007,Warrington,16,0,0,35.3
+02/05/2021,East of England,E06000033,Southend-on-Sea,11,0,0,35.0
+02/05/2021,East of England,E06000034,Thurrock,0,0,NA,33.9
+02/05/2021,East of England,E07000011,Huntingdonshire,4,0,0,32.7
+02/05/2021,East of England,E07000200,Babergh,3,0,0,32.4
+02/05/2021,East of England,E07000067,Braintree,1,0,0,32.3
+02/05/2021,East Midlands,E07000136,Boston,11,0,0,31.4
+02/05/2021,South East,E07000178,Oxford,12,0,0,31.2
+02/05/2021,East of England,E07000073,Harlow,4,0,0,30.5
+02/05/2021,East of England,E07000072,Epping Forest,2,0,0,30.3
+02/05/2021,South East,E07000181,West Oxfordshire,0,0,NA,30.1
+02/05/2021,East Midlands,E07000140,South Holland,16,0,0,29.8
+02/05/2021,East of England,E07000145,Great Yarmouth,12,0,0,29.4
+02/05/2021,East of England,E07000244,East Suffolk,5,0,0,29.4
+02/05/2021,East of England,E07000076,Tendring,3,0,0,29.1
+02/05/2021,South East,E07000005,Chiltern,1,0,0,29.0
+02/05/2021,East of England,E07000147,North Norfolk,2,0,0,28.9
+02/05/2021,East of England,E07000077,Uttlesford,10,0,0,28.6
+02/05/2021,East of England,E07000203,Mid Suffolk,7,0,0,28.4
+02/05/2021,East of England,E07000074,Maldon,0,0,NA,28.3
+02/05/2021,North East,E06000057,Northumberland,9,0,0,28.3
+02/05/2021,East of England,E07000146,King's Lynn and West Norfolk,23,0,0,27.4
+02/05/2021,East of England,E07000009,East Cambridgeshire,1,0,0,27.0
+02/05/2021,East of England,E06000031,Peterborough,36,0,0,26.9
+02/05/2021,South East,E07000177,Cherwell,8,0,0,26.9
+02/05/2021,East of England,E07000143,Breckland,8,0,0,26.4
+02/05/2021,South East,E06000046,Isle of Wight,0,0,NA,26.4
+02/05/2021,East of England,E07000144,Broadland,1,0,0,25.9
+02/05/2021,East of England,E07000010,Fenland,6,0,0,25.4
+02/05/2021,East of England,E07000075,Rochford,0,0,NA,25.1
+02/05/2021,North East,E06000001,Hartlepool,0,0,NA,24.5
+02/05/2021,South East,E07000090,Havant,7,0,0,24.5
+02/05/2021,South East,E07000088,Gosport,0,0,NA,23.9
+02/05/2021,Yorkshire and Humber,E07000166,Richmondshire,0,0,NA,23.2
+02/05/2021,East of England,E07000069,Castle Point,0,0,NA,23.0
+02/05/2021,South East,E07000084,Basingstoke and Deane,0,0,NA,22.9
+02/05/2021,South East,E07000086,Eastleigh,0,0,NA,22.9
+02/05/2021,East of England,E07000068,Brentwood,1,0,0,22.6
+02/05/2021,East of England,E07000012,South Cambridgeshire,2,0,0,22.6
+02/05/2021,North East,E08000024,Sunderland,3,0,0,21.6
+02/05/2021,South East,E07000087,Fareham,0,0,NA,20.7
+02/05/2021,North East,E08000037,Gateshead,2,0,0,20.7
+02/05/2021,London,E09000029,Sutton,1,0,0,20.4
+02/05/2021,South East,E07000225,Chichester,1,0,0,18.6
+02/05/2021,Yorkshire and Humber,E07000169,Selby,10,0,0,18.1
+02/05/2021,North East,E06000003,Redcar and Cleveland,5,0,0,17.0
+02/05/2021,South East,E07000109,Gravesham,5,0,0,16.4
+02/05/2021,South East,E07000091,New Forest,2,0,0,16.4
+02/05/2021,South East,E06000035,Medway,11,0,0,16.3
+02/05/2021,South East,E07000115,Tonbridge and Malling,3,0,0,16.0
+02/05/2021,Yorkshire and Humber,E07000164,Hambleton,0,0,NA,15.7
+02/05/2021,London,E09000001,City of London,0,0,NA,15.2
+02/05/2021,South East,E07000114,Thanet,12,0,0,14.2
+02/05/2021,South East,E07000113,Swale,9,0,0,12.1
+02/05/2021,South East,E07000108,Dover,4,0,0,12.0
+02/05/2021,Yorkshire and Humber,E07000168,Scarborough,2,0,0,11.9
+02/05/2021,Yorkshire and Humber,E07000167,Ryedale,2,0,0,11.6
+02/05/2021,South East,E07000224,Arun,4,0,0,10.6
+02/05/2021,South West,E06000058,"Bournemouth, Christchurch and Poole",0,0,NA,10.3
+02/05/2021,London,E09000021,Kingston upon Thames,2,0,0,10.2
+02/05/2021,South East,E07000212,Runnymede,1,0,0,9.1
+02/05/2021,South West,E07000079,Cotswold,0,0,NA,9.1
+02/05/2021,South East,E07000085,East Hampshire,1,0,0,8.7
+02/05/2021,South East,E07000209,Guildford,1,0,0,8.6
+02/05/2021,South East,E07000214,Surrey Heath,1,0,0,8.4
+02/05/2021,South East,E07000216,Waverley,0,0,NA,6.0
+02/05/2021,South West,E06000025,South Gloucestershire,0,0,NA,5.1
+02/05/2021,South West,E07000080,Forest of Dean,0,0,NA,4.2
+02/05/2021,South East,E07000227,Horsham,0,0,NA,3.5
+02/05/2021,South East,E07000223,Adur,0,0,NA,3.2
+02/05/2021,South West,E06000053,Isles of Scilly,0,0,NA,3.0
+02/05/2021,South West,E07000189,South Somerset,0,0,NA,3.0
+02/05/2021,South East,E07000229,Worthing,0,0,NA,2.8
+02/05/2021,South West,E07000083,Tewkesbury,0,0,NA,2.7
+02/05/2021,South West,E07000041,Exeter,0,0,NA,2.6
+02/05/2021,South East,E07000065,Wealden,0,0,NA,2.5
+02/05/2021,South West,E07000187,Mendip,0,0,NA,2.4
+02/05/2021,South East,E07000064,Rother,0,0,NA,2.0
+02/05/2021,South West,E07000082,Stroud,1,0,0,1.5
+02/05/2021,South East,E07000061,Eastbourne,0,0,NA,1.3
+02/05/2021,South East,E07000062,Hastings,1,0,0,1.2
+02/05/2021,South East,E07000063,Lewes,0,0,NA,1.2
+02/05/2021,South West,E07000188,Sedgemoor,0,0,NA,1.0
+02/05/2021,South West,E07000044,South Hams,0,0,NA,1.0
+02/05/2021,South West,E07000043,North Devon,0,0,NA,0.9
+02/05/2021,South West,E07000246,Somerset West and Taunton,0,0,NA,0.8
+02/05/2021,South West,E07000047,West Devon,0,0,NA,0.8
+02/05/2021,South West,E06000052,Cornwall,0,0,NA,0.8
+02/05/2021,South West,E07000040,East Devon,0,0,NA,0.8
+02/05/2021,South West,E07000046,Torridge,0,0,NA,0.6
+02/05/2021,South West,E07000045,Teignbridge,0,0,NA,0.5
+02/05/2021,South West,E07000042,Mid Devon,0,0,NA,0.2
