@@ -2,8 +2,8 @@ from stuff import *
 from scipy.stats import gamma,norm
 from math import exp,sqrt
 
-source="COG"
-#source="Sanger"
+#source="COG"
+source="Sanger"
 
 print("Using data source:",source)
 if source=="Sanger":
