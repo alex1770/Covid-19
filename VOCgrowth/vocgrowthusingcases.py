@@ -5,15 +5,16 @@ from random import randrange,seed
 from math import log
 import numpy as np
 
-# Get ltla_2021-05-17.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
+# Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 # Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 
-apicases=loadcsv("ltla_2021-05-17.csv")
+apicases=loadcsv("ltla.csv")
 sanger=loadcsv("lineages_by_ltla_and_week.2021-05-08.tsv",sep='\t')
 ltladata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
 ltla2region=dict(zip(ltladata['LAD19CD'],ltladata['RGN19NM']))
 ltla2ltla=dict(zip(ltladata['LAD19CD'],ltladata['LAD19CD']))
 ltla2country=dict((ltla,"England") for ltla in ltladata['LAD19CD'])
+exclude=set()#set(['E08000001'])
 
 mgt=5# Mean generation time in days
 mindate='2021-04-15'
@@ -45,7 +46,7 @@ day1=datetoday(max(apicases['date']))-removelast+1
 ndays=day1-day0
 cases={}
 for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
-  if ltla not in reduce: continue
+  if ltla not in reduce or ltla in exclude: continue
   place=reduce[ltla]
   if place not in places: continue
   day=datetoday(date)
@@ -56,6 +57,7 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
 if 1:
   for place in places:
     print("%-15s"%place,cases[place],sangnum[place])
+    #for day in range(day0,day1): print(daytodate(day),cases[place][day-day0])
   print()
 
 # Use date <-> week end convention, compatible with Sanger
