@@ -4,23 +4,21 @@ from scipy.optimize import minimize
 from random import randrange,seed
 
 # Estimate growth advantage of B.1.617.2 over B.1.1.7 by correlating, over LTLAs, the change in R
-# (over two pairs of weeks) with the relative prevalence of B.1.617.2 as estimated by S gene positivity (lack of SGTF).
+# (over two pairs of weeks) with the prevalence of B.1.617.2 as estimated by Sanger sequencing data.
 
 # Get ltla_2021-05-15.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 
-# Get SGTF/S-gene from fig. 13 from this
-# https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/986378/Variants_of_Concern_Technical_Briefing_11_Data_England__1_.xlsx
-# whose containing page is
-# https://www.gov.uk/government/publications/investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
+# Get variant numbers from Sanger
 
 apicases=loadcsv("ltla_2021-05-15.csv")
-sgtf=loadcsv("Variants_of_Concern_Technical_Briefing_11_Data_England-1-fig13.csv")
+sanger=loadcsv("lineages_by_ltla_and_week.2021-05-08.tsv",sep='\t')
 
 # Get case counts c0, c1, c2, c3 for weeks commencing on these dates
 # Then estimate old R by (c1/c0)^(mgt/gap) and new R by (c3/c2)^(mgt/gap)
 #weeks=['2021-04-11','2021-04-18', '2021-04-25','2021-05-02']
 weeks=['2021-04-11','2021-04-18', '2021-04-28','2021-05-05']
 #weeks=['2021-04-18','2021-04-25', '2021-04-28','2021-05-05']
+sangerdate='2021-05-01'
 mgt=5# Mean generation time in days
 exclude=set()# set(["E08000001"])
 
@@ -33,17 +31,18 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
     if day>=days[i] and day<days[i]+7: cases[ltla][i]+=n
 
 ltlas=set()
-sgtfnum={}
-for (ltla,n,r) in zip(sgtf['ltla.code'],sgtf['Number classifiable cases'],sgtf['Number S gene cases']):
-  if n>0 and ltla in cases and ltla not in exclude:
-    ltlas.add(ltla)
-    sgtfnum[ltla]=(r,n)
-ltlas=sorted(list(ltlas))
+sangnum={}
+for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
+  if ltla in cases and ltla not in exclude and date==sangerdate:
+    if ltla not in sangnum: sangnum[ltla]=[0,0]
+    if var=="B.1.617.2": sangnum[ltla][0]+=n
+    sangnum[ltla][1]+=n
+ltlas=sorted(list(ltla for ltla in sangnum if sangnum[ltla][0]>0))
 
 l=[]
 with open('graph','w') as fp:
   for ltla in ltlas:
-    (r,n)=sgtfnum[ltla]
+    (r,n)=sangnum[ltla]
     cc=cases[ltla]
     if cc[0]==0 or cc[1]==0 or cc[2]==0 or cc[3]==0: continue
     gapold=days[1]-days[0]
@@ -52,11 +51,11 @@ with open('graph','w') as fp:
     Rnew=(cc[3]/cc[2])**(mgt/gapnew)
     x=r/n
     y=Rnew/Rold
-    print("%5.3f %5.3f"%(x,y),file=fp)
     # Calculate approx variances of x and y
     p=(r+1)/(n+2);vx=p*(1-p)/n
     vy=y*y*sum(1/c for c in cc)*mgt*((1/gapold+1/gapnew)/2)# This mgt factor on the variance is a fudge
     l.append([x,y,vx,vy,n])
+    print("%s %5.3f %5.3f %5.3f %5.3f"%(ltla,x,y,vx,vy),file=fp)
 
 def err(xx,l,cutoff):
   a,b=xx
