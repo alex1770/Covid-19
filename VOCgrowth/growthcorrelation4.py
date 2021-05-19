@@ -4,7 +4,7 @@ from scipy.optimize import minimize
 from random import randrange,seed
 
 # Estimate growth advantage of B.1.617.2 over B.1.1.7 by correlating, over LTLAs, the change in R
-# (over two pairs of weeks) with the prevalence of B.1.617.2 as estimated by Sanger sequencing data.
+# (over two pairs of weeks) with the relative prevalence of B.1.617.2 as estimated by Sanger sequencing data.
 
 # Get ltla_2021-05-15.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 
