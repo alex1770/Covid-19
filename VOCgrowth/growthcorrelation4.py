@@ -6,11 +6,12 @@ from random import randrange,seed
 # Estimate growth advantage of B.1.617.2 over B.1.1.7 by correlating, over LTLAs, the change in R
 # (over two pairs of weeks) with the relative prevalence of B.1.617.2 as estimated by Sanger sequencing data.
 
-# Get ltla_2021-05-15.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
+# Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
+# Get Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 
 # Get variant numbers from Sanger
 
-apicases=loadcsv("ltla_2021-05-15.csv")
+apicases=loadcsv("ltla.csv")
 sanger=loadcsv("lineages_by_ltla_and_week.2021-05-08.tsv",sep='\t')
 
 # Get case counts c0, c1, c2, c3 for weeks commencing on these dates

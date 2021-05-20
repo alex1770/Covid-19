@@ -6,14 +6,15 @@ from random import randrange,seed
 # Estimate growth advantage of B.1.617.2 over B.1.1.7 by correlating, over LTLAs, the change in R
 # (over two pairs of weeks) with the relative prevalence of B.1.617.2 as estimated by S gene positivity (lack of SGTF).
 
-# Get ltla_2021-05-15.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
+# Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
+# Get Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 
 # Get SGTF/S-gene from fig. 13 from this
 # https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/986378/Variants_of_Concern_Technical_Briefing_11_Data_England__1_.xlsx
 # whose containing page is
 # https://www.gov.uk/government/publications/investigation-of-novel-sars-cov-2-variant-variant-of-concern-20201201
 
-apicases=loadcsv("ltla_2021-05-15.csv")
+apicases=loadcsv("ltla.csv")
 sgtf=loadcsv("Variants_of_Concern_Technical_Briefing_11_Data_England-1-fig13.csv")
 
 # Get case counts c0, c1, c2, c3 for weeks commencing on these dates
