@@ -1,11 +1,11 @@
 from stuff import *
 import sys
 from scipy.optimize import minimize
-from random import randrange,seed
-from math import log
+from math import log,sqrt
+from scipy.stats import norm
 
-# Estimate growth advantage of B.1.617.2 over B.1.1.7 by correlating, over LTLAs, the growh over
-# a pair of weeks with the relative prevalence of B.1.617.2 as estimated by Sanger sequencing data.
+# Estimate growth advantage of B.1.617.2 over B.1.1.7 by correlating, over LTLAs, (a) the growth over
+# a pair of weeks and (b) the relative prevalence of B.1.617.2 as estimated by Sanger sequencing data.
 
 # Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 # Get Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
@@ -19,10 +19,9 @@ sangerday=datetoday(lastsanger)
 sangerdate=daytodate(sangerday)
 date0='2021-05-04'
 date1=daytodate(datetoday(max(apicases['date']))-1)# Require dates to be less than date1, so this ignores last 2 days of cases-by-specimen-day
-minsangerseq=0
 
 mgt=5# Mean generation time in days
-exclude=set()# set(["E08000001"])
+exclude=set()#set(["E08000001"])
 
 day0=datetoday(date0)
 day1=datetoday(date1)
@@ -39,17 +38,12 @@ for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineag
     if ltla not in sangnum: sangnum[ltla]=[0,0]
     if var=="B.1.617.2": sangnum[ltla][0]+=n
     sangnum[ltla][1]+=n
-ltlas=sorted(list(ltla for ltla in sangnum if sangnum[ltla][1]>=minsangerseq))
+ltlas=sorted(list(sangnum))
 
-def LL(xx,l,cutoff):
-  a,b=xx
-  tot=0
-  for (x,y,vx,vy,n) in l:
-    if n>=cutoff:
-      v=vy+b*b*vx
-      tot+=(y-(a+b*x))**2/(2*v)+(1/2)*log(v)
-  return tot
-
+# Log likelihood of reproduction numbers Q and R.
+# Given r B.1.617.2 sequences found out of n,
+# and given an overall increase in cases from A at time t1 to B at time t2 (times relative to Sanger sample),
+# find likelihood of most likely p,a,b, where r~B(n,p), A~Po(a), B~Po(b), subject to ((1-p)Q^t2+pR^t2)/((1-p)Q^t1+pR^t1) = b/a
 def LL(Q,R,l,cutoff,t1,t2):
   Q1=Q**(t1/mgt)
   Q2=Q**(t2/mgt)
@@ -81,6 +75,7 @@ def LL(Q,R,l,cutoff,t1,t2):
 def err(xx,*aa):
   return -LL(*xx,*aa)
 
+# Find most likely reproduction numbers for B.1.1.7 and B.1.617.2
 def getrepnos(l,cutoff,t1,t2):
   xx=[1,1]
   bounds=[(0.1,10),(0.1,10)]
@@ -88,43 +83,38 @@ def getrepnos(l,cutoff,t1,t2):
   if not res.success: raise RuntimeError(res.message)
   return res.x
 
+conf=0.95
+z=norm.ppf((1+conf)/2)
 cutoffs=[0,20]
-print("      Date"+''.join("       Cutoff %2d"%c for c in cutoffs))
-data={}
+print("Q = estimated reproduction number of B.1.1.7")
+print("R = estimated reproduction number of B.1.617.2")
+print("T = increase from Q to R")
+print("Date = Week-ending of second week used to calculate growth in cases")
+print("Cutoff = minimum number of Sanger sequences sampled, otherwise reject LTLA")
+print()
+print("          "+''.join("      --------- Cutoff %2d ---------"%c for c in cutoffs))
+print("      Date"+''.join("         Q     R    T (%3.0f%% CI    )"%(100*conf) for c in cutoffs))
 for day in range(day0,day1):
   t1=day-7-sangerday
   t2=day-sangerday
-  data[day]=[]
+  l=[]
   for ltla in ltlas:
     (r,n)=sangnum[ltla]
     if r==0: continue
     A=sum(cases[ltla][day-day0:day-day0+7])
     B=sum(cases[ltla][day-day0+7:day-day0+14])
-    data[day].append((r,n,A,B))
+    l.append((r,n,A,B))
   print(daytodate(day),end='')
   for cutoff in cutoffs:
-    (Q,R)=getrepnos(data[day],cutoff,t1,t2)
-    print("     %5.2f %5.2f"%(Q,R),end='')
+    (Q,R)=getrepnos(l,cutoff,t1,t2)
+    eps=1e-2
+    L0=LL(Q,R-eps,l,cutoff,t1,t2)
+    L1=LL(Q,R    ,l,cutoff,t1,t2)
+    L2=LL(Q,R+eps,l,cutoff,t1,t2)
+    # Make confidence interval based on observed Fisher information of R (Q is unlikely to want to change that much)
+    Rerr=z/sqrt((-L0+L1*2-L2)/eps**2)
+    T=R/Q
+    Tlow=(R-Rerr)/Q
+    Thigh=(R+Rerr)/Q
+    print("     %5.2f %5.2f %3.0f%% (%3.0f%% - %3.0f%%)"%(Q,R,(T-1)*100,(Tlow-1)*100,(Thigh-1)*100),end='')
   print()
-print()
-
-print("      Date Cutoff  LTLAs      Extra transmission")
-for day in range(day0,day1):
-  t1=day-7-sangerday
-  t2=day-sangerday
-  cutoff=0
-  l0=[x for x in data[day] if x[1]>=cutoff]
-  n=len(l0)
-  (Q0,R0)=getrepnos(l0,cutoff,t1,t2)
-  # Bootstrap confidence interval
-  sl=[]
-  nit=100
-  for it in range(nit):
-    m=[l0[randrange(n)] for i in range(n)]
-    (Q,R)=getrepnos(m,cutoff,t1,t2)
-    sl.append(R/Q)
-  sl.sort()
-  conf=0.95
-  T0=R0/Q0
-  (Tmin,Tmax)=sl[int((1-conf)/2*nit)],sl[int((1+conf)/2*nit)]
-  print(daytodate(day),"   %3d    %3d     %3.0f%% (%.0f%% CI: %3.0f - %3.0f%%)"%(cutoff,n,(T0-1)*100,conf*100,(Tmin-1)*100,(Tmax-1)*100))
