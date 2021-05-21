@@ -52,7 +52,7 @@ reduce=ltla2region
 #reduce=ltla2country
 
 # Roughly how much daily growth rate is allowed to change in 1 day
-sig=0.0025
+sig=0.002
 
 # Case ascertainment rate
 asc=0.4
@@ -79,7 +79,6 @@ for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineag
     if place not in sang: sang[place]=np.zeros([nweeks,2],dtype=int)
     if var=="B.1.617.2": sang[place][week][1]+=n
     else: sang[place][week][0]+=n
-places=sorted(list(sang))
 
 # Simple weekday adjustment by dividing by the average count for that day of the week.
 # Use a relatively stable period (inclusive) over which to take the weekday averages.
@@ -98,9 +97,10 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
   d=day-minday
   if d<0 or d>=ndays: continue
   place=reduce[ltla]
-  if place not in places: continue
+  if place not in sang: continue
   if place not in cases: cases[place]=np.zeros(ndays)
   cases[place][d]+=n/weekadjp[day%7]
+places=sorted(list(cases))
 #for x in places: print(x);print(cases[x]);print()
 
 # ndays+2 parameters to be optimised:
@@ -108,6 +108,8 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
 # 1: b0
 # 2: h/sig
 # 3 ... 3+ndays-2 : g_0/sig, ..., g_{ndays-2}/sig
+# (would be tidier to put sig in the likelihood instead of on the variables, but SLSQP seems
+#  to get in trouble if its variables to be optimised are on too small a scale)
 
 def expand(xx,sig):
   (a0,b0,h)=xx[:3]
@@ -148,11 +150,12 @@ for place in places:
     day0,day1=lastsang-(nweeks-w)*7+1,lastsang-(nweeks-1-w)*7
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(sang[place][w][0],sang[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
-  bounds=[(-10,20),(-10,20),(-500,500)]+[(-50,50)]*(ndays-1)
+  bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
   res=minimize(NLL,[0]*(ndays+2),args=(cases[place],sang[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
   if not res.success: raise RuntimeError(res.message)
   xx=res.x
-  #print(xx)
+  print(res.fun)
+  print(xx)
   AA,BB=expand(xx,sig)
   (a0,b0,h)=xx[:3]
   print("A    = estimated number of new cases of non-B.1.617.2 on this day")
