@@ -148,6 +148,7 @@ def NLL(xx,lcases,lsang,sig,p):
   tot+=-(xx[2]*sig*isd)**2/2
   return -tot
 
+summary={}
 for place in places:
   print(place)
   print("="*len(place))
@@ -177,7 +178,8 @@ for place in places:
     print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(AA[i],BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
     if i<ndays-1:
       g=xx[3+i]
-      print("   %5.2f %5.2f"%(exp(g*sig*mgt),exp((g+h)*sig*mgt)))
+      Q,R=(exp(g*sig*mgt),exp((g+h)*sig*mgt))
+      print("   %5.2f %5.2f"%(Q,R))
     else:
       print()
   h0=xx[2]
@@ -192,5 +194,17 @@ for place in places:
     ff[i+1]=res.fun
   # Use observed Fisher information to make confidence interval
   dh=1.96/sqrt((ff[0]-2*ff[1]+ff[2])/eps**2)
-  print("Transmission advantage %.0f%% (%.0f%% - %.0f%%)"%((exp(h0*sig*mgt)-1)*100,(exp((h0-dh)*sig*mgt)-1)*100,(exp((h0+dh)*sig*mgt)-1)*100))
+  (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+  print("Transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
+  summary[place]=(Q,R,Tmin,T,Tmax)
   print()
+print()
+
+print("Location                       Q     R      T")
+for place in places:
+  (Q,R,Tmin,T,Tmax)=summary[place]
+  print("%-25s  %5.2f %5.2f  %4.0f%% ( %4.0f%% - %4.0f%% )"%(place,Q,R,T,Tmin,Tmax))
+print()
+print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
+print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
+print("T = estimated transmission advantage = R/Q as a percentage increase")
