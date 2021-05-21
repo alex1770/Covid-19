@@ -51,7 +51,11 @@ minday=datetoday('2021-04-01')# Inclusive
 reduce=ltla2region
 #reduce=ltla2country
 
-# Roughly how much daily growth rate is allowed to change in 1 day
+nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
+nif2=0.5   # Non-independence factor for Sanger counts (ditto)
+isd=1/0.05 # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1/0.05 is fairly weak.
+
+# Effectively the prior on how much daily growth rate is allowed to change in 1 day
 sig=0.002
 
 # Case ascertainment rate
@@ -122,6 +126,7 @@ def expand(xx,sig):
     BB.append(exp(b))
   return AA,BB
 
+# Return negative log likelihood
 def NLL(xx,lcases,lsang,sig,p):
   #print(xx)
   AA,BB=expand(xx,sig)
@@ -129,7 +134,7 @@ def NLL(xx,lcases,lsang,sig,p):
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     lam=p*(AA[i]+BB[i])
-    tot+=-lam+lcases[i]*log(lam)
+    tot+=(-lam+lcases[i]*log(lam))*nif1
   # Term to regulate change in growth rate
   for i in range(ndays-2):
     tot+=-(xx[3+i+1]-xx[3+i])**2/2
@@ -138,7 +143,9 @@ def NLL(xx,lcases,lsang,sig,p):
     endweek=lastsang-(nweeks-1-w)*7-minday
     A=sum(AA[endweek-6:endweek+1])
     B=sum(BB[endweek-6:endweek+1])
-    tot+=lsang[w][0]*log(A/(A+B))+lsang[w][1]*log(B/(A+B))
+    tot+=(lsang[w][0]*log(A/(A+B))+lsang[w][1]*log(B/(A+B)))*nif2
+  # Prior on h
+  tot+=-(xx[2]*sig*isd)**2/2
   return -tot
 
 for place in places:
