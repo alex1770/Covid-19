@@ -2,8 +2,11 @@ from stuff import *
 from scipy.stats import gamma,norm
 from math import exp,sqrt
 
-#source="COG"
-source="Sanger"
+source="COG"
+#source="Sanger"
+#source="PHE"
+#source="SGTF"
+
 
 print("Using data source:",source)
 if source=="Sanger":
@@ -12,6 +15,8 @@ if source=="Sanger":
 elif source=="COG":
   # https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
   cog=loadcsv("cog_metadata.csv")
+elif source=="PHE" or source=="SGTF":
+  pass
 else:
   raise RuntimeError("Unrecognised source: "+source)
   
@@ -64,7 +69,7 @@ elif source=="COG":
   weekendday=datetoday(weekenddate)
   minday=datetoday(mindate)
   minday+=(weekendday+1-minday)%7
-  maxday=datetoday(max(list(set(cog['sample_date']))))
+  maxday=datetoday(max(list(set(cog['sample_date']))))-3
   maxday-=(maxday-weekendday)%7
   dates=[daytodate(day) for day in range(minday-1,maxday+7,7)]
   data={region:{} for region in regions}
@@ -79,7 +84,34 @@ elif source=="COG":
         date=daytodate(day+(maxday-day)%7)
         for region in [adm1,"UK"]:
           data[region][date][lineage]=data[region][date].get(lineage,0)+1
-  
+elif source=="PHE":
+  regions=['England']
+  # From VOC government data: https://www.gov.uk/government/publications/covid-19-variants-genomically-confirmed-case-numbers/variants-distribution-of-cases-data
+  dat={
+    '2021-04-28':{'B.1.1.7':8466 , 'B.1.617.2':202 },
+    '2021-05-05':{'B.1.1.7':6795 , 'B.1.617.2':318 },
+    '2021-05-12':{'B.1.1.7':9141 , 'B.1.617.2':793 },
+    '2021-05-17':{'B.1.1.7':7066 , 'B.1.617.2':2111 }
+  }
+  data={'England':dat}
+  dates=sorted(list(dat))
+elif source=="SGTF":
+  regions=['England']
+  # From fig 14 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/986469/Variants_of_Concern_Technical_Briefing_11_Data_England-1.xlsx
+  dat={
+    '2021-03-24':{'B.1.1.7':14079, 'B.1.617.2':118 },
+    '2021-03-31':{'B.1.1.7':9640 , 'B.1.617.2':186 },
+    '2021-04-07':{'B.1.1.7':6923 , 'B.1.617.2':197 },
+    '2021-04-14':{'B.1.1.7':5548 , 'B.1.617.2':324 },
+    '2021-04-21':{'B.1.1.7':4558 , 'B.1.617.2':460 },
+    '2021-04-28':{'B.1.1.7':3017 , 'B.1.617.2':866 },
+    '2021-05-05':{'B.1.1.7':2642 , 'B.1.617.2':1632 },
+  }
+  data={'England':dat}
+  dates=sorted(list(dat))
+
+
+
 for region in regions:
   print(region)
   dat=data[region]
