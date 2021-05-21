@@ -154,8 +154,8 @@ for place in places:
   res=minimize(NLL,[0]*(ndays+2),args=(cases[place],sang[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
   if not res.success: raise RuntimeError(res.message)
   xx=res.x
-  print(res.fun)
-  print(xx)
+  #print(res.fun)
+  #print(xx)
   AA,BB=expand(xx,sig)
   (a0,b0,h)=xx[:3]
   print("A    = estimated number of new cases of non-B.1.617.2 on this day")
