@@ -137,6 +137,7 @@ def NLL(xx,lcases,lsang,sig,p):
     tot+=(-lam+lcases[i]*log(lam))*nif1
   # Term to regulate change in growth rate
   for i in range(ndays-2):
+    # Could downweight (allow larger) changes in growth on or near roadmap days, but in practice this makes almost no difference
     tot+=-(xx[3+i+1]-xx[3+i])**2/2
   # Term to align the variant numbers with Sanger data
   for w in range(nweeks):
