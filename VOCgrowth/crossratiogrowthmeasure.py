@@ -26,7 +26,7 @@ VV=["B.1.1.7","B.1.617.2"]# Variants to compare
 
 mgt=5# Mean generation time
 
-mindate='2021-04-10'
+mindate='2021-04-07'
 
 def credint(a,b,c,d,conf=0.95):
   nit=1000000
@@ -65,13 +65,13 @@ if source=="Sanger":
         data[region][date][lineage]=data[region][date].get(lineage,0)+count
 elif source=="COG":
   regions=sorted(list(set(cog['adm1'])))+['UK']
-  weekenddate='2021-05-08'# Use this to align to Sanger weeks. Weeks end on Saturday
+  weekenddate='2021-05-15'# Set equal to e.g. '2021-05-15' to align to Sanger (whose weeks end on Saturday)
   weekendday=datetoday(weekenddate)
   minday=datetoday(mindate)
-  minday+=(weekendday+1-minday)%7
+  minday+=(weekendday+1-minday)%7# Round up to beginning of week
   maxday=datetoday(max(list(set(cog['sample_date']))))-3
-  maxday-=(maxday-weekendday)%7
-  dates=[daytodate(day) for day in range(minday-1,maxday+7,7)]
+  maxday-=(maxday-weekendday)%7# Round down to end of week
+  dates=[daytodate(day) for day in range(minday+6,maxday+1,7)]
   data={region:{} for region in regions}
   for region in regions:
     data[region]={}
@@ -81,7 +81,7 @@ elif source=="COG":
     if country=="UK" and lineage in VV:
       day=datetoday(date)
       if day>=minday and day<=maxday:
-        date=daytodate(day+(maxday-day)%7)
+        date=daytodate(day+(maxday-day)%7)# Round up to end of week
         for region in [adm1,"UK"]:
           data[region][date][lineage]=data[region][date].get(lineage,0)+1
 elif source=="PHE":
@@ -123,5 +123,13 @@ for region in regions:
     print(dates[i],"%6d %6d"%(C,D),end=' ')
     if A==0 or B==0 or C==0 or D==0: print();continue
     (low,med,high)=[x**(mgt/7) for x in confint(A,B,C,D)]
-    print("%6.1f%% ( %6.1f - %6.1f%% )"%((med-1)*100,(low-1)*100,(high-1)*100))
+    print("%6.0f%% ( %6.0f%% - %6.0f%% )"%((med-1)*100,(low-1)*100,(high-1)*100))
+  for i in range(len(dates)-1):
+    A,B=dat[dates[i]][VV[0]],dat[dates[i]][VV[1]]
+    if A>0 and B>0: break
+  C,D=dat[dates[-1]][VV[0]],dat[dates[-1]][VV[1]]
+  if A>0 and B>0 and C>0 and D>0:
+    print("First-Last"," "*13,end=' ')
+    (low,med,high)=[x**(mgt/(7*(len(dates)-i-1))) for x in confint(A,B,C,D)]
+    print("%6.0f%% ( %6.0f%% - %6.0f%% )"%((med-1)*100,(low-1)*100,(high-1)*100))
   print()
