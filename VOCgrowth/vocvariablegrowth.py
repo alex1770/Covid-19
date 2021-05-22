@@ -3,24 +3,30 @@ import sys
 from scipy.optimize import minimize
 from math import log,exp,sqrt
 import numpy as np
+import re
 
 # Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 # Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
+# COG-UK data from https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
 
 apicases=loadcsv("ltla.csv")
-sanger=loadcsv("lineages_by_ltla_and_week.tsv",sep='\t')
-ltladata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
-ltla2region=dict(zip(ltladata['LAD19CD'],ltladata['RGN19NM']))
-ltla2ltla=dict(zip(ltladata['LAD19CD'],ltladata['LAD19CD']))
-ltla2country=dict((ltla,"England") for ltla in ltladata['LAD19CD'])
+ltlaengdata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
+ltlaukdata=loadcsv("Local_Authority_District_to_Country_(April_2019)_Lookup_in_the_United_Kingdom.csv")
+ltla2ltla=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['LAD19CD']))
+ltla2uk=dict((ltla,"UK") for ltla in ltlaukdata['LAD19CD'])
+ltla2country=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['CTRY19NM']))
+ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN19NM'])))
+def coglab2uk(x): return "UK"
+def coglab2country(x): return x.split('/')[0].replace('_',' ')
+def coglab2coglab(x): return x
 
-### Model
+### Model ###
 #
 # Known:
 # n_i      = number of confirmed cases on day i by specimen date (slightly adjusted for weekday)
 # p        = case ascertainment rate (chance of seeing a case)
-# r_j, s_j = Sanger (variant) counts of non-B.1.617.2, B.1.617.2 in j^th Sanger week
-# I_j      = set of days (week) corresponding to Sanger counts r_j, s_j
+# r_j, s_j = Variant counts of non-B.1.617.2, B.1.617.2 in j^th week
+# I_j      = set of days (week) corresponding to VOC counts r_j, s_j
 # Assume chance of sequencing a case is a totally free parameter, and optimise over it
 #
 # Unknown:
@@ -38,21 +44,39 @@ ltla2country=dict((ltla,"England") for ltla in ltladata['LAD19CD'])
 # g_{i+1} ~ N(g_i,sig^2)
 # q_j is optimised out, so q_j=(r_j+s_j)/(A_{I_j}+B_{I_j}), or effectively A_{I_j}/(A_{I_j}+B_{I_j}) ~ Beta(r_j+1,s_j+1)
 #
-###############
+### End Model ###
 
 
 ### Options ###
 
 exclude=set()#set(['E08000001'])
 
+# source = "COG-UK" or "Sanger"
+source="COG-UK"
+
 mgt=5# Mean generation time in days
+
+# Earliest day to use case data
 minday=datetoday('2021-04-01')# Inclusive
-#reduce=ltla2ltla
-reduce=ltla2region
-#reduce=ltla2country
+
+# Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
+firstweek=minday+6
+#firstweek=datetoday('2021-04-24')
+
+# Can only use these options with Sanger data
+#reduceltla=ltla2ltla
+#reduceltla=ltla2region
+
+reduceltla=ltla2country
+reducecog=coglab2country
+
+#reduceltla=ltla2uk
+#reducecog=coglab2uk
+
+#reducecog=coglab2coglab# Can't use this very accurately because there isn't a consistent LTLA->coglab map
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
-nif2=0.5   # Non-independence factor for Sanger counts (ditto)
+nif2=0.5   # Non-independence factor for VOC counts (ditto)
 isd=1/0.05 # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1/0.05 is fairly weak.
 
 # Effectively the prior on how much daily growth rate is allowed to change in 1 day
@@ -69,21 +93,48 @@ np.set_printoptions(precision=3,linewidth=120)
 
 maxday=datetoday(max(apicases['date']))-discarddays# Inclusive
 ndays=maxday-minday+1
-lastsang=datetoday(max(sanger['WeekEndDate']));assert maxday>=lastsang
-nweeks=(lastsang-minday+1)//7
-# Sanger week number is nweeks-1-(lastsang-day)//7
 
-# Get Sanger (variant) data into a suitable form
-sang={}
-for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
-  day=datetoday(date)
-  week=nweeks-1-(lastsang-day)//7
-  if week>=0 and week<nweeks:
-    place=reduce[ltla]
-    if place not in sang: sang[place]=np.zeros([nweeks,2],dtype=int)
-    if var=="B.1.617.2": sang[place][week][1]+=n
-    else: sang[place][week][0]+=n
-
+if source=="Sanger":
+  sanger=loadcsv("lineages_by_ltla_and_week.tsv",sep='\t')
+  
+  lastweek=datetoday(max(sanger['WeekEndDate']));assert maxday>=lastweek
+  #nweeks=(lastweek-firstweek+1)//7
+  nweeks=(lastweek-firstweek)//7+1
+  # Sanger week number is nweeks-1-(lastweek-day)//7
+  
+  # Get Sanger (variant) data into a suitable form
+  vocnum={}
+  for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
+    day=datetoday(date)
+    week=nweeks-1-(lastweek-day)//7
+    if week>=0 and week<nweeks:
+      place=reduceltla[ltla]
+      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
+      if var=="B.1.617.2": vocnum[place][week][1]+=n
+      else: vocnum[place][week][0]+=n
+elif source=="COG-UK":
+  cog=loadcsv("cog_metadata.csv")
+  censor=6
+  lastweek=datetoday(max(cog['sample_date']))-censor;assert maxday>=lastweek
+  #nweeks=(lastweek-firstweek+1)//7
+  nweeks=(lastweek-firstweek)//7+1
+  # Week number is nweeks-1-(lastweek-day)//7
+  
+  # Get COG-UK (variant) data into a suitable form
+  vocnum={}
+  for (date,seqname,var) in zip(cog['sample_date'],cog['sequence_name'],cog['lineage']):
+    day=datetoday(date)
+    week=nweeks-1-(lastweek-day)//7
+    if week>=0 and week<nweeks:
+      r=re.match("[^0-9-]*[0-9-]",seqname)
+      coglab=seqname[:r.end()-1]
+      place=reducecog(coglab)
+      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
+      if var=="B.1.617.2": vocnum[place][week][1]+=1
+      else: vocnum[place][week][0]+=1
+else:
+  raise RuntimeError("Unrecognised source: "+source)
+      
 # Simple weekday adjustment by dividing by the average count for that day of the week.
 # Use a relatively stable period (inclusive) over which to take the weekday averages.
 weekadjdates=[datetoday('2021-04-03'),datetoday('2021-05-14')]
@@ -96,12 +147,12 @@ weekadjp=weekadj*7/sum(weekadj)
 # Get case data into a suitable form
 cases={}
 for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
-  if ltla not in reduce or ltla in exclude: continue
+  if ltla not in reduceltla or ltla in exclude: continue
   day=datetoday(date)
   d=day-minday
   if d<0 or d>=ndays: continue
-  place=reduce[ltla]
-  if place not in sang: continue
+  place=reduceltla[ltla]
+  if place not in vocnum: continue
   if place not in cases: cases[place]=np.zeros(ndays)
   cases[place][d]+=n/weekadjp[day%7]
 places=sorted(list(cases))
@@ -127,7 +178,7 @@ def expand(xx,sig):
   return AA,BB
 
 # Return negative log likelihood
-def NLL(xx,lcases,lsang,sig,p):
+def NLL(xx,lcases,lvocnum,sig,p):
   #print(xx)
   AA,BB=expand(xx,sig)
   tot=0
@@ -137,14 +188,14 @@ def NLL(xx,lcases,lsang,sig,p):
     tot+=(-lam+lcases[i]*log(lam))*nif1
   # Term to regulate change in growth rate
   for i in range(ndays-2):
-    # Could downweight (allow larger) changes in growth on or near roadmap days, but in practice this makes almost no difference
+    # Could downweight (allow larger) changes in growth on or near roadmap days, but in practice that makes almost no difference
     tot+=-(xx[3+i+1]-xx[3+i])**2/2
-  # Term to align the variant numbers with Sanger data
+  # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
-    endweek=lastsang-(nweeks-1-w)*7-minday
+    endweek=lastweek-(nweeks-1-w)*7-minday
     A=sum(AA[endweek-6:endweek+1])
     B=sum(BB[endweek-6:endweek+1])
-    tot+=(lsang[w][0]*log(A/(A+B))+lsang[w][1]*log(B/(A+B)))*nif2
+    tot+=(lvocnum[w][0]*log(A/(A+B))+lvocnum[w][1]*log(B/(A+B)))*nif2
   # Prior on h
   tot+=-(xx[2]*sig*isd)**2/2
   return -tot
@@ -156,11 +207,11 @@ for place in places:
   print()
   print("                        Nonvar    Var   Seen")
   for w in range(nweeks):
-    day0,day1=lastsang-(nweeks-w)*7+1,lastsang-(nweeks-1-w)*7
-    print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(sang[place][w][0],sang[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
+    day0,day1=lastweek-(nweeks-w)*7+1,lastweek-(nweeks-1-w)*7
+    print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
   bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
-  res=minimize(NLL,[0]*(ndays+2),args=(cases[place],sang[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+  res=minimize(NLL,[0]*(ndays+2),args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
   if not res.success: raise RuntimeError(res.message)
   xx=res.x
   #print(res.fun)
@@ -190,7 +241,7 @@ for place in places:
     h=h0+i*eps
     xx=[0,0,h]+[0]*(ndays-1)
     bounds[2]=(h,h)
-    res=minimize(NLL,xx,args=(cases[place],sang[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
     if not res.success: raise RuntimeError(res.message)
     ff[i+1]=res.fun
   # Use observed Fisher information to make confidence interval
