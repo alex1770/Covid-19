@@ -8,6 +8,7 @@ import re
 # Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 # Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 # COG-UK data from https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
+# SGTF   data from Fig.16 Tech Briefing 12: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/988608/Variants_of_Concern_Technical_Briefing_12_Data_England.xlsx
 
 apicases=loadcsv("ltla.csv")
 ltlaengdata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
@@ -19,6 +20,10 @@ ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
 def coglab2coglab(x): return x
+def sgtf2region(x):
+  if x=='Yorkshire and Humber': return 'Yorkshire and The Humber'
+  return x
+def sgtf2country(x): return 'England'
 
 ### Model ###
 #
@@ -43,16 +48,19 @@ def coglab2coglab(x): return x
 # s_j ~ Po(q_j.B_{I_j})
 # g_{i+1} ~ N(g_i,sig^2)
 # q_j is optimised out, so q_j=(r_j+s_j)/(A_{I_j}+B_{I_j}), or effectively A_{I_j}/(A_{I_j}+B_{I_j}) ~ Beta(r_j+1,s_j+1)
+# h ~ N(0,tau^2)
 #
 ### End Model ###
 
 
 ### Options ###
 
-exclude=set()#set(['E08000001'])
+exclude=set()
+# exclude=set(['E08000001'])# This would exclude Bolton
 
-# source = "COG-UK" or "Sanger"
-source="COG-UK"
+#source="Sanger"
+#source="COG-UK"
+source="SGTF"
 
 mgt=5# Mean generation time in days
 
@@ -60,15 +68,17 @@ mgt=5# Mean generation time in days
 minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
-firstweek=minday+6
-#firstweek=datetoday('2021-04-24')
+#firstweek=minday+6
+firstweek=datetoday('2021-04-24')
 
-# Can only use these options with Sanger data
+# Can only use these options with Sanger or SGTF data
 #reduceltla=ltla2ltla
-#reduceltla=ltla2region
+reduceltla=ltla2region
+reducesgtf=sgtf2region
 
-reduceltla=ltla2country
-reducecog=coglab2country
+#reduceltla=ltla2country
+#reducecog=coglab2country
+#reducesgtf=sgtf2country
 
 #reduceltla=ltla2uk
 #reducecog=coglab2uk
@@ -98,13 +108,13 @@ if source=="Sanger":
   sanger=loadcsv("lineages_by_ltla_and_week.tsv",sep='\t')
   
   lastweek=datetoday(max(sanger['WeekEndDate']));assert maxday>=lastweek
-  #nweeks=(lastweek-firstweek+1)//7
   nweeks=(lastweek-firstweek)//7+1
   # Sanger week number is nweeks-1-(lastweek-day)//7
   
   # Get Sanger (variant) data into a suitable form
   vocnum={}
   for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
+    if ltla in exclude: continue
     day=datetoday(date)
     week=nweeks-1-(lastweek-day)//7
     if week>=0 and week<nweeks:
@@ -132,6 +142,45 @@ elif source=="COG-UK":
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
       if var=="B.1.617.2": vocnum[place][week][1]+=1
       else: vocnum[place][week][0]+=1
+elif source=="SGTF":
+  sgtf=loadcsv("TechBriefing12Fig17.csv")
+  lastweek=max(datetoday(x) for x in sgtf['week'])+6# Convert w/c to w/e convention
+  assert maxday>=lastweek
+  nweeks=(lastweek-firstweek)//7+1
+  # Week number is nweeks-1-(lastweek-day)//7
+  # Get SGTF data into a suitable form
+  vocnum={}
+  for (date,region,var,n) in zip(sgtf['week'],sgtf['Region'],sgtf['sgtf'],sgtf['n']):
+    day=datetoday(date)+6# Convert from w/c to w/e convention
+    week=nweeks-1-(lastweek-day)//7
+    if week>=0 and week<nweeks:
+      place=reducesgtf(region)
+      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
+      vocnum[place][week][int("SGTF" not in var)]+=n
+  # Adjust for non-B.1.617.2 S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
+  # From COG-UK: B117  Others (not B.1.617.2)
+  # 2021-02-04  13258     765   5.77%
+  # 2021-02-11  16540     681   4.12%
+  # 2021-02-18  15707     537   3.42%
+  # 2021-02-25  16676     472   2.83%
+  # 2021-03-04  14524     372   2.56%
+  # 2021-03-11  18295     341   1.86%
+  # 2021-03-18  16900     308   1.82%
+  # 2021-03-25  14920     231   1.55%
+  # 2021-04-01  10041     243   2.42%
+  # 2021-04-08   7514     240   3.19%
+  # 2021-04-15   7150     348   4.87%
+  # 2021-04-22   6623     367   5.54%
+  # 2021-04-29   5029     205   4.08%
+  # 2021-05-06   4383     217   4.95%
+  date0,date1=datetoday('2021-03-11'),datetoday('2021-04-15')
+  for place in vocnum:
+    for week in range(nweeks):
+      day=lastweek-7*(nweeks-1-week)
+      assert day>=date0
+      if day<date1: f=(day-date0)/(date1-date0)*0.03+0.02
+      else: f=0.05
+      vocnum[place][week][1]=max(vocnum[place][week][1]-int(f*vocnum[place][week][0]),0)
 else:
   raise RuntimeError("Unrecognised source: "+source)
       
