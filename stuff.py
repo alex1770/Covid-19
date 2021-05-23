@@ -24,7 +24,10 @@ def loadcsv(fn,sep=","):
   return out
 
 def datetoday(x):
-  t=time.strptime(x+'UTC','%Y-%m-%d%Z')
+  if '/' in x:
+    t=time.strptime(x+'UTC',"%d/%m/%Y%Z")
+  else:
+    t=time.strptime(x+'UTC','%Y-%m-%d%Z')
   return calendar.timegm(t)//86400
 
 def daytodate(r):
