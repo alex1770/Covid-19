@@ -5,7 +5,8 @@ from math import exp,sqrt
 source="COG"
 #source="Sanger"
 #source="PHE"
-#source="SGTF"
+#source="SGTF11"
+source="SGTF12"
 
 
 print("Using data source:",source)
@@ -15,10 +16,6 @@ if source=="Sanger":
 elif source=="COG":
   # https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
   cog=loadcsv("cog_metadata.csv")
-elif source=="PHE" or source=="SGTF":
-  pass
-else:
-  raise RuntimeError("Unrecognised source: "+source)
   
 regiondat=loadcsv("Local_Authority_District_to_Region_(April_2019)_Lookup_in_England.csv")
 
@@ -95,9 +92,10 @@ elif source=="PHE":
   }
   data={'England':dat}
   dates=sorted(list(dat))
-elif source=="SGTF":
+elif source=="SGTF11":
   regions=['England']
   # From fig 14 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/986469/Variants_of_Concern_Technical_Briefing_11_Data_England-1.xlsx
+  # Weeks are w/c
   dat={
     '2021-03-24':{'B.1.1.7':14079, 'B.1.617.2':118 },
     '2021-03-31':{'B.1.1.7':9640 , 'B.1.617.2':186 },
@@ -109,6 +107,25 @@ elif source=="SGTF":
   }
   data={'England':dat}
   dates=sorted(list(dat))
+elif source=="SGTF12":
+  regions=['England']
+  # From fig 16 of https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/988608/Variants_of_Concern_Technical_Briefing_12_Data_England.xlsx
+  # Weeks are w/c
+  dat={
+    # Subtracting 0.9% of B.1.1.7 from S+ve (estimate of non-B.1.617.2 S+ves)
+    #'2021-03-23':{'B.1.1.7':14775, 'B.1.617.2':127 },
+    #'2021-03-30':{'B.1.1.7':10042, 'B.1.617.2':159-90 },
+    '2021-04-06':{'B.1.1.7':7380 , 'B.1.617.2':217-66 },
+    '2021-04-13':{'B.1.1.7':5583 , 'B.1.617.2':295-50 },
+    '2021-04-20':{'B.1.1.7':4684 , 'B.1.617.2':428-42 },
+    '2021-04-27':{'B.1.1.7':3163 , 'B.1.617.2':754-28 },
+    '2021-05-04':{'B.1.1.7':3296 , 'B.1.617.2':1910-30 },
+    '2021-05-11':{'B.1.1.7':1944 , 'B.1.617.2':2265-17 },
+  }
+  data={'England':dat}
+  dates=sorted(list(dat))
+else:
+  raise RuntimeError("Unrecognised source: "+source)
 
 
 
