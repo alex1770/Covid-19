@@ -6,6 +6,7 @@ from math import log,exp,sqrt
 import numpy as np
 import re
 
+# (Make it auto download files?)
 # Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 # Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 # COG-UK data from https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
@@ -49,7 +50,7 @@ def sgtf2country(x): return 'England'
 # s_j ~ Po(q_j.B_{I_j})
 # g_{i+1} ~ N(g_i,sig^2)
 # q_j is optimised out, so q_j=(r_j+s_j)/(A_{I_j}+B_{I_j}), or effectively A_{I_j}/(A_{I_j}+B_{I_j}) ~ Beta(r_j+1,s_j+1)
-# h ~ N(0,tau^2)
+# [h ~ N(0,tau^2)]
 #
 ### End Model ###
 
@@ -72,19 +73,11 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-24')
 
-# Can only use LTLA and region options with Sanger or SGTF data
-reduceltla=ltla2ltla
-#reduceltla=ltla2region
-#reducesgtf=sgtf2region
-
-reduceltla=ltla2country
-#reducecog=coglab2country
-#reducesgtf=sgtf2country
-
-#reduceltla=ltla2uk
-#reducecog=coglab2uk
-
-#reducecog=coglab2coglab# Can't use this very accurately because there isn't a consistent LTLA->coglab map
+# Can choose location size from "LTLA", "region", "country", "UK"
+# Sanger works with LTLA, region, country
+# COG-UK works with country, UK
+# SGTF works with region, country
+locationsize="country"
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -101,6 +94,21 @@ discarddays=2
 
 ### End options ###
 
+print("Options")
+print("Source:",source)
+print("Location size:",locationsize)
+print("Exclude:",exclude)
+print("Generation time:",mgt)
+print("Earliest day for case data:",daytodate(minday))
+print("Earliest week (using end of week date) to use VOC count data:",daytodate(firstweek))
+print("nif1:",nif1)
+print("nif2:",nif2)
+print("Inverse sd for prior on growth:",isd)
+print("Sigma (prior on daily growth rate change):",sig)
+print("Case ascertainment rate:",asc)
+print("Number of days of case data to discard:",discarddays)
+print()
+
 np.set_printoptions(precision=3,linewidth=120)
 
 maxday=datetoday(max(apicases['date']))-discarddays# Inclusive
@@ -112,6 +120,15 @@ if source=="Sanger":
   lastweek=datetoday(max(sanger['WeekEndDate']));assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//7+1
   # Sanger week number is nweeks-1-(lastweek-day)//7
+
+  if locationsize=="LTLA":
+    reduceltla=ltla2ltla
+  elif locationsize=="region":
+    reduceltla=ltla2region
+  elif locationsize=="country":
+    reduceltla=ltla2country
+  else:
+    raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
   
   # Get Sanger (variant) data into a suitable form
   vocnum={}
@@ -132,6 +149,15 @@ elif source=="COG-UK":
   nweeks=(lastweek-firstweek)//7+1
   # Week number is nweeks-1-(lastweek-day)//7
   
+  if  locationsize=="country":
+    reduceltla=ltla2country
+    reducecog=coglab2country
+  elif locationsize=="UK":
+    reduceltla=ltla2uk
+    reducecog=coglab2uk
+  else:
+    raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
+  
   # Get COG-UK (variant) data into a suitable form
   vocnum={}
   for (date,seqname,var) in zip(cog['sample_date'],cog['sequence_name'],cog['lineage']):
@@ -150,6 +176,16 @@ elif source=="SGTF":
   assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//7+1
   # Week number is nweeks-1-(lastweek-day)//7
+
+  if locationsize=="region":
+    reduceltla=ltla2region
+    reducesgtf=sgtf2region
+  elif  locationsize=="country":
+    reduceltla=ltla2country
+    reducesgtf=sgtf2country
+  else:
+    raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
+  
   # Get SGTF data into a suitable form
   vocnum={}
   for (date,region,var,n) in zip(sgtf['week'],sgtf['Region'],sgtf['sgtf'],sgtf['n']):
@@ -318,76 +354,82 @@ def NLL(xx,lcases,lvocnum,sig,p):
   tot+=-(xx[2]*sig*isd)**2/2
   return -tot
 
+def getlikelihoods(fixedh=None):
+  summary={}
+  logp=np.zeros(ndiv)
+  for place in places:
+    print(place)
+    print("="*len(place))
+    print()
+    print("                        Nonvar    Var   Seen")
+    for w in range(nweeks):
+      day0,day1=lastweek-(nweeks-w)*7+1,lastweek-(nweeks-1-w)*7
+      print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
+    print()
+    xx=np.zeros(ndays+2)
+    bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
+    if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
+    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+    if not res.success: raise RuntimeError(res.message)
+    xx=res.x
+    AA,BB=expand(xx,sig)
+    (a0,b0,h)=xx[:3]
+    print("A    = estimated number of new cases of non-B.1.617.2 on this day")
+    print("B    = estimated number of new cases of B.1.617.2 on this day")
+    print("Pred = predicted number of cases seen this day = (ascertainment rate)*(A+B)")
+    print("Seen = number of cases seen this day, after weekday adjustment")
+    print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
+    print("R    = estimated reproduction rate of B.1.617.2 on this day")
+    print()
+    print("      Date       A       B    Pred    Seen       Q     R")
+    for i in range(ndays):
+      print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(AA[i],BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
+      if i<ndays-1:
+        g=xx[3+i]
+        Q,R=(exp(g*sig*mgt),exp((g+h)*sig*mgt))
+        print("   %5.2f %5.2f"%(Q,R))
+      else:
+        print()
+    print()
+    if fixedh!=None: summary[place]=(Q,R);continue
+    h0=xx[2]
+    ff=[0,res.fun,0]
+    eps=0.01/sig
+    for i in [-1,1]:
+      h=h0+i*eps
+      xx=[0,0,h]+[0]*(ndays-1)
+      bounds[2]=(h,h)
+      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+      if not res.success: raise RuntimeError(res.message)
+      ff[i+1]=res.fun
+    # Use observed Fisher information to make confidence interval
+    fi=(ff[0]-2*ff[1]+ff[2])/eps**2
+    if fi>0:
+      dh=1.96/sqrt(fi)
+    else:
+      dh=100/sig
+    (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+    print("Estimated transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
+    summary[place]=(Q,R,Tmin,T,Tmax)
+    print()
+    print("    g     T    log lik")
+    for i in range(ndiv):
+      h=(gmin+(gmax-gmin)*i/(ndiv-1))/sig
+      xx=[0,0,h]+[0]*(ndays-1)
+      bounds[2]=(h,h)
+      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+      if not res.success: raise RuntimeError(res.message)
+      logp[i]+=ff[1]-res.fun
+      print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
+    print()
+    sys.stdout.flush()
+  print()
+  return summary,logp
+
 ndiv=11
-logp=np.zeros(ndiv)
 gmin=0.03;gmax=0.15
 
-summary={}
-for place in places:
-  print(place)
-  print("="*len(place))
-  print()
-  print("                        Nonvar    Var   Seen")
-  for w in range(nweeks):
-    day0,day1=lastweek-(nweeks-w)*7+1,lastweek-(nweeks-1-w)*7
-    print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
-  print()
-  bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
-  res=minimize(NLL,[0]*(ndays+2),args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
-  if not res.success: raise RuntimeError(res.message)
-  xx=res.x
-  #print(res.fun)
-  #print(xx)
-  AA,BB=expand(xx,sig)
-  (a0,b0,h)=xx[:3]
-  print("A    = estimated number of new cases of non-B.1.617.2 on this day")
-  print("B    = estimated number of new cases of B.1.617.2 on this day")
-  print("Pred = predicted number of cases seen this day = (ascertainment rate)*(A+B)")
-  print("Seen = number of cases seen this day, after weekday adjustment")
-  print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
-  print("R    = estimated reproduction rate of B.1.617.2 on this day")
-  print()
-  print("      Date       A       B    Pred    Seen       Q     R")
-  for i in range(ndays):
-    print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(AA[i],BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
-    if i<ndays-1:
-      g=xx[3+i]
-      Q,R=(exp(g*sig*mgt),exp((g+h)*sig*mgt))
-      print("   %5.2f %5.2f"%(Q,R))
-    else:
-      print()
-  h0=xx[2]
-  ff=[0,res.fun,0]
-  eps=0.01/sig
-  for i in [-1,1]:
-    h=h0+i*eps
-    xx=[0,0,h]+[0]*(ndays-1)
-    bounds[2]=(h,h)
-    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
-    if not res.success: raise RuntimeError(res.message)
-    ff[i+1]=res.fun
-  # Use observed Fisher information to make confidence interval
-  fi=(ff[0]-2*ff[1]+ff[2])/eps**2
-  if fi>0:
-    dh=1.96/sqrt(fi)
-  else:
-    dh=100/sig
-  (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
-  print("Transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
-  summary[place]=(Q,R,Tmin,T,Tmax)
-  print()
-  print("    g     T    log lik")
-  for i in range(ndiv):
-    h=(gmin+(gmax-gmin)*i/(ndiv-1))/sig
-    xx=[0,0,h]+[0]*(ndays-1)
-    bounds[2]=(h,h)
-    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
-    if not res.success: raise RuntimeError(res.message)
-    logp[i]+=ff[1]-res.fun
-    print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
-  print()
-  sys.stdout.flush()
-print()
+summary,logp=getlikelihoods()
 
 print("Location                       Q     R      T")
 for place in places:
@@ -399,6 +441,7 @@ print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday
 print("T = estimated transmission advantage = R/Q as a percentage increase")
 print()
 
+print("    g     T    log lik")
 for i in range(ndiv):
   g=(gmin+(gmax-gmin)*i/(ndiv-1))
   print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
@@ -416,4 +459,18 @@ irange=sqrt(-1.96/c)
 g0=(gmin+(gmax-gmin)*imax/(ndiv-1))
 dg=(gmax-gmin)*irange/(ndiv-1)
 (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
-print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
+print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(g,g0-dg,g0+dg))
+print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+print()
+
+print("Re-running using global optimum growth advantage")
+print()
+summary,logp=getlikelihoods(fixedh=g0/sig)
+print("Location                       Q     R")
+for place in places:
+  (Q,R)=summary[place]
+  print("%-25s  %5.2f %5.2f"%(place,Q,R))
+print()
+print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
+print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
+print()
