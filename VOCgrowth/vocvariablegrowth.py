@@ -90,7 +90,11 @@ sig=0.002
 # Case ascertainment rate
 asc=0.4
 
+# Discard this many cases at the end of the list of cases by specimen day
 discarddays=2
+
+# Collect together all locations without positive entries into one combined "Other" location
+bundleremainder=False
 
 ### End options ###
 
@@ -107,6 +111,7 @@ print("Inverse sd for prior on growth:",isd)
 print("Sigma (prior on daily growth rate change):",sig)
 print("Case ascertainment rate:",asc)
 print("Number of days of case data to discard:",discarddays)
+print("Bundle remainder:",bundleremainder)
 print()
 
 np.set_printoptions(precision=3,linewidth=120)
@@ -307,9 +312,17 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
 places=sorted(list(cases))
 #for x in places: print(x);print(cases[x]);print()
 
-# Restrict to places for which there is at least some of each variant
-places=[place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0]
-
+# Restrict to places for which there is at least some of each variant, and bundle the remaining locations together as "Other"
+okplaces=set([place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
+if bundleremainder:
+  otherplaces=set(places).difference(okplaces)
+  othervocnum=sum((vocnum[place] for place in otherplaces),np.zeros([nweeks,2],dtype=int))
+  othercases=sum((cases[place] for place in otherplaces),np.zeros(ndays,dtype=int))
+  if othervocnum[:,0].sum()>0 and othervocnum[:,1].sum()>0:
+    okplaces.add("Other")
+    vocnum["Other"]=othervocnum
+    cases["Other"]=othercases
+places=list(okplaces)
 places.sort(key=lambda x: -vocnum[x].sum())
 
 # ndays+2 parameters to be optimised:
