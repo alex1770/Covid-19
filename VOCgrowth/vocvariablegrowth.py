@@ -1,6 +1,7 @@
 from stuff import *
 import sys
 from scipy.optimize import minimize
+from scipy.stats import gamma
 from math import log,exp,sqrt
 import numpy as np
 import re
@@ -58,9 +59,9 @@ def sgtf2country(x): return 'England'
 exclude=set()
 # exclude=set(['E08000001'])# This would exclude Bolton
 
-#source="Sanger"
+source="Sanger"
 #source="COG-UK"
-source="SGTF"
+#source="SGTF"
 
 mgt=5# Mean generation time in days
 
@@ -71,12 +72,12 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-24')
 
-# Can only use these options with Sanger or SGTF data
-#reduceltla=ltla2ltla
-reduceltla=ltla2region
-reducesgtf=sgtf2region
+# Can only use LTLA and region options with Sanger or SGTF data
+reduceltla=ltla2ltla
+#reduceltla=ltla2region
+#reducesgtf=sgtf2region
 
-#reduceltla=ltla2country
+reduceltla=ltla2country
 #reducecog=coglab2country
 #reducesgtf=sgtf2country
 
@@ -88,6 +89,7 @@ reducesgtf=sgtf2region
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
 isd=1/0.05 # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1/0.05 is fairly weak.
+isd=1e-6   # Flat prior
 
 # Effectively the prior on how much daily growth rate is allowed to change in 1 day
 sig=0.002
@@ -159,11 +161,6 @@ elif source=="SGTF":
       vocnum[place][week][int("SGTF" not in var)]+=n
   # Adjust for non-B.1.617.2 S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
   # From COG-UK: B117  Others (not B.1.617.2)
-  # 2021-02-04  13258     765   5.77%
-  # 2021-02-11  16540     681   4.12%
-  # 2021-02-18  15707     537   3.42%
-  # 2021-02-25  16676     472   2.83%
-  # 2021-03-04  14524     372   2.56%
   # 2021-03-11  18295     341   1.86%
   # 2021-03-18  16900     308   1.82%
   # 2021-03-25  14920     231   1.55%
@@ -183,7 +180,74 @@ elif source=="SGTF":
       vocnum[place][week][1]=max(vocnum[place][week][1]-int(f*vocnum[place][week][0]),0)
 else:
   raise RuntimeError("Unrecognised source: "+source)
-      
+
+if 0:
+  rest=0
+  eps=0
+  nit=1000000
+  for w in range(nweeks-1):
+    tot=np.zeros([2,2],dtype=int)
+    totr=np.zeros([2,2],dtype=int)
+    ndiv=20
+    p0=0.5;p1=1.5
+    logp=np.zeros(ndiv)
+    T0=T1=L0=L1=0
+    for x in vocnum:
+      a=vocnum[x][w:w+2]
+      tot+=a
+      if (a>0).all():
+        c=1/((1/a.flatten()).sum())
+        T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
+        #print("AAA%d"%w,x,c,T)
+        T0+=c;T1+=c/T
+        L0+=c*log(T);L1+=c
+        A=gamma.rvs(a[0,0]+eps,size=nit)
+        B=gamma.rvs(a[0,1]+eps,size=nit)
+        C=gamma.rvs(a[1,0]+eps,size=nit)
+        D=gamma.rvs(a[1,1]+eps,size=nit)
+        l=A*D/(B*C)
+        tp=np.zeros(ndiv,dtype=int)
+        tp=tp+0.5
+        for T in l:
+          i=int(((T-p0)/(p1-p0)*ndiv)//1)
+          if i>=0 and i<ndiv: tp[i]+=1
+        for i in range(ndiv):
+          if tp[i]==0: logp[i]-=1e9
+          else: logp[i]+=log(tp[i]/nit)
+      else:
+        totr+=a
+    if rest:
+      a=totr
+      c=1/((1/a.flatten()).sum())
+      T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
+      T0+=c;T1+=c/T
+      L0+=c*log(T);L1+=c
+    print(T0/T1,exp(L0/L1),"cf",tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]),totr.flatten())
+    for i in range(ndiv):
+      print("%5.3f - %5.3f : %7.3f"%(p0+i/ndiv,p0+(i+1)/ndiv,logp[i]))
+    poi
+  T0=T1=L0=L1=0
+  tot=np.zeros([2,2],dtype=int)
+  totr=np.zeros([2,2],dtype=int)
+  for w in range(nweeks-1):
+    for x in vocnum:
+      a=vocnum[x][w:w+2]
+      tot+=a
+      if (a>0).all():
+        c=1/((1/a.flatten()).sum())
+        T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
+        T0+=c;T1+=c/T
+        L0+=c*log(T);L1+=c
+      else:
+        totr+=a
+  if rest:
+    a=totr
+    c=1/((1/a.flatten()).sum())
+    T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
+    T0+=c;T1+=c/T
+    L0+=c*log(T);L1+=c
+  print(T0/T1,exp(L0/L1),"cf",tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]),totr.flatten())
+
 # Simple weekday adjustment by dividing by the average count for that day of the week.
 # Use a relatively stable period (inclusive) over which to take the weekday averages.
 weekadjdates=[datetoday('2021-04-03'),datetoday('2021-05-14')]
@@ -206,6 +270,11 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
   cases[place][d]+=n/weekadjp[day%7]
 places=sorted(list(cases))
 #for x in places: print(x);print(cases[x]);print()
+
+# Restrict to places for which there is at least some of each variant
+places=[place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0]
+
+places.sort(key=lambda x: -vocnum[x].sum())
 
 # ndays+2 parameters to be optimised:
 # 0: a0
@@ -248,6 +317,10 @@ def NLL(xx,lcases,lvocnum,sig,p):
   # Prior on h
   tot+=-(xx[2]*sig*isd)**2/2
   return -tot
+
+ndiv=11
+logp=np.zeros(ndiv)
+gmin=0.03;gmax=0.15
 
 summary={}
 for place in places:
@@ -294,11 +367,26 @@ for place in places:
     if not res.success: raise RuntimeError(res.message)
     ff[i+1]=res.fun
   # Use observed Fisher information to make confidence interval
-  dh=1.96/sqrt((ff[0]-2*ff[1]+ff[2])/eps**2)
+  fi=(ff[0]-2*ff[1]+ff[2])/eps**2
+  if fi>0:
+    dh=1.96/sqrt(fi)
+  else:
+    dh=100/sig
   (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
   print("Transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
   summary[place]=(Q,R,Tmin,T,Tmax)
   print()
+  print("    g     T    log lik")
+  for i in range(ndiv):
+    h=(gmin+(gmax-gmin)*i/(ndiv-1))/sig
+    xx=[0,0,h]+[0]*(ndays-1)
+    bounds[2]=(h,h)
+    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+    if not res.success: raise RuntimeError(res.message)
+    logp[i]+=ff[1]-res.fun
+    print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
+  print()
+  sys.stdout.flush()
 print()
 
 print("Location                       Q     R      T")
@@ -309,3 +397,23 @@ print()
 print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
 print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
 print("T = estimated transmission advantage = R/Q as a percentage increase")
+print()
+
+for i in range(ndiv):
+  g=(gmin+(gmax-gmin)*i/(ndiv-1))
+  print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
+i=np.argmax(logp)
+if i==0 or i==ndiv-1:
+  print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
+  imax=i
+  c=-0.1
+else:
+  a=logp[i]
+  b=(logp[i+1]-logp[i-1])/2
+  c=(logp[i+1]+logp[i-1])/2-a
+  imax=i-b/(2*c)
+irange=sqrt(-1.96/c)
+g0=(gmin+(gmax-gmin)*imax/(ndiv-1))
+dg=(gmax-gmin)*irange/(ndiv-1)
+(Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
+print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
