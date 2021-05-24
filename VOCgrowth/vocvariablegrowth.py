@@ -77,7 +77,7 @@ firstweek=datetoday('2021-04-24')
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="country"
+locationsize="region"
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -98,7 +98,7 @@ print("Options")
 print("Source:",source)
 print("Location size:",locationsize)
 print("Exclude:",exclude)
-print("Generation time:",mgt)
+print("Generation time:",mgt,"days")
 print("Earliest day for case data:",daytodate(minday))
 print("Earliest week (using end of week date) to use VOC count data:",daytodate(firstweek))
 print("nif1:",nif1)
@@ -459,7 +459,7 @@ irange=sqrt(-1.96/c)
 g0=(gmin+(gmax-gmin)*imax/(ndiv-1))
 dg=(gmax-gmin)*irange/(ndiv-1)
 (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
-print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(g,g0-dg,g0+dg))
+print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(g0,g0-dg,g0+dg))
 print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
 print()
 
@@ -474,3 +474,5 @@ print()
 print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
 print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
 print()
+print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(g0,g0-dg,g0+dg))
+print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
