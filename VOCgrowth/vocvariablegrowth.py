@@ -26,6 +26,12 @@ def sgtf2region(x):
   if x=='Yorkshire and Humber': return 'Yorkshire and The Humber'
   return x
 def sgtf2country(x): return 'England'
+def LondonLTLAs(ltla):
+  "London LTLAs"
+  return ltla2region[ltla]=='London'
+def allLTLAs(x):
+  "All LTLAs"
+  return True
 
 ### Model ###
 #
@@ -59,6 +65,7 @@ def sgtf2country(x): return 'England'
 
 exclude=set()
 # exclude=set(['E08000001'])# This would exclude Bolton
+include=allLTLAs
 
 source="Sanger"
 #source="COG-UK"
@@ -77,7 +84,7 @@ firstweek=datetoday('2021-04-24')
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="region"
+locationsize="LTLA"
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -94,13 +101,15 @@ asc=0.4
 discarddays=2
 
 # Collect together all locations without positive entries into one combined "Other" location
-bundleremainder=False
+# (Makes little difference in practice)
+bundleremainder=True
 
 ### End options ###
 
 print("Options")
 print("Source:",source)
 print("Location size:",locationsize)
+print("Include:",include.__doc__)
 print("Exclude:",exclude)
 print("Generation time:",mgt,"days")
 print("Earliest day for case data:",daytodate(minday))
@@ -138,7 +147,7 @@ if source=="Sanger":
   # Get Sanger (variant) data into a suitable form
   vocnum={}
   for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
-    if ltla in exclude: continue
+    if ltla in exclude or not include(ltla): continue
     day=datetoday(date)
     week=nweeks-1-(lastweek-day)//7
     if week>=0 and week<nweeks:
@@ -301,7 +310,7 @@ weekadjp=weekadj*7/sum(weekadj)
 # Get case data into a suitable form
 cases={}
 for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
-  if ltla not in reduceltla or ltla in exclude: continue
+  if ltla not in reduceltla or ltla in exclude or not include(ltla): continue
   day=datetoday(date)
   d=day-minday
   if d<0 or d>=ndays: continue
