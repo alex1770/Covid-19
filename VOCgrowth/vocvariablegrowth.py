@@ -291,9 +291,9 @@ def prereduce(place):
   else: return place
 
 # Convert daily growth rate & uncertainty into R-number-based description
-def Rdesc(g0,dg):
+def Rdesc(h0,dh):
   z=1.96
-  (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-z*dg,g0,g0+z*dg]]
+  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-z*dh,h0,h0+z*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
 
 print("Estimating transmission advantage using variant counts only (not case counts)")
@@ -306,7 +306,7 @@ from scipy import inf
 def crossratiosubdivide(matgen):
   tot=np.zeros([2,2],dtype=int)
   ndiv=20
-  gmin=0;gmax=0.3# Range of possible daily growth advantages
+  hmin=0;hmax=0.3# Range of possible daily growth advantages
   logp=np.zeros(ndiv)
   L0=L1=0
   for M in matgen:
@@ -316,7 +316,7 @@ def crossratiosubdivide(matgen):
       T=M[0,0]*M[1,1]/(M[0,1]*M[1,0])
       L0+=c*log(T);L1+=c
       for i in range(ndiv):
-        x=(gmin+(i+.5)/ndiv*(gmax-gmin))*7# Convert to weekly growth rate
+        x=(hmin+(i+.5)/ndiv*(hmax-hmin))*7# Convert to weekly growth rate
         a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
         l0=d*x-(betaln(a,b)+betaln(c,d))
         e=exp(x)
@@ -336,8 +336,8 @@ def crossratiosubdivide(matgen):
     c=2*logp[i]-(logp[i+1]+logp[i-1])
     imax=i+b/c
   irange=1/sqrt(c)
-  g0=(gmin+(gmax-gmin)*(imax+.5)/ndiv)
-  dg=(gmax-gmin)*irange/ndiv
+  g0=(hmin+(hmax-hmin)*(imax+.5)/ndiv)
+  dg=(hmax-hmin)*irange/ndiv
   print("Likelihood method using log(CR):",Rdesc(g0,dg))
   print()
   
@@ -399,6 +399,8 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
 def getlikelihoods(fixedh=None):
   summary={}
   logp=np.zeros(ndiv)
+  TAA=np.zeros(ndays)
+  TBB=np.zeros(ndays)
   for place in places:
     print(place)
     print("="*len(place))
@@ -415,6 +417,7 @@ def getlikelihoods(fixedh=None):
     if not res.success: raise RuntimeError(res.message)
     xx=res.x
     AA,BB=expand(xx,sig)
+    TAA+=AA;TBB+=BB
     (a0,b0,h)=xx[:3]
     print("A    = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
     print("B    = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
@@ -456,7 +459,7 @@ def getlikelihoods(fixedh=None):
     print()
     print("    g     T    log lik")
     for i in range(ndiv):
-      h=(gmin+(gmax-gmin)*i/(ndiv-1))/sig
+      h=(hmin+(hmax-hmin)*i/(ndiv-1))/sig
       xx=[0,0,h]+[0]*(ndays-1)
       bounds[2]=(h,h)
       res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
@@ -466,12 +469,12 @@ def getlikelihoods(fixedh=None):
     print()
     sys.stdout.flush()
   print()
-  return summary,logp
+  return summary,logp,TAA,TBB
 
 ndiv=11
-gmin=0.03;gmax=0.15
+hmin=0.03;hmax=0.15
 
-summary,logp=getlikelihoods()
+summary,logp,TAA,TBB=getlikelihoods()
 
 print("Location                       Q     R      T")
 for place in places:
@@ -485,7 +488,7 @@ print()
 
 print("    g     T    log lik")
 for i in range(ndiv):
-  g=(gmin+(gmax-gmin)*i/(ndiv-1))
+  g=(hmin+(hmax-hmin)*i/(ndiv-1))
   print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
 i=np.argmax(logp)
 if i==0 or i==ndiv-1:
@@ -497,16 +500,38 @@ else:
   c=2*logp[i]-(logp[i+1]+logp[i-1])
   imax=i+b/c
 irange=1.96/sqrt(c)
-g0=(gmin+(gmax-gmin)*imax/(ndiv-1))
-dg=(gmax-gmin)*irange/(ndiv-1)
-(Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
-print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(g0,g0-dg,g0+dg))
+h0=(hmin+(hmax-hmin)*imax/(ndiv-1))
+dh=(hmax-hmin)*irange/(ndiv-1)
+(Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
 print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
 print()
 
 print("Re-running using global optimum growth advantage")
 print()
-summary,logp=getlikelihoods(fixedh=g0/sig)
+summary,logp,TAA,TBB=getlikelihoods(fixedh=h0/sig)
+
+print("Total predicted counts using global optimum growth advantage")
+print()
+
+print("A    = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
+print("B    = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
+print("Pred = predicted number of cases seen this day = A+B")
+print("Seen = number of cases seen this day, after weekday adjustment")
+print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
+print("R    = estimated reproduction rate of B.1.617.2 on this day")
+print()
+print("      Date       A       B    Pred    Seen       Q     R")
+for i in range(ndays):
+  print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(asc*TAA[i],asc*TBB[i],asc*(TAA[i]+TBB[i]),sum(cases[place][i] for place in places)),end='')
+  if i<ndays-1:
+    g=log(TAA[i+1]/TAA[i])
+    Q,R=(exp(g*mgt),exp((g+h0)*mgt))
+    print("   %5.2f %5.2f"%(Q,R))
+  else:
+    print()
+print()
+
 print("Location                       Q     R")
 for place in places:
   (Q,R)=summary[place]
@@ -515,5 +540,5 @@ print()
 print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
 print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
 print()
-print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(g0,g0-dg,g0+dg))
+print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
 print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
