@@ -262,7 +262,6 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
   if d>=0 and d<ndays:
     cases[place][d]+=n/weekadjp[day%7]
 places=sorted(list(cases))
-#for x in places: print(x);print(cases[x]);print()
 
 # Restrict to places for which there is at least some of each variant, and bundle the remaining locations together as "Other"
 okplaces=set([place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
@@ -275,7 +274,8 @@ if bundleremainder:
     vocnum["Other"]=othervocnum
     cases["Other"]=othercases
 places=list(okplaces)
-places.sort(key=lambda x: -vocnum[x].sum())
+#places.sort(key=lambda x: -vocnum[x].sum())# Descending order of voc counts
+places.sort()# Alphabetical order
 
 # Work out pre-B.1.617.2 case counts, amalgamated to at least region level
 precases={}
