@@ -105,6 +105,8 @@ discarddays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
+preadjfact=1# temporary
+
 ### End options ###
 
 print("Options")
@@ -122,6 +124,7 @@ print("Sigma (prior on daily growth rate change):",sig)
 print("Case ascertainment rate:",asc)
 print("Number of days of case data to discard:",discarddays)
 print("Bundle remainder:",bundleremainder)
+print("preadjfact:",preadjfact)
 print()
 
 np.set_printoptions(precision=3,linewidth=120)
@@ -240,18 +243,24 @@ for (date,n) in zip(apicases['date'],apicases['newCasesBySpecimenDate']):
   day=datetoday(date)
   if day>=weekadjdates[0] and day<=weekadjdates[1]: weekadj[day%7]+=n
 weekadjp=weekadj*7/sum(weekadj)
-  
+
 # Get case data into a suitable form
+preweek=datetoday('2021-04-10')# Gather pre-variant counts in two one-week periods up to this date
+precases0={}
 cases={}
 for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
   if ltla not in reduceltla or ltla in exclude or not include(ltla): continue
   day=datetoday(date)
   d=day-minday
-  if d<0 or d>=ndays: continue
   place=reduceltla[ltla]
   if place not in vocnum: continue
+  if place not in precases0: precases0[place]=np.zeros(2,dtype=int)
   if place not in cases: cases[place]=np.zeros(ndays)
-  cases[place][d]+=n/weekadjp[day%7]
+  for i in range(2):
+    if day>preweek-7*(2-i) and day<=preweek-7*(1-i):
+      precases0[place][i]+=n
+  if d>=0 and d<ndays:
+    cases[place][d]+=n/weekadjp[day%7]
 places=sorted(list(cases))
 #for x in places: print(x);print(cases[x]);print()
 
@@ -267,6 +276,19 @@ if bundleremainder:
     cases["Other"]=othercases
 places=list(okplaces)
 places.sort(key=lambda x: -vocnum[x].sum())
+
+# Work out pre-B.1.617.2 case counts, amalgamated to at least region level
+precases={}
+for place in precases0:
+  if bundleremainder and place in otherplaces:
+    dest="Other"
+  elif locationsize=="LTLA": dest=ltla2region[place]
+  else: dest=place
+  if dest not in precases: precases[dest]=np.zeros(2,dtype=int)
+  precases[dest]+=precases0[place]
+def prereduce(place):
+  if place!="Other" and locationsize=="LTLA": return ltla2region[place]
+  else: return place
 
 # Convert daily growth rate & uncertainty into R-number-based description
 def Rdesc(g0,dg):
@@ -350,10 +372,12 @@ def expand(xx,sig):
   return AA,BB
 
 # Return negative log likelihood
-def NLL(xx,lcases,lvocnum,sig,p):
-  #print(xx)
+def NLL(xx,lcases,lvocnum,sig,p,lprecases):
+  a,b=lprecases[0]+.5,lprecases[1]+.5
+  g0=log(b/a)/7/sig
+  v0=(1/a+1/b)/49/sig**2+1
+  tot=-(xx[3]-g0)**2/(2*v0)*preadjfact#alter
   AA,BB=expand(xx,sig)
-  tot=0
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     lam=p*(AA[i]+BB[i])
@@ -387,7 +411,7 @@ def getlikelihoods(fixedh=None):
     xx=np.zeros(ndays+2)
     bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
     if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
-    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
     if not res.success: raise RuntimeError(res.message)
     xx=res.x
     AA,BB=expand(xx,sig)
@@ -417,7 +441,7 @@ def getlikelihoods(fixedh=None):
       h=h0+i*eps
       xx=[0,0,h]+[0]*(ndays-1)
       bounds[2]=(h,h)
-      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
       if not res.success: raise RuntimeError(res.message)
       ff[i+1]=res.fun
     # Use observed Fisher information to make confidence interval
@@ -435,7 +459,7 @@ def getlikelihoods(fixedh=None):
       h=(gmin+(gmax-gmin)*i/(ndiv-1))/sig
       xx=[0,0,h]+[0]*(ndays-1)
       bounds[2]=(h,h)
-      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
       if not res.success: raise RuntimeError(res.message)
       logp[i]+=ff[1]-res.fun
       print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
