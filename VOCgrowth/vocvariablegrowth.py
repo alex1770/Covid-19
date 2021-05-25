@@ -56,6 +56,7 @@ def allLTLAs(x):
 # s_j ~ Po(q_j.B_{I_j})
 # g_{i+1} ~ N(g_i,sig^2)
 # q_j is optimised out, so q_j=(r_j+s_j)/(A_{I_j}+B_{I_j}), or effectively A_{I_j}/(A_{I_j}+B_{I_j}) ~ Beta(r_j+1,s_j+1)
+# g_0 ~ N(g_{-1},v), where g_{-1} is from a case-based empirical calculation from a recent pre-B.1.617.2 period.
 # [h ~ N(0,tau^2)]
 #
 ### End Model ###
@@ -105,8 +106,6 @@ discarddays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-preadjfact=1# temporary
-
 ### End options ###
 
 print("Options")
@@ -124,7 +123,6 @@ print("Sigma (prior on daily growth rate change):",sig)
 print("Case ascertainment rate:",asc)
 print("Number of days of case data to discard:",discarddays)
 print("Bundle remainder:",bundleremainder)
-print("preadjfact:",preadjfact)
 print()
 
 np.set_printoptions(precision=3,linewidth=120)
@@ -376,7 +374,7 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
   a,b=lprecases[0]+.5,lprecases[1]+.5
   g0=log(b/a)/7/sig
   v0=(1/a+1/b)/49/sig**2+1
-  tot=-(xx[3]-g0)**2/(2*v0)*preadjfact#alter
+  tot=-(xx[3]-g0)**2/(2*v0)
   AA,BB=expand(xx,sig)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
