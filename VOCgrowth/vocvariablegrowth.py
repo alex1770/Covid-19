@@ -84,7 +84,7 @@ firstweek=datetoday('2021-04-24')
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="LTLA"
+locationsize="region"
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -231,73 +231,6 @@ elif source=="SGTF":
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
-if 0:
-  rest=0
-  eps=0
-  nit=1000000
-  for w in range(nweeks-1):
-    tot=np.zeros([2,2],dtype=int)
-    totr=np.zeros([2,2],dtype=int)
-    ndiv=20
-    p0=0.5;p1=1.5
-    logp=np.zeros(ndiv)
-    T0=T1=L0=L1=0
-    for x in vocnum:
-      a=vocnum[x][w:w+2]
-      tot+=a
-      if (a>0).all():
-        c=1/((1/a.flatten()).sum())
-        T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
-        #print("AAA%d"%w,x,c,T)
-        T0+=c;T1+=c/T
-        L0+=c*log(T);L1+=c
-        A=gamma.rvs(a[0,0]+eps,size=nit)
-        B=gamma.rvs(a[0,1]+eps,size=nit)
-        C=gamma.rvs(a[1,0]+eps,size=nit)
-        D=gamma.rvs(a[1,1]+eps,size=nit)
-        l=A*D/(B*C)
-        tp=np.zeros(ndiv,dtype=int)
-        tp=tp+0.5
-        for T in l:
-          i=int(((T-p0)/(p1-p0)*ndiv)//1)
-          if i>=0 and i<ndiv: tp[i]+=1
-        for i in range(ndiv):
-          if tp[i]==0: logp[i]-=1e9
-          else: logp[i]+=log(tp[i]/nit)
-      else:
-        totr+=a
-    if rest:
-      a=totr
-      c=1/((1/a.flatten()).sum())
-      T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
-      T0+=c;T1+=c/T
-      L0+=c*log(T);L1+=c
-    print(T0/T1,exp(L0/L1),"cf",tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]),totr.flatten())
-    for i in range(ndiv):
-      print("%5.3f - %5.3f : %7.3f"%(p0+i/ndiv,p0+(i+1)/ndiv,logp[i]))
-    poi
-  T0=T1=L0=L1=0
-  tot=np.zeros([2,2],dtype=int)
-  totr=np.zeros([2,2],dtype=int)
-  for w in range(nweeks-1):
-    for x in vocnum:
-      a=vocnum[x][w:w+2]
-      tot+=a
-      if (a>0).all():
-        c=1/((1/a.flatten()).sum())
-        T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
-        T0+=c;T1+=c/T
-        L0+=c*log(T);L1+=c
-      else:
-        totr+=a
-  if rest:
-    a=totr
-    c=1/((1/a.flatten()).sum())
-    T=a[0,0]*a[1,1]/(a[0,1]*a[1,0])
-    T0+=c;T1+=c/T
-    L0+=c*log(T);L1+=c
-  print(T0/T1,exp(L0/L1),"cf",tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]),totr.flatten())
-
 # Simple weekday adjustment by dividing by the average count for that day of the week.
 # Use a relatively stable period (inclusive) over which to take the weekday averages.
 weekadjdates=[datetoday('2021-04-03'),datetoday('2021-05-14')]
@@ -333,6 +266,59 @@ if bundleremainder:
     cases["Other"]=othercases
 places=list(okplaces)
 places.sort(key=lambda x: -vocnum[x].sum())
+
+# Convert daily growth rate & uncertainty into R-number-based description
+def Rdesc(g0,dg):
+  (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
+  return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
+
+from scipy.special import betaln
+from scipy.integrate import quad
+from scipy import inf
+def crossratiosubdivide(matgen):
+  tot=np.zeros([2,2],dtype=int)
+  ndiv=20
+  gmin=0;gmax=0.3# Range of possible daily growth advantages
+  logp=np.zeros(ndiv)
+  L0=L1=0
+  for M in matgen:
+    tot+=M
+    if (M>0).all():
+      c=1/((1/M.flatten()).sum())
+      T=M[0,0]*M[1,1]/(M[0,1]*M[1,0])
+      L0+=c*log(T);L1+=c
+      for i in range(ndiv):
+        x=(gmin+(i+.5)/ndiv*(gmax-gmin))*7# Convert to weekly growth rate
+        a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
+        l0=d*x-(betaln(a,b)+betaln(c,d))
+        e=exp(x)
+        res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) + l0 ), 0, inf)
+        logp[i]+=log(res[0])
+  g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/7
+  dg=sqrt((1/tot.flatten()).sum())/7
+  print("Overall cross ratio:",Rdesc(g,dg))
+  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/7,1.96/sqrt(L1)/7))
+  i=np.argmax(logp)
+  if i==0 or i==ndiv-1:
+    print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
+    imax=i
+    c=0.1
+  else:
+    b=(logp[i+1]-logp[i-1])/2
+    c=2*logp[i]-(logp[i+1]+logp[i-1])
+    imax=i+b/c
+  irange=1.96/sqrt(c)
+  g0=(gmin+(gmax-gmin)*(imax+.5)/ndiv)
+  dg=(gmax-gmin)*irange/ndiv
+  print("Likelihood method using log(CR):",Rdesc(g0,dg))
+  print()
+  
+for w in range(nweeks-1):
+  day0=lastweek-(nweeks-w)*7+1
+  print(daytodate(day0),"-",daytodate(day0+13))
+  crossratiosubdivide(vocnum[place][w:w+2] for place in places)
+print("All week pairs")
+crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
 
 # ndays+2 parameters to be optimised:
 # 0: a0
@@ -471,13 +457,12 @@ i=np.argmax(logp)
 if i==0 or i==ndiv-1:
   print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
   imax=i
-  c=-0.1
+  c=0.1
 else:
-  a=logp[i]
   b=(logp[i+1]-logp[i-1])/2
-  c=(logp[i+1]+logp[i-1])/2-a
-  imax=i-b/(2*c)
-irange=sqrt(-1.96/c)
+  c=2*logp[i]-(logp[i+1]+logp[i-1])
+  imax=i+b/c
+irange=1.96/sqrt(c)
 g0=(gmin+(gmax-gmin)*imax/(ndiv-1))
 dg=(gmax-gmin)*irange/(ndiv-1)
 (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
