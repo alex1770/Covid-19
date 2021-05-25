@@ -63,13 +63,20 @@ def allLTLAs(x):
 
 ### Options ###
 
-exclude=set()
-# exclude=set(['E08000001'])# This would exclude Bolton
-include=allLTLAs
-
 source="Sanger"
 #source="COG-UK"
 #source="SGTF"
+
+# Can choose location size from "LTLA", "region", "country", "UK"
+# Sanger works with LTLA, region, country
+# COG-UK works with country, UK
+# SGTF works with region, country
+locationsize="LTLA"
+
+exclude=set()
+# exclude=set(['E08000001'])# This would exclude Bolton
+include=allLTLAs
+#include=LondonLTLAs
 
 mgt=5# Mean generation time in days
 
@@ -78,13 +85,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-04-10')
-
-# Can choose location size from "LTLA", "region", "country", "UK"
-# Sanger works with LTLA, region, country
-# COG-UK works with country, UK
-# SGTF works with region, country
-locationsize="LTLA"
+firstweek=datetoday('2021-04-24')
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -391,16 +392,16 @@ def getlikelihoods(fixedh=None):
     xx=res.x
     AA,BB=expand(xx,sig)
     (a0,b0,h)=xx[:3]
-    print("A    = estimated number of new cases of non-B.1.617.2 on this day")
-    print("B    = estimated number of new cases of B.1.617.2 on this day")
-    print("Pred = predicted number of cases seen this day = (ascertainment rate)*(A+B)")
+    print("A    = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
+    print("B    = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
+    print("Pred = predicted number of cases seen this day = A+B")
     print("Seen = number of cases seen this day, after weekday adjustment")
     print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
     print("R    = estimated reproduction rate of B.1.617.2 on this day")
     print()
     print("      Date       A       B    Pred    Seen       Q     R")
     for i in range(ndays):
-      print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(AA[i],BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
+      print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(asc*AA[i],asc*BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
       if i<ndays-1:
         g=xx[3+i]
         Q,R=(exp(g*sig*mgt),exp((g+h)*sig*mgt))
