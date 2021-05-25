@@ -78,13 +78,13 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-04-24')
+firstweek=datetoday('2021-04-10')
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="region"
+locationsize="LTLA"
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -269,8 +269,13 @@ places.sort(key=lambda x: -vocnum[x].sum())
 
 # Convert daily growth rate & uncertainty into R-number-based description
 def Rdesc(g0,dg):
-  (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-dg,g0,g0+dg]]
+  z=1.96
+  (Tmin,T,Tmax)=[(exp(g*mgt)-1)*100 for g in [g0-z*dg,g0,g0+z*dg]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
+
+print("Estimating transmission advantage using variant counts only (not case counts)")
+print("=============================================================================")
+print()
 
 from scipy.special import betaln
 from scipy.integrate import quad
@@ -296,8 +301,8 @@ def crossratiosubdivide(matgen):
         logp[i]+=log(res[0])
   g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/7
   dg=sqrt((1/tot.flatten()).sum())/7
-  print("Overall cross ratio:",Rdesc(g,dg))
-  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/7,1.96/sqrt(L1)/7))
+  print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
+  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/7,1/sqrt(L1)/7))
   i=np.argmax(logp)
   if i==0 or i==ndiv-1:
     print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
@@ -307,7 +312,7 @@ def crossratiosubdivide(matgen):
     b=(logp[i+1]-logp[i-1])/2
     c=2*logp[i]-(logp[i+1]+logp[i-1])
     imax=i+b/c
-  irange=1.96/sqrt(c)
+  irange=1/sqrt(c)
   g0=(gmin+(gmax-gmin)*(imax+.5)/ndiv)
   dg=(gmax-gmin)*irange/ndiv
   print("Likelihood method using log(CR):",Rdesc(g0,dg))
@@ -319,6 +324,10 @@ for w in range(nweeks-1):
   crossratiosubdivide(vocnum[place][w:w+2] for place in places)
 print("All week pairs")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
+
+print("Estimating transmission advantage using variant counts together with case counts")
+print("================================================================================")
+print()
 
 # ndays+2 parameters to be optimised:
 # 0: a0
