@@ -11,7 +11,7 @@ from scipy.stats import norm
 # Get Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 
 apicases=loadcsv("ltla.csv")
-sanger=loadcsv("lineages_by_ltla_and_week.2021-05-08.tsv",sep='\t')
+sanger=loadcsv("lineages_by_ltla_and_week.tsv",sep='\t')
 
 lastsanger=max(sanger['WeekEndDate'])
 #sangerday=datetoday(lastsanger)-7# Use penultimate week, because last week is incomplete
