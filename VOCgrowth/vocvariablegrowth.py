@@ -477,7 +477,7 @@ def getlikelihoods(fixedh=None):
     print("Estimated transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
     summary[place]=(Q,R,Tmin,T,Tmax)
     print()
-    print("    g     T    log lik")
+    print("    h     T    log lik")
     for i in range(ndiv):
       h=(hmin+(hmax-hmin)*i/(ndiv-1))/sig
       xx=[0,0,h]+[0]*(ndays-1)
@@ -506,7 +506,7 @@ print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday
 print("T = estimated transmission advantage = R/Q as a percentage increase")
 print()
 
-print("    g     T    log lik")
+print("    h     T    log lik")
 for i in range(ndiv):
   g=(hmin+(hmax-hmin)*i/(ndiv-1))
   print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
