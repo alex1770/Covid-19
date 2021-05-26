@@ -109,7 +109,7 @@ discarddays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":1000,"eps":1e-6}
+minopts={"maxiter":1000,"eps":1e-5}
 
 ### End options ###
 
@@ -385,7 +385,8 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     lam=p*(AA[i]+BB[i])
-    tot+=(-lam+lcases[i]*log(lam))*nif1
+    # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
+    tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
   # Term to regulate change in growth rate
   for i in range(ndays-2):
     # Could downweight (allow larger) changes in growth on or near roadmap days, but in practice that makes almost no difference
@@ -454,6 +455,7 @@ def getlikelihoods(fixedh=None):
         print(place)
         print("xx =",xx)
         print("lcases =",list(cases[place]))
+        print("lprecases =",precases[prereduce(place)])
         print("lvocnum =",vocnum[place])
         print("sig =",sig)
         print("asc =",asc)
