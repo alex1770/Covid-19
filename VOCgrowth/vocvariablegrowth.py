@@ -1,7 +1,6 @@
 from stuff import *
 import sys
 from scipy.optimize import minimize
-from scipy.stats import gamma
 from math import log,exp,sqrt
 import numpy as np
 import re
@@ -110,7 +109,7 @@ discarddays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":1000,"eps":1e-5}
+minopts={"maxiter":1000,"eps":1e-6}
 
 ### End options ###
 
@@ -129,6 +128,7 @@ print("Sigma (prior on daily growth rate change):",sig)
 print("Case ascertainment rate:",asc)
 print("Number of days of case data to discard:",discarddays)
 print("Bundle remainder:",bundleremainder)
+print("Minimiser options:",minopts)
 print()
 
 np.set_printoptions(precision=3,linewidth=120)
@@ -449,7 +449,21 @@ def getlikelihoods(fixedh=None):
       xx=[0,0,h]+[0]*(ndays-1)
       bounds[2]=(h,h)
       res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
-      if not res.success: raise RuntimeError(res.message)
+      if not res.success:
+        print(res)
+        print(place)
+        print("xx =",xx)
+        print("lcases =",list(cases[place]))
+        print("lvocnum =",vocnum[place])
+        print("sig =",sig)
+        print("asc =",asc)
+        print("bounds =",bounds)
+        print("nif1 =",nif1)
+        print("nif2 =",nif2)
+        print("nweeks, ndays, minday, lastweek =",nweeks,",",ndays,",",minday,",",lastweek)
+        print("isd =",isd)
+        print("minopts =",minopts)
+        raise RuntimeError(res.message)
       ff[i+1]=res.fun
     # Use observed Fisher information to make confidence interval
     fi=(ff[0]-2*ff[1]+ff[2])/eps**2
