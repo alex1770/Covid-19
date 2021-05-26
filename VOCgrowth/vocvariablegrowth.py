@@ -447,7 +447,7 @@ def getlikelihoods(fixedh=None):
     eps=0.01/sig
     for i in [-1,1]:
       h=h0+i*eps
-      xx=[0,0,h]+[0]*(ndays-1)
+      xx=res.x;xx[2]=h
       bounds[2]=(h,h)
       res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
       if not res.success:
@@ -480,7 +480,7 @@ def getlikelihoods(fixedh=None):
     print("    h     T    log lik")
     for i in range(ndiv):
       h=(hmin+(hmax-hmin)*i/(ndiv-1))/sig
-      xx=[0,0,h]+[0]*(ndays-1)
+      xx=res.x;xx[2]=h
       bounds[2]=(h,h)
       res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
       if not res.success: raise RuntimeError(res.message)
