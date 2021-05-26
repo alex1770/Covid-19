@@ -32,6 +32,9 @@ def LondonLTLAs(ltla):
 def allLTLAs(x):
   "All LTLAs"
   return True
+def BoltonLTLA(ltla):
+  "Bolton LTLA"
+  return ltla=='E08000001'
 
 ### Model ###
 #
@@ -78,6 +81,7 @@ exclude=set()
 # exclude=set(['E08000001'])# This would exclude Bolton
 include=allLTLAs
 #include=LondonLTLAs
+#include=BoltonLTLA
 
 mgt=5# Mean generation time in days
 
