@@ -249,7 +249,7 @@ for (date,n) in zip(apicases['date'],apicases['newCasesBySpecimenDate']):
 weekadjp=weekadj*7/sum(weekadj)
 
 # Get case data into a suitable form
-preweek=datetoday('2021-04-10')# Gather pre-variant counts in two one-week periods up to this date
+preweek=minday+9# Gather pre-variant counts in two one-week periods up to this date
 precases0={}
 cases={}
 for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
