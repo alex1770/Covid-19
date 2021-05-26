@@ -110,6 +110,8 @@ discarddays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
+minopts={"maxiter":1000,"eps":1e-5}
+
 ### End options ###
 
 print("Options")
@@ -415,7 +417,7 @@ def getlikelihoods(fixedh=None):
     xx=np.zeros(ndays+2)
     bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
     if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
-    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
     if not res.success: raise RuntimeError(res.message)
     xx=res.x
     AA,BB=expand(xx,sig)
@@ -446,7 +448,7 @@ def getlikelihoods(fixedh=None):
       h=h0+i*eps
       xx=[0,0,h]+[0]*(ndays-1)
       bounds[2]=(h,h)
-      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
       if not res.success: raise RuntimeError(res.message)
       ff[i+1]=res.fun
     # Use observed Fisher information to make confidence interval
@@ -464,7 +466,7 @@ def getlikelihoods(fixedh=None):
       h=(hmin+(hmax-hmin)*i/(ndiv-1))/sig
       xx=[0,0,h]+[0]*(ndays-1)
       bounds[2]=(h,h)
-      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options={"maxiter":1000})
+      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
       if not res.success: raise RuntimeError(res.message)
       logp[i]+=ff[1]-res.fun
       print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
