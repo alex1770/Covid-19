@@ -101,7 +101,7 @@ isd=1/0.05 # Inverse sd for prior on transmission advantage (as growth rate per 
 isd=1e-6   # Flat prior
 
 # Effectively the prior on how much daily growth rate is allowed to change in 1 day
-sig=0.002
+sig=0.004
 
 # Case ascertainment rate
 asc=0.4
