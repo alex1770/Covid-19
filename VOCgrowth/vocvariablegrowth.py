@@ -576,16 +576,29 @@ summary,logp,TAA,TBB=getlikelihoods(fixedh=h0/sig)
 print("Total predicted counts using global optimum growth advantage")
 print()
 
-print("A    = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
-print("B    = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
-print("Pred = predicted number of cases seen this day = A+B")
-print("Seen = number of cases seen this day, after weekday adjustment")
-print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
-print("R    = estimated reproduction rate of B.1.617.2 on this day")
+print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
+print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
+print("Pred   = predicted number of cases seen this day = A+B")
+print("Seen   = number of cases seen this day, after weekday adjustment")
+print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst variant counts")
+print("PredV2 = (1-p)*Pred
+print("SeenV1 = p*Seen")
+print("SeenV2 = (1-p)*Seen")
+print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
+print("R      = estimated reproduction rate of B.1.617.2 on this day")
 print()
-print("      Date       A       B    Pred    Seen       Q     R")
+print("      Date       A       B    Pred    Seen    PredV1  PredV2  SeenV1  SeenV2        Q     R")
+totvoc=sum(vocnum.values())
 for i in range(ndays):
-  print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(asc*TAA[i],asc*TBB[i],asc*(TAA[i]+TBB[i]),sum(cases[place][i] for place in places)),end='')
+  day=minday+i
+  pred,seen=asc*(TAA[i]+TBB[i]),sum(cases[place][i] for place in places)
+  print(daytodate(day),"%7.0f %7.0f %7.0f %7.0f"%(asc*TAA[i],asc*TBB[i],pred,seen),end='')
+  week=nweeks-1-(lastweek-day)//7
+  if week>=0 and week<nweeks and totvoc[week].sum()>0:
+    p=totvoc[week][0]/totvoc[week].sum()
+    print("   %7.0f %7.0f %7.0f %7.0f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
+  else:
+    print("         -       -       -       - ",end='')
   if i<ndays-1:
     g=log(TAA[i+1]/TAA[i])
     Q,R=(exp(g*mgt),exp((g+h0)*mgt))
