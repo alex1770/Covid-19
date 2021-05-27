@@ -1,9 +1,8 @@
 from stuff import *
-import sys
+import sys,re,argparse,pickle
 from scipy.optimize import minimize
 from math import log,exp,sqrt
 import numpy as np
-import re
 
 # (Make it auto download files?)
 # Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
@@ -34,6 +33,11 @@ def includeltla(ltla,ltlaset):
     return True
   else:
     raise RuntimeError("Unrecognised ltla set "+ltlaset)
+
+parser=argparse.ArgumentParser()
+parser.add_argument('-l', '--load-options', help='Load options from a file')
+parser.add_argument('-s', '--save-options', help='Save options to a file')
+args=parser.parse_args()
 
 ### Model ###
 #
@@ -113,22 +117,49 @@ minopts={"maxiter":1000,"eps":1e-5}
 
 ### End options ###
 
-print("Options")
-print("Source:",source)
-print("Location size:",locationsize)
-print("LTLA set:",ltlaset)
-print("LTLA exclude:",ltlaexclude)
-print("Generation time:",mgt,"days")
-print("Earliest day for case data:",daytodate(minday))
-print("Earliest week (using end of week date) to use VOC count data:",daytodate(firstweek))
-print("nif1:",nif1)
-print("nif2:",nif2)
-print("Inverse sd for prior on growth:",isd)
-print("Sigma (prior on daily growth rate change):",sig)
-print("Case ascertainment rate:",asc)
-print("Number of days of case data to discard:",discarddays)
-print("Bundle remainder:",bundleremainder)
-print("Minimiser options:",minopts)
+opts=[
+  ("Source", source),
+  ("Location size", locationsize),
+  ("LTLA set", ltlaset),
+  ("LTLA exclude", list(ltlaexclude)),
+  ("Generation time (days)", mgt),
+  ("Earliest day for case data", daytodate(minday)),
+  ("Earliest week (using end of week date) to use VOC count data", daytodate(firstweek)),
+  ("nif1", nif1),
+  ("nif2", nif2),
+  ("Inverse sd for prior on growth", isd),
+  ("Sigma (prior on daily growth rate change)", sig),
+  ("Case ascertainment rate", asc),
+  ("Number of days of case data to discard", discarddays),
+  ("Bundle remainder", bundleremainder),
+  ("Minimiser options", minopts)
+]
+
+if args.save_options!=None:
+  with open(args.save_options,'w') as fp: json.dump(opts,fp)
+
+if args.load_options!=None:
+  with open(args.load_options,'r') as fp: opts=json.load(fp)
+  d=dict(opts)
+  source=d["Source"]
+  locationsize=d["Location size"]
+  ltlaset=d["LTLA set"]
+  ltlaexclude=set(d["LTLA exclude"])
+  mgt=d["Generation time (days)"]
+  minday=datetoday(d["Earliest day for case data"])
+  firstweek=datetoday(d["Earliest week (using end of week date) to use VOC count data"])
+  nif1=d["nif1"]
+  nif2=d["nif2"]
+  isd=d["Inverse sd for prior on growth"]
+  sig=d["Sigma (prior on daily growth rate change)"]
+  asc=d["Case ascertainment rate"]
+  discarddays=d["Number of days of case data to discard"]
+  bundleremainder=d["Bundle remainder"]
+  minopts=d["Minimiser options"]
+
+print("Options:")
+print()
+for x,y in opts: print("%s:"%x,y)
 print()
 
 np.set_printoptions(precision=3,linewidth=120)
