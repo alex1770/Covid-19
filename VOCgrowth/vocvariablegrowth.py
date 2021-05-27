@@ -119,51 +119,52 @@ fixedgrowthadv=None
 
 ### End options ###
 
-opts=[
-  ("Source", source),
-  ("Location size", locationsize),
-  ("LTLA set", ltlaset),
-  ("LTLA exclude", list(ltlaexclude)),
-  ("Generation time (days)", mgt),
-  ("Earliest day for case data", daytodate(minday)),
-  ("Earliest week (using end of week date) to use VOC count data", daytodate(firstweek)),
-  ("Fixed growth advantage",fixedgrowthadv),
-  ("nif1", nif1),
-  ("nif2", nif2),
-  ("Inverse sd for prior on growth", isd),
-  ("Sigma (prior on daily growth rate change)", sig),
-  ("Case ascertainment rate", asc),
-  ("Number of days of case data to discard", discarddays),
-  ("Bundle remainder", bundleremainder),
-  ("Minimiser options", minopts)
-]
+opts={
+  "Source": source,
+  "Location size": locationsize,
+  "LTLA set": ltlaset,
+  "LTLA exclude": list(ltlaexclude),
+  "Generation time (days)": mgt,
+  "Earliest day for case data": daytodate(minday),
+  "Earliest week (using end of week date) to use VOC count data": daytodate(firstweek),
+  "Fixed growth advantage": fixedgrowthadv,
+  "nif1": nif1,
+  "nif2": nif2,
+  "Inverse sd for prior on growth": isd,
+  "Sigma (prior on daily growth rate change)": sig,
+  "Case ascertainment rate": asc,
+  "Number of days of case data to discard": discarddays,
+  "Bundle remainder": bundleremainder,
+  "Minimiser options": minopts
+}
 
 if args.save_options!=None:
-  with open(args.save_options,'w') as fp: json.dump(opts,fp)
+  with open(args.save_options,'w') as fp: json.dump(opts,fp,indent=2)
 
 if args.load_options!=None:
-  with open(args.load_options,'r') as fp: opts=json.load(fp)
-  d=dict(opts)
-  source=d["Source"]
-  locationsize=d["Location size"]
-  ltlaset=d["LTLA set"]
-  ltlaexclude=set(d["LTLA exclude"])
-  mgt=d["Generation time (days)"]
-  minday=datetoday(d["Earliest day for case data"])
-  firstweek=datetoday(d["Earliest week (using end of week date) to use VOC count data"])
-  fixedgrowthadv=d["Fixed growth advantage"]
-  nif1=d["nif1"]
-  nif2=d["nif2"]
-  isd=d["Inverse sd for prior on growth"]
-  sig=d["Sigma (prior on daily growth rate change)"]
-  asc=d["Case ascertainment rate"]
-  discarddays=d["Number of days of case data to discard"]
-  bundleremainder=d["Bundle remainder"]
-  minopts=d["Minimiser options"]
+  with open(args.load_options,'r') as fp: lopts=json.load(fp)
+  for x in lopts: opts[x]=lopts[x]
+  
+source=opts["Source"]
+locationsize=opts["Location size"]
+ltlaset=opts["LTLA set"]
+ltlaexclude=set(opts["LTLA exclude"])
+mgt=opts["Generation time (days)"]
+minday=datetoday(opts["Earliest day for case data"])
+firstweek=datetoday(opts["Earliest week (using end of week date) to use VOC count data"])
+fixedgrowthadv=opts["Fixed growth advantage"]
+nif1=opts["nif1"]
+nif2=opts["nif2"]
+isd=opts["Inverse sd for prior on growth"]
+sig=opts["Sigma (prior on daily growth rate change)"]
+asc=opts["Case ascertainment rate"]
+discarddays=opts["Number of days of case data to discard"]
+bundleremainder=opts["Bundle remainder"]
+minopts=opts["Minimiser options"]
 
 print("Options:")
 print()
-for x,y in opts: print("%s:"%x,y)
+for x in sorted(list(opts)): print("%s:"%x,opts[x])
 print()
 
 np.set_printoptions(precision=3,linewidth=120)
