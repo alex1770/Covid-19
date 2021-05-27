@@ -467,13 +467,13 @@ def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
     print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
     print("R    = estimated reproduction rate of B.1.617.2 on this day")
     print()
-    print("      Date       A       B    Pred    Seen       Q     R")
+    print("      Date       A       B    Pred    Seen        Q      R")
     for i in range(ndays):
       print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(asc*AA[i],asc*BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
       if i<ndays-1:
         g=xx[3+i]
         Q,R=(exp(g*sig*mgt),exp((g+h)*sig*mgt))
-        print("   %5.2f %5.2f"%(Q,R))
+        print("   %6.3f %6.3f"%(Q,R))
       else:
         print()
     print()
@@ -587,22 +587,23 @@ print("SeenV2 = (1-p)*Seen")
 print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
 print("R      = estimated reproduction rate of B.1.617.2 on this day")
 print()
-print("      Date       A       B    Pred    Seen    PredV1  PredV2  SeenV1  SeenV2        Q     R")
+print("      Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
+# Need the extra decimal places to make graphs look smooth
 totvoc=sum(vocnum.values())
 for i in range(ndays):
   day=minday+i
   pred,seen=asc*(TAA[i]+TBB[i]),sum(cases[place][i] for place in places)
-  print(daytodate(day),"%7.0f %7.0f %7.0f %7.0f"%(asc*TAA[i],asc*TBB[i],pred,seen),end='')
+  print(daytodate(day),"%9.2f %9.2f %9.2f %9.2f"%(asc*TAA[i],asc*TBB[i],pred,seen),end='')
   week=nweeks-1-(lastweek-day)//7
   if week>=0 and week<nweeks and totvoc[week].sum()>0:
     p=totvoc[week][0]/totvoc[week].sum()
-    print("   %7.0f %7.0f %7.0f %7.0f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
+    print("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
   else:
-    print("         -       -       -       - ",end='')
+    print("           -         -         -         - ",end='')
   if i<ndays-1:
     g=log(TAA[i+1]/TAA[i])
     Q,R=(exp(g*mgt),exp((g+h0)*mgt))
-    print("   %5.2f %5.2f"%(Q,R))
+    print("   %7.4f %7.4f"%(Q,R))
   else:
     print()
 print()
