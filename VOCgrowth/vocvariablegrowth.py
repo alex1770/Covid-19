@@ -25,15 +25,15 @@ def sgtf2region(x):
   if x=='Yorkshire and Humber': return 'Yorkshire and The Humber'
   return x
 def sgtf2country(x): return 'England'
-def LondonLTLAs(ltla):
-  "London LTLAs"
-  return ltla2region[ltla]=='London'
-def allLTLAs(x):
-  "All LTLAs"
-  return True
-def BoltonLTLA(ltla):
-  "Bolton LTLA"
-  return ltla=='E08000001'
+def includeltla(ltla,ltlaset):
+  if ltlaset=="London":
+    return ltla2region[ltla]=='London'
+  elif ltlaset=="Bolton":
+    return ltla=='E08000001'
+  elif ltlaset=="All":
+    return True
+  else:
+    raise RuntimeError("Unrecognised ltla set "+ltlaset)
 
 ### Model ###
 #
@@ -76,11 +76,11 @@ source="Sanger"
 # SGTF works with region, country
 locationsize="LTLA"
 
-exclude=set()
-# exclude=set(['E08000001'])# This would exclude Bolton
-include=allLTLAs
-#include=LondonLTLAs
-#include=BoltonLTLA
+ltlaexclude=set()
+# ltlaexclude=set(['E08000001'])# This would exclude Bolton
+ltlaset="All"
+#ltlaset="London"
+#ltlaset="Bolton"
 
 mgt=5# Mean generation time in days
 
@@ -116,8 +116,8 @@ minopts={"maxiter":1000,"eps":1e-5}
 print("Options")
 print("Source:",source)
 print("Location size:",locationsize)
-print("Include:",include.__doc__)
-print("Exclude:",exclude)
+print("LTLA set:",ltlaset)
+print("LTLA exclude:",ltlaexclude)
 print("Generation time:",mgt,"days")
 print("Earliest day for case data:",daytodate(minday))
 print("Earliest week (using end of week date) to use VOC count data:",daytodate(firstweek))
@@ -155,7 +155,7 @@ if source=="Sanger":
   # Get Sanger (variant) data into a suitable form
   vocnum={}
   for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
-    if ltla in exclude or not include(ltla): continue
+    if ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
     day=datetoday(date)
     week=nweeks-1-(lastweek-day)//7
     if week>=0 and week<nweeks:
@@ -253,7 +253,7 @@ preweek=minday+9# Gather pre-variant counts in two one-week periods up to this d
 precases0={}
 cases={}
 for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
-  if ltla not in reduceltla or ltla in exclude or not include(ltla): continue
+  if ltla not in reduceltla or ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
   day=datetoday(date)
   d=day-minday
   place=reduceltla[ltla]
