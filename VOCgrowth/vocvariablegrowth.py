@@ -93,7 +93,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-04-24')
+firstweek=datetoday('2021-05-01')
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -115,6 +115,8 @@ bundleremainder=True
 
 minopts={"maxiter":1000,"eps":1e-5}
 
+fixedgrowthadv=None
+
 ### End options ###
 
 opts=[
@@ -125,6 +127,7 @@ opts=[
   ("Generation time (days)", mgt),
   ("Earliest day for case data", daytodate(minday)),
   ("Earliest week (using end of week date) to use VOC count data", daytodate(firstweek)),
+  ("Fixed growth advantage",fixedgrowthadv),
   ("nif1", nif1),
   ("nif2", nif2),
   ("Inverse sd for prior on growth", isd),
@@ -148,6 +151,7 @@ if args.load_options!=None:
   mgt=d["Generation time (days)"]
   minday=datetoday(d["Earliest day for case data"])
   firstweek=datetoday(d["Earliest week (using end of week date) to use VOC count data"])
+  fixedgrowthadv=d["Fixed growth advantage"]
   nif1=d["nif1"]
   nif2=d["nif2"]
   isd=d["Inverse sd for prior on growth"]
@@ -432,7 +436,7 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
   tot+=-(xx[2]*sig*isd)**2/2
   return -tot
 
-def getlikelihoods(fixedh=None):
+def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
   summary={}
   logp=np.zeros(ndiv)
   TAA=np.zeros(ndays)
@@ -505,7 +509,7 @@ def getlikelihoods(fixedh=None):
     else:
       dh=100/sig
     (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
-    print("Estimated transmission advantage %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
+    print("Estimated transmission advantage: %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
     summary[place]=(Q,R,Tmin,T,Tmax)
     print()
     print("    h     T    log lik")
@@ -522,44 +526,50 @@ def getlikelihoods(fixedh=None):
   print()
   return summary,logp,TAA,TBB
 
-ndiv=11
-hmin=0.03;hmax=0.15
-
-summary,logp,TAA,TBB=getlikelihoods()
-
-print("Location                       Q     R      T")
-for place in places:
-  (Q,R,Tmin,T,Tmax)=summary[place]
-  print("%-25s  %5.2f %5.2f  %4.0f%% ( %4.0f%% - %4.0f%% )"%(place,Q,R,T,Tmin,Tmax))
-print()
-print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
-print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
-print("T = estimated transmission advantage = R/Q as a percentage increase")
-print()
-
-print("    h     T    log lik")
-for i in range(ndiv):
-  g=(hmin+(hmax-hmin)*i/(ndiv-1))
-  print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
-i=np.argmax(logp)
-if i==0 or i==ndiv-1:
-  print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
-  imax=i
-  c=0.1
+if fixedgrowthadv==None:
+  ndiv=11
+  hmin=0.03;hmax=0.15
+  
+  summary,logp,TAA,TBB=getlikelihoods(ndiv=ndiv,hmin=hmin,hmax=hmax)
+  
+  print("Location                       Q     R      T")
+  for place in places:
+    (Q,R,Tmin,T,Tmax)=summary[place]
+    print("%-25s  %5.2f %5.2f  %4.0f%% ( %4.0f%% - %4.0f%% )"%(place,Q,R,T,Tmin,Tmax))
+  print()
+  print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
+  print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
+  print("T = estimated transmission advantage = R/Q as a percentage increase")
+  print()
+  
+  print("    h     T    log lik")
+  for i in range(ndiv):
+    g=(hmin+(hmax-hmin)*i/(ndiv-1))
+    print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
+  i=np.argmax(logp)
+  if i==0 or i==ndiv-1:
+    print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
+    imax=i
+    c=0.1
+  else:
+    b=(logp[i+1]-logp[i-1])/2
+    c=2*logp[i]-(logp[i+1]+logp[i-1])
+    imax=i+b/c
+  irange=1.96/sqrt(c)
+  h0=(hmin+(hmax-hmin)*imax/(ndiv-1))
+  dh=(hmax-hmin)*irange/(ndiv-1)
+  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
+  print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+  print()
+  
+  print("Re-running using global optimum growth advantage",h0)
+  print()
 else:
-  b=(logp[i+1]-logp[i-1])/2
-  c=2*logp[i]-(logp[i+1]+logp[i-1])
-  imax=i+b/c
-irange=1.96/sqrt(c)
-h0=(hmin+(hmax-hmin)*imax/(ndiv-1))
-dh=(hmax-hmin)*irange/(ndiv-1)
-(Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
-print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
-print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
-print()
-
-print("Re-running using global optimum growth advantage")
-print()
+  h0=fixedgrowthadv
+  print("Running using global optimum growth advantage",h0)
+  print()
+  
 summary,logp,TAA,TBB=getlikelihoods(fixedh=h0/sig)
 
 print("Total predicted counts using global optimum growth advantage")
@@ -591,5 +601,11 @@ print()
 print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
 print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
 print()
-print("Combined growth advantage per day %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
-print("Combined transmission advantage %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+if fixedgrowthadv==None:
+  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
+  print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+else:
+  T=(exp(h0*mgt)-1)*100
+  print("Combined growth advantage per day: %.3f"%h0)
+  print("Combined transmission advantage: %.0f%% (assuming fixed generation time of %g days)"%(T,mgt))
