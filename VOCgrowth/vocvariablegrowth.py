@@ -581,7 +581,7 @@ print("B      = estimated number of new cases of B.1.617.2 on this day multiplie
 print("Pred   = predicted number of cases seen this day = A+B")
 print("Seen   = number of cases seen this day, after weekday adjustment")
 print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst variant counts")
-print("PredV2 = (1-p)*Pred
+print("PredV2 = (1-p)*Pred")
 print("SeenV1 = p*Seen")
 print("SeenV2 = (1-p)*Seen")
 print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
