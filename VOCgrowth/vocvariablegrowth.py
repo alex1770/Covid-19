@@ -117,7 +117,7 @@ minopts={"maxiter":1000,"eps":1e-5}
 
 fixedgrowthadv=None
 
-voclen=7
+voclen=(1 if source=="COG-UK" else 7)
 
 ### End options ###
 
@@ -137,7 +137,8 @@ opts={
   "Case ascertainment rate": asc,
   "Number of days of case data to discard": discarddays,
   "Bundle remainder": bundleremainder,
-  "Minimiser options": minopts
+  "Minimiser options": minopts,
+  "Length of time period over which VOC counts are given (days)": voclen
 }
 
 if args.save_options!=None:
@@ -163,6 +164,7 @@ asc=opts["Case ascertainment rate"]
 discarddays=opts["Number of days of case data to discard"]
 bundleremainder=opts["Bundle remainder"]
 minopts=opts["Minimiser options"]
+voclen=opts["Length of time period over which VOC counts are given (days)"]
 
 print("Options:")
 print()
@@ -204,7 +206,7 @@ if source=="Sanger":
       else: vocnum[place][week][0]+=n
 elif source=="COG-UK":
   cog=loadcsv("cog_metadata.csv")
-  censor=6
+  censor=2
   lastweek=datetoday(max(cog['sample_date']))-censor;assert maxday>=lastweek
   #nweeks=(lastweek-firstweek+1)//voclen
   nweeks=(lastweek-firstweek)//voclen+1
@@ -373,6 +375,8 @@ def crossratiosubdivide(matgen):
         l1=(b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z)
         res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
         logp[i]+=log(res[0])+l0+l1
+  if (tot==0).any():
+    print("Can't estimate best transmission factor because VOC count matrix has 1 or more zero entries");return
   g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/voclen
   dg=sqrt((1/tot.flatten()).sum())/voclen
   print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
@@ -394,7 +398,7 @@ def crossratiosubdivide(matgen):
   
 for w in range(nweeks-1):
   day0=lastweek-(nweeks-w)*voclen+1
-  print(daytodate(day0),"-",daytodate(day0+13))
+  print(daytodate(day0),"-",daytodate(day0+2*voclen-1))
   crossratiosubdivide(vocnum[place][w:w+2] for place in places)
 print("All week pairs")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
@@ -441,8 +445,8 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
   # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
     endweek=lastweek-(nweeks-1-w)*voclen-minday
-    A=sum(AA[endweek-6:endweek+1])
-    B=sum(BB[endweek-6:endweek+1])
+    A=sum(AA[endweek-(voclen-1):endweek+1])
+    B=sum(BB[endweek-(voclen-1):endweek+1])
     tot+=(lvocnum[w][0]*log(A/(A+B))+lvocnum[w][1]*log(B/(A+B)))*nif2
   # Prior on h
   tot+=-(xx[2]*sig*isd)**2/2
