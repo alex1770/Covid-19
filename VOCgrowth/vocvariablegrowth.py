@@ -117,6 +117,8 @@ minopts={"maxiter":1000,"eps":1e-5}
 
 fixedgrowthadv=None
 
+voclen=7
+
 ### End options ###
 
 opts={
@@ -173,11 +175,12 @@ maxday=datetoday(max(apicases['date']))-discarddays# Inclusive
 ndays=maxday-minday+1
 
 if source=="Sanger":
+  assert voclen==7
   sanger=loadcsv("lineages_by_ltla_and_week.tsv",sep='\t')
   
   lastweek=datetoday(max(sanger['WeekEndDate']));assert maxday>=lastweek
-  nweeks=(lastweek-firstweek)//7+1
-  # Sanger week number is nweeks-1-(lastweek-day)//7
+  nweeks=(lastweek-firstweek)//voclen+1
+  # Sanger week number is nweeks-1-(lastweek-day)//voclen
 
   if locationsize=="LTLA":
     reduceltla=ltla2ltla
@@ -193,7 +196,7 @@ if source=="Sanger":
   for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
     if ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
     day=datetoday(date)
-    week=nweeks-1-(lastweek-day)//7
+    week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
       place=reduceltla[ltla]
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
@@ -203,9 +206,9 @@ elif source=="COG-UK":
   cog=loadcsv("cog_metadata.csv")
   censor=6
   lastweek=datetoday(max(cog['sample_date']))-censor;assert maxday>=lastweek
-  #nweeks=(lastweek-firstweek+1)//7
-  nweeks=(lastweek-firstweek)//7+1
-  # Week number is nweeks-1-(lastweek-day)//7
+  #nweeks=(lastweek-firstweek+1)//voclen
+  nweeks=(lastweek-firstweek)//voclen+1
+  # Week number is nweeks-1-(lastweek-day)//voclen
   
   if  locationsize=="country":
     reduceltla=ltla2country
@@ -220,7 +223,7 @@ elif source=="COG-UK":
   vocnum={}
   for (date,seqname,var) in zip(cog['sample_date'],cog['sequence_name'],cog['lineage']):
     day=datetoday(date)
-    week=nweeks-1-(lastweek-day)//7
+    week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
       r=re.match("[^0-9-]*[0-9-]",seqname)
       coglab=seqname[:r.end()-1]
@@ -229,11 +232,12 @@ elif source=="COG-UK":
       if var=="B.1.617.2": vocnum[place][week][1]+=1
       else: vocnum[place][week][0]+=1
 elif source=="SGTF":
+  assert voclen==7
   sgtf=loadcsv("TechBriefing12Fig17.csv")
   lastweek=max(datetoday(x) for x in sgtf['week'])+6# Convert w/c to w/e convention
   assert maxday>=lastweek
-  nweeks=(lastweek-firstweek)//7+1
-  # Week number is nweeks-1-(lastweek-day)//7
+  nweeks=(lastweek-firstweek)//voclen+1
+  # Week number is nweeks-1-(lastweek-day)//voclen
 
   if locationsize=="region":
     reduceltla=ltla2region
@@ -248,7 +252,7 @@ elif source=="SGTF":
   vocnum={}
   for (date,region,var,n) in zip(sgtf['week'],sgtf['Region'],sgtf['sgtf'],sgtf['n']):
     day=datetoday(date)+6# Convert from w/c to w/e convention
-    week=nweeks-1-(lastweek-day)//7
+    week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
       place=reducesgtf(region)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
@@ -267,7 +271,7 @@ elif source=="SGTF":
   date0,date1=datetoday('2021-03-11'),datetoday('2021-04-15')
   for place in vocnum:
     for week in range(nweeks):
-      day=lastweek-7*(nweeks-1-week)
+      day=lastweek-voclen*(nweeks-1-week)
       assert day>=date0
       if day<date1: f=(day-date0)/(date1-date0)*0.03+0.02
       else: f=0.05
@@ -356,7 +360,7 @@ def crossratiosubdivide(matgen):
       T=M[0,0]*M[1,1]/(M[0,1]*M[1,0])
       L0+=c*log(T);L1+=c
       for i in range(ndiv):
-        x=(hmin+(i+.5)/ndiv*(hmax-hmin))*7# Convert to weekly growth rate
+        x=(hmin+(i+.5)/ndiv*(hmax-hmin))*voclen# Convert to weekly growth rate
         a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
         l0=d*x-(betaln(a,b)+betaln(c,d))
         # Faff around finding maximum to avoid underflow in integral
@@ -369,10 +373,10 @@ def crossratiosubdivide(matgen):
         l1=(b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z)
         res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
         logp[i]+=log(res[0])+l0+l1
-  g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/7
-  dg=sqrt((1/tot.flatten()).sum())/7
+  g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/voclen
+  dg=sqrt((1/tot.flatten()).sum())/voclen
   print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
-  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/7,1/sqrt(L1)/7))
+  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/voclen,1/sqrt(L1)/voclen))
   i=np.argmax(logp)
   if i==0 or i==ndiv-1:
     print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
@@ -389,7 +393,7 @@ def crossratiosubdivide(matgen):
   print()
   
 for w in range(nweeks-1):
-  day0=lastweek-(nweeks-w)*7+1
+  day0=lastweek-(nweeks-w)*voclen+1
   print(daytodate(day0),"-",daytodate(day0+13))
   crossratiosubdivide(vocnum[place][w:w+2] for place in places)
 print("All week pairs")
@@ -436,7 +440,7 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
     tot+=-(xx[3+i+1]-xx[3+i])**2/2
   # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
-    endweek=lastweek-(nweeks-1-w)*7-minday
+    endweek=lastweek-(nweeks-1-w)*voclen-minday
     A=sum(AA[endweek-6:endweek+1])
     B=sum(BB[endweek-6:endweek+1])
     tot+=(lvocnum[w][0]*log(A/(A+B))+lvocnum[w][1]*log(B/(A+B)))*nif2
@@ -455,7 +459,7 @@ def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
     print()
     print("                        Nonvar    Var   Seen")
     for w in range(nweeks):
-      day0,day1=lastweek-(nweeks-w)*7+1,lastweek-(nweeks-1-w)*7
+      day0,day1=lastweek-(nweeks-w)*voclen+1,lastweek-(nweeks-1-w)*voclen
       print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
     print()
     xx=np.zeros(ndays+2)
@@ -601,7 +605,7 @@ for i in range(ndays):
   day=minday+i
   pred,seen=asc*(TAA[i]+TBB[i]),sum(cases[place][i] for place in places)
   print(daytodate(day),"%9.2f %9.2f %9.2f %9.2f"%(asc*TAA[i],asc*TBB[i],pred,seen),end='')
-  week=nweeks-1-(lastweek-day)//7
+  week=nweeks-1-(lastweek-day)//voclen
   if week>=0 and week<nweeks and totvoc[week].sum()>0:
     p=totvoc[week][0]/totvoc[week].sum()
     print("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
