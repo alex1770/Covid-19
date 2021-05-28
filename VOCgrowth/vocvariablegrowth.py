@@ -173,6 +173,7 @@ print("Options:")
 print()
 for x in sorted(list(opts)): print("%s:"%x,opts[x])
 print()
+sys.stdout.flush()
 
 np.set_printoptions(precision=3,linewidth=120)
 
