@@ -359,9 +359,16 @@ def crossratiosubdivide(matgen):
         x=(hmin+(i+.5)/ndiv*(hmax-hmin))*7# Convert to weekly growth rate
         a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
         l0=d*x-(betaln(a,b)+betaln(c,d))
+        # Faff around finding maximum to avoid underflow in integral
         e=exp(x)
-        res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) + l0 ), 0, inf)
-        logp[i]+=log(res[0])
+        X=b+d-1;Y=a+b;Z=c+d
+        A=Y+Z-X
+        B=Y/e+Z-X*(1+1/e)
+        C=-X/e
+        z=(-B+sqrt(B**2-4*A*C))/(2*A)
+        l1=(b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z)
+        res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
+        logp[i]+=log(res[0])+l0+l1
   g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/7
   dg=sqrt((1/tot.flatten()).sum())/7
   print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
