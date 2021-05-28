@@ -175,6 +175,7 @@ np.set_printoptions(precision=3,linewidth=120)
 
 maxday=datetoday(max(apicases['date']))-discarddays# Inclusive
 ndays=maxday-minday+1
+firstweek=max(firstweek,minday+voclen-1)
 
 if source=="Sanger":
   assert voclen==7
@@ -208,7 +209,6 @@ elif source=="COG-UK":
   cog=loadcsv("cog_metadata.csv")
   censor=2
   lastweek=datetoday(max(cog['sample_date']))-censor;assert maxday>=lastweek
-  #nweeks=(lastweek-firstweek+1)//voclen
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
   
