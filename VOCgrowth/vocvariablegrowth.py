@@ -1,7 +1,7 @@
 from stuff import *
 import sys,re,argparse,pickle
 from scipy.optimize import minimize
-from math import log,exp,sqrt
+from math import log,exp,sqrt,sin,pi
 import numpy as np
 
 # (Make it auto download files?)
@@ -102,6 +102,9 @@ isd=1e-6   # Flat prior
 
 # Effectively the prior on how much daily growth rate is allowed to change in 1 day
 sig=0.004
+
+# Timescale over which growth rate can change significantly
+bmsig=30
 
 # Case ascertainment rate
 asc=0.4
@@ -407,24 +410,45 @@ print("Estimating transmission advantage using variant counts together with case
 print("================================================================================")
 print()
 
-# ndays+2 parameters to be optimised:
+# L=ndays-1
+# i is time from start, in days
+# t=i/L
+# growth[i] = bmscale*sqrt(L)*(t*X_0 + sum_{n=1}^{N-1} sqrt(2)/pi*exp(-(n*bmsig/L)^2/2)*sin(n*pi*t)/n*X_n)
+# where X_n ~ N(0,1),  n=0,...,N; N=ceil(4*L/bmsig), say
+
+bmscale=0.02
+bmL=ndays-1
+bmN=int(4*bmL/bmsig+1)
+bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
+bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
+
+# bmN+4 parameters to be optimised:
 # 0: a0
 # 1: b0
 # 2: h/sig
-# 3 ... 3+ndays-2 : g_0/sig, ..., g_{ndays-2}/sig
+# 3: g0/sig
+# 4 ... 4+bmN-1 : X_0, ..., X_{bmN-1}
 # (would be tidier to put sig in the likelihood instead of on the variables, but SLSQP seems
-#  to get in trouble if its variables to be optimised are on too small a scale)
+#  to get in trouble if its variables to be optimised are not on the scale of order 1)
 
 def expand(xx,sig):
-  (a0,b0,h)=xx[:3]
+  (a0,b0)=xx[:2]
   AA=[exp(a0)];BB=[exp(b0)]
+  h=xx[2]*sig
+  g0=xx[3]*sig
   a=a0;b=b0
+  w=bmscale*sqrt(bmL)
+  GG=[]
   for i in range(ndays-1):
-    g=xx[3+i]
-    a+=g*sig;b+=(g+h)*sig
+    t=i/bmL
+    gu=t*xx[4]
+    for n in range(1,bmN):
+      gu+=bmweight[n]*bmsin[(i*n)%(2*bmL)]*xx[4+n]
+    g=g0+w*gu
+    a+=g;b+=g+h;GG.append(g)
     AA.append(exp(a))
     BB.append(exp(b))
-  return AA,BB
+  return AA,BB,GG
 
 # Return negative log likelihood
 def NLL(xx,lcases,lvocnum,sig,p,lprecases):
@@ -432,16 +456,15 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
   g0=log(b/a)/7/sig
   v0=(1/a+1/b)/49/sig**2+1
   tot=-(xx[3]-g0)**2/(2*v0)
-  AA,BB=expand(xx,sig)
+  AA,BB,GG=expand(xx,sig)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     lam=p*(AA[i]+BB[i])
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
     tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
   # Term to regulate change in growth rate
-  for i in range(ndays-2):
-    # Could downweight (allow larger) changes in growth on or near roadmap days, but in practice that makes almost no difference
-    tot+=-(xx[3+i+1]-xx[3+i])**2/2
+  for i in range(bmN):
+    tot+=-xx[4+i]**2/2
   # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
     endweek=lastweek-(nweeks-1-w)*voclen-minday
@@ -466,13 +489,13 @@ def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
       day0,day1=lastweek-(nweeks-w)*voclen+1,lastweek-(nweeks-1-w)*voclen
       print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
     print()
-    xx=np.zeros(ndays+2)
-    bounds=[(-10,20),(-10,20),(-1/sig,1/sig)]+[(-1/sig,1/sig)]*(ndays-1)
+    xx=np.zeros(bmN+4)
+    bounds=[(-10,20),(-10,20),(-1/sig,1/sig),(-1/sig,1/sig)]+[(-10,10)]*bmN
     if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
     res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
     if not res.success: raise RuntimeError(res.message)
     xx=res.x
-    AA,BB=expand(xx,sig)
+    AA,BB,GG=expand(xx,sig)
     TAA+=AA;TBB+=BB
     (a0,b0,h)=xx[:3]
     print("A    = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
@@ -486,8 +509,8 @@ def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
     for i in range(ndays):
       print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(asc*AA[i],asc*BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
       if i<ndays-1:
-        g=xx[3+i]
-        Q,R=(exp(g*sig*mgt),exp((g+h)*sig*mgt))
+        g=GG[i]
+        Q,R=(exp(g*mgt),exp((g+h*sig)*mgt))
         print("   %6.3f %6.3f"%(Q,R))
       else:
         print()
