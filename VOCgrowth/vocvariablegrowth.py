@@ -97,8 +97,7 @@ firstweek=datetoday('2021-04-17')
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
-isd=1/0.05 # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1/0.05 is fairly weak.
-isd=1e-6   # Flat prior
+isd=1/0.1  # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1/0.1 is pretty weak.
 
 # Effectively the prior on how much daily growth rate is allowed to change in 1 day
 sig=0.004
