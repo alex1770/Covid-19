@@ -526,7 +526,6 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None):
   print()
   print("      Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
   # Need the extra decimal places to make graphs look smooth
-  lvocnum=sum(vocnum.values())
   for i in range(ndays):
     day=minday+i
     pred,seen=asc*(AA[i]+BB[i]),lcases[i]
