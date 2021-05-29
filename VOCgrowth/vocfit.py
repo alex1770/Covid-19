@@ -46,13 +46,14 @@ args=parser.parse_args()
 # Known:
 # n_i      = number of confirmed cases on day i by specimen date (slightly adjusted for weekday)
 # p        = case ascertainment rate (chance of seeing a case)
+# g_{-1}(r),v_{-1}(r) = emperical growth rate (and its variance) in the two weeks up to 2021-04-10 as a function of region, r
 # r_j, s_j = Variant counts of non-B.1.617.2, B.1.617.2 in j^th week
 # I_j      = set of days (week) corresponding to VOC counts r_j, s_j
 # Assume chance of sequencing a case is a totally free parameter, and optimise over it
 #
 # Unknown:
 # h   = daily growth advantage of B.1.617.2 over other variants
-# g_i = growth rate of other variants on day i -> i+1
+# X_n = Fourier coefficients controlling the growth of non-B.1.617.2
 # A_0 = initial count of non-B.1.617.2
 # B_0 = initial count of B.1.617.2
 #
@@ -62,10 +63,13 @@ args=parser.parse_args()
 # n_i ~ Po(p(A_i+B_i))
 # r_j ~ Po(q_j.A_{I_j})  (A_{I_j} means sum_{i in A_j}A_i)
 # s_j ~ Po(q_j.B_{I_j})
-# g_{i+1} ~ N(g_i,sig^2)
+# [q_j ~ eps.e^{-eps.q}dq (a wide exponential distribution) - not currently implemented]
 # q_j is optimised out, so q_j=(r_j+s_j)/(A_{I_j}+B_{I_j}), or effectively A_{I_j}/(A_{I_j}+B_{I_j}) ~ Beta(r_j+1,s_j+1)
-# g_0 ~ N(g_{-1},v), where g_{-1} is from a case-based empirical calculation from a recent pre-B.1.617.2 period.
-# [h ~ N(0,tau^2)]
+# g_0 ~ N(g_{-1},v_{-1})
+# X_n ~ N(0,1)
+# N=ndays-1
+# g_i = g_0 + bmscale*sqrt(N)*(i/N*X_0 + sqrt(2)/pi*sum_n e^{-(n*bmsig/N)^2/2}sin(n*pi*i/N)*X_n/n)
+# h ~ N(0,tau^2)
 #
 ### End Model ###
 
