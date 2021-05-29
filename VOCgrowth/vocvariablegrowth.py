@@ -102,8 +102,13 @@ isd=1/0.1  # Inverse sd for prior on transmission advantage (as growth rate per 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
 sig0=0.004
 
-# Timescale over which growth rate can change significantly
+# Timescale in days over which growth rate can change significantly
+# (lower = more wiggles)
 bmsig=30
+
+# Lengthscale for filtered Brownian motion
+# (higher = greater amplitude for the wiggles)
+bmscale=0.02
 
 # Case ascertainment rate
 asc=0.4
@@ -142,6 +147,7 @@ opts={
   "Inverse sd for prior on growth": isd,
   "Sigma (prior on daily growth rate change)": sig0,
   "Timescale of growth rate change (days)": bmsig,
+  "Lengthscale for filtered Brownian motion": bmscale,
   "Case ascertainment rate": asc,
   "Number of days of case data to discard": discardcasedays,
   "Number of days of COG-UK data to discard": discardcogdays,
@@ -170,6 +176,7 @@ nif2=opts["nif2"]
 isd=opts["Inverse sd for prior on growth"]
 sig0=opts["Sigma (prior on daily growth rate change)"]
 bmsig=opts["Timescale of growth rate change (days)"]
+bmscale=opts["Lengthscale for filtered Brownian motion"]
 asc=opts["Case ascertainment rate"]
 discardcasedays=opts["Number of days of case data to discard"]
 discardcogdays=opts["Number of days of COG-UK data to discard"]
@@ -183,7 +190,7 @@ for x in sorted(list(opts)): print("%s:"%x,opts[x])
 print()
 sys.stdout.flush()
 
-np.set_printoptions(precision=3,linewidth=120)
+np.set_printoptions(precision=3,linewidth=150)
 
 maxday=datetoday(max(apicases['date']))-discardcasedays# Inclusive
 ndays=maxday-minday+1
@@ -406,12 +413,13 @@ def crossratiosubdivide(matgen):
   dg=(hmax-hmin)*irange/ndiv
   print("Likelihood method using log(CR):",Rdesc(g0,dg))
   print()
-  
-for w in range(nweeks-1):
-  day0=lastweek-(nweeks-w)*voclen+1
-  print(daytodate(day0),"-",daytodate(day0+2*voclen-1))
-  crossratiosubdivide(vocnum[place][w:w+2] for place in places)
-print("All week pairs")
+
+if voclen>=7:
+  for w in range(nweeks-1):
+    day0=lastweek-(nweeks-w)*voclen+1
+    print(daytodate(day0),"-",daytodate(day0+2*voclen-1))
+    crossratiosubdivide(vocnum[place][w:w+2] for place in places)
+print("All week pairs:")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
 
 print("Estimating transmission advantage using variant counts together with case counts")
@@ -424,14 +432,13 @@ print()
 # growth[i] = bmscale*sqrt(L)*(t*X_0 + sum_{n=1}^{N-1} sqrt(2)/pi*exp(-(n*bmsig/L)^2/2)*sin(n*pi*t)/n*X_n)
 # where X_n ~ N(0,1),  n=0,...,N; N=ceil(4*L/bmsig), say
 
-bmscale=0.02
 bmL=ndays-1
 bmN=int(3*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
 
 # Need to scale the variables being optimised over to keep SLSQP happy
-condition=np.array([100,100,1000,1000]+[1.]*bmN)
+condition=np.array([50,50,1000,1000]+[1.]*bmN)
 
 # bmN+4 parameters to be optimised:
 # 0: a0
@@ -485,7 +492,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,p,lprecases):
   tot+=-(xx[2]*isd)**2/2
   return -tot
 
-def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
+def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   xx=np.copy(hint)
   # bounds[2][0]=0 prejudges B.1.617.2 as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
   # though would need to relax this constraint if dealing with other variants where it might not be true.
@@ -503,7 +510,43 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
     print("bounds =",bounds)
     print("nweeks, ndays, minday, lastweek =",nweeks,",",ndays,",",minday,",",lastweek)
     raise RuntimeError(res.message)
-  return res.x/condition,res.fun
+  xx=res.x/condition
+
+  # Work out the useful constant terms. They don't affect the optimisation, but they allow optimisation over hyperparameters
+  
+  
+  # If 'statphase', make the log likelihood a better approximation to log(integral over all parameters) using stationary phase approximation
+  if statphase:
+    N=bmN+4
+    eps=1e-3
+    H=np.zeros([N,N])
+    for i in range(N-1):
+      for j in range(i+1,N):
+        v=0
+        eps1=eps/condition[i]
+        eps2=eps/condition[j]
+        for (s1,s2) in [(-1,-1),(-1,1),(1,-1),(1,1)]:
+          x=np.copy(xx)
+          x[i]+=s1*eps1
+          x[j]+=s2*eps2
+          v+=s1*s2*NLL(x*condition,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
+        e=v/(4*eps1*eps2)
+        H[i,j]=e
+        H[j,i]=e
+    for i in range(N):
+      x=np.copy(xx)
+      v=0
+      eps1=eps/condition[i]
+      for s in [-1,0,1]:
+        x=np.copy(xx)
+        x[i]+=s*eps1
+        v+=(s*s*3-2)*NLL(x*condition,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
+      H[i,i]=v/eps1**2
+    det=np.linalg.det(H)
+  else:
+    det=1
+    
+  return res.x/condition,res.fun+log(det)/2
 
 def printplaceinfo(place):
   print(place)
@@ -571,6 +614,10 @@ if mode=="local growth rates":
   for place in places:
     printplaceinfo(place)
     xx0,L0=optimiseplace(place)
+    if 1:
+      print("Log likelihood",-L0)
+      xx1,L1=optimiseplace(place,statphase=True)
+      print("Corrected log likelihood",-L1)
     AA,BB,GG=expand(xx0)
     h0=xx0[2]
     ff=[0,L0,0]
