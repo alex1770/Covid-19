@@ -101,9 +101,9 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-17')
 
-nif1=1  # Non-independence factor for cases (less than 1 means downweight this information)
-nif2=1  # Non-independence factor for VOC counts (ditto)
-isd=1   # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
+nif1=0.5 # Non-independence factor for cases (less than 1 means downweight this information)
+nif2=0.5 # Non-independence factor for VOC counts (ditto)
+isd=1    # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
 sig0=0.004
