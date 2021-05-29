@@ -57,7 +57,7 @@ args=parser.parse_args()
 # A_0 = initial count of non-B.1.617.2
 # B_0 = initial count of B.1.617.2
 #
-# Likelihood: (some parts have now been changed; description to be updated)
+# Likelihood:
 # A_{i+1}=e^{g_i}A_i
 # B_{i+1}=e^{g_i+h}B_i
 # n_i ~ Po(p(A_i+B_i))
