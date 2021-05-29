@@ -70,15 +70,15 @@ args=parser.parse_args()
 
 ### Options ###
 
-#source="Sanger"
-source="COG-UK"
+source="Sanger"
+#source="COG-UK"
 #source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="UK"
+locationsize="LTLA"
 
 ltlaexclude=set()
 # ltlaexclude=set(['E08000001'])# This would exclude Bolton
@@ -93,7 +93,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-04-17')
+firstweek=datetoday('2021-05-01')
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -427,6 +427,8 @@ bmL=ndays-1
 bmN=int(4*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
+
+# Need to scale the variables being optimised over to keep SLSQP happy
 condition=np.array([100,100,1000,1000]+[1.]*bmN)
 
 # bmN+4 parameters to be optimised:
@@ -435,8 +437,6 @@ condition=np.array([100,100,1000,1000]+[1.]*bmN)
 # 2: h
 # 3: g0
 # 4 ... 4+bmN-1 : X_0, ..., X_{bmN-1}
-# (would be tidier to put sig in the likelihood instead of on the variables, but SLSQP seems
-#  to get in trouble if its variables to be optimised are not on the scale of order 1)
 
 def expand(xx):
   (a0,b0)=xx[:2]
@@ -485,7 +485,9 @@ def NLL(xx_conditioned,lcases,lvocnum,sig,p,lprecases):
 
 def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
   xx=np.copy(hint)
-  bounds=[(-10,20),(-10,20),(-1,1),(-1,1)]+[(-10,10)]*bmN
+  # bounds[2][0]=0 prejudges B.1.617.2 as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
+  # though would need to relax this constraint if dealing with other variants where it might not be true.
+  bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
   res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
   if not res.success:
@@ -554,7 +556,7 @@ def printsummary(summary):
   for place in places:
     (Q,R,T,Tmin,Tmax)=summary[place]
     print("%-25s  %5.2f %5.2f  %4.0f%%"%(place,Q,R,T),end='')
-    if Tmin!=None: print("( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
+    if Tmin!=None: print(" ( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
     else: print()
   print()
   print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
@@ -578,9 +580,9 @@ if mode=="local growth rates":
     fi=(ff[0]-2*ff[1]+ff[2])/eps**2
     if fi>0:
       dh=1.96/sqrt(fi)
+      (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
     else:
-      dh=100
-    (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+      (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
