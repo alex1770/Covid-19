@@ -1,0 +1,216 @@
+Region,week,sgtf,n,percent,conf_low,conf_high
+East Midlands,2/3/2021,Cases with confirmed S-gene,22,1.8,1.17,2.78
+East Midlands,2/3/2021,Cases with confirmed SGTF,1191,98.2,97.22,98.83
+East Midlands,9/3/2021,Cases with confirmed S-gene,24,1,0.64,1.47
+East Midlands,9/3/2021,Cases with confirmed SGTF,2444,99,98.53,99.36
+East Midlands,16/3/2021,Cases with confirmed S-gene,12,0.5,0.26,0.86
+East Midlands,16/3/2021,Cases with confirmed SGTF,2482,99.5,99.14,99.74
+East Midlands,23/3/2021,Cases with confirmed S-gene,4,0.2,0.06,0.5
+East Midlands,23/3/2021,Cases with confirmed SGTF,2187,99.8,99.5,99.94
+East Midlands,30/3/2021,Cases with confirmed S-gene,14,0.9,0.53,1.6
+East Midlands,30/3/2021,Cases with confirmed SGTF,1488,99.1,98.4,99.47
+East Midlands,6/4/2021,Cases with confirmed S-gene,27,3.2,2.18,4.73
+East Midlands,6/4/2021,Cases with confirmed SGTF,809,96.8,95.27,97.82
+East Midlands,13/4/2021,Cases with confirmed S-gene,40,5.2,3.78,7.07
+East Midlands,13/4/2021,Cases with confirmed SGTF,730,94.8,92.93,96.22
+East Midlands,20/4/2021,Cases with confirmed S-gene,63,12.2,9.59,15.45
+East Midlands,20/4/2021,Cases with confirmed SGTF,452,87.8,84.55,90.41
+East Midlands,27/4/2021,Cases with confirmed S-gene,70,12.8,10.13,15.9
+East Midlands,27/4/2021,Cases with confirmed SGTF,479,87.2,84.1,89.87
+East Midlands,4/5/2021,Cases with confirmed S-gene,208,21.8,19.25,24.59
+East Midlands,4/5/2021,Cases with confirmed SGTF,746,78.2,75.41,80.75
+East Midlands,11/5/2021,Cases with confirmed S-gene,232,34.3,30.77,38.05
+East Midlands,11/5/2021,Cases with confirmed SGTF,444,65.7,61.95,69.23
+East Midlands,18/5/2021,Cases with confirmed S-gene,333,57.1,52.98,61.16
+East Midlands,18/5/2021,Cases with confirmed SGTF,250,42.9,38.84,47.02
+East of England,2/3/2021,Cases with confirmed S-gene,18,1.8,1.08,2.83
+East of England,2/3/2021,Cases with confirmed SGTF,1002,98.2,97.17,98.92
+East of England,9/3/2021,Cases with confirmed S-gene,23,1.5,0.97,2.26
+East of England,9/3/2021,Cases with confirmed SGTF,1523,98.5,97.74,99.03
+East of England,16/3/2021,Cases with confirmed S-gene,16,1.1,0.65,1.81
+East of England,16/3/2021,Cases with confirmed SGTF,1445,98.9,98.19,99.35
+East of England,23/3/2021,Cases with confirmed S-gene,11,1,0.52,1.81
+East of England,23/3/2021,Cases with confirmed SGTF,1107,99,98.19,99.48
+East of England,30/3/2021,Cases with confirmed S-gene,13,1.7,0.97,3.02
+East of England,30/3/2021,Cases with confirmed SGTF,738,98.3,96.98,99.03
+East of England,6/4/2021,Cases with confirmed S-gene,21,4.4,2.83,6.79
+East of England,6/4/2021,Cases with confirmed SGTF,454,95.6,93.21,97.17
+East of England,13/4/2021,Cases with confirmed S-gene,23,5.3,3.5,8.03
+East of England,13/4/2021,Cases with confirmed SGTF,407,94.7,91.97,96.5
+East of England,20/4/2021,Cases with confirmed S-gene,32,9.5,6.68,13.27
+East of England,20/4/2021,Cases with confirmed SGTF,305,90.5,86.73,93.32
+East of England,27/4/2021,Cases with confirmed S-gene,88,23.1,19.02,27.72
+East of England,27/4/2021,Cases with confirmed SGTF,293,76.9,72.28,80.98
+East of England,4/5/2021,Cases with confirmed S-gene,200,35.2,31.31,39.32
+East of England,4/5/2021,Cases with confirmed SGTF,368,64.8,60.68,68.69
+East of England,11/5/2021,Cases with confirmed S-gene,370,56.7,52.76,60.49
+East of England,11/5/2021,Cases with confirmed SGTF,283,43.3,39.51,47.24
+East of England,18/5/2021,Cases with confirmed S-gene,486,69.8,66.24,73.19
+East of England,18/5/2021,Cases with confirmed SGTF,210,30.2,26.81,33.76
+London,2/3/2021,Cases with confirmed S-gene,44,3.8,2.8,5.09
+London,2/3/2021,Cases with confirmed SGTF,1118,96.2,94.91,97.2
+London,9/3/2021,Cases with confirmed S-gene,63,4.9,3.8,6.24
+London,9/3/2021,Cases with confirmed SGTF,1228,95.1,93.76,96.2
+London,16/3/2021,Cases with confirmed S-gene,42,4,2.91,5.38
+London,16/3/2021,Cases with confirmed SGTF,1016,96,94.62,97.09
+London,23/3/2021,Cases with confirmed S-gene,28,3.9,2.65,5.64
+London,23/3/2021,Cases with confirmed SGTF,692,96.1,94.36,97.35
+London,30/3/2021,Cases with confirmed S-gene,36,9.3,6.7,12.79
+London,30/3/2021,Cases with confirmed SGTF,350,90.7,87.21,93.3
+London,6/4/2021,Cases with confirmed S-gene,81,18.2,14.83,22.22
+London,6/4/2021,Cases with confirmed SGTF,363,81.8,77.78,85.17
+London,13/4/2021,Cases with confirmed S-gene,86,21.3,17.46,25.67
+London,13/4/2021,Cases with confirmed SGTF,318,78.7,74.33,82.54
+London,20/4/2021,Cases with confirmed S-gene,96,33.3,27.98,39.14
+London,20/4/2021,Cases with confirmed SGTF,192,66.7,60.86,72.02
+London,27/4/2021,Cases with confirmed S-gene,129,48.5,42.37,54.67
+London,27/4/2021,Cases with confirmed SGTF,137,51.5,45.33,57.63
+London,4/5/2021,Cases with confirmed S-gene,221,53.4,48.45,58.25
+London,4/5/2021,Cases with confirmed SGTF,193,46.6,41.75,51.55
+London,11/5/2021,Cases with confirmed S-gene,283,57.5,53.01,61.91
+London,11/5/2021,Cases with confirmed SGTF,209,42.5,38.09,46.99
+London,18/5/2021,Cases with confirmed S-gene,373,72,67.89,75.79
+London,18/5/2021,Cases with confirmed SGTF,145,28,24.21,32.11
+North East,2/3/2021,Cases with confirmed S-gene,5,0.3,0.12,0.82
+North East,2/3/2021,Cases with confirmed SGTF,1510,99.7,99.18,99.88
+North East,9/3/2021,Cases with confirmed S-gene,4,0.3,0.08,0.71
+North East,9/3/2021,Cases with confirmed SGTF,1531,99.7,99.29,99.92
+North East,16/3/2021,Cases with confirmed S-gene,3,0.2,0.05,0.66
+North East,16/3/2021,Cases with confirmed SGTF,1443,99.8,99.34,99.95
+North East,23/3/2021,Cases with confirmed SGTF,931,100,99.49,100
+North East,30/3/2021,Cases with confirmed S-gene,3,0.4,0.1,1.27
+North East,30/3/2021,Cases with confirmed SGTF,747,99.6,98.73,99.9
+North East,6/4/2021,Cases with confirmed S-gene,1,0.2,0.01,1.47
+North East,6/4/2021,Cases with confirmed SGTF,438,99.8,98.53,99.99
+North East,13/4/2021,Cases with confirmed S-gene,4,1.8,0.57,4.75
+North East,13/4/2021,Cases with confirmed SGTF,223,98.2,95.25,99.43
+North East,20/4/2021,Cases with confirmed S-gene,5,2.1,0.78,5.15
+North East,20/4/2021,Cases with confirmed SGTF,231,97.9,94.85,99.22
+North East,27/4/2021,Cases with confirmed S-gene,11,8.6,4.58,15.2
+North East,27/4/2021,Cases with confirmed SGTF,117,91.4,84.8,95.42
+North East,4/5/2021,Cases with confirmed S-gene,7,9.3,4.15,18.85
+North East,4/5/2021,Cases with confirmed SGTF,68,90.7,81.15,95.85
+North East,11/5/2021,Cases with confirmed S-gene,5,17.9,6.77,37.58
+North East,11/5/2021,Cases with confirmed SGTF,23,82.1,62.42,93.23
+North East,18/5/2021,Cases with confirmed S-gene,8,47.1,23.86,71.47
+North East,18/5/2021,Cases with confirmed SGTF,9,52.9,28.53,76.14
+North West,2/3/2021,Cases with confirmed S-gene,39,1.1,0.77,1.48
+North West,2/3/2021,Cases with confirmed SGTF,3606,98.9,98.52,99.23
+North West,9/3/2021,Cases with confirmed S-gene,32,0.8,0.58,1.18
+North West,9/3/2021,Cases with confirmed SGTF,3837,99.2,98.82,99.42
+North West,16/3/2021,Cases with confirmed S-gene,22,0.6,0.4,0.95
+North West,16/3/2021,Cases with confirmed SGTF,3558,99.4,99.05,99.6
+North West,23/3/2021,Cases with confirmed S-gene,30,1,0.67,1.4
+North West,23/3/2021,Cases with confirmed SGTF,3054,99,98.6,99.33
+North West,30/3/2021,Cases with confirmed S-gene,30,1.6,1.07,2.24
+North West,30/3/2021,Cases with confirmed SGTF,1904,98.4,97.76,98.93
+North West,6/4/2021,Cases with confirmed S-gene,27,1.8,1.25,2.72
+North West,6/4/2021,Cases with confirmed SGTF,1434,98.2,97.28,98.75
+North West,13/4/2021,Cases with confirmed S-gene,49,4.6,3.47,6.1
+North West,13/4/2021,Cases with confirmed SGTF,1013,95.4,93.9,96.53
+North West,20/4/2021,Cases with confirmed S-gene,102,9.7,8.02,11.7
+North West,20/4/2021,Cases with confirmed SGTF,949,90.3,88.3,91.98
+North West,27/4/2021,Cases with confirmed S-gene,322,27.8,25.24,30.48
+North West,27/4/2021,Cases with confirmed SGTF,837,72.2,69.52,74.76
+North West,4/5/2021,Cases with confirmed S-gene,1053,53.8,51.54,56
+North West,4/5/2021,Cases with confirmed SGTF,905,46.2,44,48.46
+North West,11/5/2021,Cases with confirmed S-gene,1695,71.4,69.5,73.17
+North West,11/5/2021,Cases with confirmed SGTF,680,28.6,26.83,30.5
+North West,18/5/2021,Cases with confirmed S-gene,2285,83.9,82.44,85.23
+North West,18/5/2021,Cases with confirmed SGTF,439,16.1,14.77,17.56
+South East,2/3/2021,Cases with confirmed S-gene,24,1.9,1.22,2.79
+South East,2/3/2021,Cases with confirmed SGTF,1272,98.1,97.21,98.78
+South East,9/3/2021,Cases with confirmed S-gene,16,1.3,0.77,2.15
+South East,9/3/2021,Cases with confirmed SGTF,1218,98.7,97.85,99.23
+South East,16/3/2021,Cases with confirmed S-gene,13,1.2,0.65,2.03
+South East,16/3/2021,Cases with confirmed SGTF,1106,98.8,97.97,99.35
+South East,23/3/2021,Cases with confirmed S-gene,6,0.9,0.36,2.01
+South East,23/3/2021,Cases with confirmed SGTF,675,99.1,97.99,99.64
+South East,30/3/2021,Cases with confirmed S-gene,16,3.5,2.06,5.68
+South East,30/3/2021,Cases with confirmed SGTF,446,96.5,94.32,97.94
+South East,6/4/2021,Cases with confirmed S-gene,26,5.2,3.51,7.67
+South East,6/4/2021,Cases with confirmed SGTF,471,94.8,92.33,96.49
+South East,13/4/2021,Cases with confirmed S-gene,51,12.6,9.58,16.28
+South East,13/4/2021,Cases with confirmed SGTF,355,87.4,83.72,90.42
+South East,20/4/2021,Cases with confirmed S-gene,34,15.7,11.29,21.45
+South East,20/4/2021,Cases with confirmed SGTF,182,84.3,78.55,88.71
+South East,27/4/2021,Cases with confirmed S-gene,41,19.5,14.52,25.67
+South East,27/4/2021,Cases with confirmed SGTF,169,80.5,74.33,85.48
+South East,4/5/2021,Cases with confirmed S-gene,80,30.2,24.8,36.16
+South East,4/5/2021,Cases with confirmed SGTF,185,69.8,63.84,75.2
+South East,11/5/2021,Cases with confirmed S-gene,131,51.6,45.26,57.84
+South East,11/5/2021,Cases with confirmed SGTF,123,48.4,42.16,54.74
+South East,18/5/2021,Cases with confirmed S-gene,221,72.2,66.78,77.09
+South East,18/5/2021,Cases with confirmed SGTF,85,27.8,22.91,33.22
+South West,2/3/2021,Cases with confirmed S-gene,4,0.9,0.29,2.42
+South West,2/3/2021,Cases with confirmed SGTF,446,99.1,97.58,99.71
+South West,9/3/2021,Cases with confirmed S-gene,4,1.4,0.44,3.67
+South West,9/3/2021,Cases with confirmed SGTF,291,98.6,96.33,99.56
+South West,16/3/2021,Cases with confirmed S-gene,4,2,0.65,5.4
+South West,16/3/2021,Cases with confirmed SGTF,195,98,94.6,99.35
+South West,23/3/2021,Cases with confirmed S-gene,2,1,0.18,4.05
+South West,23/3/2021,Cases with confirmed SGTF,193,99,95.95,99.82
+South West,30/3/2021,Cases with confirmed S-gene,8,5.2,2.42,10.26
+South West,30/3/2021,Cases with confirmed SGTF,147,94.8,89.74,97.58
+South West,6/4/2021,Cases with confirmed S-gene,7,5.7,2.54,11.89
+South West,6/4/2021,Cases with confirmed SGTF,115,94.3,88.11,97.46
+South West,13/4/2021,Cases with confirmed S-gene,3,5,1.3,14.82
+South West,13/4/2021,Cases with confirmed SGTF,57,95,85.18,98.7
+South West,20/4/2021,Cases with confirmed S-gene,15,32.6,19.97,48.13
+South West,20/4/2021,Cases with confirmed SGTF,31,67.4,51.87,80.03
+South West,27/4/2021,Cases with confirmed S-gene,9,37.5,19.55,59.24
+South West,27/4/2021,Cases with confirmed SGTF,15,62.5,40.76,80.45
+South West,4/5/2021,Cases with confirmed S-gene,14,58.3,36.94,77.2
+South West,4/5/2021,Cases with confirmed SGTF,10,41.7,22.8,63.06
+South West,11/5/2021,Cases with confirmed S-gene,23,88.5,68.72,96.97
+South West,11/5/2021,Cases with confirmed SGTF,3,11.5,3.03,31.28
+South West,18/5/2021,Cases with confirmed S-gene,6,50,25.38,74.62
+South West,18/5/2021,Cases with confirmed SGTF,6,50,25.38,74.62
+West Midlands,2/3/2021,Cases with confirmed S-gene,26,2,1.35,2.98
+West Midlands,2/3/2021,Cases with confirmed SGTF,1266,98,97.02,98.65
+West Midlands,9/3/2021,Cases with confirmed S-gene,29,1.3,0.91,1.94
+West Midlands,9/3/2021,Cases with confirmed SGTF,2141,98.7,98.06,99.09
+West Midlands,16/3/2021,Cases with confirmed S-gene,30,1.4,0.96,2.02
+West Midlands,16/3/2021,Cases with confirmed SGTF,2116,98.6,97.98,99.04
+West Midlands,23/3/2021,Cases with confirmed S-gene,27,1.7,1.12,2.45
+West Midlands,23/3/2021,Cases with confirmed SGTF,1596,98.3,97.55,98.88
+West Midlands,30/3/2021,Cases with confirmed S-gene,23,1.9,1.23,2.87
+West Midlands,30/3/2021,Cases with confirmed SGTF,1195,98.1,97.13,98.77
+West Midlands,6/4/2021,Cases with confirmed S-gene,18,2,1.25,3.28
+West Midlands,6/4/2021,Cases with confirmed SGTF,861,98,96.72,98.75
+West Midlands,13/4/2021,Cases with confirmed S-gene,21,2.8,1.77,4.28
+West Midlands,13/4/2021,Cases with confirmed SGTF,737,97.2,95.72,98.23
+West Midlands,20/4/2021,Cases with confirmed S-gene,56,9.4,7.27,12.16
+West Midlands,20/4/2021,Cases with confirmed SGTF,537,90.6,87.84,92.73
+West Midlands,27/4/2021,Cases with confirmed S-gene,53,10.9,8.31,14.05
+West Midlands,27/4/2021,Cases with confirmed SGTF,435,89.1,85.95,91.69
+West Midlands,4/5/2021,Cases with confirmed S-gene,87,15.9,12.97,19.27
+West Midlands,4/5/2021,Cases with confirmed SGTF,461,84.1,80.73,87.03
+West Midlands,11/5/2021,Cases with confirmed S-gene,169,30.7,26.93,34.8
+West Midlands,11/5/2021,Cases with confirmed SGTF,381,69.3,65.2,73.07
+West Midlands,18/5/2021,Cases with confirmed S-gene,263,54.8,50.21,59.29
+West Midlands,18/5/2021,Cases with confirmed SGTF,217,45.2,40.71,49.79
+Yorkshire and Humber,2/3/2021,Cases with confirmed S-gene,38,0.9,0.67,1.3
+Yorkshire and Humber,2/3/2021,Cases with confirmed SGTF,4015,99.1,98.7,99.33
+Yorkshire and Humber,9/3/2021,Cases with confirmed S-gene,16,0.3,0.21,0.58
+Yorkshire and Humber,9/3/2021,Cases with confirmed SGTF,4600,99.7,99.42,99.79
+Yorkshire and Humber,16/3/2021,Cases with confirmed S-gene,19,0.4,0.24,0.63
+Yorkshire and Humber,16/3/2021,Cases with confirmed SGTF,4790,99.6,99.37,99.76
+Yorkshire and Humber,23/3/2021,Cases with confirmed S-gene,19,0.4,0.27,0.7
+Yorkshire and Humber,23/3/2021,Cases with confirmed SGTF,4311,99.6,99.3,99.73
+Yorkshire and Humber,30/3/2021,Cases with confirmed S-gene,16,0.5,0.31,0.88
+Yorkshire and Humber,30/3/2021,Cases with confirmed SGTF,3010,99.5,99.12,99.69
+Yorkshire and Humber,6/4/2021,Cases with confirmed S-gene,9,0.4,0.18,0.73
+Yorkshire and Humber,6/4/2021,Cases with confirmed SGTF,2424,99.6,99.27,99.82
+Yorkshire and Humber,13/4/2021,Cases with confirmed S-gene,17,1,0.58,1.58
+Yorkshire and Humber,13/4/2021,Cases with confirmed SGTF,1739,99,98.42,99.42
+Yorkshire and Humber,20/4/2021,Cases with confirmed S-gene,22,1.2,0.78,1.85
+Yorkshire and Humber,20/4/2021,Cases with confirmed SGTF,1801,98.8,98.15,99.22
+Yorkshire and Humber,27/4/2021,Cases with confirmed S-gene,26,3.7,2.5,5.49
+Yorkshire and Humber,27/4/2021,Cases with confirmed SGTF,672,96.3,94.51,97.5
+Yorkshire and Humber,4/5/2021,Cases with confirmed S-gene,29,7.5,5.16,10.7
+Yorkshire and Humber,4/5/2021,Cases with confirmed SGTF,358,92.5,89.3,94.84
+Yorkshire and Humber,11/5/2021,Cases with confirmed S-gene,29,16.4,11.42,22.85
+Yorkshire and Humber,11/5/2021,Cases with confirmed SGTF,148,83.6,77.15,88.58
+Yorkshire and Humber,18/5/2021,Cases with confirmed S-gene,29,26.9,18.99,36.39
+Yorkshire and Humber,18/5/2021,Cases with confirmed SGTF,79,73.1,63.61,81.01

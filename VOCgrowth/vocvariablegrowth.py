@@ -253,7 +253,7 @@ elif source=="COG-UK":
       else: vocnum[place][week][0]+=1
 elif source=="SGTF":
   assert voclen==7
-  sgtf=loadcsv("TechBriefing12Fig17.csv")
+  sgtf=loadcsv("TechBriefing13Fig19.csv")
   lastweek=max(datetoday(x) for x in sgtf['week'])+6# Convert w/c to w/e convention
   assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
