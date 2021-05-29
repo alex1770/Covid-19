@@ -586,7 +586,6 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
   print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
   print("R      = estimated reproduction rate of B.1.617.2 on this day")
   print()
-  print("      Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
   # Need the extra decimal places to make graphs look smooth
   if area!=None and args.graph_filename!=None:
     graphdata=args.graph_filename+'_'+area+'.dat'
@@ -596,6 +595,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
   def mprint(*a,**b):
     print(*a,**b)
     if graphfp!=None: print(*a,**b,file=graphfp)
+  print("#     Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
   for i in range(ndays):
     day=minday+i
     pred,seen=asc*(AA[i]+BB[i]),lcases[i]
@@ -624,16 +624,18 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       areacoveredhere=areacovered
     else:
       areacoveredhere=area
+    # 'As of %s, estimated R(non-B.1.617.2)=%.2f R(B.1.617.2)=%.2f\\n'%(daytodate(minday+ndays-3),Q,R)+
     for yaxis in ["lin","log"]:
       graphfn=args.graph_filename+'_'+areacoveredhere+'_'+yaxis+'.png'
       po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
       # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
       def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
       write('set xdata time')
-      write('set key top center')
+      write('set key top left')
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
-      write('set xtics rotate by 45 right offset 0.5,0')
+      write('set xtics nomirror rotate by 45 right offset 0.5,0')
+      write('set label "As of %s:\\nEstimated R(non-B.1.617.2)=%.2f\\nEstimated R(B.1.617.2)=%.2f" at screen 0.5,0.9'%(daytodate(minday+ndays-3),Q,R))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
