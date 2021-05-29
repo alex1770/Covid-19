@@ -428,21 +428,22 @@ bmL=ndays-1
 bmN=int(4*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
+condition=np.array([100,100,1000,1000]+[1.]*bmN)
 
 # bmN+4 parameters to be optimised:
 # 0: a0
 # 1: b0
-# 2: h/sig
-# 3: g0/sig
+# 2: h
+# 3: g0
 # 4 ... 4+bmN-1 : X_0, ..., X_{bmN-1}
 # (would be tidier to put sig in the likelihood instead of on the variables, but SLSQP seems
 #  to get in trouble if its variables to be optimised are not on the scale of order 1)
 
-def expand(xx,sig):
+def expand(xx):
   (a0,b0)=xx[:2]
   AA=[exp(a0)];BB=[exp(b0)]
-  h=xx[2]*sig
-  g0=xx[3]*sig
+  h=xx[2]
+  g0=xx[3]
   a=a0;b=b0
   w=bmscale*sqrt(bmL)
   GG=[]
@@ -458,12 +459,13 @@ def expand(xx,sig):
   return AA,BB,GG
 
 # Return negative log likelihood
-def NLL(xx,lcases,lvocnum,sig,p,lprecases):
+def NLL(xx_conditioned,lcases,lvocnum,sig,p,lprecases):
+  xx=xx_conditioned/condition
   a,b=lprecases[0]+.5,lprecases[1]+.5
-  g0=log(b/a)/7/sig
-  v0=(1/a+1/b)/49/sig**2+1
+  g0=log(b/a)/7
+  v0=(1/a+1/b)/49+sig**2
   tot=-(xx[3]-g0)**2/(2*v0)
-  AA,BB,GG=expand(xx,sig)
+  AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     lam=p*(AA[i]+BB[i])
@@ -479,14 +481,14 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
     B=sum(BB[endweek-(voclen-1):endweek+1])
     tot+=(lvocnum[w][0]*log(A/(A+B))+lvocnum[w][1]*log(B/(A+B)))*nif2
   # Prior on h
-  tot+=-(xx[2]*sig*isd)**2/2
+  tot+=-(xx[2]*isd)**2/2
   return -tot
 
 def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
   xx=np.copy(hint)
-  bounds=[(-10,20),(-10,20),(-1/sig,1/sig),(-1/sig,1/sig)]+[(-10,10)]*bmN
+  bounds=[(-10,20),(-10,20),(-1,1),(-1,1)]+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
-  res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
+  res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
   if not res.success:
     print(res)
     print(place)
@@ -498,7 +500,7 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
     print("bounds =",bounds)
     print("nweeks, ndays, minday, lastweek =",nweeks,",",ndays,",",minday,",",lastweek)
     raise RuntimeError(res.message)
-  return res.x,res.fun
+  return res.x/condition,res.fun
 
 def printplaceinfo(place):
   print(place)
@@ -567,10 +569,10 @@ if mode=="local growth rates":
   for place in places:
     printplaceinfo(place)
     xx0,L0=optimiseplace(place)
-    AA,BB,GG=expand(xx0,sig)
+    AA,BB,GG=expand(xx0)
     h0=xx0[2]
     ff=[0,L0,0]
-    eps=0.01/sig
+    eps=0.01
     for i in [-1,1]:
       xx,L=optimiseplace(place,hint=xx0,fixedh=h0+i*eps)
       ff[i+1]=L
@@ -579,9 +581,9 @@ if mode=="local growth rates":
     if fi>0:
       dh=1.96/sqrt(fi)
     else:
-      dh=100/sig
-    (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0*sig,Tmin,Tmax)
+      dh=100
+    (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
@@ -590,11 +592,11 @@ if type(mode)==tuple and mode[0]=="fixed growth rate":
   summary={}
   for place in places:
     printplaceinfo(place)
-    h0=mode[1]/sig
+    h0=mode[1]
     xx0,L0=optimiseplace(place,fixedh=h0)
-    AA,BB,GG=expand(xx0,sig)
-    T=(exp(h0*sig*mgt)-1)*100
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0*sig)
+    AA,BB,GG=expand(xx0)
+    T=(exp(h0*mgt)-1)*100
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -607,10 +609,10 @@ if mode=="global growth rate":
     print("    h     T    log lik")
     xx,L0=optimiseplace(place)
     for i in range(ndiv):
-      h=(hmin+(hmax-hmin)*i/(ndiv-1))/sig
+      h=(hmin+(hmax-hmin)*i/(ndiv-1))
       xx,L=optimiseplace(place,hint=xx,fixedh=h)
       logp[i]+=L0-L
-      print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
+      print("%5.3f %5.3f  %9.2f"%(h,exp(h*mgt),logp[i]))
     print()
     sys.stdout.flush()
   print()
@@ -638,8 +640,8 @@ if mode=="global growth rate":
   TBB=np.zeros(ndays)
   for place in places:
     printplaceinfo(place)
-    xx0,L0=optimiseplace(place,fixedh=h0/sig)
-    AA,BB,GG=expand(xx0,sig)
+    xx0,L0=optimiseplace(place,fixedh=h0)
+    AA,BB,GG=expand(xx0)
     TAA+=AA;TBB+=BB
     T=(exp(h0*mgt)-1)*100
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0)
