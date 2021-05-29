@@ -54,7 +54,7 @@ args=parser.parse_args()
 # A_0 = initial count of non-B.1.617.2
 # B_0 = initial count of B.1.617.2
 #
-# Likelihood:
+# Likelihood: (some parts have now been changed; description to be updated)
 # A_{i+1}=e^{g_i}A_i
 # B_{i+1}=e^{g_i+h}B_i
 # n_i ~ Po(p(A_i+B_i))
@@ -585,6 +585,7 @@ if mode=="local growth rates":
       (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
     else:
       (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
+    print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
@@ -598,6 +599,7 @@ if type(mode)==tuple and mode[0]=="fixed growth rate":
     xx0,L0=optimiseplace(place,fixedh=h0)
     AA,BB,GG=expand(xx0)
     T=(exp(h0*mgt)-1)*100
+    print("Predetermined growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0)
     summary[place]=(Q,R,T,None,None)
   print()
@@ -646,6 +648,7 @@ if mode=="global growth rate":
     AA,BB,GG=expand(xx0)
     TAA+=AA;TBB+=BB
     T=(exp(h0*mgt)-1)*100
+    print("Globally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0)
     summary[place]=(Q,R,T,None,None)
   print()
@@ -654,6 +657,7 @@ if mode=="global growth rate":
   print("Total predicted counts using global optimum growth advantage")
   print()
 
+  print("Combined results using globally optimised growth advantage")
   Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0)
   
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
