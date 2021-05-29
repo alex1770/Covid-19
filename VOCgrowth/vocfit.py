@@ -451,6 +451,7 @@ bmL=ndays-1
 bmN=int(3*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
+bmsin2=[np.array([bmweight[n]*bmsin[(i*n)%(2*bmL)] for n in range(bmN)]) for i in range(ndays)]
 
 # Need to scale the variables being optimised over to keep SLSQP happy
 condition=np.array([50,50,1000,1000]+[1.]*bmN)
@@ -467,18 +468,19 @@ def expand(xx):
   AA=[exp(a0)];BB=[exp(b0)]
   h=xx[2]
   g0=xx[3]
-  a=a0;b=b0
   w=bmscale*sqrt(bmL)
   GG=[]
+  H=exp(h)
   for i in range(ndays-1):
     t=i/bmL
-    gu=t*xx[4]
-    for n in range(1,bmN):
-      gu+=bmweight[n]*bmsin[(i*n)%(2*bmL)]*xx[4+n]
+    gu=t*xx[4]+np.dot(bmsin2[i],xx[4:])
+    #for n in range(1,bmN):
+    #  gu+=bmweight[n]*bmsin[(i*n)%(2*bmL)]*xx[4+n]
     g=g0+w*gu
-    a+=g;b+=g+h;GG.append(g)
-    AA.append(exp(a))
-    BB.append(exp(b))
+    GG.append(g)
+    G=exp(g)
+    AA.append(AA[-1]*G)
+    BB.append(BB[-1]*G*H)
   return AA,BB,GG
 
 # Return negative log likelihood
