@@ -543,6 +543,7 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
         v+=(s*s*3-2)*NLL(x*condition,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
       H[i,i]=v/eps1**2
     det=np.linalg.det(H)
+    if det<=0: print("Warning: Hessian not positive for %s. Can't make corrected log likelihood."%place);det=1
   else:
     det=1
     
