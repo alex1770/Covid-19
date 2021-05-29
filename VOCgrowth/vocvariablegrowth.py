@@ -70,15 +70,15 @@ args=parser.parse_args()
 
 ### Options ###
 
-source="Sanger"
-#source="COG-UK"
+#source="Sanger"
+source="COG-UK"
 #source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="LTLA"
+locationsize="UK"
 
 ltlaexclude=set()
 # ltlaexclude=set(['E08000001'])# This would exclude Bolton
@@ -93,14 +93,14 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-05-01')
+firstweek=datetoday('2021-04-17')
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
 isd=1/0.1  # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1/0.1 is pretty weak.
 
-# Effectively the prior on how much daily growth rate is allowed to change in 1 day
-sig=0.004
+# Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
+sig0=0.004
 
 # Timescale over which growth rate can change significantly
 bmsig=30
@@ -140,7 +140,8 @@ opts={
   "nif1": nif1,
   "nif2": nif2,
   "Inverse sd for prior on growth": isd,
-  "Sigma (prior on daily growth rate change)": sig,
+  "Sigma (prior on daily growth rate change)": sig0,
+  "Timescale of growth rate change (days)": bmsig,
   "Case ascertainment rate": asc,
   "Number of days of case data to discard": discardcasedays,
   "Number of days of COG-UK data to discard": discardcogdays,
@@ -167,7 +168,8 @@ mode=opts["Optimisation mode"]
 nif1=opts["nif1"]
 nif2=opts["nif2"]
 isd=opts["Inverse sd for prior on growth"]
-sig=opts["Sigma (prior on daily growth rate change)"]
+sig0=opts["Sigma (prior on daily growth rate change)"]
+bmsig=opts["Timescale of growth rate change (days)"]
 asc=opts["Case ascertainment rate"]
 discardcasedays=opts["Number of days of case data to discard"]
 discardcogdays=opts["Number of days of COG-UK data to discard"]
@@ -458,11 +460,11 @@ def expand(xx):
   return AA,BB,GG
 
 # Return negative log likelihood
-def NLL(xx_conditioned,lcases,lvocnum,sig,p,lprecases):
+def NLL(xx_conditioned,lcases,lvocnum,sig0,p,lprecases):
   xx=xx_conditioned/condition
   a,b=lprecases[0]+.5,lprecases[1]+.5
   g0=log(b/a)/7
-  v0=(1/a+1/b)/49+sig**2
+  v0=(1/a+1/b)/49+sig0**2
   tot=-(xx[3]-g0)**2/(2*v0)
   AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
@@ -489,7 +491,7 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
   # though would need to relax this constraint if dealing with other variants where it might not be true.
   bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
-  res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
+  res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig0,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
   if not res.success:
     print(res)
     print(place)
