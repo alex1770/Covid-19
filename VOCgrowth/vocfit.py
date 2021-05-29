@@ -613,10 +613,9 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
     else:
       mprint()
   T=(R/Q-1)*100
-  if Tmin!=None:
-    print("Estimated transmission advantage: %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
-  else:
-    print("Estimated transmission advantage: %.0f%%"%T)
+  ETA="Estimated transmission advantage: %.0f%%"%T
+  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%), CI excludes model uncertainty"%(Tmin,Tmax)
+  print(ETA)
   print()
   if graphfp!=None:
     graphfp.close()
@@ -635,7 +634,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
       write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "As of %s:\\nEstimated R(non-B.1.617.2)=%.2f\\nEstimated R(B.1.617.2)=%.2f" at screen 0.5,0.9'%(daytodate(minday+ndays-3),Q,R))
+      write('set label "As of %s:\\nEstimated R(non-B.1.617.2)=%.2f\\nEstimated R(B.1.617.2)=%.2f\\n%s" at screen 0.48,0.9'%(daytodate(minday+ndays-3),Q,R,ETA))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
@@ -643,7 +642,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       if yaxis=="log": write('set logscale y')
       write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%areacoveredhere+
             'Fit made on 2021-05-29 using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'+
-            'Data source: %s"'%fullsource)
+            'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
       write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-B.1.617.2", "%s" u 1:3 with lines lw 3 title "Modelled B.1.617.2", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-B.1.617.2 scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of B.1.617.2 scaled up to modelled total"'%((graphdata,)*6))
       p.close();po.wait()
       print("Written graph to %s"%graphfn)
@@ -758,7 +757,7 @@ if mode=="global growth rate":
   print()
 
   print("Combined results using globally optimised growth advantage")
-  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0,area="all")
+  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0,Tmin,Tmax,area="all")
   
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
