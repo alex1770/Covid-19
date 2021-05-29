@@ -595,7 +595,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
   def mprint(*a,**b):
     print(*a,**b)
     if graphfp!=None: print(*a,**b,file=graphfp)
-  print("#     Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
+  mprint("#     Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
   for i in range(ndays):
     day=minday+i
     pred,seen=asc*(AA[i]+BB[i]),lcases[i]
