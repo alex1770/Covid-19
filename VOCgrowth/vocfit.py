@@ -614,7 +614,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       mprint()
   T=(R/Q-1)*100
   ETA="Estimated transmission advantage: %.0f%%"%T
-  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%), CI excludes model uncertainty"%(Tmin,Tmax)
+  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%)\\n(CI shows within-model statistical uncertainty, not model uncertainty)"%(Tmin,Tmax)
   print(ETA)
   print()
   if graphfp!=None:
@@ -634,7 +634,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
       write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "As of %s:\\nEstimated R(non-B.1.617.2)=%.2f\\nEstimated R(B.1.617.2)=%.2f\\n%s" at screen 0.48,0.9'%(daytodate(minday+ndays-3),Q,R,ETA))
+      write('set label "Location: %s\\nAs of %s:\\nEstimated R(non-B.1.617.2)=%.2f\\nEstimated R(B.1.617.2)=%.2f\\n%s" at screen 0.48,0.9'%(areacoveredhere,daytodate(minday+ndays-3),Q,R,ETA))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
