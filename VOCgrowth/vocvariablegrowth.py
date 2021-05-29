@@ -123,7 +123,7 @@ discardcogdays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":1000,"eps":1e-5}
+minopts={"maxiter":10000,"eps":1e-5}
 
 mode="local growth rates"
 #mode="global growth rate"
