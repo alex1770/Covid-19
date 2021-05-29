@@ -426,7 +426,7 @@ print()
 
 bmscale=0.02
 bmL=ndays-1
-bmN=int(4*bmL/bmsig+1)
+bmN=int(3*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
 
