@@ -70,15 +70,15 @@ args=parser.parse_args()
 
 ### Options ###
 
-source="Sanger"
-#source="COG-UK"
+#source="Sanger"
+source="COG-UK"
 #source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="LTLA"
+locationsize="UK"
 
 ltlaexclude=set()
 # ltlaexclude=set(['E08000001'])# This would exclude Bolton
@@ -93,7 +93,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-05-01')
+firstweek=datetoday('2021-04-17')
 
 nif1=0.5   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5   # Non-independence factor for VOC counts (ditto)
@@ -110,7 +110,10 @@ bmsig=30
 asc=0.4
 
 # Discard this many cases at the end of the list of cases by specimen day
-discarddays=2
+discardcasedays=2
+
+# Discard this many days of the latest COG data
+discardcogdays=2
 
 # Collect together all locations without positive entries into one combined "Other" location
 # (Makes little difference in practice)
@@ -118,7 +121,9 @@ bundleremainder=True
 
 minopts={"maxiter":1000,"eps":1e-5}
 
-fixedgrowthadv=None
+mode="local growth rates"
+#mode="global growth rate"
+#mode="fixed growth rate",0.1
 
 voclen=(1 if source=="COG-UK" else 7)
 
@@ -132,13 +137,14 @@ opts={
   "Generation time (days)": mgt,
   "Earliest day for case data": daytodate(minday),
   "Earliest week (using end of week date) to use VOC count data": daytodate(firstweek),
-  "Fixed growth advantage": fixedgrowthadv,
+  "Optimisation mode": mode,
   "nif1": nif1,
   "nif2": nif2,
   "Inverse sd for prior on growth": isd,
   "Sigma (prior on daily growth rate change)": sig,
   "Case ascertainment rate": asc,
-  "Number of days of case data to discard": discarddays,
+  "Number of days of case data to discard": discardcasedays,
+  "Number of days of COG-UK data to discard": discardcogdays,
   "Bundle remainder": bundleremainder,
   "Minimiser options": minopts,
   "Length of time period over which VOC counts are given (days)": voclen
@@ -158,13 +164,14 @@ ltlaexclude=set(opts["LTLA exclude"])
 mgt=opts["Generation time (days)"]
 minday=datetoday(opts["Earliest day for case data"])
 firstweek=datetoday(opts["Earliest week (using end of week date) to use VOC count data"])
-fixedgrowthadv=opts["Fixed growth advantage"]
+mode=opts["Optimisation mode"]
 nif1=opts["nif1"]
 nif2=opts["nif2"]
 isd=opts["Inverse sd for prior on growth"]
 sig=opts["Sigma (prior on daily growth rate change)"]
 asc=opts["Case ascertainment rate"]
-discarddays=opts["Number of days of case data to discard"]
+discardcasedays=opts["Number of days of case data to discard"]
+discardcogdays=opts["Number of days of COG-UK data to discard"]
 bundleremainder=opts["Bundle remainder"]
 minopts=opts["Minimiser options"]
 voclen=opts["Length of time period over which VOC counts are given (days)"]
@@ -177,7 +184,7 @@ sys.stdout.flush()
 
 np.set_printoptions(precision=3,linewidth=120)
 
-maxday=datetoday(max(apicases['date']))-discarddays# Inclusive
+maxday=datetoday(max(apicases['date']))-discardcasedays# Inclusive
 ndays=maxday-minday+1
 firstweek=max(firstweek,minday+voclen-1)
 
@@ -211,8 +218,7 @@ if source=="Sanger":
       else: vocnum[place][week][0]+=n
 elif source=="COG-UK":
   cog=loadcsv("cog_metadata.csv")
-  censor=2
-  lastweek=datetoday(max(cog['sample_date']))-censor;assert maxday>=lastweek
+  lastweek=datetoday(max(cog['sample_date']))-discardcogdays;assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
   
@@ -264,6 +270,7 @@ elif source=="SGTF":
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
       vocnum[place][week][int("SGTF" not in var)]+=n
   # Adjust for non-B.1.617.2 S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
+  # This is likely to be dodgy
   # From COG-UK: B117  Others (not B.1.617.2)
   # 2021-03-11  18295     341   1.86%
   # 2021-03-18  16900     308   1.82%
@@ -324,7 +331,6 @@ if bundleremainder:
     vocnum["Other"]=othervocnum
     cases["Other"]=othercases
 places=list(okplaces)
-#places.sort(key=lambda x: -vocnum[x].sum())# Descending order of voc counts
 places.sort()# Alphabetical order
 
 # Work out pre-B.1.617.2 case counts, amalgamated to at least region level
@@ -476,72 +482,98 @@ def NLL(xx,lcases,lvocnum,sig,p,lprecases):
   tot+=-(xx[2]*sig*isd)**2/2
   return -tot
 
-def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
-  summary={}
-  logp=np.zeros(ndiv)
-  TAA=np.zeros(ndays)
-  TBB=np.zeros(ndays)
-  for place in places:
+def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None):
+  xx=np.copy(hint)
+  bounds=[(-10,20),(-10,20),(-1/sig,1/sig),(-1/sig,1/sig)]+[(-10,10)]*bmN
+  if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
+  res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
+  if not res.success:
+    print(res)
     print(place)
-    print("="*len(place))
-    print()
-    print("                        Nonvar    Var   Seen")
-    for w in range(nweeks):
-      day0,day1=lastweek-(nweeks-w)*voclen+1,lastweek-(nweeks-1-w)*voclen
-      print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
-    print()
-    xx=np.zeros(bmN+4)
-    bounds=[(-10,20),(-10,20),(-1/sig,1/sig),(-1/sig,1/sig)]+[(-10,10)]*bmN
-    if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
-    res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
-    if not res.success: raise RuntimeError(res.message)
-    xx=res.x
-    AA,BB,GG=expand(xx,sig)
-    TAA+=AA;TBB+=BB
-    (a0,b0,h)=xx[:3]
-    print("A    = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
-    print("B    = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
-    print("Pred = predicted number of cases seen this day = A+B")
-    print("Seen = number of cases seen this day, after weekday adjustment")
-    print("Q    = estimated reproduction rate of non-B.1.617.2 on this day")
-    print("R    = estimated reproduction rate of B.1.617.2 on this day")
-    print()
-    print("      Date       A       B    Pred    Seen        Q      R")
-    for i in range(ndays):
-      print(daytodate(minday+i),"%7.0f %7.0f %7.0f %7.0f"%(asc*AA[i],asc*BB[i],asc*(AA[i]+BB[i]),cases[place][i]),end='')
-      if i<ndays-1:
-        g=GG[i]
-        Q,R=(exp(g*mgt),exp((g+h*sig)*mgt))
-        print("   %6.3f %6.3f"%(Q,R))
-      else:
-        print()
-    print()
-    if fixedh!=None: summary[place]=(Q,R);continue
-    h0=xx[2]
-    ff=[0,res.fun,0]
+    print("xx =",xx)
+    print("lcases =",list(cases[place]))
+    print("lprecases =",precases[prereduce(place)])
+    print("lvocnum =",vocnum[place])
+    for x in sorted(list(opts)): print("%s:"%x,opts[x])
+    print("bounds =",bounds)
+    print("nweeks, ndays, minday, lastweek =",nweeks,",",ndays,",",minday,",",lastweek)
+    raise RuntimeError(res.message)
+  return res.x,res.fun
+
+def printplaceinfo(place):
+  print(place)
+  print("="*len(place))
+  print()
+  print("                        Nonvar    Var   Seen")
+  for w in range(nweeks):
+    day0,day1=lastweek-(nweeks-w)*voclen+1,lastweek-(nweeks-1-w)*voclen
+    print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
+  print()
+
+def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None):
+  print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
+  print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
+  print("Pred   = predicted number of cases seen this day = A+B")
+  print("Seen   = number of cases seen this day, after weekday adjustment")
+  print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst variant counts")
+  print("PredV2 = (1-p)*Pred")
+  print("SeenV1 = p*Seen")
+  print("SeenV2 = (1-p)*Seen")
+  print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
+  print("R      = estimated reproduction rate of B.1.617.2 on this day")
+  print()
+  print("      Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
+  # Need the extra decimal places to make graphs look smooth
+  lvocnum=sum(vocnum.values())
+  for i in range(ndays):
+    day=minday+i
+    pred,seen=asc*(AA[i]+BB[i]),lcases[i]
+    print(daytodate(day),"%9.2f %9.2f %9.2f %9.2f"%(asc*AA[i],asc*BB[i],pred,seen),end='')
+    week=nweeks-1-(lastweek-day)//voclen
+    if week>=0 and week<nweeks and lvocnum[week].sum()>0:
+      p=lvocnum[week][0]/lvocnum[week].sum()
+      print("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
+    else:
+      print("           -         -         -         - ",end='')
+    if i<ndays-1:
+      g=log(AA[i+1]/AA[i])
+      Q,R=(exp(g*mgt),exp((g+h0)*mgt))
+      print("   %7.4f %7.4f"%(Q,R))
+    else:
+      print()
+  T=(R/Q-1)*100
+  if Tmin!=None:
+    print("Estimated transmission advantage: %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
+  else:
+    print("Estimated transmission advantage: %.0f%%"%T)
+  print()
+  return Q,R
+
+def printsummary(summary):
+  print("Location                       Q     R      T")
+  for place in places:
+    (Q,R,T,Tmin,Tmax)=summary[place]
+    print("%-25s  %5.2f %5.2f  %4.0f%%"%(place,Q,R,T),end='')
+    if Tmin!=None: print("( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
+    else: print()
+  print()
+  print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
+  print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
+  print("T = estimated transmission advantage = R/Q as a percentage increase")
+  print()
+
+if mode=="local growth rates":
+  summary={}
+  for place in places:
+    printplaceinfo(place)
+    xx0,L0=optimiseplace(place)
+    AA,BB,GG=expand(xx0,sig)
+    h0=xx0[2]
+    ff=[0,L0,0]
     eps=0.01/sig
     for i in [-1,1]:
-      h=h0+i*eps
-      xx=res.x;xx[2]=h
-      bounds[2]=(h,h)
-      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
-      if not res.success:
-        print(res)
-        print(place)
-        print("xx =",xx)
-        print("lcases =",list(cases[place]))
-        print("lprecases =",precases[prereduce(place)])
-        print("lvocnum =",vocnum[place])
-        print("sig =",sig)
-        print("asc =",asc)
-        print("bounds =",bounds)
-        print("nif1 =",nif1)
-        print("nif2 =",nif2)
-        print("nweeks, ndays, minday, lastweek =",nweeks,",",ndays,",",minday,",",lastweek)
-        print("isd =",isd)
-        print("minopts =",minopts)
-        raise RuntimeError(res.message)
-      ff[i+1]=res.fun
+      xx,L=optimiseplace(place,hint=xx0,fixedh=h0+i*eps)
+      ff[i+1]=L
     # Use observed Fisher information to make confidence interval
     fi=(ff[0]-2*ff[1]+ff[2])/eps**2
     if fi>0:
@@ -549,43 +581,39 @@ def getlikelihoods(ndiv=11,hmin=0.03,hmax=0.15,fixedh=None):
     else:
       dh=100/sig
     (Tmin,T,Tmax)=[(exp(h*sig*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
-    print("Estimated transmission advantage: %.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax))
-    summary[place]=(Q,R,Tmin,T,Tmax)
-    print()
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0*sig,Tmin,Tmax)
+    summary[place]=(Q,R,T,Tmin,Tmax)
+  print()
+  printsummary(summary)
+
+if type(mode)==tuple and mode[0]=="fixed growth rate":
+  summary={}
+  for place in places:
+    printplaceinfo(place)
+    h0=mode[1]/sig
+    xx0,L0=optimiseplace(place,fixedh=h0)
+    AA,BB,GG=expand(xx0,sig)
+    T=(exp(h0*sig*mgt)-1)*100
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0*sig)
+    summary[place]=(Q,R,T,None,None)
+  print()
+  printsummary(summary)
+  
+if mode=="global growth rate":
+  ndiv=11;hmin=0.03;hmax=0.15
+  logp=np.zeros(ndiv)
+  for place in places:
+    printplaceinfo(place)
     print("    h     T    log lik")
+    xx,L0=optimiseplace(place)
     for i in range(ndiv):
       h=(hmin+(hmax-hmin)*i/(ndiv-1))/sig
-      xx=res.x;xx[2]=h
-      bounds[2]=(h,h)
-      res=minimize(NLL,xx,args=(cases[place],vocnum[place],sig,asc,precases[prereduce(place)]),bounds=bounds,method="SLSQP",options=minopts)
-      if not res.success: raise RuntimeError(res.message)
-      logp[i]+=ff[1]-res.fun
+      xx,L=optimiseplace(place,hint=xx,fixedh=h)
+      logp[i]+=L0-L
       print("%5.3f %5.3f  %9.2f"%(h*sig,exp(h*sig*mgt),logp[i]))
     print()
     sys.stdout.flush()
   print()
-  return summary,logp,TAA,TBB
-
-if fixedgrowthadv==None:
-  ndiv=11
-  hmin=0.03;hmax=0.15
-  
-  summary,logp,TAA,TBB=getlikelihoods(ndiv=ndiv,hmin=hmin,hmax=hmax)
-  
-  print("Location                       Q     R      T")
-  for place in places:
-    (Q,R,Tmin,T,Tmax)=summary[place]
-    print("%-25s  %5.2f %5.2f  %4.0f%% ( %4.0f%% - %4.0f%% )"%(place,Q,R,T,Tmin,Tmax))
-  print()
-  print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
-  print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
-  print("T = estimated transmission advantage = R/Q as a percentage increase")
-  print()
-  
-  print("    h     T    log lik")
-  for i in range(ndiv):
-    g=(hmin+(hmax-hmin)*i/(ndiv-1))
-    print("%5.3f %5.3f  %9.2f"%(g,exp(g*mgt),logp[i]))
   i=np.argmax(logp)
   if i==0 or i==ndiv-1:
     print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
@@ -602,64 +630,28 @@ if fixedgrowthadv==None:
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
   print()
-  
   print("Re-running using global optimum growth advantage",h0)
   print()
-else:
-  h0=fixedgrowthadv
-  print("Running using global optimum growth advantage",h0)
+
+  summary={}
+  TAA=np.zeros(ndays)
+  TBB=np.zeros(ndays)
+  for place in places:
+    printplaceinfo(place)
+    xx0,L0=optimiseplace(place,fixedh=h0/sig)
+    AA,BB,GG=expand(xx0,sig)
+    TAA+=AA;TBB+=BB
+    T=(exp(h0*mgt)-1)*100
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0)
+    summary[place]=(Q,R,T,None,None)
   print()
+  printsummary(summary)
   
-summary,logp,TAA,TBB=getlikelihoods(fixedh=h0/sig)
+  print("Total predicted counts using global optimum growth advantage")
+  print()
 
-print("Total predicted counts using global optimum growth advantage")
-print()
-
-print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
-print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
-print("Pred   = predicted number of cases seen this day = A+B")
-print("Seen   = number of cases seen this day, after weekday adjustment")
-print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst variant counts")
-print("PredV2 = (1-p)*Pred")
-print("SeenV1 = p*Seen")
-print("SeenV2 = (1-p)*Seen")
-print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
-print("R      = estimated reproduction rate of B.1.617.2 on this day")
-print()
-print("      Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
-# Need the extra decimal places to make graphs look smooth
-totvoc=sum(vocnum.values())
-for i in range(ndays):
-  day=minday+i
-  pred,seen=asc*(TAA[i]+TBB[i]),sum(cases[place][i] for place in places)
-  print(daytodate(day),"%9.2f %9.2f %9.2f %9.2f"%(asc*TAA[i],asc*TBB[i],pred,seen),end='')
-  week=nweeks-1-(lastweek-day)//voclen
-  if week>=0 and week<nweeks and totvoc[week].sum()>0:
-    p=totvoc[week][0]/totvoc[week].sum()
-    print("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
-  else:
-    print("           -         -         -         - ",end='')
-  if i<ndays-1:
-    g=log(TAA[i+1]/TAA[i])
-    Q,R=(exp(g*mgt),exp((g+h0)*mgt))
-    print("   %7.4f %7.4f"%(Q,R))
-  else:
-    print()
-print()
-
-print("Location                       Q     R")
-for place in places:
-  (Q,R)=summary[place]
-  print("%-25s  %5.2f %5.2f"%(place,Q,R))
-print()
-print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
-print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
-print()
-if fixedgrowthadv==None:
+  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0)
+  
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
-else:
-  T=(exp(h0*mgt)-1)*100
-  print("Combined growth advantage per day: %.3f"%h0)
-  print("Combined transmission advantage: %.0f%% (assuming fixed generation time of %g days)"%(T,mgt))
