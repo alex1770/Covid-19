@@ -509,6 +509,35 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,p,lprecases):
   tot+=-(xx[2]*isd)**2/2
   return -tot
 
+def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
+  N=bmN+4
+  eps=1e-3
+  H=np.zeros([N,N])
+  for i in range(N-1):
+    for j in range(i+1,N):
+      v=0
+      eps1=eps/condition[i]
+      eps2=eps/condition[j]
+      for (s1,s2) in [(-1,-1),(-1,1),(1,-1),(1,1)]:
+        x=np.copy(xx)
+        x[i]+=s1*eps1
+        x[j]+=s2*eps2
+        v+=s1*s2*NLL(x*condition,lcases,lvocnum,sig0,asc,lprecases)
+      e=v/(4*eps1*eps2)
+      H[i,j]=e
+      H[j,i]=e
+  for i in range(N):
+    x=np.copy(xx)
+    v=0
+    eps1=eps/condition[i]
+    for s in [-1,0,1]:
+      x=np.copy(xx)
+      x[i]+=s*eps1
+      v+=(s*s*3-2)*NLL(x*condition,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
+    H[i,i]=v/eps1**2
+  return H
+      
+# Returns negative log likelihood
 def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   xx=np.copy(hint)
   # bounds[2][0]=0 prejudges B.1.617.2 as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
@@ -529,42 +558,19 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
     raise RuntimeError(res.message)
   xx=res.x/condition
 
-  # Work out the useful constant terms. They don't affect the optimisation, but they allow optimisation over hyperparameters
-  
+  # Work out the useful constant term(s). They don't affect the optimisation, but they allow optimisation over hyperparameters
+  # Possibly extend this to include the g0,v0 term
+  logconst=log(isd)
   
   # If 'statphase', make the log likelihood a better approximation to log(integral over all parameters) using stationary phase approximation
   if statphase:
-    N=bmN+4
-    eps=1e-3
-    H=np.zeros([N,N])
-    for i in range(N-1):
-      for j in range(i+1,N):
-        v=0
-        eps1=eps/condition[i]
-        eps2=eps/condition[j]
-        for (s1,s2) in [(-1,-1),(-1,1),(1,-1),(1,1)]:
-          x=np.copy(xx)
-          x[i]+=s1*eps1
-          x[j]+=s2*eps2
-          v+=s1*s2*NLL(x*condition,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
-        e=v/(4*eps1*eps2)
-        H[i,j]=e
-        H[j,i]=e
-    for i in range(N):
-      x=np.copy(xx)
-      v=0
-      eps1=eps/condition[i]
-      for s in [-1,0,1]:
-        x=np.copy(xx)
-        x[i]+=s*eps1
-        v+=(s*s*3-2)*NLL(x*condition,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
-      H[i,i]=v/eps1**2
+    H=Hessian(xx,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
     det=np.linalg.det(H)
     if det<=0: print("Warning: Hessian not positive for %s. Can't make corrected log likelihood."%place);det=1
   else:
     det=1
-    
-  return res.x/condition,res.fun+log(det)/2
+
+  return res.x/condition,res.fun+log(det)/2-logconst
 
 def printplaceinfo(place):
   print(place)
