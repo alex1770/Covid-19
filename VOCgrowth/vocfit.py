@@ -620,8 +620,12 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
   print()
   if graphfp!=None:
     graphfp.close()
+    if area=="all":
+      areacoveredhere=areacovered
+    else:
+      areacoveredhere=area
     for yaxis in ["lin","log"]:
-      graphfn=args.graph_filename+'_'+area+'_'+yaxis+'.png'
+      graphfn=args.graph_filename+'_'+areacoveredhere+'_'+yaxis+'.png'
       po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
       # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
       def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
@@ -635,7 +639,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       if yaxis=="log": write('set logscale y')
-      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%areacovered+
+      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%areacoveredhere+
             'Fit made on 2021-05-29 using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'+
             'Data source: %s"'%fullsource)
       write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-B.1.617.2", "%s" u 1:3 with lines lw 3 title "Modelled B.1.617.2", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-B.1.617.2 scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of B.1.617.2 scaled up to modelled total"'%((graphdata,)*6))
@@ -661,7 +665,7 @@ if mode=="local growth rates":
   for place in places:
     printplaceinfo(place)
     xx0,L0=optimiseplace(place)
-    if 1:
+    if 0:
       print("Log likelihood",-L0)
       xx1,L1=optimiseplace(place,statphase=True)
       print("Corrected log likelihood",-L1)
@@ -680,7 +684,7 @@ if mode=="local growth rates":
     else:
       (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax,place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax,area=place)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
@@ -694,7 +698,7 @@ if type(mode)==tuple and mode[0]=="fixed growth rate":
     AA,BB,GG=expand(xx0)
     T=(exp(h0*mgt)-1)*100
     print("Predetermined growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,area=place)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -752,7 +756,7 @@ if mode=="global growth rate":
   print()
 
   print("Combined results using globally optimised growth advantage")
-  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0,"all")
+  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0,area="all")
   
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
