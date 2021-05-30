@@ -1,6 +1,7 @@
 from stuff import *
 import sys,re,argparse,pickle
 from scipy.optimize import minimize
+from scipy.stats import norm
 from math import log,exp,sqrt,sin,pi
 import numpy as np
 from subprocess import Popen,PIPE
@@ -36,8 +37,9 @@ def includeltla(ltla,ltlaset):
     raise RuntimeError("Unrecognised ltla set "+ltlaset)
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-l', '--load-options', help='Load options from a file')
-parser.add_argument('-s', '--save-options', help='Save options to a file')
+parser.add_argument('-l', '--load-options',   help='Load options from a file')
+parser.add_argument('-s', '--save-options',   help='Save options to a file')
+parser.add_argument('-c', '--confidence',     help='Evaluate confidence intervals for everything', action='store_true')# Currenly ignored
 parser.add_argument('-g', '--graph-filename', help='Stem of graph filenames')
 args=parser.parse_args()
 
@@ -570,8 +572,39 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   else:
     det=1
 
+  # Return negative log likelihood
   return res.x/condition,res.fun+log(det)/2-logconst
 
+def evalconfidence(place,xx0):
+  H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
+  Hcond=H/condition/condition[:,None]
+  eig=np.linalg.eigh(Hcond)
+  # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond),eig[1])) ~= eig[0]
+  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None,None,None,None
+  nsamp=10000
+  N=bmN+4
+  t=norm.rvs(size=[nsamp,N])# nsamp x N
+  sd=eig[0]**(-.5)# N
+  u=t*sd# nsamp x N
+  samp_cond=np.matmul(u,np.transpose(eig[1]))# nsamp x N
+  samp=samp_cond/condition
+  QQ=[];RR=[];TT=[]
+  for i in range(nsamp):
+    dx=samp[i]
+    xx=xx0+dx
+    AA,BB,GG=expand(xx)
+    QQ.append((AA[-1]/AA[-2])**mgt)
+    RR.append((BB[-1]/BB[-2])**mgt)
+    TT.append(exp(mgt*xx[2]))
+  QQ.sort();RR.sort();TT.sort()
+  conf=0.95
+  n0=int((1-conf)/2*nsamp)
+  n1=int((1+conf)/2*nsamp)
+  print("R_{B.1.1.7}   %6.3f - %6.3f"%(QQ[n0],QQ[n1]))
+  print("R_{B.1.617.2} %6.3f - %6.3f"%(RR[n0],RR[n1]))
+  print("T             %5.1f%% - %5.1f%%"%((TT[n0]-1)*100,(TT[n1]-1)*100))
+  return QQ[n0],QQ[n1],RR[n0],RR[n1]
+  
 def printplaceinfo(place):
   print(place)
   print("="*len(place))
@@ -582,7 +615,7 @@ def printplaceinfo(place):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
+def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None):
   print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
   print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
   print("Pred   = predicted number of cases seen this day = A+B")
@@ -621,9 +654,16 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
     else:
       mprint()
   T=(R/Q-1)*100
-  ETA="Estimated transmission advantage: %.0f%%"%T
-  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%)\\n(CI shows within-model statistical uncertainty, not model uncertainty)"%(Tmin,Tmax)
+  EQ="Estimated R(non-B.1.617.2) = %.2f"%Q
+  if Qmin!=None: EQ+=" (%.2f - %.2f)"%(Qmin,Qmax)
+  ER="Estimated R(B.1.617.2)       = %.2f"%R
+  if Rmin!=None: ER+=" (%.2f - %.2f)"%(Rmin,Rmax)
+  ETA="Estimated transmission advantage = %.0f%%"%T
+  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%)"%(Tmin,Tmax)
+  print(EQ)
+  print(ER)
   print(ETA)
+  if Tmin!=None: ETA+="\\n(CI shows within-model statistical uncertainty, not model uncertainty)"
   print()
   if graphfp!=None:
     graphfp.close()
@@ -642,7 +682,7 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,area=None):
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
       write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "Location: %s\\nAs of %s:\\nEstimated R(non-B.1.617.2)=%.2f\\nEstimated R(B.1.617.2)=%.2f\\n%s" at screen 0.48,0.9'%(areacoveredhere,daytodate(minday+ndays-3),Q,R,ETA))
+      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(areacoveredhere,daytodate(minday+ndays-3),EQ,ER,ETA))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
@@ -692,8 +732,12 @@ if mode=="local growth rates":
       (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
     else:
       (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
+    if 1 or args.confidence:
+      Qmin,Qmax,Rmin,Rmax=evalconfidence(place,xx0)
+    else:
+      Qmin=Qmax=Rmin=Rmax=None
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax,area=place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=place)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
