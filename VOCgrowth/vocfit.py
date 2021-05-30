@@ -615,7 +615,10 @@ def printplaceinfo(place):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None):
+def sanitise(fn):
+  return fn.replace(' ','_')
+
+def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None):
   print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
   print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
   print("Pred   = predicted number of cases seen this day = A+B")
@@ -628,8 +631,12 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rm
   print("R      = estimated reproduction rate of B.1.617.2 on this day")
   print()
   # Need the extra decimal places to make graphs look smooth
+  if area=="all":
+    areahere=areacovered
+  else:
+    areahere=area
   if area!=None and args.graph_filename!=None:
-    graphdata=args.graph_filename+'_'+area+'.dat'
+    graphdata=sanitise(args.graph_filename+'_'+areahere+'.dat')
     graphfp=open(graphdata,'w')
   else:
     graphfp=None
@@ -648,12 +655,12 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rm
     else:
       mprint("           -         -         -         - ",end='')
     if i<ndays-1:
-      g=log(AA[i+1]/AA[i])
-      Q,R=(exp(g*mgt),exp((g+h0)*mgt))
+      Q,R=((AA[i+1]/AA[i])**mgt,(BB[i+1]/BB[i])**mgt)
       mprint("   %7.4f %7.4f"%(Q,R))
     else:
       mprint()
-  T=(R/Q-1)*100
+  # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
+  # but because of Simpson's paradox, that doesn't been the cross ratio of AAs and BBs is also T.
   EQ="Estimated R(non-B.1.617.2) = %.2f"%Q
   if Qmin!=None: EQ+=" (%.2f - %.2f)"%(Qmin,Qmax)
   ER="Estimated R(B.1.617.2)       = %.2f"%R
@@ -667,13 +674,9 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rm
   print()
   if graphfp!=None:
     graphfp.close()
-    if area=="all":
-      areacoveredhere=areacovered
-    else:
-      areacoveredhere=area
     # 'As of %s, estimated R(non-B.1.617.2)=%.2f R(B.1.617.2)=%.2f\\n'%(daytodate(minday+ndays-3),Q,R)+
     for yaxis in ["lin","log"]:
-      graphfn=args.graph_filename+'_'+areacoveredhere+'_'+yaxis+'.png'
+      graphfn=sanitise(args.graph_filename+'_'+areahere+'_'+yaxis+'.png')
       po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
       # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
       def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
@@ -682,13 +685,13 @@ def fullprint(AA,BB,lvocnum,lcases,h0,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rm
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
       write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(areacoveredhere,daytodate(minday+ndays-3),EQ,ER,ETA))
+      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(areahere,daytodate(minday+ndays-3),EQ,ER,ETA))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       if yaxis=="log": write('set logscale y')
-      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%areacoveredhere+
+      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%areahere+
             'Fit made on 2021-05-29 using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
       write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-B.1.617.2", "%s" u 1:3 with lines lw 3 title "Modelled B.1.617.2", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-B.1.617.2 scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of B.1.617.2 scaled up to modelled total"'%((graphdata,)*6))
@@ -737,7 +740,7 @@ if mode=="local growth rates":
     else:
       Qmin=Qmax=Rmin=Rmax=None
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=place)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
@@ -751,7 +754,7 @@ if type(mode)==tuple and mode[0]=="fixed growth rate":
     AA,BB,GG=expand(xx0)
     T=(exp(h0*mgt)-1)*100
     print("Predetermined growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0,area=place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,area=place)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -798,9 +801,8 @@ if mode=="global growth rate":
     xx0,L0=optimiseplace(place,fixedh=h0)
     AA,BB,GG=expand(xx0)
     TAA+=AA;TBB+=BB
-    T=(exp(h0*mgt)-1)*100
     print("Globally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],h0)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -809,8 +811,7 @@ if mode=="global growth rate":
   print()
 
   print("Combined results using globally optimised growth advantage")
-  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],h0,Tmin,Tmax,area="all")
+  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,area="all")
   
-  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
