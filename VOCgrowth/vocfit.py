@@ -5,12 +5,15 @@ from scipy.stats import norm
 from math import log,exp,sqrt,sin,pi
 import numpy as np
 from subprocess import Popen,PIPE
+from datetime import datetime
 
 # (Make it auto download files?)
 # Get ltla.csv from https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv
 # Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 # COG-UK data from https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
 # SGTF   data from Fig.16 Tech Briefing 12: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/988608/Variants_of_Concern_Technical_Briefing_12_Data_England.xlsx
+
+def sanitise(fn): return fn.replace(' ','_').replace("'","")
 
 apicases=loadcsv("ltla.csv")
 ltlaengdata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
@@ -19,6 +22,8 @@ ltla2ltla=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['LAD19CD']))
 ltla2uk=dict((ltla,"UK") for ltla in ltlaukdata['LAD19CD'])
 ltla2country=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['CTRY19NM']))
 ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN19NM'])))
+ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
+
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
 def coglab2coglab(x): return x
@@ -93,6 +98,9 @@ ltlaexclude=set()
 ltlaset="All"
 #ltlaset="London"
 #ltlaset="Bolton"
+
+# Will plot graph of these locations even if only encountered during subdivision of global growth mode
+specialinterest=set(['E08000001'])
 
 mgt=5# Mean generation time in days
 
@@ -201,7 +209,7 @@ sys.stdout.flush()
 np.set_printoptions(precision=3,linewidth=150)
 
 if ltlaset=="All":
-  if source=="COG-UK": areacovered="the UK"
+  if source=="COG-UK": areacovered="UK"
   else: areacovered="England"
 else:
   areacovered=ltlaset
@@ -605,9 +613,10 @@ def evalconfidence(place,xx0):
   print("T             %5.1f%% - %5.1f%%"%((TT[n0]-1)*100,(TT[n1]-1)*100))
   return QQ[n0],QQ[n1],RR[n0],RR[n1]
   
-def printplaceinfo(place):
-  print(place)
-  print("="*len(place))
+def printplaceinfo(place,using=''):
+  name=ltla2name.get(place,place)+using
+  print(name)
+  print("="*len(name))
   print()
   print("                        Nonvar    Var   Seen")
   for w in range(nweeks):
@@ -615,10 +624,7 @@ def printplaceinfo(place):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def sanitise(fn):
-  return fn.replace(' ','_')
-
-def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None):
+def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None,using=''):
   print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
   print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
   print("Pred   = predicted number of cases seen this day = A+B")
@@ -630,13 +636,8 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
   print("R      = estimated reproduction rate of B.1.617.2 on this day")
   print()
-  # Need the extra decimal places to make graphs look smooth
-  if area=="all":
-    areahere=areacovered
-  else:
-    areahere=area
   if area!=None and args.graph_filename!=None:
-    graphdata=sanitise(args.graph_filename+'_'+areahere+'.dat')
+    graphdata=sanitise(args.graph_filename+'_'+area+'.dat')
     graphfp=open(graphdata,'w')
   else:
     graphfp=None
@@ -674,9 +675,10 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   print()
   if graphfp!=None:
     graphfp.close()
+    now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
     # 'As of %s, estimated R(non-B.1.617.2)=%.2f R(B.1.617.2)=%.2f\\n'%(daytodate(minday+ndays-3),Q,R)+
     for yaxis in ["lin","log"]:
-      graphfn=sanitise(args.graph_filename+'_'+areahere+'_'+yaxis+'.png')
+      graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
       po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
       # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
       def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
@@ -685,14 +687,14 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
       write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(areahere,daytodate(minday+ndays-3),EQ,ER,ETA))
+      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-3),EQ,ER,ETA))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       if yaxis=="log": write('set logscale y')
-      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%areahere+
-            'Fit made on 2021-05-29 using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'+
+      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%(area+using)+
+            'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
       write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-B.1.617.2", "%s" u 1:3 with lines lw 3 title "Modelled B.1.617.2", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-B.1.617.2 scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of B.1.617.2 scaled up to modelled total"'%((graphdata,)*6))
       p.close();po.wait()
@@ -740,7 +742,7 @@ if mode=="local growth rates":
     else:
       Qmin=Qmax=Rmin=Rmax=None
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(place,place))
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
@@ -754,7 +756,7 @@ if type(mode)==tuple and mode[0]=="fixed growth rate":
     AA,BB,GG=expand(xx0)
     T=(exp(h0*mgt)-1)*100
     print("Predetermined growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,area=place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,area=ltla2name.get(place,place))
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -790,19 +792,22 @@ if mode=="global growth rate":
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
   print()
+  
   print("Re-running using global optimum growth advantage",h0)
   print()
-
   summary={}
   TAA=np.zeros(ndays)
   TBB=np.zeros(ndays)
   for place in places:
-    printplaceinfo(place)
+    using=' (using information from '+ltla2name.get(areacovered,areacovered)+')'
+    printplaceinfo(place,using=using)
     xx0,L0=optimiseplace(place,fixedh=h0)
     AA,BB,GG=expand(xx0)
     TAA+=AA;TBB+=BB
     print("Globally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax)
+    area=None
+    if place!=areacovered and (locationsize!="LTLA" or place in specialinterest): area=ltla2name.get(place,place)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,area=area,using=using)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -811,7 +816,7 @@ if mode=="global growth rate":
   print()
 
   print("Combined results using globally optimised growth advantage")
-  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,area="all")
+  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,area=ltla2name.get(areacovered,areacovered))
   
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
