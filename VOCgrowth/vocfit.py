@@ -44,7 +44,6 @@ def includeltla(ltla,ltlaset):
 parser=argparse.ArgumentParser()
 parser.add_argument('-l', '--load-options',   help='Load options from a file')
 parser.add_argument('-s', '--save-options',   help='Save options to a file')
-parser.add_argument('-c', '--confidence',     help='Evaluate confidence intervals for everything', action='store_true')# Currenly ignored
 parser.add_argument('-g', '--graph-filename', help='Stem of graph filenames')
 args=parser.parse_args()
 
@@ -124,7 +123,7 @@ bmsig=25
 
 # Lengthscale for filtered Brownian motion
 # (higher = greater amplitude for the wiggles)
-bmscale=0.02
+bmscale=0.04
 
 # Case ascertainment rate
 asc=0.4
@@ -146,6 +145,9 @@ mode="local growth rates"
 #mode="fixed growth rate",0.1
 
 voclen=(1 if source=="COG-UK" else 7)
+
+conf=0.95
+nsamp=1000
 
 ### End options ###
 
@@ -169,7 +171,9 @@ opts={
   "Number of days of COG-UK data to discard": discardcogdays,
   "Bundle remainder": bundleremainder,
   "Minimiser options": minopts,
-  "Length of time period over which VOC counts are given (days)": voclen
+  "Length of time period over which VOC counts are given (days)": voclen,
+  "Confidence level": conf,
+  "Number of samples for confidence calcultions in hierachical mode": nsamp
 }
 
 if args.save_options!=None:
@@ -199,6 +203,10 @@ discardcogdays=opts["Number of days of COG-UK data to discard"]
 bundleremainder=opts["Bundle remainder"]
 minopts=opts["Minimiser options"]
 voclen=opts["Length of time period over which VOC counts are given (days)"]
+conf=opts["Confidence level"]
+nsamp=opts["Number of samples for confidence calcultions in hierachical mode"]
+
+zconf=norm.ppf((1+conf)/2)
 
 print("Options:")
 print()
@@ -380,9 +388,9 @@ def prereduce(place):
   else: return place
 
 # Convert daily growth rate & uncertainty into R-number-based description
+# dh = 1 standard deviation
 def Rdesc(h0,dh):
-  z=1.96
-  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-z*dh,h0,h0+z*dh]]
+  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
 
 print("Estimating transmission advantage using variant counts only (not case counts)")
@@ -621,13 +629,43 @@ def evalconfidence(place,xx0):
     RR.append((BB[-1]/BB[-2])**mgt)
     TT.append(exp(mgt*xx[2]))
   QQ.sort();RR.sort();TT.sort()
-  conf=0.95
   n0=int((1-conf)/2*nsamp)
   n1=int((1+conf)/2*nsamp)
   print("R_{B.1.1.7}   %6.3f - %6.3f"%(QQ[n0],QQ[n1]))
   print("R_{B.1.617.2} %6.3f - %6.3f"%(RR[n0],RR[n1]))
   print("T             %5.1f%% - %5.1f%%"%((TT[n0]-1)*100,(TT[n1]-1)*100))
   return QQ[n0],QQ[n1],RR[n0],RR[n1]
+
+
+# Generate sample paths conditional on h = xx0[2] + dhsamp
+# xx0 = N-vector that is optimal conditioned on xx0[2]
+# dhsamp = nsamp-vector of deltas in xx0[2] to sample over (an externally imposed normal - not from the log likelihood)
+# Use normal approximation with Hessian from log likelihood for other co-ordinates
+def getcondsamples(place,xx0,dhsamp):
+  N=bmN+4
+  H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
+  Hcond=H/condition/condition[:,None]
+  Hcond__=np.delete(np.delete(Hcond,2,0),2,1)# N-1 x N-1
+  Hcond_=np.delete(Hcond[2],2,0)# N-1
+  eig=np.linalg.eigh(Hcond__)
+  # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond__),eig[1])) ~= eig[0]
+  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None,None
+  nsamp=len(dhsamp)
+  t=norm.rvs(size=[nsamp,N-1])# nsamp x N-1
+  sd=eig[0]**(-.5)# N-1
+  u=t*sd# nsamp x N-1
+  s0=np.insert(np.matmul(u,np.transpose(eig[1])),2,0,1)# nsamp x N
+  s1=np.insert(-np.linalg.solve(Hcond__,Hcond_),2,1,0)# N
+  samp=s0/condition+dhsamp[:,None]*s1# nsamp x N
+  AAA=[];BBB=[]
+  # This is the slow bit. For the purposes of calculating AA[-2:] and BB[-2:] could do something much faster, but it would be
+  # annoyingly specialised and mean that you can't change NLL() without making a corresponding alteration here.
+  for i in range(nsamp):
+    xx=xx0+samp[i]
+    AA,BB,GG=expand(xx)
+    AAA.append(AA)
+    BBB.append(BB)
+  return np.array(AAA),np.array(BBB)
   
 def printplaceinfo(place,using=''):
   name=ltla2name.get(place,place)+using
@@ -750,14 +788,11 @@ if mode=="local growth rates":
     # Use observed Fisher information to make confidence interval
     fi=(ff[0]-2*ff[1]+ff[2])/eps**2
     if fi>0:
-      dh=1.96/sqrt(fi)
-      (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
+      dh=1/sqrt(fi)
+      (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
     else:
       (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
-    if 1 or args.confidence:
-      Qmin,Qmax,Rmin,Rmax=evalconfidence(place,xx0)
-    else:
-      Qmin=Qmax=Rmin=Rmax=None
+    Qmin,Qmax,Rmin,Rmax=evalconfidence(place,xx0)
     print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(place,place))
     summary[place]=(Q,R,T,Tmin,Tmax)
@@ -802,29 +837,41 @@ if mode=="global growth rate":
     b=(logp[i+1]-logp[i-1])/2
     c=2*logp[i]-(logp[i+1]+logp[i-1])
     imax=i+b/c
-  irange=1.96/sqrt(c)
+  irange=1/sqrt(c)
   h0=(hmin+(hmax-hmin)*imax/(ndiv-1))
   dh=(hmax-hmin)*irange/(ndiv-1)
-  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-dh,h0,h0+dh]]
-  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
+  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
+  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
   print()
   
   print("Re-running using global optimum growth advantage",h0)
   print()
   summary={}
-  TAA=np.zeros(ndays)
-  TBB=np.zeros(ndays)
+  TAA0=np.zeros(ndays)
+  TBB0=np.zeros(ndays)
+  Qmin=Qmax=Rmin=Rmax=None
+  TAA=np.zeros([nsamp,2])# Last two days
+  TBB=np.zeros([nsamp,2])
+  dhsamp=dh*norm.rvs(size=nsamp)
+  n0=int((1-conf)/2*nsamp)
+  n1=int((1+conf)/2*nsamp)
   for place in places:
     using=' (using information from '+ltla2name.get(areacovered,areacovered)+')'
     printplaceinfo(place,using=using)
     xx0,L0=optimiseplace(place,fixedh=h0)
-    AA,BB,GG=expand(xx0)
-    TAA+=AA;TBB+=BB
+    AA0,BB0,GG0=expand(xx0)
+    TAA0+=AA0;TBB0+=BB0
+    AAA,BBB=getcondsamples(place,xx0,dhsamp)
+    if not AAA is None:
+      TAA+=AAA[:,-2:]
+      TBB+=BBB[:,-2:]
+      qq=list(AAA[:,-1]/AAA[:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
+      rr=list(BBB[:,-1]/BBB[:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
     print("Globally optimised growth advantage")
     area=None
     if place!=areacovered and (locationsize!="LTLA" or place in specialinterest): area=ltla2name.get(place,place)
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,area=area,using=using)
+    Q,R=fullprint(AA0,BB0,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=area,using=using)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -833,7 +880,9 @@ if mode=="global growth rate":
   print()
 
   print("Combined results using globally optimised growth advantage")
-  Q,R=fullprint(TAA,TBB,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,area=ltla2name.get(areacovered,areacovered))
+  qq=list(TAA[:,-1]/TAA[:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
+  rr=list(TBB[:,-1]/TBB[:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
+  Q,R=fullprint(TAA0,TBB0,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(areacovered,areacovered))
   
-  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-dh,h0+dh))
+  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
