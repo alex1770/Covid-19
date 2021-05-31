@@ -113,7 +113,7 @@ firstweek=datetoday('2021-04-17')
 
 nif1=0.5 # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5 # Non-independence factor for VOC counts (ditto)
-isd=1    # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
+isd2=1   # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
 sig0=0.004
@@ -160,7 +160,7 @@ opts={
   "Optimisation mode": mode,
   "nif1": nif1,
   "nif2": nif2,
-  "Inverse sd for prior on growth": isd,
+  "Inverse sd for prior on growth": isd2,
   "Sigma (prior on daily growth rate change)": sig0,
   "Timescale of growth rate change (days)": bmsig,
   "Lengthscale for filtered Brownian motion": bmscale,
@@ -189,7 +189,7 @@ firstweek=datetoday(opts["Earliest week (using end of week date) to use VOC coun
 mode=opts["Optimisation mode"]
 nif1=opts["nif1"]
 nif2=opts["nif2"]
-isd=opts["Inverse sd for prior on growth"]
+isd2=opts["Inverse sd for prior on growth"]
 sig0=opts["Sigma (prior on daily growth rate change)"]
 bmsig=opts["Timescale of growth rate change (days)"]
 bmscale=opts["Lengthscale for filtered Brownian motion"]
@@ -494,29 +494,45 @@ def expand(xx):
   return AA,BB,GG
 
 # Return negative log likelihood
-def NLL(xx_conditioned,lcases,lvocnum,sig0,p,lprecases):
+def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases):
   xx=xx_conditioned/condition
+  tot=0
+  
+  # Prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
+  a0=log(lcases[0]+.5)
+  isd0=0
+  tot+=-((xx[0]-a0)*isd0)**2/2
+  
+  # Prior on starting number of cases of B.1.617.2
+  isd1=0
+  #tot+=-((xx[1]-(a0-10))*isd1)**2/2
+  
+  # Prior on h
+  tot+=-(xx[2]*isd2)**2/2
+  
   a,b=lprecases[0]+.5,lprecases[1]+.5
   g0=log(b/a)/7
   v0=(1/a+1/b)/49+sig0**2
-  tot=-(xx[3]-g0)**2/(2*v0)
+  tot+=-(xx[3]-g0)**2/(2*v0)
+  
   AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
-    lam=p*(AA[i]+BB[i])
+    lam=asc*(AA[i]+BB[i])
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
     tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
+  
   # Term to regulate change in growth rate
   for i in range(bmN):
     tot+=-xx[4+i]**2/2
+  
   # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
     endweek=lastweek-(nweeks-1-w)*voclen-minday
     A=sum(AA[endweek-(voclen-1):endweek+1])
     B=sum(BB[endweek-(voclen-1):endweek+1])
     tot+=(lvocnum[w][0]*log(A/(A+B))+lvocnum[w][1]*log(B/(A+B)))*nif2
-  # Prior on h
-  tot+=-(xx[2]*isd)**2/2
+  
   return -tot
 
 def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
@@ -570,7 +586,7 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
 
   # Work out the useful constant term(s). They don't affect the optimisation, but they allow optimisation over hyperparameters
   # Possibly extend this to include the g0,v0 term
-  logconst=log(isd)
+  logconst=log(isd2)
   
   # If 'statphase', make the log likelihood a better approximation to log(integral over all parameters) using stationary phase approximation
   if statphase:
@@ -615,6 +631,7 @@ def evalconfidence(place,xx0):
   
 def printplaceinfo(place,using=''):
   name=ltla2name.get(place,place)+using
+  print()
   print(name)
   print("="*len(name))
   print()
@@ -668,6 +685,7 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   if Rmin!=None: ER+=" (%.2f - %.2f)"%(Rmin,Rmax)
   ETA="Estimated transmission advantage = %.0f%%"%T
   if Tmin!=None: ETA+=" (%.0f%% - %.0f%%)"%(Tmin,Tmax)
+  if area!=None: print("Summary");print(area+using)
   print(EQ)
   print(ER)
   print(ETA)
