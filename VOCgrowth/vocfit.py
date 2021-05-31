@@ -675,7 +675,7 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   print()
   if graphfp!=None:
     graphfp.close()
-    now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
+    now=datetime.utcnow().strftime('%Y-%m-%d')
     # 'As of %s, estimated R(non-B.1.617.2)=%.2f R(B.1.617.2)=%.2f\\n'%(daytodate(minday+ndays-3),Q,R)+
     for yaxis in ["lin","log"]:
       graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
