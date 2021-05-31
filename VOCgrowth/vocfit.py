@@ -765,7 +765,7 @@ if mode=="local growth rates":
   print()
   printsummary(summary)
 
-if type(mode)==tuple and mode[0]=="fixed growth rate":
+if (type(mode)==tuple or type(mode)==list) and mode[0]=="fixed growth rate":
   summary={}
   for place in places:
     printplaceinfo(place)
