@@ -111,7 +111,7 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-17')
 
-nif1=0.5 # Non-independence factor for cases (less than 1 means downweight this information)
+nif1=1   # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5 # Non-independence factor for VOC counts (ditto)
 isd2=1   # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
@@ -120,7 +120,7 @@ sig0=0.004
 
 # Timescale in days over which growth rate can change significantly
 # (lower = more wiggles)
-bmsig=30
+bmsig=25
 
 # Lengthscale for filtered Brownian motion
 # (higher = greater amplitude for the wiggles)
@@ -694,7 +694,6 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   if graphfp!=None:
     graphfp.close()
     now=datetime.utcnow().strftime('%Y-%m-%d')
-    # 'As of %s, estimated R(non-B.1.617.2)=%.2f R(B.1.617.2)=%.2f\\n'%(daytodate(minday+ndays-3),Q,R)+
     for yaxis in ["lin","log"]:
       graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
       po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
@@ -705,7 +704,7 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
       write('set timefmt "%Y-%m-%d"')
       write('set format x "%Y-%m-%d"')
       write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-3),EQ,ER,ETA))
+      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-2),EQ,ER,ETA))
       write('set terminal pngcairo font "sans,13" size 1920,1280')
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
