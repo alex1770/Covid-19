@@ -130,7 +130,7 @@ bmscale=0.02
 asc=0.4
 
 # Discard this many cases at the end of the list of cases by specimen day
-discardcasedays=2
+discardcasedays=3# Pro tem to allow for Wales and NI late reporting at weekends and bank holidays
 
 # Discard this many days of the latest COG data
 discardcogdays=2
