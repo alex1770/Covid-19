@@ -572,7 +572,7 @@ def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
     H[i,i]=v/eps1**2
   return H
       
-# Returns negative log likelihood
+# Returns log likelihood
 def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   xx=np.copy(hint)
   # bounds[2][0]=0 prejudges B.1.617.2 as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
@@ -612,7 +612,7 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
     logconst+=N*log(2*pi)/2-log(det)/2
 
   # Return negative log likelihood
-  return res.x/condition,res.fun-logconst
+  return res.x/condition,-res.fun+logconst
 
 def evalconfidence(place,xx0):
   H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
@@ -783,7 +783,7 @@ if mode=="local growth rates":
     xx0,L0=optimiseplace(place)
     if len(places)<10:
       xx1,L1=optimiseplace(place,statphase=True)
-      print("Corrected log likelihood",-L1)
+      print("Corrected log likelihood",L1)
     AA,BB,GG=expand(xx0)
     h0=xx0[2]
     ff=[0,L0,0]
@@ -792,7 +792,7 @@ if mode=="local growth rates":
       xx,L=optimiseplace(place,hint=xx0,fixedh=h0+i*eps)
       ff[i+1]=L
     # Use observed Fisher information to make confidence interval
-    fi=(ff[0]-2*ff[1]+ff[2])/eps**2
+    fi=(-ff[0]+2*ff[1]-ff[2])/eps**2
     if fi>0:
       dh=1/sqrt(fi)
       (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
@@ -829,7 +829,7 @@ if mode=="global growth rate":
     for i in range(ndiv):
       h=(hmin+(hmax-hmin)*i/(ndiv-1))
       xx,L=optimiseplace(place,hint=xx,fixedh=h)
-      logp[i]+=L0-L
+      logp[i]+=L-L0
       print("%5.3f %5.3f  %9.2f"%(h,exp(h*mgt),logp[i]))
     print()
     sys.stdout.flush()
