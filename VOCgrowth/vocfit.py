@@ -148,7 +148,7 @@ mode="local growth rates"
 voclen=(1 if source=="COG-UK" else 7)
 
 conf=0.95
-nsamp=1000
+nsamp=2000
 
 ### End options ###
 
