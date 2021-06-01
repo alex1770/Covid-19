@@ -521,13 +521,13 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   
   # Prior on h
   tot+=-(xx[2]*isd2)**2/2
-  if const: tot+=log(2*pi/isd2**2)/2
+  if const: tot-=log(2*pi/isd2**2)/2
   
   a,b=lprecases[0]+.5,lprecases[1]+.5
   g0=log(b/a)/7
   v0=(1/a+1/b)/49+sig0**2
   tot+=-(xx[3]-g0)**2/(2*v0)
-  if const: tot+=log(2*pi*v0)/2
+  if const: tot-=log(2*pi*v0)/2
   
   AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
@@ -544,7 +544,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   # Term to regulate change in growth rate
   for i in range(bmN):
     tot+=-xx[4+i]**2/2
-  if const: tot+=log(2*pi*bmN)/2
+  if const: tot-=bmN*log(2*pi)/2
   
   # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
