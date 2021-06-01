@@ -111,7 +111,7 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-17')
 
-nif1=1   # Non-independence factor for cases (less than 1 means downweight this information)
+nif1=0.5 # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.5 # Non-independence factor for VOC counts (ditto)
 isd2=1   # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
@@ -503,7 +503,8 @@ def expand(xx):
   return AA,BB,GG
 
 # Return negative log likelihood (negative because scipy can only minimise, not maximise)
-def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases):
+# If const is true then add in all the constant terms (that don't affect the optimisation)
+def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   xx=xx_conditioned/condition
   tot=0
   
@@ -511,37 +512,52 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases):
   a0=log(lcases[0]+.5)
   isd0=0
   tot+=-((xx[0]-a0)*isd0)**2/2
+  #if const: tot+=log(2*pi/isd0**2)/2
   
   # Prior on starting number of cases of B.1.617.2
   isd1=0
   #tot+=-((xx[1]-(a0-10))*isd1)**2/2
+  #if const: tot+=log(2*pi/isd1**2)/2
   
   # Prior on h
   tot+=-(xx[2]*isd2)**2/2
+  if const: tot+=log(2*pi/isd2**2)/2
   
   a,b=lprecases[0]+.5,lprecases[1]+.5
   g0=log(b/a)/7
   v0=(1/a+1/b)/49+sig0**2
   tot+=-(xx[3]-g0)**2/(2*v0)
+  if const: tot+=log(2*pi*v0)/2
   
   AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     lam=asc*(AA[i]+BB[i])
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
-    tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
+    #tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
+    r=lam*nif1/(1-nif1)
+    p=1-nif1
+    n=lcases[i]
+    tot+=max(gammaln(n+r)+r*log(1-p)+n*log(p)-gammaln(r)-gammaln(n+1),-10000)
+    # cf -lam+n*log(lam)-gammaln(n+1)
   
   # Term to regulate change in growth rate
   for i in range(bmN):
     tot+=-xx[4+i]**2/2
+  if const: tot+=log(2*pi*bmN)/2
   
   # Term to align the variant numbers with VOC count data
   for w in range(nweeks):
     endweek=lastweek-(nweeks-1-w)*voclen-minday
     A=sum(AA[endweek-(voclen-1):endweek+1])
     B=sum(BB[endweek-(voclen-1):endweek+1])
-    tot+=(lvocnum[w][0]*log(A/(A+B))+lvocnum[w][1]*log(B/(A+B)))*nif2
-  
+    f=nif2/(1-nif2);a=f*A;b=f*B
+    r,s=lvocnum[w][0],lvocnum[w][1]
+    if abs(a+b)<10000*(r+s):
+      tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)+gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
+    else:
+      tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)+r*log(A/(A+B))+s*log(B/(A+B))
+
   return -tot
 
 def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
@@ -593,15 +609,8 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
     raise RuntimeError(res.message)
   xx=res.x/condition
 
-  # Work out the useful constant term(s). They don't affect the optimisation, but they allow optimisation over hyperparameters
-  # Possibly extend this to include the g0,v0 term
-  # and should be something involving nif1, nif2
-  logconst=log(isd2)-bmN*log(2*pi)/2
-  lcases=cases[place]
-  for i in range(ndays):
-    n=lcases[i]
-    logconst+=-n*nif1+(n*nif1+1)*log(nif1)-gammaln(n*nif1+1)
-  
+  # Work out log likelihood including constant terms
+  LL=-NLL(res.x,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)],const=True)
   
   # If 'statphase', make the log likelihood a better approximation to log(integral over all parameters) using stationary phase approximation
   if statphase:
@@ -609,10 +618,10 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
     det=np.linalg.det(H)
     N=H.shape[0]
     if det<=0: print("Warning: Hessian not positive for %s. Can't make corrected log likelihood."%place);det=1
-    logconst+=N*log(2*pi)/2-log(det)/2
+    LL+=N*log(2*pi)/2-log(det)/2
 
-  # Return negative log likelihood
-  return res.x/condition,-res.fun+logconst
+  # Return optimum xx log likelihood
+  return res.x/condition,LL
 
 def evalconfidence(place,xx0):
   H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
