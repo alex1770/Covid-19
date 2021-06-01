@@ -502,8 +502,11 @@ def expand(xx):
     BB.append(BB[-1]*G*H)
   return AA,BB,GG
 
+
 # Return negative log likelihood (negative because scipy can only minimise, not maximise)
 # If const is true then add in all the constant terms (that don't affect the optimisation)
+lognif1=log(nif1)
+log1mnif1=log(1-nif1)
 def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   xx=xx_conditioned/condition
   tot=0
@@ -536,9 +539,9 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
     #tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
     r=lam*nif1/(1-nif1)
-    p=1-nif1
     n=lcases[i]
-    tot+=max(gammaln(n+r)+r*log(1-p)+n*log(p)-gammaln(r)-gammaln(n+1),-10000)
+    tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
+    if const: tot+=-gammaln(n+1)
     # cf -lam+n*log(lam)-gammaln(n+1)
   
   # Term to regulate change in growth rate
@@ -554,9 +557,10 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     f=nif2/(1-nif2);a=f*A;b=f*B
     r,s=lvocnum[w][0],lvocnum[w][1]
     if abs(a+b)<10000*(r+s):
-      tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)+gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
+      tot+=gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
     else:
-      tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)+r*log(A/(A+B))+s*log(B/(A+B))
+      tot+=r*log(A/(A+B))+s*log(B/(A+B))
+    if const: tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)
 
   return -tot
 
