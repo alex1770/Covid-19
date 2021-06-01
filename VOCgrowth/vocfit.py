@@ -535,14 +535,14 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
-    lam=asc*(AA[i]+BB[i])
-    # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
-    #tot+=max((lcases[i]-lam+lcases[i]*log(lam))*nif1,-10000)
-    r=lam*nif1/(1-nif1)
+    mu=asc*(AA[i]+BB[i])
+    r=mu*nif1/(1-nif1)
     n=lcases[i]
+    # n ~ Negative binomial(mean=mu, variance=mu/nif1)
+    # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
     tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
     if const: tot+=-gammaln(n+1)
-    # cf -lam+n*log(lam)-gammaln(n+1)
+    # cf -mu+n*log(mu)-gammaln(n+1)
   
   # Term to regulate change in growth rate
   for i in range(bmN):
