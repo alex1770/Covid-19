@@ -2,6 +2,7 @@ from stuff import *
 import sys,re,argparse,pickle
 from scipy.optimize import minimize
 from scipy.stats import norm
+from scipy.special import gammaln
 from math import log,exp,sqrt,sin,pi
 import numpy as np
 from subprocess import Popen,PIPE
@@ -501,7 +502,7 @@ def expand(xx):
     BB.append(BB[-1]*G*H)
   return AA,BB,GG
 
-# Return negative log likelihood
+# Return negative log likelihood (negative because scipy can only minimise, not maximise)
 def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases):
   xx=xx_conditioned/condition
   tot=0
@@ -594,18 +595,24 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
 
   # Work out the useful constant term(s). They don't affect the optimisation, but they allow optimisation over hyperparameters
   # Possibly extend this to include the g0,v0 term
-  logconst=log(isd2)
+  # and should be something involving nif1, nif2
+  logconst=log(isd2)-bmN*log(2*pi)/2
+  lcases=cases[place]
+  for i in range(ndays):
+    n=lcases[i]
+    logconst+=-n*nif1+(n*nif1+1)*log(nif1)-gammaln(n*nif1+1)
+  
   
   # If 'statphase', make the log likelihood a better approximation to log(integral over all parameters) using stationary phase approximation
   if statphase:
     H=Hessian(xx,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
     det=np.linalg.det(H)
+    N=H.shape[0]
     if det<=0: print("Warning: Hessian not positive for %s. Can't make corrected log likelihood."%place);det=1
-  else:
-    det=1
+    logconst+=N*log(2*pi)/2-log(det)/2
 
   # Return negative log likelihood
-  return res.x/condition,res.fun+log(det)/2-logconst
+  return res.x/condition,res.fun-logconst
 
 def evalconfidence(place,xx0):
   H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
@@ -774,8 +781,7 @@ if mode=="local growth rates":
   for place in places:
     printplaceinfo(place)
     xx0,L0=optimiseplace(place)
-    if 0:
-      print("Log likelihood",-L0)
+    if len(places)<10:
       xx1,L1=optimiseplace(place,statphase=True)
       print("Corrected log likelihood",-L1)
     AA,BB,GG=expand(xx0)
