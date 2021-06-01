@@ -111,9 +111,9 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-17')
 
-nif1=0.5 # Non-independence factor for cases (less than 1 means downweight this information)
-nif2=0.5 # Non-independence factor for VOC counts (ditto)
-isd2=1   # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
+nif1=0.048 # Non-independence factor for cases (less than 1 means downweight this information)
+nif2=0.07  # Non-independence factor for VOC counts (ditto)
+isd2=1     # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
 sig0=0.004
@@ -124,7 +124,7 @@ bmsig=25
 
 # Lengthscale for filtered Brownian motion
 # (higher = greater amplitude for the wiggles)
-bmscale=0.04
+bmscale=0.01
 
 # Case ascertainment rate
 asc=0.4
