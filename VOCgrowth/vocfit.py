@@ -67,11 +67,8 @@ args=parser.parse_args()
 # Likelihood:
 # A_{i+1}=e^{g_i}A_i
 # B_{i+1}=e^{g_i+h}B_i
-# n_i ~ Po(p(A_i+B_i))
-# r_j ~ Po(q_j.A_{I_j})  (A_{I_j} means sum_{i in A_j}A_i)
-# s_j ~ Po(q_j.B_{I_j})
-# [q_j ~ eps.e^{-eps.q}dq (a wide exponential distribution) - not currently implemented]
-# q_j is optimised out, so q_j=(r_j+s_j)/(A_{I_j}+B_{I_j}), or effectively A_{I_j}/(A_{I_j}+B_{I_j}) ~ Beta(r_j+1,s_j+1)
+# n_i ~ NB(mean=p(A_i+B_i),var=mean/nif1)
+# r_j ~ BetaBinomial(r_j+s_j, A_{I_j}nif2/(1-nif2), B_{I_j}nif2/(1-nif2))  (A_{I_j} means sum_{i in I_j}A_i)
 # g_0 ~ N(g_{-1},v_{-1})
 # X_n ~ N(0,1)
 # N=ndays-1
@@ -867,11 +864,21 @@ if mode=="global growth rate":
   print("Re-running using global optimum growth advantage",h0)
   print()
   summary={}
-  TAA0=np.zeros(ndays)
-  TBB0=np.zeros(ndays)
-  Qmin=Qmax=Rmin=Rmax=None
-  TAA=np.zeros([nsamp,2])# Last two days
-  TBB=np.zeros([nsamp,2])
+
+  # Combine places into a single top level 'areacovered', and also possibly into regions
+  # Make a set of [name of aggregate location, set of ltlas that are in it]
+  regions=set(ltla2region.values())
+  makeregions=(locationsize=="LTLA" and areacovered not in regions)
+  if makeregions: combinedplaces=sorted(list(regions))
+  else: combinedplaces=[]
+  combinedplaces.append(areacovered)
+  TAA0={};TBB0={};TAA={};TBB={}
+  for loc in combinedplaces:
+    TAA0[loc]=np.zeros(ndays)
+    TBB0[loc]=np.zeros(ndays)
+    TAA[loc]=np.zeros([nsamp,2])# Last two days
+    TBB[loc]=np.zeros([nsamp,2])
+  
   dhsamp=dh*norm.rvs(size=nsamp)
   n0=int((1-conf)/2*nsamp)
   n1=int((1+conf)/2*nsamp)
@@ -880,11 +887,14 @@ if mode=="global growth rate":
     printplaceinfo(place,using=using)
     xx0,L0=optimiseplace(place,fixedh=h0)
     AA0,BB0,GG0=expand(xx0)
-    TAA0+=AA0;TBB0+=BB0
+    TAA0[areacovered]+=AA0;TBB0[areacovered]+=BB0
+    if makeregions: reg=ltla2region[place];TAA0[reg]+=AA0;TBB0[reg]+=BB0
     AAA,BBB=getcondsamples(place,xx0,dhsamp)
+    Qmin=Qmax=Rmin=Rmax=None
     if not AAA is None:
-      TAA+=AAA[:,-2:]
-      TBB+=BBB[:,-2:]
+      TAA[areacovered]+=AAA[:,-2:]
+      TBB[areacovered]+=BBB[:,-2:]
+      if makeregions: TAA[reg]+=AAA[:,-2:];TBB[reg]+=BBB[:,-2:]
       qq=list(AAA[:,-1]/AAA[:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
       rr=list(BBB[:,-1]/BBB[:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
     print("Globally optimised growth advantage")
@@ -898,10 +908,11 @@ if mode=="global growth rate":
   print("Total predicted counts using global optimum growth advantage")
   print()
 
-  print("Combined results using globally optimised growth advantage")
-  qq=list(TAA[:,-1]/TAA[:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
-  rr=list(TBB[:,-1]/TBB[:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
-  Q,R=fullprint(TAA0,TBB0,sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(areacovered,areacovered))
+  for loc in combinedplaces:
+    print("Combined results for %s using globally optimised growth advantage"%loc)
+    qq=list(TAA[loc][:,-1]/TAA[loc][:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
+    rr=list(TBB[loc][:,-1]/TBB[loc][:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
+    Q,R=fullprint(TAA0[loc],TBB0[loc],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(loc,loc))
   
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
