@@ -37,6 +37,10 @@ def includeltla(ltla,ltlaset):
     return ltla2region[ltla]=='London'
   elif ltlaset=="Bolton":
     return ltla=='E08000001'
+  elif ltlaset=="Hartlepool":
+    return ltla=='E06000001'
+  elif ltlaset=="NE":
+    return ltla2region[ltla]=='North East'
   elif ltlaset=="All":
     return True
   else:
@@ -80,21 +84,22 @@ args=parser.parse_args()
 
 ### Options ###
 
-#source="Sanger"
-source="COG-UK"
+source="Sanger"
+#source="COG-UK"
 #source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="UK"
+locationsize="LTLA"
 
 ltlaexclude=set()
 # ltlaexclude=set(['E08000001'])# This would exclude Bolton
-ltlaset="All"
+#ltlaset="All"
 #ltlaset="London"
 #ltlaset="Bolton"
+ltlaset="Hartlepool"
 
 # Will plot graph of these locations even if only encountered during subdivision of global growth mode
 specialinterest=set(['E08000001'])
@@ -106,7 +111,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-04-17')
+firstweek=datetoday('2021-05-01')
 
 nif1=0.048 # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.07  # Non-independence factor for VOC counts (ditto)
@@ -361,6 +366,7 @@ places=sorted(list(cases))
 
 # Restrict to places for which there is at least some of each variant, and bundle the remaining locations together as "Other"
 okplaces=set([place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
+#okplaces=set(places)
 if bundleremainder:
   otherplaces=set(places).difference(okplaces)
   othervocnum=sum((vocnum[place] for place in otherplaces),np.zeros([nweeks,2],dtype=int))
@@ -452,6 +458,7 @@ if voclen>=7:
     crossratiosubdivide(vocnum[place][w:w+2] for place in places)
 print("All week pairs:")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
+print()
 
 print("Estimating transmission advantage using variant counts together with case counts")
 print("================================================================================")
@@ -504,7 +511,7 @@ def expand(xx):
 # If const is true then add in all the constant terms (that don't affect the optimisation)
 lognif1=log(nif1)
 log1mnif1=log(1-nif1)
-def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
+def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False,deb=False):
   xx=xx_conditioned/condition
   tot=0
   
@@ -537,7 +544,9 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     n=lcases[i]
     # n ~ Negative binomial(mean=mu, variance=mu/nif1)
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
-    tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
+    #tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
+    tot+=max(gammaln(n+r)-nif1*gammaln(mu+r)+n*log1mnif1,-10000)
+    if deb: print("NLL NB%d"%i,gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r))
     if const: tot+=-gammaln(n+1)
     # cf -mu+n*log(mu)-gammaln(n+1)
   
@@ -555,8 +564,10 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     r,s=lvocnum[w][0],lvocnum[w][1]
     if abs(a+b)<10000*(r+s):
       tot+=gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
+      if deb: print("NLL BB%d"%w,gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b))
     else:
       tot+=r*log(A/(A+B))+s*log(B/(A+B))
+      if deb: print("NLL BB'%d"%w,r*log(A/(A+B))+s*log(B/(A+B)))
     if const: tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)
 
   return -tot
