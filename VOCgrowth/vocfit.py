@@ -84,22 +84,22 @@ args=parser.parse_args()
 
 ### Options ###
 
-source="Sanger"
-#source="COG-UK"
+#source="Sanger"
+source="COG-UK"
 #source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="LTLA"
+locationsize="UK"
 
 ltlaexclude=set()
 # ltlaexclude=set(['E08000001'])# This would exclude Bolton
-#ltlaset="All"
+ltlaset="All"
 #ltlaset="London"
 #ltlaset="Bolton"
-ltlaset="Hartlepool"
+#ltlaset="Hartlepool"
 
 # Will plot graph of these locations even if only encountered during subdivision of global growth mode
 specialinterest=set(['E08000001'])
@@ -111,7 +111,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-05-01')
+firstweek=datetoday('2021-04-17')
 
 nif1=0.048 # Non-independence factor for cases (less than 1 means downweight this information)
 nif2=0.255 # Non-independence factor for VOC counts (ditto)
