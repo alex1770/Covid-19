@@ -113,8 +113,10 @@ minday=datetoday('2021-04-01')# Inclusive
 #firstweek=minday+6
 firstweek=datetoday('2021-04-17')
 
-nif1=0.048 # Non-independence factor for cases (less than 1 means downweight this information)
-nif2=0.255 # Non-independence factor for VOC counts (ditto)
+nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
+nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
+isd0=1.2   # Inverse sd for prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
+isd1=0.19  # Inverse sd for prior on starting number of cases of B.1.617.2 (0.19 is very weak)
 isd2=1     # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
@@ -169,6 +171,8 @@ opts={
   "Optimisation mode": mode,
   "nif1": nif1,
   "nif2": nif2,
+  "Inverse sd for prior on initial non-B.1.617.2": isd0,
+  "Inverse sd for prior on initial B.1.617.2": isd1,
   "Inverse sd for prior on growth": isd2,
   "Sigma (prior on daily growth rate change)": sig0,
   "Timescale of growth rate change (days)": bmsig,
@@ -201,6 +205,8 @@ firstweek=datetoday(opts["Earliest week (using end of week date) to use VOC coun
 mode=opts["Optimisation mode"]
 nif1=opts["nif1"]
 nif2=opts["nif2"]
+isd0=opts["Inverse sd for prior on initial non-B.1.617.2"]
+isd1=opts["Inverse sd for prior on initial B.1.617.2"]
 isd2=opts["Inverse sd for prior on growth"]
 sig0=opts["Sigma (prior on daily growth rate change)"]
 bmsig=opts["Timescale of growth rate change (days)"]
@@ -523,12 +529,10 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   
   # Prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
   a0=log(lcases[0]+.5)
-  isd0=1.2
   tot+=-((xx[0]-a0)*isd0)**2/2
   if const: tot-=log(2*pi/isd0**2)/2
   
   # Very weak prior on starting number of cases of B.1.617.2
-  isd1=0.19
   tot+=-((xx[1]-(a0-10))*isd1)**2/2
   if const: tot-=log(2*pi/isd1**2)/2
   
