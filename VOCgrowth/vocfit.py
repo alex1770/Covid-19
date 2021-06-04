@@ -152,6 +152,10 @@ voclen=(1 if source=="COG-UK" else 7)
 conf=0.95
 nsamp=2000
 
+model="quasipoisson"
+#model="NBBB"
+#model="NBBB+magicprior"
+
 ### End options ###
 
 opts={
@@ -176,7 +180,8 @@ opts={
   "Minimiser options": minopts,
   "Length of time period over which VOC counts are given (days)": voclen,
   "Confidence level": conf,
-  "Number of samples for confidence calcultions in hierachical mode": nsamp
+  "Number of samples for confidence calcultions in hierachical mode": nsamp,
+  "Model": model
 }
 
 if args.save_options!=None:
@@ -208,6 +213,7 @@ minopts=opts["Minimiser options"]
 voclen=opts["Length of time period over which VOC counts are given (days)"]
 conf=opts["Confidence level"]
 nsamp=opts["Number of samples for confidence calcultions in hierachical mode"]
+model=opts["Model"]
 
 zconf=norm.ppf((1+conf)/2)
 
@@ -511,7 +517,7 @@ def expand(xx):
 # If const is true then add in all the constant terms (that don't affect the optimisation)
 lognif1=log(nif1)
 log1mnif1=log(1-nif1)
-def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False,deb=False):
+def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   xx=xx_conditioned/condition
   tot=0
   
@@ -544,11 +550,16 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False,deb=False):
     n=lcases[i]
     # n ~ Negative binomial(mean=mu, variance=mu/nif1)
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
-    #tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
-    tot+=max(gammaln(n+r)-nif1*gammaln(mu+r)+n*log1mnif1,-10000)
-    if deb: print("NLL NB%d"%i,gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r))
-    if const: tot+=-gammaln(n+1)
-    # cf -mu+n*log(mu)-gammaln(n+1)
+    if model=="quasipoisson":
+      tot+=max((-mu+n*log(nif1*mu))*nif1,-10000)
+      if const: tot+=log(nif1)-gammaln(nif1*n+1)
+    elif model=="NBBB":
+      tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
+      if const: tot+=-gammaln(n+1)
+    elif model=="NBBB+magicprior":
+      tot+=max(gammaln(n+r)-nif1*gammaln(mu+r)+n*log1mnif1,-10000)
+      if const: tot+=-gammaln(n+1)
+    else: raise RuntimeError("Unrecognised model "+model)
   
   # Term to regulate change in growth rate
   for i in range(bmN):
@@ -562,12 +573,14 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False,deb=False):
     B=sum(BB[endweek-(voclen-1):endweek+1])
     f=nif2/(1-nif2);a=f*A;b=f*B
     r,s=lvocnum[w][0],lvocnum[w][1]
-    if abs(a+b)<10000*(r+s):
-      tot+=gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
-      if deb: print("NLL BB%d"%w,gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b))
-    else:
-      tot+=r*log(A/(A+B))+s*log(B/(A+B))
-      if deb: print("NLL BB'%d"%w,r*log(A/(A+B))+s*log(B/(A+B)))
+    if model=="quasipoisson":
+      tot+=(r*log(A/(A+B))+s*log(B/(A+B)))*nif2+log(nif2)
+    elif model=="NBBB" or model=="NBBB+magicprior":
+      if abs(a+b)<10000*(r+s):
+        tot+=gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
+      else:
+        tot+=r*log(A/(A+B))+s*log(B/(A+B))
+    else: raise RuntimeError("Unrecognised model "+model)
     if const: tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)
 
   return -tot
@@ -879,7 +892,7 @@ if mode=="global growth rate":
   # Combine places into a single top level 'areacovered', and also possibly into regions
   # Make a set of [name of aggregate location, set of ltlas that are in it]
   regions=set(ltla2region.values())
-  makeregions=(locationsize=="LTLA" and areacovered not in regions)
+  makeregions=(locationsize=="LTLA" and areacovered not in regions)*0# temporarily disable
   if makeregions: combinedplaces=sorted(list(regions))
   else: combinedplaces=[]
   combinedplaces.append(areacovered)
