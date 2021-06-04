@@ -35,6 +35,8 @@ def sgtf2country(x): return 'England'
 def includeltla(ltla,ltlaset):
   if ltlaset=="London":
     return ltla2region[ltla]=='London'
+  elif ltlaset=="test":
+    return ltla2region[ltla]=='London' and ltla<'E09000010'
   elif ltlaset=="Bolton":
     return ltla=='E08000001'
   elif ltlaset=="Hartlepool":
@@ -115,8 +117,8 @@ firstweek=datetoday('2021-04-17')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
-isd0=1.2   # Inverse sd for prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
-isd1=0.19  # Inverse sd for prior on starting number of cases of B.1.617.2 (0.19 is very weak)
+isd0=1.0   # Inverse sd for prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
+isd1=0.3   # Inverse sd for prior on starting number of cases of B.1.617.2 (0.3 is very weak)
 isd2=1     # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
@@ -533,7 +535,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   if const: tot-=log(2*pi/isd0**2)/2
   
   # Very weak prior on starting number of cases of B.1.617.2
-  tot+=-((xx[1]-(a0-10))*isd1)**2/2
+  tot+=-((xx[1]-(a0-4))*isd1)**2/2
   if const: tot-=log(2*pi/isd1**2)/2
   
   # Prior on h
