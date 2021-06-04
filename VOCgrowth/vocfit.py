@@ -114,7 +114,7 @@ minday=datetoday('2021-04-01')# Inclusive
 firstweek=datetoday('2021-05-01')
 
 nif1=0.048 # Non-independence factor for cases (less than 1 means downweight this information)
-nif2=0.07  # Non-independence factor for VOC counts (ditto)
+nif2=0.255 # Non-independence factor for VOC counts (ditto)
 isd2=1     # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
 # Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
@@ -552,7 +552,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
     if model=="quasipoisson":
       tot+=max((-mu+n*log(nif1*mu))*nif1,-10000)
-      if const: tot+=log(nif1)-gammaln(nif1*n+1)
+      if const: tot+=log(nif1)-gammaln(nif1*n+1)# Approx normalisation
     elif model=="NBBB":
       tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
       if const: tot+=-gammaln(n+1)
@@ -574,14 +574,16 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     f=nif2/(1-nif2);a=f*A;b=f*B
     r,s=lvocnum[w][0],lvocnum[w][1]
     if model=="quasipoisson":
-      tot+=(r*log(A/(A+B))+s*log(B/(A+B)))*nif2+log(nif2)
+      r1,s1=nif2*r,nif2*s
+      tot+=r1*log(A/(A+B))+s1*log(B/(A+B))
+      if const: tot+=gammaln(r1+s1+1)-gammaln(r1+1)-gammaln(s1+1)+log(nif2)
     elif model=="NBBB" or model=="NBBB+magicprior":
       if abs(a+b)<10000*(r+s):
         tot+=gammaln(a+r)+gammaln(b+s)-gammaln(a+b+r+s)+gammaln(a+b)-gammaln(a)-gammaln(b)
       else:
         tot+=r*log(A/(A+B))+s*log(B/(A+B))
+      if const: tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)
     else: raise RuntimeError("Unrecognised model "+model)
-    if const: tot+=gammaln(r+s+1)-gammaln(r+1)-gammaln(s+1)
 
   return -tot
 
