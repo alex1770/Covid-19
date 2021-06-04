@@ -152,7 +152,7 @@ voclen=(1 if source=="COG-UK" else 7)
 conf=0.95
 nsamp=2000
 
-model="quasipoisson"
+model="scaledpoisson"
 #model="NBBB"
 #model="NBBB+magicprior"
 
@@ -550,7 +550,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     n=lcases[i]
     # n ~ Negative binomial(mean=mu, variance=mu/nif1)
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
-    if model=="quasipoisson":
+    if model=="scaledpoisson":
       tot+=max((-mu+n*log(nif1*mu))*nif1,-10000)
       if const: tot+=log(nif1)-gammaln(nif1*n+1)# Approx normalisation
     elif model=="NBBB":
@@ -573,7 +573,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
     B=sum(BB[endweek-(voclen-1):endweek+1])
     f=nif2/(1-nif2);a=f*A;b=f*B
     r,s=lvocnum[w][0],lvocnum[w][1]
-    if model=="quasipoisson":
+    if model=="scaledpoisson":
       r1,s1=nif2*r,nif2*s
       tot+=r1*log(A/(A+B))+s1*log(B/(A+B))
       if const: tot+=gammaln(r1+s1+1)-gammaln(r1+1)-gammaln(s1+1)+log(nif2)
