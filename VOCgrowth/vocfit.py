@@ -523,14 +523,14 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   
   # Prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
   a0=log(lcases[0]+.5)
-  isd0=0
+  isd0=1.2
   tot+=-((xx[0]-a0)*isd0)**2/2
-  #if const: tot+=log(2*pi/isd0**2)/2
+  if const: tot-=log(2*pi/isd0**2)/2
   
-  # Prior on starting number of cases of B.1.617.2
-  isd1=0
-  #tot+=-((xx[1]-(a0-10))*isd1)**2/2
-  #if const: tot+=log(2*pi/isd1**2)/2
+  # Very weak prior on starting number of cases of B.1.617.2
+  isd1=0.19
+  tot+=-((xx[1]-(a0-10))*isd1)**2/2
+  if const: tot-=log(2*pi/isd1**2)/2
   
   # Prior on h
   tot+=-(xx[2]*isd2)**2/2
@@ -692,7 +692,9 @@ def getcondsamples(place,xx0,dhsamp):
   Hcond_=np.delete(Hcond[2],2,0)# N-1
   eig=np.linalg.eigh(Hcond__)
   # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond__),eig[1])) ~= eig[0]
-  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None,None
+  m=eig[0].min()
+  if m<=0: print("Hessian not +ve definite in getcondsamples so can't do full confidence calculation");return None,None
+  if m<1e-6: print("Warning: Hessian has a very low eigenvalue in getcondsamples:",m)
   nsamp=len(dhsamp)
   t=norm.rvs(size=[nsamp,N-1])# nsamp x N-1
   sd=eig[0]**(-.5)# N-1
@@ -908,14 +910,17 @@ if mode=="global growth rate":
   dhsamp=dh*norm.rvs(size=nsamp)
   n0=int((1-conf)/2*nsamp)
   n1=int((1+conf)/2*nsamp)
+  TLL=0
   for place in places:
     using=' (using information from '+ltla2name.get(areacovered,areacovered)+')'
     printplaceinfo(place,using=using)
-    xx0,L0=optimiseplace(place,fixedh=h0)
+    xx0,L0=optimiseplace(place,fixedh=h0,statphase=True)
+    TLL+=L0
     AA0,BB0,GG0=expand(xx0)
     TAA0[areacovered]+=AA0;TBB0[areacovered]+=BB0
     if makeregions: reg=ltla2region[place];TAA0[reg]+=AA0;TBB0[reg]+=BB0
     AAA,BBB=getcondsamples(place,xx0,dhsamp)
+    assert BBB[:,-2:].max()<1e20
     Qmin=Qmax=Rmin=Rmax=None
     if not AAA is None:
       TAA[areacovered]+=AAA[:,-2:]
@@ -930,6 +935,7 @@ if mode=="global growth rate":
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
+  print("Corrected log likelihood",TLL)
   
   print("Total predicted counts using global optimum growth advantage")
   print()
