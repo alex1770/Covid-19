@@ -542,100 +542,11 @@ def printplaceinfo(place,using=''):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None,using=''):
-  print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
-  print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
-  print("Pred   = predicted number of cases seen this day = A+B")
-  print("Seen   = number of cases seen this day, after weekday adjustment")
-  print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst variant counts")
-  print("PredV2 = (1-p)*Pred")
-  print("SeenV1 = p*Seen")
-  print("SeenV2 = (1-p)*Seen")
-  print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
-  print("R      = estimated reproduction rate of B.1.617.2 on this day")
-  print()
-  if area!=None and args.graph_filename!=None:
-    graphdata=sanitise(args.graph_filename+'_'+area+'.dat')
-    graphfp=open(graphdata,'w')
-  else:
-    graphfp=None
-  def mprint(*a,**b):
-    print(*a,**b)
-    if graphfp!=None: print(*a,**b,file=graphfp)
-  mprint("#     Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
-  for i in range(ndays):
-    day=minday+i
-    pred,seen=asc*(AA[i]+BB[i]),lcases[i]
-    mprint(daytodate(day),"%9.2f %9.2f %9.2f %9.2f"%(asc*AA[i],asc*BB[i],pred,seen),end='')
-    week=nweeks-1-(lastweek-day)//voclen
-    if week>=0 and week<nweeks and lvocnum[week].sum()>0:
-      p=lvocnum[week][0]/lvocnum[week].sum()
-      mprint("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
-    else:
-      mprint("           -         -         -         - ",end='')
-    if i<ndays-1:
-      Q,R=((AA[i+1]/AA[i])**mgt,(BB[i+1]/BB[i])**mgt)
-      mprint("   %7.4f %7.4f"%(Q,R))
-    else:
-      mprint()
-  # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
-  # but because of Simpson's paradox, that doesn't been the cross ratio of AAs and BBs is also T.
-  EQ="Estimated R(non-B.1.617.2) = %.2f"%Q
-  if Qmin!=None: EQ+=" (%.2f - %.2f)"%(Qmin,Qmax)
-  ER="Estimated R(B.1.617.2)       = %.2f"%R
-  if Rmin!=None: ER+=" (%.2f - %.2f)"%(Rmin,Rmax)
-  ETA="Estimated transmission advantage = %.0f%%"%T
-  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%)"%(Tmin,Tmax)
-  if area!=None: print("Summary");print(area+using)
-  print(EQ)
-  print(ER)
-  print(ETA)
-  if Tmin!=None: ETA+="\\n(CI shows within-model statistical uncertainty, not model uncertainty)"
-  print()
-  if graphfp!=None:
-    graphfp.close()
-    now=datetime.utcnow().strftime('%Y-%m-%d')
-    for yaxis in ["lin","log"]:
-      graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
-      po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
-      # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
-      def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
-      write('set xdata time')
-      write('set key top left')
-      write('set timefmt "%Y-%m-%d"')
-      write('set format x "%Y-%m-%d"')
-      write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-2),EQ,ER,ETA))
-      write('set terminal pngcairo font "sans,13" size 1920,1280')
-      write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
-      write('set output "%s"'%graphfn)
-      write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
-      if yaxis=="log": write('set logscale y')
-      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%(area+using)+
-            'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-            'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-      write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-B.1.617.2", "%s" u 1:3 with lines lw 3 title "Modelled B.1.617.2", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-B.1.617.2 scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of B.1.617.2 scaled up to modelled total"'%((graphdata,)*6))
-      p.close();po.wait()
-      print("Written graph to %s"%graphfn)
-  return Q,R
-
-def printsummary(summary):
-  print("Location                       Q     R      T")
-  for place in places:
-    (Q,R,T,Tmin,Tmax)=summary[place]
-    print("%-25s  %5.2f %5.2f  %4.0f%%"%(place,Q,R,T),end='')
-    if Tmin!=None: print(" ( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
-    else: print()
-  print()
-  print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
-  print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
-  print("T = estimated transmission advantage = R/Q as a percentage increase")
-  print()
-
 xx,L=optimise()
-print(xx)
+print("Variables:",xx)
 print("Log likelihood:",L)
 H=Hessian(xx)
 h=xx[0]/7;dh=1/sqrt(H[0,0])/7
-print("Growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%(h*100,(h-zconf*dh)*100,(h+zconf*dh)*100))
-print("R-number advantage %.2f (%.2f - %.2f):"%(exp(mgt*h),exp(mgt*(h-zconf*dh)),exp(mgt*(h+zconf*dh))))
+print("Logarithmic growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%(h*100,(h-zconf*dh)*100,(h+zconf*dh)*100))
+print("Multiplicative growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%((exp(h)-1)*100,(exp(h-zconf*dh)-1)*100,(exp(h+zconf*dh)-1)*100))
+print("R-number advantage: %.2f (%.2f - %.2f)"%(exp(mgt*h),exp(mgt*(h-zconf*dh)),exp(mgt*(h+zconf*dh))))
