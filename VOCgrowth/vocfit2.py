@@ -1,5 +1,5 @@
 from stuff import *
-import sys,re,argparse
+import sys,re,argparse,pickle
 from scipy.optimize import minimize
 from scipy.stats import norm
 from scipy.special import gammaln
@@ -14,17 +14,27 @@ from datetime import datetime
 # COG-UK data from https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
 # SGTF   data from Fig.16 Tech Briefing 12: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/988608/Variants_of_Concern_Technical_Briefing_12_Data_England.xlsx
 
+# LTLA_age.csv from https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=newCasesBySpecimenDateAgeDemographics&format=csv
+
 def sanitise(fn): return fn.replace(' ','_').replace("'","")
 
-apicases=loadcsv("ltla.csv")
-ltlaengdata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
-ltlaukdata=loadcsv("Local_Authority_District_to_Country_(April_2019)_Lookup_in_the_United_Kingdom.csv")
-ltla2ltla=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['LAD19CD']))
-ltla2uk=dict((ltla,"UK") for ltla in ltlaukdata['LAD19CD'])
-ltla2country=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['CTRY19NM']))
-ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN19NM'])))
-ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
-ltla2pop=loadcsv("LTLA-NIMS-populations.csv")
+ltlaengdata=loadcsv("Local_Authority_District_to_Region__December_2020__Lookup_in_England.csv")
+ltla2region=dict(zip(ltlaengdata['LAD20CD'],ltlaengdata['RGN20NM']))
+ltla2name=dict(zip(ltlaengdata['LAD20CD'],map(sanitise,ltlaengdata['LAD20NM'])))
+ltlapopdata=loadcsv("LTLA-NIMS-populations.csv")
+
+# 1. Sanger uses LAD19 except E06000053 (Isles of Scilly) isn't present. I assume it's fused into E06000052 (Cornwall).
+# 2. Dashboard/api use LAD19 except that E09000001 (City of London) has been fused into E09000012 (Hackney).
+#    and E06000053 (Isles of Scilly) is fused into E06000052 (Cornwall).
+# 3. NIMS (population and vaccine data) uses LAD20 (E070000[4567] fused into E06000060).
+# Easier to fuse than to split, so standardise on LAD20 with E09000001 fused into E09000012 and E06000053 fused into E06000052.
+fuseltla=dict(zip(ltlaengdata['LAD20CD'],ltlaengdata['LAD20CD']))
+fuseltla['E07000004']='E06000060'
+fuseltla['E07000005']='E06000060'
+fuseltla['E07000006']='E06000060'
+fuseltla['E07000007']='E06000060'
+fuseltla['E09000001']='E09000012'
+fuseltla['E06000053']='E06000052'
 
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
@@ -56,32 +66,6 @@ parser.add_argument('-g', '--graph-filename', help='Stem of graph filenames')
 args=parser.parse_args()
 
 ### Model ###
-#
-# Known:
-# n_i      = number of confirmed cases on day i by specimen date (slightly adjusted for weekday)
-# p        = case ascertainment rate (chance of seeing a case)
-# g_{-1}(r),v_{-1}(r) = emperical growth rate (and its variance) in the two weeks up to 2021-04-10 as a function of region, r
-# r_j, s_j = Variant counts of non-B.1.617.2, B.1.617.2 in j^th week
-# I_j      = set of days (week) corresponding to VOC counts r_j, s_j
-# Assume chance of sequencing a case is a totally free parameter, and optimise over it
-#
-# Unknown:
-# h   = daily growth advantage of B.1.617.2 over other variants
-# X_n = Fourier coefficients controlling the growth of non-B.1.617.2
-# A_0 = initial count of non-B.1.617.2
-# B_0 = initial count of B.1.617.2
-#
-# Likelihood:
-# A_{i+1}=e^{g_i}A_i
-# B_{i+1}=e^{g_i+h}B_i
-# n_i ~ NB(mean=p(A_i+B_i),var=mean/nif1)
-# r_j ~ BetaBinomial(r_j+s_j, A_{I_j}nif2/(1-nif2), B_{I_j}nif2/(1-nif2))  (A_{I_j} means sum_{i in I_j}A_i)
-# g_0 ~ N(g_{-1},v_{-1})
-# X_n ~ N(0,1)
-# N=ndays-1
-# g_i = g_0 + bmscale*sqrt(N)*(i/N*X_0 + sqrt(2)/pi*sum_n e^{-(n*bmsig/N)^2/2}sin(n*pi*i/N)*X_n/n)
-# h ~ N(0,tau^2)
-#
 ### End Model ###
 
 
@@ -93,7 +77,7 @@ source="Sanger"
 
 # Number of parameters to optimise
 #N=4;r0=0.3
-N=5
+N=3
 
 vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 
@@ -240,40 +224,27 @@ if ltlaset=="All":
 else:
   areacovered=ltlaset
 
-maxday=datetoday(max(apicases['date']))-discardcasedays# Inclusive
-ndays=maxday-minday+1
-firstweek=max(firstweek,minday+voclen-1)
-
 if source=="Sanger":
   fullsource="Wellcome Sanger Institute"
   assert voclen==7
   sanger=loadcsv("lineages_by_ltla_and_week.tsv",sep='\t')
   
-  lastweek=datetoday(max(sanger['WeekEndDate']));assert maxday>=lastweek
+  lastweek=datetoday(max(sanger['WeekEndDate']))
   nweeks=(lastweek-firstweek)//voclen+1
   # Sanger week number is nweeks-1-(lastweek-day)//voclen
 
-  if locationsize=="LTLA":
-    reduceltla=ltla2ltla
-  elif locationsize=="region":
-    reduceltla=ltla2region
-  elif locationsize=="country":
-    reduceltla=ltla2country
-  else:
-    raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
-  
   # Get Sanger (variant) data into a suitable form
   vocnum={}#ltla: np.zeros([nweeks,2],dtype=int) for ltla in ltla2region if ltla[0]=='E'}
   rvocnum={}
-  for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
-    if ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
+  for (date,lad19,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
     day=datetoday(date)
     week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
-      place=ltla
-      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var=="B.1.617.2": vocnum[place][week][1]+=n
-      else: vocnum[place][week][0]+=n
+      ltla=fuseltla[lad19]
+      if ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
+      if ltla not in vocnum: vocnum[ltla]=np.zeros([nweeks,2],dtype=int)
+      if var=="B.1.617.2": vocnum[ltla][week][1]+=n
+      else: vocnum[ltla][week][0]+=n
       place=ltla2region[ltla]
       if place not in rvocnum: rvocnum[place]=np.zeros([nweeks,2],dtype=int)
       if var=="B.1.617.2": rvocnum[place][week][1]+=n
@@ -281,7 +252,7 @@ if source=="Sanger":
 elif source=="COG-UK":
   fullsource="COG-UK"
   cog=loadcsv("cog_metadata.csv")
-  lastweek=datetoday(max(cog['sample_date']))-discardcogdays;assert maxday>=lastweek
+  lastweek=datetoday(max(cog['sample_date']))-discardcogdays
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
   
@@ -311,7 +282,6 @@ elif source=="SGTF":
   assert voclen==7
   sgtf=loadcsv("TechBriefing13Fig19.csv")
   lastweek=max(datetoday(x) for x in sgtf['week'])+6# Convert w/c to w/e convention
-  assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
 
@@ -358,34 +328,22 @@ else:
 
 tvocnum=sum(rvocnum.values())
 
-places=sorted([x for x in set(sanger['LTLA']) if x not in ltlaexclude and includeltla(x,ltlaset)])
+places=sorted([x for x in set(fuseltla.values()) if x not in ltlaexclude and includeltla(x,ltlaset)])
 
 # Restrict to places for which there is at least some of each variant
-#okplaces=set([place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
+#okplaces=set([place for place in places if place in vocnum and vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
 okplaces=set(places)
 
 places=list(okplaces)
 places.sort()# Alphabetical order
 
-# Adjustment because Sanger and the api use LAD19 and NIMS uses LAD20 (or something)
-# Old LTLA  Population      New LTLA  Population
-# E07000004     215000     E06000060      581000
-# E07000005     103000
-# E07000006      75000
-# E07000007     188000
-# Change this to standardise on LAD20.
 ltlapop={}
 regionpop={}
-ltlapop['E07000004']=215000
-ltlapop['E07000005']=103000
-ltlapop['E07000006']= 75000
-ltlapop['E07000007']=188000
-regionpop[ltla2region['E07000004']]=581000
-for (ltla,n1,n2) in zip(ltla2pop['LTLA Code'],ltla2pop['Under 16'],ltla2pop['16+']):
-  if ltla!='E06000060':
-    ltlapop[ltla]=n1+n2
-    region=ltla2region[ltla]
-    regionpop[region]=regionpop.get(region,0)+n1+n2
+for (lad20,n1,n2) in zip(ltlapopdata['LTLA Code'],ltlapopdata['Under 16'],ltlapopdata['16+']):
+  ltla=fuseltla[lad20]
+  ltlapop[ltla]=n1+n2
+  region=ltla2region[ltla]
+  regionpop[region]=regionpop.get(region,0)+n1+n2
 rpopratio={ltla:ltlapop[ltla]/regionpop[ltla2region[ltla]] for ltla in ltlapop}
 tpop=sum(regionpop.values())
 tpopratio={ltla:ltlapop[ltla]/tpop for ltla in ltlapop}
@@ -395,18 +353,6 @@ tpopratio={ltla:ltlapop[ltla]/tpop for ltla in ltlapop}
 def Rdesc(h0,dh):
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
-
-# L=ndays-1
-# i is time from start, in days
-# t=i/L
-# growth[i] = bmscale*sqrt(L)*(t*X_0 + sum_{n=1}^{N-1} sqrt(2)/pi*exp(-(n*bmsig/L)^2/2)*sin(n*pi*t)/n*X_n)
-# where X_n ~ N(0,1),  n=0,...,N; N=ceil(4*L/bmsig), say
-
-bmL=ndays-1
-bmN=int(3*bmL/bmsig+1)
-bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
-bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
-bmsin2=[np.array([bmweight[n]*bmsin[(i*n)%(2*bmL)] for n in range(bmN)]) for i in range(ndays)]
 
 # Need to scale the variables being optimised over to keep SLSQP happy
 condition=np.zeros(N)+1
@@ -420,7 +366,7 @@ condition=np.zeros(N)+1
 
 # Return negative log likelihood (negative because scipy can only minimise, not maximise)
 # If const is true then add in all the constant terms (that don't affect the optimisation)
-def NLL(xx_conditioned,const=False):
+def NLL(xx_conditioned,const=False,pic=False):
   xx=xx_conditioned/condition
   tot=0
 
@@ -445,6 +391,7 @@ def NLL(xx_conditioned,const=False):
   #tot+=-(xx[4]*isd2)**2/2
   #if const: tot-=log(2*pi/isd2**2)/2
 
+  if pic: fp=open("temp","w")
   for place in places:
     if place not in vocnum: continue
     vv=vocnum[place]
@@ -453,18 +400,19 @@ def NLL(xx_conditioned,const=False):
     tpr=tpopratio[place]
     for w in range(nweeks-1):
       rho=exp(xx[0])
+      AB=vv[w]+xx[1]*rpr*rv[w]+xx[2]*tpr*tvocnum[w]
+      CD=vv[w+1]
       if N>=4:
         p=pvax[place][w]
         r1=xx[3]
         if N>=5: r0_=xx[4]
         else: r0_=r0
         rho*=(1-p+p*r1)/(1-p+p*r0_)
-      AB=vv[w]+xx[1]*rpr*rv[w]+xx[2]*tpr*tvocnum[w]
-      CD=vv[w+1]
+        if pic: print("%s.%d  %8.5f  %12g  %12g"%(place,w,p,CD[0]/AB[0],CD[1]/AB[1]),file=fp)
       s=AB[0]+rho*AB[1]
       tot+=CD[0]*log(AB[0]/s)+CD[1]*log(rho*AB[1]/s)
       if const: tot+=gammaln(CD[0]+CD[1]+1)-gammaln(CD[0]+1)-gammaln(CD[1]+1)# Could make a table
-
+  if pic: fp.close()
   return -tot
 
 def Hessian(xx):
@@ -569,9 +517,44 @@ for x in sorted(os.listdir(vaxdir)):
   f=x.find('20')
   vaxdat[x[f:f+10]]=loadcsv(os.path.join(vaxdir,x))
 
+def parseage_api(age):
+  if '_' in age: x=age.split('_');a0,a1=int(x[0]),int(x[1])+1
+  elif age[-1]=='+': a0,a1=int(age[:-1]),150
+  elif age=='unassigned': a0,a1=0,150
+  else: raise RuntimeError("Unrecognised age band: "+age)
+  return (a0,a1)
+  
+def parseage_nims(age):
+  return (a0,a1)
+  
+ltlaagecachedir="LTLA_age_cache"
+ltlaagecachename="LTLA_age_weekly_%s_+%dweeks.pickle"%(daytodate(firstweek),nweeks)
+fn=os.path.join(ltlaagecachedir,ltlaagecachename)
+os.makedirs(ltlaagecachedir,exist_ok=True)
+if os.path.isfile(fn):
+  with open(fn,'rb') as fp:
+    caseages=pickle.load(fp)
+else:
+  la=loadcsv("LTLA_age.csv")
+  date0=daytodate(lastweek)
+  date1=max(la['date'])
+  if date1<date0: raise RuntimeError("LTLA_age.csv not up to date. Need up to %s but it ends at %s."%(date0,date1))
+  caseages={}
+  for lad19,date,age,cases in zip(la['areaCode'],la['date'],la['age'],la['cases']):
+    ltla=fuseltla[lad19]
+    day=datetoday(date)
+    w=nweeks-1-(lastweek-day)//voclen
+    if w>=0 and w<nweeks:
+      if ltla not in caseages: caseages[ltla]={}
+      a=parseage_api(age)
+      if a!=(0,60) and a!=(60,150):
+        caseages[ltla].setdefault(a,[0]*nweeks)[w]+=cases
+  with open(fn,'wb') as fp:
+    pickle.dump(caseages,fp)
+
+    
 from random import random,seed
-seed(46)
-# Check E06000060 malarkey - alter
+seed(42)#alter
 pvax={place:[0]*(nweeks-1) for place in places}
 for w in range(nweeks-1):
   date=daytodate(firstweek+w*7+10-vaxeffecttime)
@@ -581,11 +564,12 @@ for w in range(nweeks-1):
   for (i,place) in enumerate(v['LTLA Code']):
     if place in places:
       n=sum(v[key][i] for key in v if key[0]=='D')
-      pvax[place][w]=n/ltlapop[place]
+      pvax[place][w]=min(n/ltlapop[place],1)
 
 xx,L=optimise()
 print("Variables:",xx)
 print("Log likelihood:",L)
+NLL(xx*condition,const=True,pic=True)
 H=Hessian(xx)
 h=xx[0]/7;dh=1/sqrt(H[0,0])/7
 print("Logarithmic growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%(h*100,(h-zconf*dh)*100,(h+zconf*dh)*100))
