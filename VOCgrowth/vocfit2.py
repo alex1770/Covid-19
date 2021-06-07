@@ -77,7 +77,7 @@ source="Sanger"
 
 # Number of parameters to optimise
 #N=4;r0=0.3
-N=5
+N=3
 
 vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 
@@ -88,7 +88,7 @@ vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 locationsize="LTLA"
 
 ltlaexclude=set()
-# ltlaexclude=set(['E08000001'])# This would exclude Bolton
+#ltlaexclude=set(['E08000001','E12000002'])# Bolton, Manchester
 ltlaset="All"
 #ltlaset="London"
 #ltlaset="Bolton"
@@ -585,16 +585,17 @@ for w in range(nweeks-1):
           vaxpop[ltla][a]=vaxpop[ltla].get(a,0)+ltlapopdata[age][i]
   
   for ltla in caseages:
-    cas=caseages[ltla]
-    vax=vaxnum[ltla]
-    pop=vaxpop[ltla]
-    num=den=0
-    for age in cas:
-      for a in vax:
-        if a[0]>=age[0] and a[1]<=age[1]: num+=vax[a]
-      for a in pop:
-        if a[0]>=age[0] and a[1]<=age[1]: den+=pop[a]
-    pvax[ltla][w]=min(num/den,1)
+    if ltla in okplaces:
+      cas=caseages[ltla]
+      vax=vaxnum[ltla]
+      pop=vaxpop[ltla]
+      num=den=0
+      for age in cas:
+        for a in vax:
+          if a[0]>=age[0] and a[1]<=age[1]: num+=vax[a]
+        for a in pop:
+          if a[0]>=age[0] and a[1]<=age[1]: den+=pop[a]
+      pvax[ltla][w]=min(num/den,1)
 
 xx,L=optimise()
 print("Variables:",xx)
