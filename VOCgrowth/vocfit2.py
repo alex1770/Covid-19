@@ -91,7 +91,11 @@ source="Sanger"
 #source="COG-UK"
 #source="SGTF"
 
-N=2# Number of parameters to optimise
+# Number of parameters to optimise
+#N=4;r0=0.3
+N=5
+
+vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
@@ -259,7 +263,7 @@ if source=="Sanger":
     raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
   
   # Get Sanger (variant) data into a suitable form
-  vocnum={ltla: np.zeros([nweeks,2],dtype=int) for ltla in ltla2region if ltla[0]=='E'}
+  vocnum={}#ltla: np.zeros([nweeks,2],dtype=int) for ltla in ltla2region if ltla[0]=='E'}
   rvocnum={}
   for (date,ltla,var,n) in zip(sanger['WeekEndDate'],sanger['LTLA'],sanger['Lineage'],sanger['Count']):
     if ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
@@ -267,6 +271,7 @@ if source=="Sanger":
     week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
       place=ltla
+      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
       if var=="B.1.617.2": vocnum[place][week][1]+=n
       else: vocnum[place][week][0]+=n
       place=ltla2region[ltla]
@@ -351,7 +356,9 @@ elif source=="SGTF":
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
-places=sorted(list(set(sanger['LTLA'])))
+tvocnum=sum(rvocnum.values())
+
+places=sorted([x for x in set(sanger['LTLA']) if x not in ltlaexclude and includeltla(x,ltlaset)])
 
 # Restrict to places for which there is at least some of each variant
 #okplaces=set([place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
@@ -366,6 +373,7 @@ places.sort()# Alphabetical order
 # E07000005     103000
 # E07000006      75000
 # E07000007     188000
+# Change this to standardise on LAD20.
 ltlapop={}
 regionpop={}
 ltlapop['E07000004']=215000
@@ -378,7 +386,9 @@ for (ltla,n1,n2) in zip(ltla2pop['LTLA Code'],ltla2pop['Under 16'],ltla2pop['16+
     ltlapop[ltla]=n1+n2
     region=ltla2region[ltla]
     regionpop[region]=regionpop.get(region,0)+n1+n2
-popratio={ltla:ltlapop[ltla]/regionpop[ltla2region[ltla]] for ltla in ltlapop}
+rpopratio={ltla:ltlapop[ltla]/regionpop[ltla2region[ltla]] for ltla in ltlapop}
+tpop=sum(regionpop.values())
+tpopratio={ltla:ltlapop[ltla]/tpop for ltla in ltlapop}
 
 # Convert daily growth rate & uncertainty into R-number-based description
 # dh = 1 standard deviation
@@ -401,11 +411,12 @@ bmsin2=[np.array([bmweight[n]*bmsin[(i*n)%(2*bmL)] for n in range(bmN)]) for i i
 # Need to scale the variables being optimised over to keep SLSQP happy
 condition=np.zeros(N)+1
 
-# Up to 4 parameters to be optimised:
+# Up to 5 parameters to be optimised:
 # 0: g    Difference of weekly growth rates (g(V1)-g(V0)) for unvaccinated people
-# 1: w    Weight of region counts in hierarchy
-# 2: r1   RR (= 1-VE) of vaccine for variant 1 (delta)
-# 3: r0   RR (= 1-VE) of vaccine for variant 0 (alpha)
+# 1: rw   Weight of region counts in hierarchy
+# 2: tw   Weight of total counts in hierarchy
+# 3: r1   RR (= 1-VE) of vaccine for variant 1 (delta)
+# 4: r0   RR (= 1-VE) of vaccine for variant 0 (alpha)
 
 # Return negative log likelihood (negative because scipy can only minimise, not maximise)
 # If const is true then add in all the constant terms (that don't affect the optimisation)
@@ -418,25 +429,37 @@ def NLL(xx_conditioned,const=False):
   #tot+=-((xx[0]-a0)*isd0)**2/2
   #if const: tot-=log(2*pi/isd0**2)/2
   
-  # Prior on w
+  # Prior on rweight
   #tot+=-((xx[1]-(a0-4))*isd1)**2/2
   #if const: tot-=log(2*pi/isd1**2)/2
   
+  # Prior on tweight
+  #tot+=-((xx[2]-(a0-4))*isd1)**2/2
+  #if const: tot-=log(2*pi/isd1**2)/2
+
   # Prior on r1
-  #tot+=-(xx[2]*isd2)**2/2
+  #tot+=-(xx[3]*isd2)**2/2
   #if const: tot-=log(2*pi/isd2**2)/2
   
   # Prior on r0
-  #tot+=-(xx[2]*isd2)**2/2
+  #tot+=-(xx[4]*isd2)**2/2
   #if const: tot-=log(2*pi/isd2**2)/2
 
   for place in places:
+    if place not in vocnum: continue
     vv=vocnum[place]
     rv=rvocnum[ltla2region[place]]
-    pr=popratio[place]
+    rpr=rpopratio[place]
+    tpr=tpopratio[place]
     for w in range(nweeks-1):
       rho=exp(xx[0])
-      AB=vv[w]+xx[1]*pr*rv[w]
+      if N>=4:
+        p=pvax[place][w]
+        r1=xx[3]
+        if N>=5: r0_=xx[4]
+        else: r0_=r0
+        rho*=(1-p+p*r1)/(1-p+p*r0_)
+      AB=vv[w]+xx[1]*rpr*rv[w]+xx[2]*tpr*tvocnum[w]
       CD=vv[w+1]
       s=AB[0]+rho*AB[1]
       tot+=CD[0]*log(AB[0]/s)+CD[1]*log(rho*AB[1]/s)
@@ -472,11 +495,9 @@ def Hessian(xx):
   return H
 
 # Returns log likelihood
-def optimise(hint=[0.,1,1,1][:N],statphase=False):
+def optimise(hint=[0.7,.25,.2,0.3,0.3][:N],statphase=False):
   xx=np.copy(hint)
-  # bounds[2][0]=0 prejudges B.1.617.2 as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
-  # though would need to relax this constraint if dealing with other variants where it might not be true.
-  bounds=[(-5,10),(1e-2,100),(0.01,5),(0.01,5)][:N]
+  bounds=[(-5,10),(1e-2,100),(1e-2,100),(0.01,5),(0.01,5)][:N]
   res=minimize(NLL,xx*condition,bounds=bounds,method="SLSQP",options=minopts)
   if not res.success:
     print(res)
@@ -541,6 +562,26 @@ def printplaceinfo(place,using=''):
     day0,day1=lastweek-(nweeks-w)*voclen+1,lastweek-(nweeks-1-w)*voclen
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
+
+vaxdir='VaccinationData'
+vaxdat={}
+for x in sorted(os.listdir(vaxdir)):
+  f=x.find('20')
+  vaxdat[x[f:f+10]]=loadcsv(os.path.join(vaxdir,x))
+
+from random import random,seed
+seed(46)
+# Check E06000060 malarkey - alter
+pvax={place:[0]*(nweeks-1) for place in places}
+for w in range(nweeks-1):
+  date=daytodate(firstweek+w*7+10-vaxeffecttime)
+  id=max(dt for dt in vaxdat if dt<date)
+  print("Using NIMS vax w/e %s to correspond to Sanger w/e %s -> w/e %s"%(id,daytodate(firstweek+w*7),daytodate(firstweek+w*7+7)))
+  v=vaxdat[id]
+  for (i,place) in enumerate(v['LTLA Code']):
+    if place in places:
+      n=sum(v[key][i] for key in v if key[0]=='D')
+      pvax[place][w]=n/ltlapop[place]
 
 xx,L=optimise()
 print("Variables:",xx)
