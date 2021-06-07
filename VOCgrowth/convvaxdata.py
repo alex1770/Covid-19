@@ -17,16 +17,23 @@ start=False
 outrows=[]
 for row in reader:
   if 'LTLA Code' in row: headings=row
-  if any('0-' in x for x in row):
+  numageranges=sum(x[:5]=='Under' for x in row)
+  assert numageranges<3
+  if numageranges>0:
     for (i,x) in enumerate(row):
       while i>=len(headings): headings.append('')
       if row[i]!='': headings[i]=row[i]
     cols=[]
     outputheadings=[]
+    n=0
     for (i,x) in enumerate(headings):
       if x=='LTLA Code': outputheadings.append(x);lcol=i;continue
       a=parseagerange(x)
-      if a!=None: outputheadings.append(a);cols.append(i)
+      if a!=None:
+        if a[:2]=='0-': n+=1
+        prefix=('D*' if numageranges==1 else 'D%d'%n)
+        outputheadings.append(prefix+'.'+a)
+        cols.append(i)
     writer.writerow(outputheadings)
     start=True
     continue
