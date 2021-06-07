@@ -77,7 +77,7 @@ source="Sanger"
 
 # Number of parameters to optimise
 #N=4;r0=0.3
-N=3
+N=5
 
 vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 
@@ -218,11 +218,8 @@ sys.stdout.flush()
 
 np.set_printoptions(precision=3,linewidth=150)
 
-if ltlaset=="All":
-  if source=="COG-UK": areacovered="UK"
-  else: areacovered="England"
-else:
-  areacovered=ltlaset
+okplaces=[ltla for ltla in fuseltla.values() if includeltla(ltla,ltlaset) and not ltla in ltlaexclude]
+places=sorted(list(okplaces))
 
 if source=="Sanger":
   fullsource="Wellcome Sanger Institute"
@@ -241,7 +238,7 @@ if source=="Sanger":
     week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
       ltla=fuseltla[lad19]
-      if ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
+      if ltla not in okplaces: continue
       if ltla not in vocnum: vocnum[ltla]=np.zeros([nweeks,2],dtype=int)
       if var=="B.1.617.2": vocnum[ltla][week][1]+=n
       else: vocnum[ltla][week][0]+=n
@@ -328,20 +325,13 @@ else:
 
 tvocnum=sum(rvocnum.values())
 
-places=sorted([x for x in set(fuseltla.values()) if x not in ltlaexclude and includeltla(x,ltlaset)])
-
-# Restrict to places for which there is at least some of each variant
-#okplaces=set([place for place in places if place in vocnum and vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
-okplaces=set(places)
-
-places=list(okplaces)
-places.sort()# Alphabetical order
 
 ltlapop={}
 regionpop={}
 for (lad20,n1,n2) in zip(ltlapopdata['LTLA Code'],ltlapopdata['Under 16'],ltlapopdata['16+']):
   ltla=fuseltla[lad20]
-  ltlapop[ltla]=n1+n2
+  if ltla not in okplaces: continue
+  ltlapop[ltla]=ltlapop.get(ltla,0)+n1+n2
   region=ltla2region[ltla]
   regionpop[region]=regionpop.get(region,0)+n1+n2
 rpopratio={ltla:ltlapop[ltla]/regionpop[ltla2region[ltla]] for ltla in ltlapop}
@@ -518,15 +508,25 @@ for x in sorted(os.listdir(vaxdir)):
   vaxdat[x[f:f+10]]=loadcsv(os.path.join(vaxdir,x))
 
 def parseage_api(age):
-  if '_' in age: x=age.split('_');a0,a1=int(x[0]),int(x[1])+1
-  elif age[-1]=='+': a0,a1=int(age[:-1]),150
-  elif age=='unassigned': a0,a1=0,150
+  if '_' in age: x=age.split('_');return int(x[0]),int(x[1])+1
+  if age[-1]=='+': return int(age[:-1]),150
+  if age=='unassigned': return 0,150
   else: raise RuntimeError("Unrecognised age band: "+age)
-  return (a0,a1)
-  
-def parseage_nims(age):
-  return (a0,a1)
-  
+
+# D*.0-50,D*.50-55,...,D1.0-30,D1.30-35,D1.35-40,D1.40-45,...,D2.40-45,D2.45-50,...
+def parseage_nimsvax(age):
+  if age[:1]!='D': return None,None
+  f=age.find('.')
+  g=age.find('-',f+1)
+  return (age[:f],(int(age[f+1:g]),int(age[g+1:])))
+
+# Under 16,16-29,30-34,35-39,40-44,45-49,50-54,55-59,60-64,65-69,70-74,75-79,80+,16+
+def parseage_nimspop(age):
+  if '-' in age: x=age.split('-');return int(x[0]),int(x[1])+1
+  if age[:5]=='Under': return 0,int(age[6:])
+  if age[-1]=='+': return int(age[:-1]),150
+  return None
+
 ltlaagecachedir="LTLA_age_cache"
 ltlaagecachename="LTLA_age_weekly_%s_+%dweeks.pickle"%(daytodate(firstweek),nweeks)
 fn=os.path.join(ltlaagecachedir,ltlaagecachename)
@@ -535,6 +535,8 @@ if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     caseages=pickle.load(fp)
 else:
+  print("Loading and processing case-age data from api")
+  # Todo: automate loading of LTLA_age.csv if not present or out of date.
   la=loadcsv("LTLA_age.csv")
   date0=daytodate(lastweek)
   date1=max(la['date'])
@@ -552,7 +554,7 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump(caseages,fp)
 
-    
+
 from random import random,seed
 seed(42)#alter
 pvax={place:[0]*(nweeks-1) for place in places}
@@ -561,10 +563,38 @@ for w in range(nweeks-1):
   id=max(dt for dt in vaxdat if dt<date)
   print("Using NIMS vax w/e %s to correspond to Sanger w/e %s -> w/e %s"%(id,daytodate(firstweek+w*7),daytodate(firstweek+w*7+7)))
   v=vaxdat[id]
-  for (i,place) in enumerate(v['LTLA Code']):
-    if place in places:
-      n=sum(v[key][i] for key in v if key[0]=='D')
-      pvax[place][w]=min(n/ltlapop[place],1)
+  
+  vaxnum={}# Map from LTLA -> age -> numvaxed
+  for (i,lad20) in enumerate(v['LTLA Code']):
+    ltla=fuseltla[lad20]
+    if ltla in okplaces:
+      if ltla not in vaxnum: vaxnum[ltla]={}
+      for age in v:
+        d,a=parseage_nimsvax(age)
+        if a!=None:
+          vaxnum[ltla][a]=vaxnum[ltla].get(a,0)+v[age][i]
+
+  vaxpop={}# Map from LTLA -> age -> population
+  for (i,lad20) in enumerate(ltlapopdata['LTLA Code']):
+    ltla=fuseltla[lad20]
+    if ltla in okplaces:
+      if ltla not in vaxpop: vaxpop[ltla]={}
+      for age in ltlapopdata:
+        a=parseage_nimspop(age)
+        if a!=None:
+          vaxpop[ltla][a]=vaxpop[ltla].get(a,0)+ltlapopdata[age][i]
+  
+  for ltla in caseages:
+    cas=caseages[ltla]
+    vax=vaxnum[ltla]
+    pop=vaxpop[ltla]
+    num=den=0
+    for age in cas:
+      for a in vax:
+        if a[0]>=age[0] and a[1]<=age[1]: num+=vax[a]
+      for a in pop:
+        if a[0]>=age[0] and a[1]<=age[1]: den+=pop[a]
+    pvax[ltla][w]=min(num/den,1)
 
 xx,L=optimise()
 print("Variables:",xx)
