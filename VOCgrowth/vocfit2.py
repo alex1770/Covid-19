@@ -77,7 +77,8 @@ source="Sanger"
 
 # Number of parameters to optimise
 #N=4;r0=0.3
-N=3
+#N=3
+N=5
 
 vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 
@@ -397,6 +398,9 @@ def NLL(xx_conditioned,const=False,pic=False):
         r1=xx[3]
         if N>=5: r0_=xx[4]
         else: r0_=r0
+        if p==-1:
+          p=0.5
+          if CD.sum()>0: print(place,w,CD);raise RuntimeError("Shouldn't happen: Sanger[%s] has a case but api shows none"%place)
         rho*=(1-p+p*r1)/(1-p+p*r0_)
         if pic: print("%s.%d  %8.5f  %12g  %12g"%(place,w,p,CD[0]/AB[0],CD[1]/AB[1]),file=fp)
       s=AB[0]+rho*AB[1]
@@ -556,7 +560,7 @@ else:
 
 
 from random import random,seed
-seed(42)#alter
+#seed(42)
 pvax={place:[0]*(nweeks-1) for place in places}
 for w in range(nweeks-1):
   date=daytodate(firstweek+w*7+10-vaxeffecttime)
@@ -589,13 +593,18 @@ for w in range(nweeks-1):
       cas=caseages[ltla]
       vax=vaxnum[ltla]
       pop=vaxpop[ltla]
-      num=den=0
-      for age in cas:
-        for a in vax:
-          if a[0]>=age[0] and a[1]<=age[1]: num+=vax[a]
-        for a in pop:
-          if a[0]>=age[0] and a[1]<=age[1]: den+=pop[a]
-      pvax[ltla][w]=min(num/den,1)
+      p0=p1=0
+      for ca in cas:
+        n=cas[ca][w+1]
+        if n==0: continue
+        num=den=0
+        for va in vax:
+          # Want (vax number) as weighted by P(case age interval|vax age interval) = |ca intersect va|/|va|
+          num+=max(min(va[1],ca[1],100)-max(va[0],ca[0]),0)/(min(va[1],100)-va[0])*vax[va]
+        for pa in pop:
+          den+=max(min(pa[1],ca[1],100)-max(pa[0],ca[0]),0)/(min(pa[1],100)-pa[0])*pop[pa]
+        p0+=n;p1+=n*num/den
+      pvax[ltla][w]=(min(p1/p0,1) if p0>0 else -1)
 
 xx,L=optimise()
 print("Variables:",xx)
@@ -606,3 +615,9 @@ h=xx[0]/7;dh=1/sqrt(H[0,0])/7
 print("Logarithmic growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%(h*100,(h-zconf*dh)*100,(h+zconf*dh)*100))
 print("Multiplicative growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%((exp(h)-1)*100,(exp(h-zconf*dh)-1)*100,(exp(h+zconf*dh)-1)*100))
 print("R-number advantage: %.2f (%.2f - %.2f)"%(exp(mgt*h),exp(mgt*(h-zconf*dh)),exp(mgt*(h+zconf*dh))))
+
+if 0:
+  l=list(pvax)
+  l.sort(key=lambda x: pvax[x][3])
+  for x in l:
+    print(x,"%5.0f %5.0f %5.0f %5.0f"%tuple([z*100 for z in pvax[x]]),"  ",ltla2name[x])
