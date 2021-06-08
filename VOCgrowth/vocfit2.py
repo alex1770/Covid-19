@@ -76,9 +76,9 @@ source="Sanger"
 #source="SGTF"
 
 # Number of parameters to optimise
-#N=4;r0=0.3
+N=4;r0=0.3
 #N=3
-N=5
+#N=5
 
 vaxeffecttime=20# Days before vaccine is presumed to have a decent effect
 
@@ -393,18 +393,27 @@ def NLL(xx_conditioned,const=False,pic=False):
       rho=exp(xx[0])
       AB=vv[w]+xx[1]*rpr*rv[w]+xx[2]*tpr*tvocnum[w]
       CD=vv[w+1]
+      if CD.sum()==0: continue
       if N>=4:
-        p=pvax[place][w]
         r1=xx[3]
         if N>=5: r0_=xx[4]
         else: r0_=r0
-        if p==-1:
-          p=0.5
-          if CD.sum()>0: print(place,w,CD);raise RuntimeError("Shouldn't happen: Sanger[%s] has a case but api shows none"%place)
-        rho*=(1-p+p*r1)/(1-p+p*r0_)
-        if pic: print("%s.%d  %8.5f  %12g  %12g"%(place,w,p,CD[0]/AB[0],CD[1]/AB[1]),file=fp)
-      s=AB[0]+rho*AB[1]
-      tot+=CD[0]*log(AB[0]/s)+CD[1]*log(rho*AB[1]/s)
+        pp=pvax[place][w]
+        if pp==[]:
+          print(place,w,CD);raise RuntimeError("Shouldn't happen: Sanger[%s] has a case but api shows none"%place)
+        #if pic: print("%s.%d  %8.5f  %12g  %12g"%(place,w,p,CD[0]/AB[0],CD[1]/AB[1]),file=fp)
+      else:
+        r1=r0_=0
+        pp=[(1,0)]
+      tl=0;tn=0
+      for (n,p) in pp:
+        rho_=rho*(1-p+p*r1)/(1-p+p*r0_)
+        s=AB[0]+rho_*AB[1]
+        #print(AB,CD,rho_,s,p,r0_,r1)
+        tl+=CD[0]*log(AB[0]/s)+CD[1]*log(rho_*AB[1]/s)
+        tn+=n
+      assert tn>0
+      tot+=tl/tn
       if const: tot+=gammaln(CD[0]+CD[1]+1)-gammaln(CD[0]+1)-gammaln(CD[1]+1)# Could make a table
   if pic: fp.close()
   return -tot
@@ -561,7 +570,7 @@ else:
 
 from random import random,seed
 #seed(42)
-pvax={place:[0]*(nweeks-1) for place in places}
+pvax={place:[[] for w in range(nweeks-1)] for place in places}
 for w in range(nweeks-1):
   date=daytodate(firstweek+w*7+10-vaxeffecttime)
   id=max(dt for dt in vaxdat if dt<date)
@@ -593,7 +602,7 @@ for w in range(nweeks-1):
       cas=caseages[ltla]
       vax=vaxnum[ltla]
       pop=vaxpop[ltla]
-      p0=p1=0
+      pp=[]
       for ca in cas:
         n=cas[ca][w+1]
         if n==0: continue
@@ -603,8 +612,8 @@ for w in range(nweeks-1):
           num+=max(min(va[1],ca[1],100)-max(va[0],ca[0]),0)/(min(va[1],100)-va[0])*vax[va]
         for pa in pop:
           den+=max(min(pa[1],ca[1],100)-max(pa[0],ca[0]),0)/(min(pa[1],100)-pa[0])*pop[pa]
-        p0+=n;p1+=n*num/den
-      pvax[ltla][w]=(min(p1/p0,1) if p0>0 else -1)
+        pp.append((n,min(num/den,1)))
+      pvax[ltla][w]=pp
 
 xx,L=optimise()
 print("Variables:",xx)
