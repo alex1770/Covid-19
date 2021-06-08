@@ -97,7 +97,8 @@ source="COG-UK"
 locationsize="UK"
 
 ltlaexclude=set()
-# ltlaexclude=set(['E08000001'])# This would exclude Bolton
+#ltlaexclude=set(['E08000001','E12000002'])# Bolton, Manchester
+#ltlaexclude=set(['E08000001','E12000002']+[x for x in ltla2region if ltla2region[x]=='London'])# Bolton, Manchester, London
 ltlaset="All"
 #ltlaset="London"
 #ltlaset="Bolton"
