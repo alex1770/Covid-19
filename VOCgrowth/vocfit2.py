@@ -65,6 +65,15 @@ parser.add_argument('-s', '--save-options',   help='Save options to a file')
 parser.add_argument('-g', '--graph-filename', help='Stem of graph filenames')
 args=parser.parse_args()
 
+# Up to 5 parameters to be optimised:
+# 0: g    Difference of weekly growth rates (g(V1)-g(V0)) for unvaccinated people
+# 1: rw   Weight of region counts in hierarchy
+# 2: tw   Weight of total counts in hierarchy
+# 3: r1   RR (= 1-VE) of vaccine for variant 1 (delta)
+# 4: r0   RR (= 1-VE) of vaccine for variant 0 (alpha)
+
+desc=["Δg_week","region_wt","eng_wt","r1","r0"]
+
 ### Model ###
 ### End Model ###
 
@@ -142,7 +151,6 @@ mode="local growth rates"
 voclen=(1 if source=="COG-UK" else 7)
 
 conf=0.95
-nsamp=2000
 
 model="scaledpoisson"
 #model="NBBB"
@@ -164,7 +172,6 @@ opts={
   "Inverse sd for prior on initial non-B.1.617.2": isd0,
   "Inverse sd for prior on initial B.1.617.2": isd1,
   "Inverse sd for prior on growth": isd2,
-  "Sigma (prior on daily growth rate change)": sig0,
   "Timescale of growth rate change (days)": bmsig,
   "Lengthscale for filtered Brownian motion": bmscale,
   "Case ascertainment rate": asc,
@@ -173,7 +180,6 @@ opts={
   "Minimiser options": minopts,
   "Length of time period over which VOC counts are given (days)": voclen,
   "Confidence level": conf,
-  "Number of samples for confidence calcultions in hierachical mode": nsamp,
   "Model": model
 }
 
@@ -197,7 +203,6 @@ nif2=opts["nif2"]
 isd0=opts["Inverse sd for prior on initial non-B.1.617.2"]
 isd1=opts["Inverse sd for prior on initial B.1.617.2"]
 isd2=opts["Inverse sd for prior on growth"]
-sig0=opts["Sigma (prior on daily growth rate change)"]
 bmsig=opts["Timescale of growth rate change (days)"]
 bmscale=opts["Lengthscale for filtered Brownian motion"]
 asc=opts["Case ascertainment rate"]
@@ -206,7 +211,6 @@ discardcogdays=opts["Number of days of COG-UK data to discard"]
 minopts=opts["Minimiser options"]
 voclen=opts["Length of time period over which VOC counts are given (days)"]
 conf=opts["Confidence level"]
-nsamp=opts["Number of samples for confidence calcultions in hierachical mode"]
 model=opts["Model"]
 
 zconf=norm.ppf((1+conf)/2)
@@ -247,82 +251,7 @@ if source=="Sanger":
       if place not in rvocnum: rvocnum[place]=np.zeros([nweeks,2],dtype=int)
       if var=="B.1.617.2": rvocnum[place][week][1]+=n
       else: rvocnum[place][week][0]+=n
-elif source=="COG-UK":
-  fullsource="COG-UK"
-  cog=loadcsv("cog_metadata.csv")
-  lastweek=datetoday(max(cog['sample_date']))-discardcogdays
-  nweeks=(lastweek-firstweek)//voclen+1
-  # Week number is nweeks-1-(lastweek-day)//voclen
-  
-  if  locationsize=="country":
-    reduceltla=ltla2country
-    reducecog=coglab2country
-  elif locationsize=="UK":
-    reduceltla=ltla2uk
-    reducecog=coglab2uk
-  else:
-    raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
-  
-  # Get COG-UK (variant) data into a suitable form
-  vocnum={}
-  for (date,seqname,var) in zip(cog['sample_date'],cog['sequence_name'],cog['lineage']):
-    day=datetoday(date)
-    week=nweeks-1-(lastweek-day)//voclen
-    if week>=0 and week<nweeks:
-      r=re.match("[^0-9-]*[0-9-]",seqname)
-      coglab=seqname[:r.end()-1]
-      place=reducecog(coglab)
-      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var=="B.1.617.2": vocnum[place][week][1]+=1
-      else: vocnum[place][week][0]+=1
-elif source=="SGTF":
-  fullsource="SGTF data from PHE Technical briefing 13"
-  assert voclen==7
-  sgtf=loadcsv("TechBriefing13Fig19.csv")
-  lastweek=max(datetoday(x) for x in sgtf['week'])+6# Convert w/c to w/e convention
-  nweeks=(lastweek-firstweek)//voclen+1
-  # Week number is nweeks-1-(lastweek-day)//voclen
-
-  if locationsize=="region":
-    reduceltla=ltla2region
-    reducesgtf=sgtf2region
-  elif  locationsize=="country":
-    reduceltla=ltla2country
-    reducesgtf=sgtf2country
-  else:
-    raise RuntimeError("Incompatible source, locationsize combination: "+source+", "+locationsize)
-  
-  # Get SGTF data into a suitable form
-  vocnum={}
-  for (date,region,var,n) in zip(sgtf['week'],sgtf['Region'],sgtf['sgtf'],sgtf['n']):
-    day=datetoday(date)+6# Convert from w/c to w/e convention
-    week=nweeks-1-(lastweek-day)//voclen
-    if week>=0 and week<nweeks:
-      place=reducesgtf(region)
-      if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      vocnum[place][week][int("SGTF" not in var)]+=n
-  # Adjust for non-B.1.617.2 S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
-  # This is likely to be dodgy
-  # From COG-UK: B117  Others (not B.1.617.2)
-  # 2021-03-11  18295     341   1.86%
-  # 2021-03-18  16900     308   1.82%
-  # 2021-03-25  14920     231   1.55%
-  # 2021-04-01  10041     243   2.42%
-  # 2021-04-08   7514     240   3.19%
-  # 2021-04-15   7150     348   4.87%
-  # 2021-04-22   6623     367   5.54%
-  # 2021-04-29   5029     205   4.08%
-  # 2021-05-06   4383     217   4.95%
-  date0,date1=datetoday('2021-03-11'),datetoday('2021-04-15')
-  for place in vocnum:
-    for week in range(nweeks):
-      day=lastweek-voclen*(nweeks-1-week)
-      assert day>=date0
-      if day<date1: f=(day-date0)/(date1-date0)*0.03+0.02
-      else: f=0.05
-      vocnum[place][week][1]=max(vocnum[place][week][1]-int(f*vocnum[place][week][0]),0)
-else:
-  raise RuntimeError("Unrecognised source: "+source)
+else: raise RuntimeError("Unrecognised source: "+source)
 
 tvocnum=sum(rvocnum.values())
 
@@ -347,13 +276,6 @@ def Rdesc(h0,dh):
 
 # Need to scale the variables being optimised over to keep SLSQP happy
 condition=np.zeros(N)+1
-
-# Up to 5 parameters to be optimised:
-# 0: g    Difference of weekly growth rates (g(V1)-g(V0)) for unvaccinated people
-# 1: rw   Weight of region counts in hierarchy
-# 2: tw   Weight of total counts in hierarchy
-# 3: r1   RR (= 1-VE) of vaccine for variant 1 (delta)
-# 4: r0   RR (= 1-VE) of vaccine for variant 0 (alpha)
 
 # Return negative log likelihood (negative because scipy can only minimise, not maximise)
 # If const is true then add in all the constant terms (that don't affect the optimisation)
@@ -472,35 +394,27 @@ def optimise(hint=[0.7,.25,.2,0.3,0.3][:N],statphase=False):
   # Return optimum xx log likelihood
   return res.x/condition,LL
 
-def evalconfidence(place,xx0):
-  H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
+# Assumes xx is at a local max of log likelihood
+def makesamples(xx,H=None):
+  if H is None: H=Hessian(xx)
   Hcond=H/condition/condition[:,None]
   eig=np.linalg.eigh(Hcond)
   # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond),eig[1])) ~= eig[0]
-  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None,None,None,None
-  nsamp=10000
-  N=bmN+4
+  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None,None
+  nsamp=100000
   t=norm.rvs(size=[nsamp,N])# nsamp x N
   sd=eig[0]**(-.5)# N
   u=t*sd# nsamp x N
   samp_cond=np.matmul(u,np.transpose(eig[1]))# nsamp x N
-  samp=samp_cond/condition
-  QQ=[];RR=[];TT=[]
-  for i in range(nsamp):
-    dx=samp[i]
-    xx=xx0+dx
-    AA,BB,GG=expand(xx)
-    QQ.append((AA[-1]/AA[-2])**mgt)
-    RR.append((BB[-1]/BB[-2])**mgt)
-    TT.append(exp(mgt*xx[2]))
-  QQ.sort();RR.sort();TT.sort()
+  samp=samp_cond/condition+xx
+  cc=[]
   n0=int((1-conf)/2*nsamp)
   n1=int((1+conf)/2*nsamp)
-  print("R_{B.1.1.7}   %6.3f - %6.3f"%(QQ[n0],QQ[n1]))
-  print("R_{B.1.617.2} %6.3f - %6.3f"%(RR[n0],RR[n1]))
-  print("T             %5.1f%% - %5.1f%%"%((TT[n0]-1)*100,(TT[n1]-1)*100))
-  return QQ[n0],QQ[n1],RR[n0],RR[n1]
-
+  for i in range(N):
+    a=list(samp[:,i])
+    a.sort()
+    cc.append((a[nsamp//2],a[n0],a[n1]))
+  return samp,cc
 
 def printplaceinfo(place,using=''):
   name=ltla2name.get(place,place)+using
@@ -616,14 +530,40 @@ for w in range(nweeks-1):
       pvax[ltla][w]=pp
 
 xx,L=optimise()
+print()
+
 print("Variables:",xx)
 print("Log likelihood:",L)
 NLL(xx*condition,const=True,pic=True)
 H=Hessian(xx)
+print("Hessian:");print(H)
+eig=np.linalg.eigh(H)
+print("Eigenvalues:",eig[0])
+print()
+
 h=xx[0]/7;dh=1/sqrt(H[0,0])/7
 print("Logarithmic growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%(h*100,(h-zconf*dh)*100,(h+zconf*dh)*100))
 print("Multiplicative growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%((exp(h)-1)*100,(exp(h-zconf*dh)-1)*100,(exp(h+zconf*dh)-1)*100))
 print("R-number advantage: %.2f (%.2f - %.2f)"%(exp(mgt*h),exp(mgt*(h-zconf*dh)),exp(mgt*(h+zconf*dh))))
+print()
+
+print("Confidence intervals from single variables:")
+for i in range(N):
+  x=xx[i];dx=1/sqrt(H[i,i])
+  print("%10s: %5.3f (%5.3f - %5.3f)"%(desc[i],x,x-zconf*dx,x+zconf*dx))
+print()
+
+print("Confidence intervals from multivariate calculation:")
+C=np.linalg.inv(H)
+for i in range(N):
+  x=xx[i];dx=sqrt(C[i,i])
+  print("%10s: %5.3f (%5.3f - %5.3f)"%(desc[i],x,x-zconf*dx,x+zconf*dx))
+print()
+
+samp,cc=makesamples(xx,H)
+print("Confidence intervals from multivariate simulation:")
+for i in range(N):
+  print("%10s: %5.3f (%5.3f - %5.3f)"%((desc[i],)+cc[i]))
 
 if 0:
   l=list(pvax)
