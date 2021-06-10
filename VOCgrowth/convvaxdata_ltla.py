@@ -4,7 +4,7 @@ import sys,csv
 
 # "Under xx", "xx-yy", "xx+"
 def parseagerange(x):
-  if x[:5]=="Under": return "0-%d"%int(x[6:])
+  if x[:6]=="Under ": return "0-%d"%int(x[6:])
   if '-' in x: y=x.split('-');return "%d-%d"%(int(y[0]),int(y[1])+1)
   if x[-1:]=='+': return "%d-150"%int(x[:-1])
   return None
@@ -17,7 +17,7 @@ start=False
 outrows=[]
 for row in reader:
   if 'LTLA Code' in row: headings=row
-  numageranges=sum(x[:5]=='Under' for x in row)
+  numageranges=sum(x[:6]=='Under ' for x in row)
   assert numageranges<3
   if numageranges>0:
     for (i,x) in enumerate(row):
