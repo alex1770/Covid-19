@@ -223,7 +223,7 @@ sys.stdout.flush()
 
 np.set_printoptions(precision=3,linewidth=150)
 
-okplaces=[ltla for ltla in fuseltla.values() if includeltla(ltla,ltlaset) and not ltla in ltlaexclude]
+okplaces=set(ltla for ltla in fuseltla.values() if includeltla(ltla,ltlaset) and not ltla in ltlaexclude)
 places=sorted(list(okplaces))
 
 if source=="Sanger":
