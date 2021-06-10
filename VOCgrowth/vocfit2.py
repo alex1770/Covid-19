@@ -142,7 +142,7 @@ discardcasedays=3# Pro tem to allow for Wales and NI late reporting at weekends 
 # Discard this many days of the latest COG data
 discardcogdays=2
 
-minopts={"maxiter":10000,"eps":1e-5}
+minopts={"maxiter":10000,"eps":1e-4}
 
 mode="local growth rates"
 #mode="global growth rate"
