@@ -332,7 +332,7 @@ def NLL(xx_conditioned,const=False,pic=False):
         rho_=rho*(1-p+p*r1)/(1-p+p*r0_)
         s=AB[0]+rho_*AB[1]
         #print(AB,CD,rho_,s,p,r0_,r1)
-        tl+=CD[0]*log(AB[0]/s)+CD[1]*log(rho_*AB[1]/s)
+        tl+=n*(CD[0]*log(AB[0]/s)+CD[1]*log(rho_*AB[1]/s))
         tn+=n
       assert tn>0
       tot+=tl/tn
