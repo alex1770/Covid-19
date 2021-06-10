@@ -34,14 +34,14 @@ from subprocess import Popen,PIPE
 
 # See https://ec.europa.eu/eurostat/cache/metadata/en/demomwk_esms.htm for country codes
 # and https://population.un.org/wpp/Download/Metadata/Documentation/ for country names
-#countrycode='UK';countryname='United Kingdom'
+countrycode='UK';countryname='United Kingdom'
 #countrycode='FR';countryname='France'
 #countrycode='ES';countryname='Spain'
 #countrycode='CZ';countryname='Czechia'
 #countrycode='IT';countryname='Italy'
 #countrycode='SE';countryname='Sweden'
-countrycode='HU';countryname='Hungary'
-meanyears=range(2010,2020)
+#countrycode='HU';countryname='Hungary'
+meanyears=range(2015,2020)
 agerange=(0,150)
 targetyear=2020
 # popsource = (Description, yearoffset, population [, projected population])
