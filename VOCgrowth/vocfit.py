@@ -485,7 +485,7 @@ print()
 # growth[i] = bmscale*sqrt(L)*(t*X_0 + sum_{n=1}^{N-1} sqrt(2)/pi*exp(-(n*bmsig/L)^2/2)*sin(n*pi*t)/n*X_n)
 # where X_n ~ N(0,1),  n=0,...,N; N=ceil(4*L/bmsig), say
 
-bmL=ndays-1
+bmL=ndays+bmsig*2# Add on bmsig*2 to eliminate periodicity effects
 bmN=int(3*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
