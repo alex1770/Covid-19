@@ -130,7 +130,7 @@ def processnewcases():
   for loc in locs:
     nn=l[loc]
     kernel=getkernel()
-    sameweight=1
+    sameweight=10
     # Get x[i] = new cases between day days[i-1]-offset and days[i]-offset
     x=deconvolve(nn,kernel,sameweight)
     output[loc]=[(daytodate(days[i]-offset), x[i]) for i in range(n)]
