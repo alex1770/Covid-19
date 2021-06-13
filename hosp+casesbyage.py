@@ -380,3 +380,28 @@ for ageband in range(0,90,10):
 title='Confirmed cases per day for Covid-19 in England by age group. Last few values subject to change.\\nSource: https://coronavirus.data.gov.uk/ at '+now
 makegraph(title=title, data=data, mindate=mindate, ylabel='Number of cases per day', outfn='confirmedcasesbyage-abs.png')#, extra=['set logscale y'])
 
+if 0:
+  # Looking at hospitalisations per case
+  ave=14
+  delay=10
+  for t in range(-ave,-250,-ave):
+    print(cases[t]['date']+":",end='')
+    for age in hospages:
+      print("    %s:"%str(age),end='')
+      nh=nc=0
+      for i in range(ave):
+        nh+=hosp[t+i][age]
+        c=cases[t+i-delay]
+        for a in c:
+          if a=='date': continue
+          if a[0]>=age[0] and a[1]<=age[1]: nc+=c[a]
+      print("%5.1f"%(nh/nc*100),end='')
+    print()
+  print()
+  
+  for t in range(-ave,-250,-ave):
+    nh=nc=0
+    for i in range(ave):
+      nh+=sum(hosp[t+i][x] for x in hospages)
+      nc+=sum(cases[t+i-delay][x] for x in caseages)
+    print("%s: %5.1f"%(cases[t]['date'],nh/nc*100))
