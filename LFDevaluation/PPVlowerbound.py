@@ -24,5 +24,9 @@ for i0 in range(n-1):
         ppv=1-dd[date1][date2]['newCasesLFDOnlyBySpecimenDate']/dd[date0][date2]['newCasesLFDOnlyBySpecimenDate']
         if ppv>PPVLB[date2]: PPVLB[date2]=ppv
 
+d=dd[captureddates[-1]]
+
 for x in sorted(list(PPVLB)):
-  print(x,"PPV >= %5.1f%%"%(PPVLB[x]*100))
+  a=d[x]['newCasesLFDOnlyBySpecimenDate']
+  b=d[x]['newCasesLFDConfirmedPCRBySpecimenDate']
+  print(x,"PPV >= %5.1f%% %5.1f%%"%(PPVLB[x]*100,b/(a+b)*100))

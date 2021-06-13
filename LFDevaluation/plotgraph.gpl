@@ -8,4 +8,4 @@ set ylabel "Total new LFD positive tests in secondary school students as a perce
 plot [0:0.55] [0:] "graph" u (100*($3)/6.3e6):(100*($1)/($2)) lw 12 title "%LFD student positivity over a week vs %new cases age 10-19 in England in a corresponding week"
 
 set output "lfdcaseswithfit.png"
-plot [0:0.55] [0:] "graph" u (100*($3)/6.3e6):(100*($1)/($2)):(100*($4)/($2)) with errorbars lw 3 title "%LFD student positivity over a week vs %new cases age 10-19 in England in a corresponding week", 0.627*x+0.0101 lw 3
+plot [0:0.55] [0:] "graph" u (100*($3)/6.3e6):(100*($1)/($2)):(100*($4)/($2)) with errorbars lw 3 title "%LFD student positivity over a week vs %new cases age 10-19 in England in a corresponding week", 1.47*x+0.0117 lw 3
