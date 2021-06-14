@@ -137,7 +137,7 @@ bmscale=0.01
 asc=0.4
 
 # Discard this many cases at the end of the list of cases by specimen day
-discardcasedays=3# Pro tem to allow for Wales and NI late reporting at weekends and bank holidays
+discardcasedays=2# Make have to make this 3 sometimes to allow for Wales and NI late reporting at weekends and bank holidays
 
 # Discard this many days of the latest COG data
 discardcogdays=2
@@ -768,7 +768,7 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
     else:
       mprint()
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
-  # but because of Simpson's paradox, that doesn't been the cross ratio of AAs and BBs is also T.
+  # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
   EQ="Estimated R(non-B.1.617.2) = %.2f"%Q
   if Qmin!=None: EQ+=" (%.2f - %.2f)"%(Qmin,Qmax)
   ER="Estimated R(B.1.617.2)       = %.2f"%R
@@ -911,8 +911,8 @@ if mode=="global growth rate":
   for loc in combinedplaces:
     TAA0[loc]=np.zeros(ndays)
     TBB0[loc]=np.zeros(ndays)
-    TAA[loc]=np.zeros([nsamp,2])# Last two days
-    TBB[loc]=np.zeros([nsamp,2])
+    TAA[loc]=np.zeros([nsamp,ndays])
+    TBB[loc]=np.zeros([nsamp,ndays])
   
   dhsamp=dh*norm.rvs(size=nsamp)
   n0=int((1-conf)/2*nsamp)
@@ -930,9 +930,9 @@ if mode=="global growth rate":
     assert BBB[:,-2:].max()<1e20
     Qmin=Qmax=Rmin=Rmax=None
     if not AAA is None:
-      TAA[areacovered]+=AAA[:,-2:]
-      TBB[areacovered]+=BBB[:,-2:]
-      if makeregions: TAA[reg]+=AAA[:,-2:];TBB[reg]+=BBB[:,-2:]
+      TAA[areacovered]+=AAA
+      TBB[areacovered]+=BBB
+      if makeregions: TAA[reg]+=AAA;TBB[reg]+=BBB
       qq=list(AAA[:,-1]/AAA[:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
       rr=list(BBB[:,-1]/BBB[:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
     print("Globally optimised growth advantage")
@@ -951,6 +951,9 @@ if mode=="global growth rate":
     print("Combined results for %s using globally optimised growth advantage"%loc)
     qq=list(TAA[loc][:,-1]/TAA[loc][:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
     rr=list(TBB[loc][:,-1]/TBB[loc][:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
+    for k in range(1,15):
+      dd=list(TBB[loc][:,-1]*TBB[loc][:,-(2*k+1)]/TBB[loc][:,-(k+1)]**2);dd.sort();Dmin,Dmed,Dmax=[mgt/k**2*log(dd[n]) for n in [n0,nsamp//2,n1]]
+      print("Day interval %2d ==> Change in R_t(Delta) / day = %7.4f (%7.4f - %7.4f)"%(k,Dmed,Dmin,Dmax))
     Q,R=fullprint(TAA0[loc],TBB0[loc],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(loc,loc))
   
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
