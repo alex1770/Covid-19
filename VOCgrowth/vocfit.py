@@ -419,7 +419,7 @@ print()
 from scipy.special import betaln
 from scipy.integrate import quad
 from scipy import inf
-def crossratiosubdivide(matgen):
+def crossratiosubdivide(matgen,duration=voclen):
   tot=np.zeros([2,2],dtype=int)
   ndiv=20
   hmin=0;hmax=0.3# Range of possible daily growth advantages
@@ -432,7 +432,7 @@ def crossratiosubdivide(matgen):
       T=M[0,0]*M[1,1]/(M[0,1]*M[1,0])
       L0+=c*log(T);L1+=c
       for i in range(ndiv):
-        x=(hmin+(i+.5)/ndiv*(hmax-hmin))*voclen# Convert to weekly growth rate
+        x=(hmin+(i+.5)/ndiv*(hmax-hmin))*duration# Convert to weekly growth rate
         a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
         l0=d*x-(betaln(a,b)+betaln(c,d))
         # Faff around finding maximum to avoid underflow in integral
@@ -447,10 +447,10 @@ def crossratiosubdivide(matgen):
         logp[i]+=log(res[0])+l0+l1
   if (tot==0).any():
     print("Can't estimate best transmission factor because VOC count matrix has 1 or more zero entries");return
-  g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/voclen
-  dg=sqrt((1/tot.flatten()).sum())/voclen
+  g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/duration
+  dg=sqrt((1/tot.flatten()).sum())/duration
   print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
-  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/voclen,1/sqrt(L1)/voclen))
+  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/duration,1/sqrt(L1)/duration))
   i=np.argmax(logp)
   if i==0 or i==ndiv-1:
     print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
@@ -473,6 +473,8 @@ if voclen>=7:
     crossratiosubdivide(vocnum[place][w:w+2] for place in places)
 print("All week pairs:")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
+print("First week to last week:")
+crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
 print()
 
 print("Estimating transmission advantage using variant counts together with case counts")
@@ -670,11 +672,14 @@ def evalconfidence(place,xx0):
   u=t*sd# nsamp x N
   samp_cond=np.matmul(u,np.transpose(eig[1]))# nsamp x N
   samp=samp_cond/condition
+  SSS=np.zeros([nsamp,2,ndays])
   QQ=[];RR=[];TT=[]
   for i in range(nsamp):
     dx=samp[i]
     xx=xx0+dx
     AA,BB,GG=expand(xx)
+    SSS[i,0,:]=AA
+    SSS[i,1,:]=BB
     QQ.append((AA[-1]/AA[-2])**mgt)
     RR.append((BB[-1]/BB[-2])**mgt)
     TT.append(exp(mgt*xx[2]))
@@ -684,7 +689,7 @@ def evalconfidence(place,xx0):
   print("R_{B.1.1.7}   %6.3f - %6.3f"%(QQ[n0],QQ[n1]))
   print("R_{B.1.617.2} %6.3f - %6.3f"%(RR[n0],RR[n1]))
   print("T             %5.1f%% - %5.1f%%"%((TT[n0]-1)*100,(TT[n1]-1)*100))
-  return QQ[n0],QQ[n1],RR[n0],RR[n1]
+  return QQ[n0],QQ[n1],RR[n0],RR[n1],SSS
 
 
 # Generate sample paths conditional on h = xx0[2] + dhsamp
@@ -709,15 +714,15 @@ def getcondsamples(place,xx0,dhsamp):
   s0=np.insert(np.matmul(u,np.transpose(eig[1])),2,0,1)# nsamp x N
   s1=np.insert(-np.linalg.solve(Hcond__,Hcond_),2,1,0)# N
   samp=s0/condition+dhsamp[:,None]*s1# nsamp x N
-  AAA=[];BBB=[]
+  SSS=np.zeros([nsamp,2,ndays])
   # This is the slow bit. For the purposes of calculating AA[-2:] and BB[-2:] could do something much faster, but it would be
   # annoyingly specialised and mean that you can't change NLL() without making a corresponding alteration here.
   for i in range(nsamp):
     xx=xx0+samp[i]
     AA,BB,GG=expand(xx)
-    AAA.append(AA)
-    BBB.append(BB)
-  return np.array(AAA),np.array(BBB)
+    SSS[i,0,:]=AA
+    SSS[i,1,:]=BB
+  return SSS
   
 def printplaceinfo(place,using=''):
   name=ltla2name.get(place,place)+using
@@ -731,7 +736,7 @@ def printplaceinfo(place,using=''):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None,using=''):
+def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None,using='',samples=None):
   print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
   print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
   print("Pred   = predicted number of cases seen this day = A+B")
@@ -843,9 +848,9 @@ if mode=="local growth rates":
       (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
     else:
       (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
-    Qmin,Qmax,Rmin,Rmax=evalconfidence(place,xx0)
+    Qmin,Qmax,Rmin,Rmax,SSS=evalconfidence(place,xx0)
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(place,place))
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(place,place),samples=SSS)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
@@ -907,12 +912,10 @@ if mode=="global growth rate":
   if makeregions: combinedplaces=sorted(list(regions))
   else: combinedplaces=[]
   combinedplaces.append(areacovered)
-  TAA0={};TBB0={};TAA={};TBB={}
+  TSS0={};TSSS={}
   for loc in combinedplaces:
-    TAA0[loc]=np.zeros(ndays)
-    TBB0[loc]=np.zeros(ndays)
-    TAA[loc]=np.zeros([nsamp,ndays])
-    TBB[loc]=np.zeros([nsamp,ndays])
+    TSS0[loc]=np.zeros([2,ndays])
+    TSSS[loc]=np.zeros([nsamp,2,ndays])
   
   dhsamp=dh*norm.rvs(size=nsamp)
   n0=int((1-conf)/2*nsamp)
@@ -924,21 +927,20 @@ if mode=="global growth rate":
     xx0,L0=optimiseplace(place,fixedh=h0,statphase=True)
     TLL+=L0
     AA0,BB0,GG0=expand(xx0)
-    TAA0[areacovered]+=AA0;TBB0[areacovered]+=BB0
-    if makeregions: reg=ltla2region[place];TAA0[reg]+=AA0;TBB0[reg]+=BB0
-    AAA,BBB=getcondsamples(place,xx0,dhsamp)
-    assert BBB[:,-2:].max()<1e20
+    TSS0[areacovered][0,:]+=AA0;TSS0[areacovered][1,:]+=BB0
+    if makeregions: reg=ltla2region[place];TSS0[0,reg]+=AA0;TSS0[1,reg]+=BB0
+    SSS=getcondsamples(place,xx0,dhsamp)
+    assert SSS[:,1,-2:].max()<1e20
     Qmin=Qmax=Rmin=Rmax=None
-    if not AAA is None:
-      TAA[areacovered]+=AAA
-      TBB[areacovered]+=BBB
-      if makeregions: TAA[reg]+=AAA;TBB[reg]+=BBB
-      qq=list(AAA[:,-1]/AAA[:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
-      rr=list(BBB[:,-1]/BBB[:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
+    if not SSS is None:
+      TSSS[areacovered]+=SSS
+      if makeregions: TSSS[reg]+=SSS
+      qq=list(SSS[:,0,-1]/SSS[:,0,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
+      rr=list(SSS[:,1,-1]/SSS[:,1,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
     print("Globally optimised growth advantage")
     area=None
     if place!=areacovered and (locationsize!="LTLA" or place in specialinterest): area=ltla2name.get(place,place)
-    Q,R=fullprint(AA0,BB0,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=area,using=using)
+    Q,R=fullprint(AA0,BB0,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=area,using=using,samples=SSS)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -949,12 +951,12 @@ if mode=="global growth rate":
 
   for loc in combinedplaces:
     print("Combined results for %s using globally optimised growth advantage"%loc)
-    qq=list(TAA[loc][:,-1]/TAA[loc][:,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
-    rr=list(TBB[loc][:,-1]/TBB[loc][:,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
+    qq=list(TSSS[loc][:,0,-1]/TSSS[loc][:,0,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
+    rr=list(TSSS[loc][:,1,-1]/TSSS[loc][:,1,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
     for k in range(1,15):
-      dd=list(TBB[loc][:,-1]*TBB[loc][:,-(2*k+1)]/TBB[loc][:,-(k+1)]**2);dd.sort();Dmin,Dmed,Dmax=[mgt/k**2*log(dd[n]) for n in [n0,nsamp//2,n1]]
+      dd=list(TSSS[loc][:,1,-1]*TSSS[loc][:,1,-(2*k+1)]/TSSS[loc][:,1,-(k+1)]**2);dd.sort();Dmin,Dmed,Dmax=[mgt/k**2*log(dd[n]) for n in [n0,nsamp//2,n1]]
       print("Day interval %2d ==> Change in R_t(Delta) / day = %7.4f (%7.4f - %7.4f)"%(k,Dmed,Dmin,Dmax))
-    Q,R=fullprint(TAA0[loc],TBB0[loc],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(loc,loc))
+    Q,R=fullprint(TSS0[loc][0,:],TSS0[loc][1,:],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(loc,loc),samples=TSSS[loc])
   
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
   print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
