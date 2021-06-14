@@ -2,11 +2,11 @@ from stuff import *
 from scipy.stats import gamma,norm
 from math import exp,sqrt
 
-source="COG"
-#source="Sanger"
+#source="COG"
+source="Sanger"
 #source="PHE"
 #source="SGTF11"
-source="SGTF12"
+#source="SGTF12"
 
 
 print("Using data source:",source)
