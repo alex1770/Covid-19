@@ -726,15 +726,15 @@ def printplaceinfo(place,using=''):
   print()
 
 def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using='',samples=None):
-  print("ModV1    = modelled number of new cases of non-Delta on this day multiplied by the ascertainment rate")
+  print("ModV1    = modelled number of new cases of Alpha on this day multiplied by the ascertainment rate")
   print("ModV2    = modelled number of new cases of Delta on this day multiplied by the ascertainment rate")
   print("Pred     = predicted number of cases seen this day = ModV1+ModV2")
   print("Seen     = number of cases observed this day, after weekday adjustment, from api/dashboard")
-  print("PredV1   = p*Pred, where p = proportion of non-Delta amongst obserbed variant counts from",source)
+  print("PredV1   = p*Pred, where p = proportion of Alpha amongst obserbed variant counts from",source)
   print("PredV2   = (1-p)*Pred")
   print("SeenV1   = p*Seen")
   print("SeenV2   = (1-p)*Seen")
-  print("Q        = estimated reproduction rate of non-Delta on this day")
+  print("Q        = estimated reproduction rate of Alpha on this day")
   print("R        = estimated reproduction rate of Delta on this day")
   print("ModV1min = ModV1 min confidence interval")
   print("ModV1med = ModV1 mode confidence interval")
@@ -790,7 +790,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint(" %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f"%(sr[nmin,0,i],sr[nmed,0,i],sr[nmax,0,i],sr[nmin,1,i],sr[nmed,1,i],sr[nmax,1,i]))
     else:
       mprint("       -       -       -       -       -       -")
-  EQ="Estimated R(non-Delta) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
+  EQ="Estimated R(Alpha) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
   ER="Estimated R(Delta)       = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
@@ -801,7 +801,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   print(EQ)
   print(ER)
   print(ETA)
-  if Tmin!=None: ETA+="\\n(CI shows within-model statistical uncertainty, not model uncertainty)"
+  if Tmin!=None: ETA+="\\n(CI shows within-model statistical uncertainty; model assumptions lead to other uncertainties)"
   print()
   if graphfp!=None:
     graphfp.close()
@@ -823,16 +823,16 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
-      write('set title "Estimated new cases per day of non-Delta and Delta in %s\\n'%(area+using)+
+      write('set title "Estimated new cases per day of Alpha and Delta in %s\\n'%(area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-      write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-Delta", "%s" u 1:3 with lines lw 3 title "Modelled Delta", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-Delta scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of Delta scaled up to modelled total"'%((graphdata,)*6))
+      write('plot "%s" u 1:2 with lines lw 3 title "Modelled Alpha", "%s" u 1:3 with lines lw 3 title "Modelled Delta", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of Alpha scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of Delta scaled up to modelled total"'%((graphdata,)*6))
 
       if yaxis=="lin":
         write('set output "%s"'%graphfn2)
         write('set key right')
         write('set ylabel "Estimated reproduction number"')
-        write('unset label')
+        #write('unset label')
         write('set title "Estimated reproduction numbers of Alpha and Delta variants in %s\\n'%(area+using)+
               'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
               'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
@@ -853,7 +853,7 @@ def printsummary(summary):
     if Tmin!=None: print(" ( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
     else: print()
   print()
-  print("Q = point estimate of reproduction rate of non-Delta on",daytodate(maxday-1))
+  print("Q = point estimate of reproduction rate of Alpha on",daytodate(maxday-1))
   print("R = point estimate of reproduction rate of Delta on",daytodate(maxday-1))
   print("T = estimated competitive advantage = R/Q as a percentage increase")
   print()
