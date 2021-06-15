@@ -60,15 +60,15 @@ args=parser.parse_args()
 # n_i      = number of confirmed cases on day i by specimen date (slightly adjusted for weekday)
 # p        = case ascertainment rate (chance of seeing a case)
 # g_{-1}(r),v_{-1}(r) = emperical growth rate (and its variance) in the two weeks up to 2021-04-10 as a function of region, r
-# r_j, s_j = Variant counts of non-B.1.617.2, B.1.617.2 in j^th week
+# r_j, s_j = Variant counts of non-Delta, Delta in j^th week
 # I_j      = set of days (week) corresponding to VOC counts r_j, s_j
 # Assume chance of sequencing a case is a totally free parameter, and optimise over it
 #
 # Unknown:
-# h   = daily growth advantage of B.1.617.2 over other variants
-# X_n = Fourier coefficients controlling the growth of non-B.1.617.2
-# A_0 = initial count of non-B.1.617.2
-# B_0 = initial count of B.1.617.2
+# h   = daily growth advantage of Delta over other variants
+# X_n = Fourier coefficients controlling the growth of non-Delta
+# A_0 = initial count of non-Delta
+# B_0 = initial count of Delta
 #
 # Likelihood:
 # A_{i+1}=e^{g_i}A_i
@@ -118,11 +118,11 @@ firstweek=datetoday('2021-04-17')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
-isd0=1.0   # Inverse sd for prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
-isd1=0.3   # Inverse sd for prior on starting number of cases of B.1.617.2 (0.3 is very weak)
-isd2=1     # Inverse sd for prior on transmission advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
+isd0=1.0   # Inverse sd for prior on starting number of cases of non-Delta: assume starts off similar to total number of cases
+isd1=0.3   # Inverse sd for prior on starting number of cases of Delta (0.3 is very weak)
+isd2=1     # Inverse sd for prior on competitive advantage (as growth rate per day). 0 means uniform prior. 1 is very weak.
 
-# Prior linking initial daily growth rate to estimate from pre-B.1.617.2 era
+# Prior linking initial daily growth rate to estimate from pre-Delta era
 sig0=0.004
 
 # Timescale in days over which growth rate can change significantly
@@ -174,8 +174,8 @@ opts={
   "Optimisation mode": mode,
   "nif1": nif1,
   "nif2": nif2,
-  "Inverse sd for prior on initial non-B.1.617.2": isd0,
-  "Inverse sd for prior on initial B.1.617.2": isd1,
+  "Inverse sd for prior on initial non-Delta": isd0,
+  "Inverse sd for prior on initial Delta": isd1,
   "Inverse sd for prior on growth": isd2,
   "Sigma (prior on daily growth rate change)": sig0,
   "Timescale of growth rate change (days)": bmsig,
@@ -208,8 +208,8 @@ firstweek=datetoday(opts["Earliest week (using end of week date) to use VOC coun
 mode=opts["Optimisation mode"]
 nif1=opts["nif1"]
 nif2=opts["nif2"]
-isd0=opts["Inverse sd for prior on initial non-B.1.617.2"]
-isd1=opts["Inverse sd for prior on initial B.1.617.2"]
+isd0=opts["Inverse sd for prior on initial non-Delta"]
+isd1=opts["Inverse sd for prior on initial Delta"]
 isd2=opts["Inverse sd for prior on growth"]
 sig0=opts["Sigma (prior on daily growth rate change)"]
 bmsig=opts["Timescale of growth rate change (days)"]
@@ -328,9 +328,9 @@ elif source=="SGTF":
       place=reducesgtf(region)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
       vocnum[place][week][int("SGTF" not in var)]+=n
-  # Adjust for non-B.1.617.2 S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
+  # Adjust for non-Delta S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
   # This is likely to be dodgy
-  # From COG-UK: B117  Others (not B.1.617.2)
+  # From COG-UK: B117  Others (not Delta)
   # 2021-03-11  18295     341   1.86%
   # 2021-03-18  16900     308   1.82%
   # 2021-03-25  14920     231   1.55%
@@ -393,7 +393,7 @@ if bundleremainder:
 places=list(okplaces)
 places.sort()# Alphabetical order
 
-# Work out pre-B.1.617.2 case counts, amalgamated to at least region level
+# Work out pre-Delta case counts, amalgamated to at least region level
 precases={}
 for place in precases0:
   if bundleremainder and place in otherplaces:
@@ -412,8 +412,8 @@ def Rdesc(h0,dh):
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
 
-print("Estimating transmission advantage using variant counts only (not case counts)")
-print("=============================================================================")
+print("Estimating competitive advantage using variant counts only (not case counts)")
+print("============================================================================")
 print()
 
 from scipy.special import betaln
@@ -477,8 +477,8 @@ print("First week to last week:")
 crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
 print()
 
-print("Estimating transmission advantage using variant counts together with case counts")
-print("================================================================================")
+print("Estimating competitive advantage using variant counts together with case counts")
+print("===============================================================================")
 print()
 
 # L=ndays-1
@@ -532,12 +532,12 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   xx=xx_conditioned/condition
   tot=0
   
-  # Prior on starting number of cases of non-B.1.617.2: assume starts off similar to total number of cases
+  # Prior on starting number of cases of non-Delta: assume starts off similar to total number of cases
   a0=log(lcases[0]+.5)
   tot+=-((xx[0]-a0)*isd0)**2/2
   if const: tot-=log(2*pi/isd0**2)/2
   
-  # Very weak prior on starting number of cases of B.1.617.2
+  # Very weak prior on starting number of cases of Delta
   tot+=-((xx[1]-(a0-4))*isd1)**2/2
   if const: tot-=log(2*pi/isd1**2)/2
   
@@ -627,7 +627,7 @@ def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
 # Returns log likelihood
 def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   xx=np.copy(hint)
-  # bounds[2][0]=0 prejudges B.1.617.2 as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
+  # bounds[2][0]=0 prejudges Delta as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
   # though would need to relax this constraint if dealing with other variants where it might not be true.
   bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
@@ -659,7 +659,7 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   # Return optimum xx log likelihood
   return res.x/condition,LL
 
-def evalconfidence(place,xx0):
+def getsamples(place,xx0):
   H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
   Hcond=H/condition/condition[:,None]
   eig=np.linalg.eigh(Hcond)
@@ -673,23 +673,12 @@ def evalconfidence(place,xx0):
   samp_cond=np.matmul(u,np.transpose(eig[1]))# nsamp x N
   samp=samp_cond/condition
   SSS=np.zeros([nsamp,2,ndays])
-  QQ=[];RR=[];TT=[]
   for i in range(nsamp):
-    dx=samp[i]
-    xx=xx0+dx
+    xx=xx0+samp[i]
     AA,BB,GG=expand(xx)
     SSS[i,0,:]=AA
     SSS[i,1,:]=BB
-    QQ.append((AA[-1]/AA[-2])**mgt)
-    RR.append((BB[-1]/BB[-2])**mgt)
-    TT.append(exp(mgt*xx[2]))
-  QQ.sort();RR.sort();TT.sort()
-  n0=int((1-conf)/2*nsamp)
-  n1=int((1+conf)/2*nsamp)
-  print("R_{B.1.1.7}   %6.3f - %6.3f"%(QQ[n0],QQ[n1]))
-  print("R_{B.1.617.2} %6.3f - %6.3f"%(RR[n0],RR[n1]))
-  print("T             %5.1f%% - %5.1f%%"%((TT[n0]-1)*100,(TT[n1]-1)*100))
-  return QQ[n0],QQ[n1],RR[n0],RR[n1],SSS
+  return SSS
 
 
 # Generate sample paths conditional on h = xx0[2] + dhsamp
@@ -736,17 +725,17 @@ def printplaceinfo(place,using=''):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None,using='',samples=None):
-  print("ModV1  = modelled number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
-  print("ModV2  = modelled number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
+def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using='',samples=None):
+  print("ModV1  = modelled number of new cases of non-Delta on this day multiplied by the ascertainment rate")
+  print("ModV2  = modelled number of new cases of Delta on this day multiplied by the ascertainment rate")
   print("Pred   = predicted number of cases seen this day = ModV1+ModV2")
   print("Seen   = number of cases observed this day, after weekday adjustment, from api/dashboard")
-  print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst obserbed variant counts from",source)
+  print("PredV1 = p*Pred, where p = proportion of non-Delta amongst obserbed variant counts from",source)
   print("PredV2 = (1-p)*Pred")
   print("SeenV1 = p*Seen")
   print("SeenV2 = (1-p)*Seen")
-  print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
-  print("R      = estimated reproduction rate of B.1.617.2 on this day")
+  print("Q      = estimated reproduction rate of non-Delta on this day")
+  print("R      = estimated reproduction rate of Delta on this day")
   print()
   nsamp=len(samples)
   nmin=int((1-conf)/2*nsamp)
@@ -786,12 +775,11 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
       mprint()
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
-  EQ="Estimated R(non-B.1.617.2) = %.2f"%Q
-  if Qmin!=None: EQ+=" (%.2f - %.2f) cf %.2f (%.2f - %.2f)"%(Qmin,Qmax,QQ[nmed]**mgt,QQ[nmin]**mgt,QQ[nmax]**mgt)
-  ER="Estimated R(B.1.617.2)       = %.2f"%R
-  if Rmin!=None: ER+=" (%.2f - %.2f) cf %.2f (%.2f - %.2f)"%(Rmin,Rmax,RR[nmed]**mgt,RR[nmin]**mgt,RR[nmax]**mgt)
-  ETA="Estimated transmission advantage = %.0f%%"%T
-  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%) cf %.0f%% (%.0f%% - %.0f%%)"%(Tmin,Tmax,(TT[nmed]**mgt-1)*100,(TT[nmin]**mgt-1)*100,(TT[nmax]**mgt-1)*100)
+  EQ="Estimated R(non-Delta) = %.2f (%.2f - %.2f)"%(QQ[nmed]**mgt,QQ[nmin]**mgt,QQ[nmax]**mgt)
+  ER="Estimated R(Delta)       = %.2f (%.2f - %.2f)"%(RR[nmed]**mgt,RR[nmin]**mgt,RR[nmax]**mgt)
+  ETA="Estimated competitive advantage = "
+  if T!=None: ETA+="%.0f%% (%.0f%% - %.0f%%); unadjusted: "%(T,Tmin,Tmax)
+  ETA+="%.0f%% (%.0f%% - %.0f%%)"%((TT[nmed]**mgt-1)*100,(TT[nmin]**mgt-1)*100,(TT[nmax]**mgt-1)*100)
   if area!=None: print("Summary");print(area+using)
   print(EQ)
   print(ER)
@@ -817,10 +805,10 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       if yaxis=="log": write('set logscale y')
-      write('set title "Estimated new cases per day of non-B.1.617.2 and B.1.617.2 in %s\\n'%(area+using)+
+      write('set title "Estimated new cases per day of non-Delta and Delta in %s\\n'%(area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-      write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-B.1.617.2", "%s" u 1:3 with lines lw 3 title "Modelled B.1.617.2", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-B.1.617.2 scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of B.1.617.2 scaled up to modelled total"'%((graphdata,)*6))
+      write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-Delta", "%s" u 1:3 with lines lw 3 title "Modelled Delta", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-Delta scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of Delta scaled up to modelled total"'%((graphdata,)*6))
       p.close();po.wait()
       print("Written graph to %s"%graphfn)
   return Q,R
@@ -833,9 +821,9 @@ def printsummary(summary):
     if Tmin!=None: print(" ( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
     else: print()
   print()
-  print("Q = point estimate of reproduction rate of non-B.1.617.2 on",daytodate(maxday-1))
-  print("R = point estimate of reproduction rate of B.1.617.2 on",daytodate(maxday-1))
-  print("T = estimated transmission advantage = R/Q as a percentage increase")
+  print("Q = point estimate of reproduction rate of non-Delta on",daytodate(maxday-1))
+  print("R = point estimate of reproduction rate of Delta on",daytodate(maxday-1))
+  print("T = estimated competitive advantage = R/Q as a percentage increase")
   print()
 
 if mode=="local growth rates":
@@ -860,9 +848,9 @@ if mode=="local growth rates":
       (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
     else:
       (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
-    Qmin,Qmax,Rmin,Rmax,SSS=evalconfidence(place,xx0)
+    SSS=getsamples(place,xx0)
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(place,place),samples=SSS)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
     summary[place]=(Q,R,T,Tmin,Tmax)
   print()
   printsummary(summary)
@@ -877,7 +865,7 @@ if (type(mode)==tuple or type(mode)==list) and mode[0]=="fixed growth rate":
     T=(exp(h0*mgt)-1)*100
     print("Predetermined growth advantage")
     SSS=getcondsamples(place,xx0,[0]*10000)
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,area=ltla2name.get(place,place),samples=SSS)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -911,7 +899,7 @@ if mode=="global growth rate":
   dh=(hmax-hmin)*irange/(ndiv-1)
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
-  print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+  print("Combined competitive advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
   print()
   
   print("Re-running using global optimum growth advantage",h0)
@@ -931,8 +919,6 @@ if mode=="global growth rate":
     TSSS[loc]=np.zeros([nsamp,2,ndays])
   
   dhsamp=dh*norm.rvs(size=nsamp)
-  n0=int((1-conf)/2*nsamp)
-  n1=int((1+conf)/2*nsamp)
   TLL=0
   for place in places:
     using=' (using information from '+ltla2name.get(areacovered,areacovered)+')'
@@ -944,16 +930,13 @@ if mode=="global growth rate":
     if makeregions: reg=ltla2region[place];TSS0[0,reg]+=AA0;TSS0[1,reg]+=BB0
     SSS=getcondsamples(place,xx0,dhsamp)
     assert SSS[:,1,-2:].max()<1e20
-    Qmin=Qmax=Rmin=Rmax=None
     if not SSS is None:
       TSSS[areacovered]+=SSS
       if makeregions: TSSS[reg]+=SSS
-      qq=list(SSS[:,0,-1]/SSS[:,0,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
-      rr=list(SSS[:,1,-1]/SSS[:,1,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
     print("Globally optimised growth advantage")
     area=None
     if place!=areacovered and (locationsize!="LTLA" or place in specialinterest): area=ltla2name.get(place,place)
-    Q,R=fullprint(AA0,BB0,vocnum[place],cases[place],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=area,using=using,samples=SSS)
+    Q,R=fullprint(AA0,BB0,vocnum[place],cases[place],area=area,using=using,samples=SSS)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -964,9 +947,7 @@ if mode=="global growth rate":
 
   for loc in combinedplaces:
     print("Combined results for %s using globally optimised growth advantage"%loc)
-    qq=list(TSSS[loc][:,0,-1]/TSSS[loc][:,0,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
-    rr=list(TSSS[loc][:,1,-1]/TSSS[loc][:,1,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
-    Q,R=fullprint(TSS0[loc][0,:],TSS0[loc][1,:],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(loc,loc),samples=TSSS[loc])
+    Q,R=fullprint(TSS0[loc][0,:],TSS0[loc][1,:],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,area=ltla2name.get(loc,loc),samples=TSSS[loc])
   
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
-  print("Combined transmission advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+  print("Combined competitive advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
