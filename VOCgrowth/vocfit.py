@@ -808,9 +808,11 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     now=datetime.utcnow().strftime('%Y-%m-%d')
     for yaxis in ["lin","log"]:
       graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
+      graphfn2=sanitise(args.graph_filename+'_'+area+'.R.png')
       po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
       # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
       def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
+      if yaxis=="log": write('set logscale y')
       write('set xdata time')
       write('set key top left')
       write('set timefmt "%Y-%m-%d"')
@@ -821,13 +823,26 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
-      if yaxis=="log": write('set logscale y')
       write('set title "Estimated new cases per day of non-Delta and Delta in %s\\n'%(area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
       write('plot "%s" u 1:2 with lines lw 3 title "Modelled non-Delta", "%s" u 1:3 with lines lw 3 title "Modelled Delta", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of non-Delta scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of Delta scaled up to modelled total"'%((graphdata,)*6))
+
+      if yaxis=="lin":
+        write('set output "%s"'%graphfn2)
+        write('set key right')
+        write('set ylabel "Estimated reproduction number"')
+        write('unset label')
+        write('set title "Estimated reproduction numbers of Alpha and Delta variants in %s\\n'%(area+using)+
+              'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
+              'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
+        write('set style fill transparent solid 0.25')
+        write('set style fill noborder')
+        write('set y2tics')
+        write('plot "%s" u 1:19 w lines lc "green" lw 3 title "Estimated R_t(Alpha)", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated R_t(Delta)", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%((graphdata,)*4))
+
       p.close();po.wait()
-      print("Written graph to %s"%graphfn)
+      print("Written graph to %s and %s"%(graphfn,graphfn2))
   return Q,R
 
 def printsummary(summary):
