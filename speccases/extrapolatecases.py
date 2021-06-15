@@ -36,9 +36,11 @@ for day in range(minday,maxday):
 # cases[x][y] = cases from specimen day minday+x-(y+1), as reported on day minday+x
 mode=0
 
+flagdel=[]
+flagadd=[]
 for dow in range(7):
   # dow: 0=Monday, ..., 6=Sunday
-  for pred in [2]:#range(1,8):
+  for pred in [1]:#range(1,8):
     # Predicting cases from specimen day r-pred from information available on day r.
     numrel=3# Number of releases to go back
     numpd=3# Number of days to go back within release
@@ -77,8 +79,44 @@ for dow in range(7):
       day+=7
     A=np.array(l)
     B=np.array(m)
-    C=np.linalg.lstsq(A,B)
-    r=np.max(np.matmul(A,C[0])-B,0)
-    print(C[0],C[1]/len(B),np.dot(r,r)/len(B))
-  #print()
-    
+    n=A.shape[1]
+    flags=[True]*n
+    C=np.linalg.lstsq(A[:,flags],B)
+    r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
+    v=np.dot(r,r)/len(B)
+    best=(v,C[0],flags)
+    print(best)
+    for delete in range(n-1):
+      best=(1e30,)
+      for i in range(n):
+        if flags[i]:
+          flags[i]=False
+          C=np.linalg.lstsq(A[:,flags],B)
+          r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
+          v=np.dot(r,r)/len(B)
+          if v<best[0]: best=(v,np.copy(C[0]),np.copy(flags))
+          flags[i]=True
+      print(best)
+      flags=best[2]
+      if delete==n//2: flagdel.append(flags)
+    print("---------------------")
+    flags=[False]*n
+    for add in range(n):
+      best=(1e30,)
+      for i in range(n):
+        if not flags[i]:
+          flags[i]=True
+          C=np.linalg.lstsq(A[:,flags],B)
+          r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
+          v=np.dot(r,r)/len(B)
+          if v<best[0]: best=(v,np.copy(C[0]),np.copy(flags))
+          flags[i]=False
+      print(best)
+      flags=best[2]
+      if add==n//2: flagadd.append(flags)
+    print()
+
+print()
+for f in flagdel: print(f)
+print()
+for f in flagadd: print(f)
