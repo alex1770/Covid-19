@@ -791,7 +791,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     else:
       mprint("       -       -       -       -       -       -")
   EQ="Estimated R(Alpha) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
-  ER="Estimated R(Delta)       = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
+  ER="Estimated R(Delta) = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
   ETA="Estimated competitive advantage = "
@@ -801,48 +801,49 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   print(EQ)
   print(ER)
   print(ETA)
-  if Tmin!=None: ETA+="\\n(CI shows within-model statistical uncertainty; model assumptions lead to other uncertainties)"
+  ETA+="\\n(CIs show within-model statistical uncertainty; model assumptions lead to other uncertainties)"
   print()
   if graphfp!=None:
     graphfp.close()
     now=datetime.utcnow().strftime('%Y-%m-%d')
+    po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
+    # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
+    def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
+    
+    write('set terminal pngcairo font "sans,13" size 1920,1280')
+    write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
+    write('set xdata time')
+    write('set timefmt "%Y-%m-%d"')
+    write('set format x "%Y-%m-%d"')
+    write('set xtics nomirror rotate by 45 right offset 0.5,0')
+    write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-2),EQ,ER,ETA))
+    
+    graphfnR=sanitise(args.graph_filename+'_'+area+'_R.png')
+    write('set output "%s"'%graphfnR)
+    write('set key right')
+    write('set ylabel "Estimated reproduction number"')
+    write('set style fill transparent solid 0.25')
+    write('set style fill noborder')
+    write('set y2tics')
+    write('set title "Estimated reproduction numbers of Alpha and Delta variants in %s\\n'%(area+using)+
+          'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
+          'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
+    write('plot "%s" u 1:19 w lines lc "green" lw 3 title "Estimated R_t(Alpha)", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated R_t(Delta)", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%((graphdata,)*4))
+    print("Written graph to %s"%graphfnR)
+    
     for yaxis in ["lin","log"]:
       graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
-      graphfn2=sanitise(args.graph_filename+'_'+area+'.R.png')
-      po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
-      # Use this write function to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
-      def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
       if yaxis=="log": write('set logscale y')
-      write('set xdata time')
       write('set key top left')
-      write('set timefmt "%Y-%m-%d"')
-      write('set format x "%Y-%m-%d"')
-      write('set xtics nomirror rotate by 45 right offset 0.5,0')
-      write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-2),EQ,ER,ETA))
-      write('set terminal pngcairo font "sans,13" size 1920,1280')
-      write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       write('set title "Estimated new cases per day of Alpha and Delta in %s\\n'%(area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
       write('plot "%s" u 1:2 with lines lw 3 title "Modelled Alpha", "%s" u 1:3 with lines lw 3 title "Modelled Delta", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of Alpha scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of Delta scaled up to modelled total"'%((graphdata,)*6))
-
-      if yaxis=="lin":
-        write('set output "%s"'%graphfn2)
-        write('set key right')
-        write('set ylabel "Estimated reproduction number"')
-        #write('unset label')
-        write('set title "Estimated reproduction numbers of Alpha and Delta variants in %s\\n'%(area+using)+
-              'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-              'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-        write('set style fill transparent solid 0.25')
-        write('set style fill noborder')
-        write('set y2tics')
-        write('plot "%s" u 1:19 w lines lc "green" lw 3 title "Estimated R_t(Alpha)", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated R_t(Delta)", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%((graphdata,)*4))
-
-      p.close();po.wait()
-      print("Written graph to %s and %s"%(graphfn,graphfn2))
+      print("Written graph to %s"%graphfn)
+    
+    p.close();po.wait()
   return Q,R
 
 def printsummary(summary):
@@ -967,7 +968,7 @@ if mode=="global growth rate":
       if makeregions: TSSS[reg]+=SSS
     print("Globally optimised growth advantage")
     area=None
-    if place!=areacovered and (locationsize!="LTLA" or place in specialinterest): area=ltla2name.get(place,place)
+    if place!=areacovered and (locationsize!="LTLA" or place in specialinterest or len(places)<50): area=ltla2name.get(place,place)
     Q,R=fullprint(AA0,BB0,vocnum[place],cases[place],area=area,using=using,samples=SSS)
     summary[place]=(Q,R,T,None,None)
   print()
