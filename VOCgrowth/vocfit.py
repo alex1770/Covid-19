@@ -726,23 +726,35 @@ def printplaceinfo(place,using=''):
   print()
 
 def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using='',samples=None):
-  print("ModV1  = modelled number of new cases of non-Delta on this day multiplied by the ascertainment rate")
-  print("ModV2  = modelled number of new cases of Delta on this day multiplied by the ascertainment rate")
-  print("Pred   = predicted number of cases seen this day = ModV1+ModV2")
-  print("Seen   = number of cases observed this day, after weekday adjustment, from api/dashboard")
-  print("PredV1 = p*Pred, where p = proportion of non-Delta amongst obserbed variant counts from",source)
-  print("PredV2 = (1-p)*Pred")
-  print("SeenV1 = p*Seen")
-  print("SeenV2 = (1-p)*Seen")
-  print("Q      = estimated reproduction rate of non-Delta on this day")
-  print("R      = estimated reproduction rate of Delta on this day")
+  print("ModV1    = modelled number of new cases of non-Delta on this day multiplied by the ascertainment rate")
+  print("ModV2    = modelled number of new cases of Delta on this day multiplied by the ascertainment rate")
+  print("Pred     = predicted number of cases seen this day = ModV1+ModV2")
+  print("Seen     = number of cases observed this day, after weekday adjustment, from api/dashboard")
+  print("PredV1   = p*Pred, where p = proportion of non-Delta amongst obserbed variant counts from",source)
+  print("PredV2   = (1-p)*Pred")
+  print("SeenV1   = p*Seen")
+  print("SeenV2   = (1-p)*Seen")
+  print("Q        = estimated reproduction rate of non-Delta on this day")
+  print("R        = estimated reproduction rate of Delta on this day")
+  print("ModV1min = ModV1 min confidence interval")
+  print("ModV1med = ModV1 mode confidence interval")
+  print("ModV1max = ModV1 max confidence interval")
+  print("ModV2min = ModV1 min confidence interval")
+  print("ModV2med = ModV1 mode confidence interval")
+  print("ModV2max = ModV1 max confidence interval")
+  print("Qmin     = Q min confidence interval")
+  print("Qmed     = Q mode confidence interval")
+  print("Qmax     = Q max confidence interval")
+  print("Rmin     = R min confidence interval")
+  print("Rmed     = R mode confidence interval")
+  print("Rmax     = R max confidence interval")
   print()
   nsamp=len(samples)
   nmin=int((1-conf)/2*nsamp)
   nmed=nsamp//2
   nmax=int((1+conf)/2*nsamp)
   sa=np.sort(samples,axis=0)
-  sr0=samples[:,:,1:]/samples[:,:,:-1]# sr, sr0 = R-numbers: R(V1), R(V2)
+  sr0=(samples[:,:,1:]/samples[:,:,:-1])**mgt# sr, sr0 = R-numbers: R(V1), R(V2)
   sr=np.sort(sr0,axis=0)#               
   tr=np.sort(sr0[:,1,:]/sr0[:,0,:],axis=0)# tr = R(V2)/R(V1)
   QQ=sr[:,0,-1]
@@ -756,7 +768,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   def mprint(*a,**b):
     print(*a,**b)
     if graphfp!=None: print(*a,**b,file=graphfp)
-  mprint("#     Date     ModV1     ModV2      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
+  mprint("#     Date     ModV1     ModV2      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R  ModV1min  ModV1med  ModV1max  ModV2min  ModV2med  ModV2max    Qmin    Qmed    Qmax    Rmin    Rmed    Rmax")
   for i in range(ndays):
     day=minday+i
     pred,seen=asc*(AA[i]+BB[i]),lcases[i]
@@ -767,19 +779,24 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
     else:
       mprint("           -         -         -         - ",end='')
-    mprint(" %12g %12g"%(asc*(sa[nmed][0][i]-AA[i]),asc*(sa[nmed][1][i]-BB[i])),end='')
+    #mprint(" %12g %12g"%(asc*(sa[nmed][0][i]-AA[i]),asc*(sa[nmed][1][i]-BB[i])),end='')
     if i<ndays-1:
       Q,R=((AA[i+1]/AA[i])**mgt,(BB[i+1]/BB[i])**mgt)
-      mprint("   %7.4f %7.4f"%(Q,R))
+      mprint("   %7.4f %7.4f"%(Q,R),end='')
     else:
-      mprint()
+      mprint("         -       -",end='')
+    mprint(" %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f"%(asc*sa[nmin,0,i],asc*sa[nmed,0,i],asc*sa[nmax,0,i],asc*sa[nmin,1,i],asc*sa[nmed,1,i],asc*sa[nmax,1,i]),end='')
+    if i<ndays-1:
+      mprint(" %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f"%(sr[nmin,0,i],sr[nmed,0,i],sr[nmax,0,i],sr[nmin,1,i],sr[nmed,1,i],sr[nmax,1,i]))
+    else:
+      mprint("       -       -       -       -       -       -")
+  EQ="Estimated R(non-Delta) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
+  ER="Estimated R(Delta)       = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
-  EQ="Estimated R(non-Delta) = %.2f (%.2f - %.2f)"%(QQ[nmed]**mgt,QQ[nmin]**mgt,QQ[nmax]**mgt)
-  ER="Estimated R(Delta)       = %.2f (%.2f - %.2f)"%(RR[nmed]**mgt,RR[nmin]**mgt,RR[nmax]**mgt)
   ETA="Estimated competitive advantage = "
   if T!=None: ETA+="%.0f%% (%.0f%% - %.0f%%); unadjusted: "%(T,Tmin,Tmax)
-  ETA+="%.0f%% (%.0f%% - %.0f%%)"%((TT[nmed]**mgt-1)*100,(TT[nmin]**mgt-1)*100,(TT[nmax]**mgt-1)*100)
+  ETA+="%.0f%% (%.0f%% - %.0f%%)"%((TT[nmed]-1)*100,(TT[nmin]-1)*100,(TT[nmax]-1)*100)
   if area!=None: print("Summary");print(area+using)
   print(EQ)
   print(ER)
