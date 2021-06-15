@@ -146,7 +146,7 @@ discardcogdays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":10000,"eps":1e-5}
+minopts={"maxiter":10000,"eps":1e-4}
 
 mode="local growth rates"
 #mode="global growth rate"
@@ -737,17 +737,28 @@ def printplaceinfo(place,using=''):
   print()
 
 def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmin=None,Rmax=None,area=None,using='',samples=None):
-  print("A      = estimated number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
-  print("B      = estimated number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
-  print("Pred   = predicted number of cases seen this day = A+B")
-  print("Seen   = number of cases seen this day, after weekday adjustment")
-  print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst variant counts")
+  print("ModV1  = modelled number of new cases of non-B.1.617.2 on this day multiplied by the ascertainment rate")
+  print("ModV2  = modelled number of new cases of B.1.617.2 on this day multiplied by the ascertainment rate")
+  print("Pred   = predicted number of cases seen this day = ModV1+ModV2")
+  print("Seen   = number of cases observed this day, after weekday adjustment, from api/dashboard")
+  print("PredV1 = p*Pred, where p = proportion of non-B.1.617.2 amongst obserbed variant counts from",source)
   print("PredV2 = (1-p)*Pred")
   print("SeenV1 = p*Seen")
   print("SeenV2 = (1-p)*Seen")
   print("Q      = estimated reproduction rate of non-B.1.617.2 on this day")
   print("R      = estimated reproduction rate of B.1.617.2 on this day")
   print()
+  nsamp=len(samples)
+  nmin=int((1-conf)/2*nsamp)
+  nmed=nsamp//2
+  nmax=int((1+conf)/2*nsamp)
+  sa=np.sort(samples,axis=0)
+  sr0=samples[:,:,1:]/samples[:,:,:-1]# sr, sr0 = R-numbers: R(V1), R(V2)
+  sr=np.sort(sr0,axis=0)#               
+  tr=np.sort(sr0[:,1,:]/sr0[:,0,:],axis=0)# tr = R(V2)/R(V1)
+  QQ=sr[:,0,-1]
+  RR=sr[:,1,-1]
+  TT=list(tr[:,-1])
   if area!=None and args.graph_filename!=None:
     graphdata=sanitise(args.graph_filename+'_'+area+'.dat')
     graphfp=open(graphdata,'w')
@@ -756,7 +767,7 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   def mprint(*a,**b):
     print(*a,**b)
     if graphfp!=None: print(*a,**b,file=graphfp)
-  mprint("#     Date         A         B      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
+  mprint("#     Date     ModV1     ModV2      Pred      Seen      PredV1    PredV2    SeenV1    SeenV2          Q       R")
   for i in range(ndays):
     day=minday+i
     pred,seen=asc*(AA[i]+BB[i]),lcases[i]
@@ -767,6 +778,7 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
       mprint("   %9.2f %9.2f %9.2f %9.2f "%(p*pred,(1-p)*pred,p*seen,(1-p)*seen),end='')
     else:
       mprint("           -         -         -         - ",end='')
+    mprint(" %12g %12g"%(asc*(sa[nmed][0][i]-AA[i]),asc*(sa[nmed][1][i]-BB[i])),end='')
     if i<ndays-1:
       Q,R=((AA[i+1]/AA[i])**mgt,(BB[i+1]/BB[i])**mgt)
       mprint("   %7.4f %7.4f"%(Q,R))
@@ -775,11 +787,11 @@ def fullprint(AA,BB,lvocnum,lcases,T,Tmin=None,Tmax=None,Qmin=None,Qmax=None,Rmi
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
   EQ="Estimated R(non-B.1.617.2) = %.2f"%Q
-  if Qmin!=None: EQ+=" (%.2f - %.2f)"%(Qmin,Qmax)
+  if Qmin!=None: EQ+=" (%.2f - %.2f) cf %.2f (%.2f - %.2f)"%(Qmin,Qmax,QQ[nmed]**mgt,QQ[nmin]**mgt,QQ[nmax]**mgt)
   ER="Estimated R(B.1.617.2)       = %.2f"%R
-  if Rmin!=None: ER+=" (%.2f - %.2f)"%(Rmin,Rmax)
+  if Rmin!=None: ER+=" (%.2f - %.2f) cf %.2f (%.2f - %.2f)"%(Rmin,Rmax,RR[nmed]**mgt,RR[nmin]**mgt,RR[nmax]**mgt)
   ETA="Estimated transmission advantage = %.0f%%"%T
-  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%)"%(Tmin,Tmax)
+  if Tmin!=None: ETA+=" (%.0f%% - %.0f%%) cf %.0f%% (%.0f%% - %.0f%%)"%(Tmin,Tmax,(TT[nmed]**mgt-1)*100,(TT[nmin]**mgt-1)*100,(TT[nmax]**mgt-1)*100)
   if area!=None: print("Summary");print(area+using)
   print(EQ)
   print(ER)
@@ -864,7 +876,8 @@ if (type(mode)==tuple or type(mode)==list) and mode[0]=="fixed growth rate":
     AA,BB,GG=expand(xx0)
     T=(exp(h0*mgt)-1)*100
     print("Predetermined growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,area=ltla2name.get(place,place))
+    SSS=getcondsamples(place,xx0,[0]*10000)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],T,area=ltla2name.get(place,place),samples=SSS)
     summary[place]=(Q,R,T,None,None)
   print()
   printsummary(summary)
@@ -953,9 +966,6 @@ if mode=="global growth rate":
     print("Combined results for %s using globally optimised growth advantage"%loc)
     qq=list(TSSS[loc][:,0,-1]/TSSS[loc][:,0,-2]);qq.sort();Qmin=qq[n0]**mgt;Qmax=qq[n1]**mgt
     rr=list(TSSS[loc][:,1,-1]/TSSS[loc][:,1,-2]);rr.sort();Rmin=rr[n0]**mgt;Rmax=rr[n1]**mgt
-    for k in range(1,15):
-      dd=list(TSSS[loc][:,1,-1]*TSSS[loc][:,1,-(2*k+1)]/TSSS[loc][:,1,-(k+1)]**2);dd.sort();Dmin,Dmed,Dmax=[mgt/k**2*log(dd[n]) for n in [n0,nsamp//2,n1]]
-      print("Day interval %2d ==> Change in R_t(Delta) / day = %7.4f (%7.4f - %7.4f)"%(k,Dmed,Dmin,Dmax))
     Q,R=fullprint(TSS0[loc][0,:],TSS0[loc][1,:],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,Qmin,Qmax,Rmin,Rmax,area=ltla2name.get(loc,loc),samples=TSSS[loc])
   
   print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
