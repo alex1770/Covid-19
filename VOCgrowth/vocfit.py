@@ -513,13 +513,15 @@ print()
 # where X_n ~ N(0,1),  n=0,...,N; N=ceil(4*L/bmsig), say
 
 bmL=ndays+bmsig*2# Add on bmsig*2 to eliminate periodicity effects
-bmN=int(3*bmL/bmsig+1)
+bmN=int(2.5*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
 bmsin2=[np.array([bmweight[n]*bmsin[(i*n)%(2*bmL)] for n in range(bmN)]) for i in range(ndays)]
 
 # Need to scale the variables being optimised over to keep SLSQP happy
-condition=np.array([50,50,1000,1000]+[1.]*bmN)
+#condition=np.array([50,50,1000,1000]+[1.]*bmN)
+t=40000*np.array(bmweight[1:])*bmscale/np.arange(1,bmN)+1
+condition=np.array([70,80,5000,5000,t[0]]+list(t))
 
 # bmN+4 parameters to be optimised:
 # 0: a0
@@ -687,7 +689,7 @@ def getsamples(place,xx0):
   Hcond=H/condition/condition[:,None]
   eig=np.linalg.eigh(Hcond)
   # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond),eig[1])) ~= eig[0]
-  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None,None,None,None
+  if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None
   nsamp=10000
   N=bmN+4
   t=norm.rvs(size=[nsamp,N])# nsamp x N
@@ -717,7 +719,7 @@ def getcondsamples(place,xx0,dhsamp):
   eig=np.linalg.eigh(Hcond__)
   # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond__),eig[1])) ~= eig[0]
   m=eig[0].min()
-  if m<=0: print("Hessian not +ve definite in getcondsamples so can't do full confidence calculation");return None,None
+  if m<=0: print("Hessian not +ve definite in getcondsamples so can't do full confidence calculation");return None
   if m<1e-6: print("Warning: Hessian has a very low eigenvalue in getcondsamples:",m)
   nsamp=len(dhsamp)
   t=norm.rvs(size=[nsamp,N-1])# nsamp x N-1
