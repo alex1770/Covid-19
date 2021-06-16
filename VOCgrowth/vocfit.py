@@ -822,8 +822,8 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint(" %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f"%(sr[nmin,0,i],sr[nmed,0,i],sr[nmax,0,i],sr[nmin,1,i],sr[nmed,1,i],sr[nmax,1,i]))
     else:
       mprint("       -       -       -       -       -       -")
-  EQ="Estimated R(Alpha) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
-  ER="Estimated R(Delta) = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
+  EQ="Estimated R_t(Alpha) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
+  ER="Estimated R_t(Delta) = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
   ETA="Estimated competitive advantage = "
@@ -865,7 +865,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     
     for yaxis in ["lin","log"]:
       graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
-      if yaxis=="log": write('set logscale y')
+      if yaxis=="log": write('set logscale y');write('unset y2tics')
       write('set key top left')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
