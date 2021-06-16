@@ -86,15 +86,15 @@ args=parser.parse_args()
 
 ### Options ###
 
-#source="Sanger"
-source="COG-UK"
+source="Sanger"
+#source="COG-UK"
 #source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="UK"
+locationsize="region"
 
 ltlaexclude=set()
 #ltlaexclude=set(['E08000001','E12000002'])# Bolton, Manchester
@@ -114,7 +114,7 @@ minday=datetoday('2021-04-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-04-17')
+firstweek=datetoday('2021-05-01')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
@@ -137,7 +137,7 @@ bmscale=0.01
 asc=0.4
 
 # Discard this many cases at the end of the list of cases by specimen day
-discardcasedays=2# Make have to make this 3 sometimes to allow for Wales and NI late reporting at weekends and bank holidays
+discardcasedays=int(locationsize=="UK" or (source=="COG-UK" and locationsize=="country"))*2# Make sure this is at least 2 if Wales is in the mix, because it has later reporting
 
 # Discard this many days of the latest COG data
 discardcogdays=2
@@ -148,8 +148,8 @@ bundleremainder=True
 
 minopts={"maxiter":10000,"eps":1e-4}
 
-mode="local growth rates"
-#mode="global growth rate"
+#mode="local growth rates"
+mode="global growth rate"
 #mode="fixed growth rate",0.1
 
 voclen=(1 if source=="COG-UK" else 7)
@@ -351,6 +351,27 @@ elif source=="SGTF":
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
+# speccasesadjust[d][r] = chance that a specimen from day of the week d (Monday=0) is reported (by) r days later
+speccasesadjust=np.array([[ 0.    , 0.3954, 0.8823, 0.9664, 0.9914, 0.9975, 0.9989, 1.    ],
+                          [ 0.    , 0.3264, 0.8731, 0.9707, 0.9893, 0.9962, 1.0003, 1.    ],
+                          [ 0.    , 0.3561, 0.8745, 0.9604, 0.983 , 0.989 , 0.9936, 1.    ],
+                          [ 0.    , 0.3511, 0.8699, 0.9567, 0.9768, 0.9873, 0.9974, 1.    ],
+                          [ 0.    , 0.3132, 0.8363, 0.942 , 0.9701, 0.988 , 0.9964, 1.    ],
+                          [ 0.    , 0.2943, 0.8404, 0.9218, 0.9595, 0.984 , 0.994 , 1.    ],
+                          [ 0.    , 0.4585, 0.9093, 0.961 , 0.9859, 0.9934, 0.9987, 1.    ]])
+infinity=speccasesadjust.shape[1]# Cases are considered stable at infinity-1 days after specimen taken
+publishedday=datetoday(max(apicases['date']))+1# Day when api published results
+monday=datetoday('2021-06-07')# Example of a Monday
+specadj=np.zeros(ndays)
+for d in range(ndays):
+  day=minday+d
+  r=publishedday-day;assert r>=1 and r<1000
+  if r<infinity: specadj[d]=speccasesadjust[(day-monday)%7][r]
+  else: specadj[d]=1
+nif1a=nif1*specadj
+lognif1a=np.log(nif1a)
+log1mnif1a=np.log(1-nif1a)
+
 # Simple weekday adjustment by dividing by the average count for that day of the week.
 # Use a relatively stable period (inclusive) over which to take the weekday averages.
 weekadjdates=[datetoday('2021-04-03'),datetoday('2021-05-14')]
@@ -376,7 +397,7 @@ for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCase
     if day>preweek-7*(2-i) and day<=preweek-7*(1-i):
       precases0[place][i]+=n
   if d>=0 and d<ndays:
-    cases[place][d]+=n/weekadjp[day%7]
+    cases[place][d]+=n/specadj[d]/weekadjp[day%7]
 places=sorted(list(cases))
 
 # Restrict to places for which there is at least some of each variant, and bundle the remaining locations together as "Other"
@@ -526,8 +547,6 @@ def expand(xx):
 
 # Return negative log likelihood (negative because scipy can only minimise, not maximise)
 # If const is true then add in all the constant terms (that don't affect the optimisation)
-lognif1=log(nif1)
-log1mnif1=log(1-nif1)
 def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   xx=xx_conditioned/condition
   tot=0
@@ -555,18 +574,18 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
     mu=asc*(AA[i]+BB[i])
-    r=mu*nif1/(1-nif1)
+    r=mu*nif1a[i]/(1-nif1a[i])
     n=lcases[i]
     # n ~ Negative binomial(mean=mu, variance=mu/nif1)
     # max with -10000 because the expression is unbounded below which can cause a problem for SLSQP
     if model=="scaledpoisson":
-      tot+=max((-mu+n*log(nif1*mu))*nif1,-10000)
-      if const: tot+=log(nif1)-gammaln(nif1*n+1)# Approx normalisation
+      tot+=max((-mu+n*log(nif1a[i]*mu))*nif1a[i],-10000)
+      if const: tot+=log(nif1a[i])-gammaln(nif1a[i]*n+1)# Approx normalisation
     elif model=="NBBB":
-      tot+=max(gammaln(n+r)+r*lognif1+n*log1mnif1-gammaln(r),-10000)
+      tot+=max(gammaln(n+r)+r*lognif1a[i]+n*log1mnif1a[i]-gammaln(r),-10000)
       if const: tot+=-gammaln(n+1)
     elif model=="NBBB+magicprior":
-      tot+=max(gammaln(n+r)-nif1*gammaln(mu+r)+n*log1mnif1,-10000)
+      tot+=max(gammaln(n+r)-nif1a[i]*gammaln(mu+r)+n*log1mnif1[i],-10000)
       if const: tot+=-gammaln(n+1)
     else: raise RuntimeError("Unrecognised model "+model)
   
