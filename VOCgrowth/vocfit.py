@@ -589,7 +589,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
       tot+=max(gammaln(n+r)+r*lognif1a[i]+n*log1mnif1a[i]-gammaln(r),-10000)
       if const: tot+=-gammaln(n+1)
     elif model=="NBBB+magicprior":
-      tot+=max(gammaln(n+r)-nif1a[i]*gammaln(mu+r)+n*log1mnif1[i],-10000)
+      tot+=max(gammaln(n+r)-nif1a[i]*gammaln(mu+r)+n*log1mnif1a[i],-10000)
       if const: tot+=-gammaln(n+1)
     else: raise RuntimeError("Unrecognised model "+model)
   
