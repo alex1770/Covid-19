@@ -3,6 +3,7 @@ import json,os
 from requests import get
 import numpy as np
 from random import random
+from math import sqrt
 
 np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=100000)
@@ -47,14 +48,15 @@ def trystuff(A,B):
       r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
       v=np.dot(r,r)/len(B)
       if v<best[0]: best=(v,np.copy(C[0]),np.copy(flags))
-    print(best)
-    if weight==3: flagl.append(best[2])
+    print(sqrt(best[0]),best[1],best[2])
+    if weight==2: flagl.append(best[2])
     toterr[weight]+=best[0]
   print()
     
 flagl=[]
 toterr=[0]*1000
 TA=TB=None
+backtot=0
 for dow in range(7):
   # dow: 0=Monday, ..., 6=Sunday
   for pred in [1]:#range(1,8):
@@ -69,6 +71,7 @@ for dow in range(7):
       # Predicting specimen day: 'day'-pred
       if mode==0:
         l.append([cases[day-minday-r][pred-1+p] for r in range(numrel) for p in range(numpd)])# reported on day-r, specimen on day-pred-r-p
+        for r in range(backtot): l[-1].append(sum(cases[day-minday-r])-sum(cases[day-minday-r-1]))
         for r in range(numrel):
           for p in range(numpd):
             #print("Using spec day %s published day %s to help with spec day %s"%(daytodate(day-r-(pred+p)),daytodate(day-r),daytodate(day-pred)))
@@ -106,8 +109,9 @@ for f in flagl: print(f)
 
 print()
 for weight in range(1,n+1):
-  print("Total error at weight %2d: %12g"%(weight,toterr[weight]))
+  print("Total error at weight %2d: %12g"%(weight,sqrt(toterr[weight])))
 
+print()
 print("Combining days")
 flagl=[]
 toterr=[0]*1000
@@ -118,5 +122,6 @@ for f in flagl: print(f)
 
 print()
 for weight in range(1,n+1):
-  print("Total error at weight %2d: %12g"%(weight,toterr[weight]))
+  print("Total error at weight %2d: %12g"%(weight,sqrt(toterr[weight])))
+  
   
