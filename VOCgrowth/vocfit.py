@@ -131,6 +131,7 @@ bmsig=25
 
 # Lengthscale for filtered Brownian motion
 # (higher = greater amplitude for the wiggles)
+# bmscale will be set below - no longer user specifiable
 bmscale=0.01
 
 # Case ascertainment rate
@@ -227,6 +228,12 @@ model=opts["Model"]
 # Make sure this is at least 2 if Wales is in the mix, because it has later reporting
 discardcasedays=max(int(locationsize=="UK" or (source=="COG-UK" and locationsize=="country"))*2,discardcasedays)
 opts["Number of days of case data to discard"]=discardcasedays
+
+# bmscale no longer user-specifiable
+if locationsize=="LTLA": bmscale=0.06
+elif locationsize=="region": bmscale=0.025
+else: bmscale=0.01
+opts["Lengthscale for filtered Brownian motion"]=bmscale
 
 zconf=norm.ppf((1+conf)/2)
 
