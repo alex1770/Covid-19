@@ -7,7 +7,7 @@ from random import random
 np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=100000)
 
-adir='apiarchive'
+adir='casesbyspecdate'
 mindate='2021-02-24'# Can't get archive data earlier than 2021-02-24
 now=datetime.datetime.utcnow().strftime('%Y-%m-%d')
 
