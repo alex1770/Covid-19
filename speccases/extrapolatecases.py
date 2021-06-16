@@ -36,12 +36,29 @@ for day in range(minday,maxday):
 # cases[x][y] = cases from specimen day minday+x-(y+1), as reported on day minday+x
 mode=0
 
-flagdel=[]
-flagadd=[]
+def trystuff(A,B):
+  n=A.shape[1]
+  for weight in range(1,n+1):
+    best=(1e30,)
+    for i in range(1<<n):
+      flags=[(i>>j&1)>0 for j in range(n)]
+      if sum(flags)!=weight: continue
+      C=np.linalg.lstsq(A[:,flags],B)
+      r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
+      v=np.dot(r,r)/len(B)
+      if v<best[0]: best=(v,np.copy(C[0]),np.copy(flags))
+    print(best)
+    if weight==3: flagl.append(best[2])
+    toterr[weight]+=best[0]
+  print()
+    
+flagl=[]
+toterr=[0]*1000
+TA=TB=None
 for dow in range(7):
   # dow: 0=Monday, ..., 6=Sunday
   for pred in [1]:#range(1,8):
-    # Predicting cases from specimen day r-pred from information available on day r.
+    # Predicting cases from specimen day (r-pred) from information available on day r.
     numrel=3# Number of releases to go back
     numpd=3# Number of days to go back within release
     day0=minday+numrel+(monday+dow-minday-numrel)%7
@@ -51,7 +68,7 @@ for dow in range(7):
     while day<maxday-infinity:
       # Predicting specimen day: 'day'-pred
       if mode==0:
-        l.append([cases[day-minday-r][pred-1+p] for r in range(numrel) for p in range(numpd)])
+        l.append([cases[day-minday-r][pred-1+p] for r in range(numrel) for p in range(numpd)])# reported on day-r, specimen on day-pred-r-p
         for r in range(numrel):
           for p in range(numpd):
             #print("Using spec day %s published day %s to help with spec day %s"%(daytodate(day-r-(pred+p)),daytodate(day-r),daytodate(day-pred)))
@@ -79,44 +96,27 @@ for dow in range(7):
       day+=7
     A=np.array(l)
     B=np.array(m)
+    if TA is None: TA=np.copy(A);TB=np.copy(B)
+    else: m=min(A.shape[0],TA.shape[0]);TA=TA[:m,:]+A[:m,:];TB=TB[:m]+B[:m]
     n=A.shape[1]
-    flags=[True]*n
-    C=np.linalg.lstsq(A[:,flags],B)
-    r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
-    v=np.dot(r,r)/len(B)
-    best=(v,C[0],flags)
-    print(best)
-    for delete in range(n-1):
-      best=(1e30,)
-      for i in range(n):
-        if flags[i]:
-          flags[i]=False
-          C=np.linalg.lstsq(A[:,flags],B)
-          r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
-          v=np.dot(r,r)/len(B)
-          if v<best[0]: best=(v,np.copy(C[0]),np.copy(flags))
-          flags[i]=True
-      print(best)
-      flags=best[2]
-      if delete==n//2: flagdel.append(flags)
-    print("---------------------")
-    flags=[False]*n
-    for add in range(n):
-      best=(1e30,)
-      for i in range(n):
-        if not flags[i]:
-          flags[i]=True
-          C=np.linalg.lstsq(A[:,flags],B)
-          r=np.maximum(np.matmul(A[:,flags],C[0]),0)-B
-          v=np.dot(r,r)/len(B)
-          if v<best[0]: best=(v,np.copy(C[0]),np.copy(flags))
-          flags[i]=False
-      print(best)
-      flags=best[2]
-      if add==n//2: flagadd.append(flags)
-    print()
+    trystuff(A,B)
+    
+print()
+for f in flagl: print(f)
 
 print()
-for f in flagdel: print(f)
+for weight in range(1,n+1):
+  print("Total error at weight %2d: %12g"%(weight,toterr[weight]))
+
+print("Combining days")
+flagl=[]
+toterr=[0]*1000
 print()
-for f in flagadd: print(f)
+trystuff(TA,TB)
+print()
+for f in flagl: print(f)
+
+print()
+for weight in range(1,n+1):
+  print("Total error at weight %2d: %12g"%(weight,toterr[weight]))
+  
