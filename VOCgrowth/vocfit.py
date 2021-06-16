@@ -136,8 +136,8 @@ bmscale=0.01
 # Case ascertainment rate
 asc=0.4
 
-# Discard this many cases at the end of the list of cases by specimen day
-discardcasedays=int(locationsize=="UK" or (source=="COG-UK" and locationsize=="country"))*2# Make sure this is at least 2 if Wales is in the mix, because it has later reporting
+# Discard this many cases at the end of the list of cases by specimen day (may be increased later if Wales is in the mix)
+discardcasedays=0
 
 # Discard this many days of the latest COG data
 discardcogdays=2
@@ -223,6 +223,10 @@ voclen=opts["Length of time period over which VOC counts are given (days)"]
 conf=opts["Confidence level"]
 nsamp=opts["Number of samples for confidence calcultions in hierachical mode"]
 model=opts["Model"]
+
+# Make sure this is at least 2 if Wales is in the mix, because it has later reporting
+discardcasedays=max(int(locationsize=="UK" or (source=="COG-UK" and locationsize=="country"))*2,discardcasedays)
+opts["Number of days of case data to discard"]=discardcasedays
 
 zconf=norm.ppf((1+conf)/2)
 
