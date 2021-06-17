@@ -229,11 +229,10 @@ model=opts["Model"]
 discardcasedays=max(int(locationsize=="UK" or (source=="COG-UK" and locationsize=="country"))*2,discardcasedays)
 opts["Number of days of case data to discard"]=discardcasedays
 
-# bmscale no longer user-specifiable
-if locationsize=="LTLA": bmscale=0.06
-elif locationsize=="region": bmscale=0.025
-else: bmscale=0.01
-opts["Lengthscale for filtered Brownian motion"]=bmscale
+# if locationsize=="LTLA": bmscale=0.1
+# elif locationsize=="region": bmscale=0.03
+# else: bmscale=0.01
+# opts["Lengthscale for filtered Brownian motion"]=bmscale
 
 zconf=norm.ppf((1+conf)/2)
 
@@ -717,6 +716,16 @@ def getsamples(place,xx0):
 # xx0 = N-vector that is optimal conditioned on xx0[2]
 # dhsamp = nsamp-vector of deltas in xx0[2] to sample over (an externally imposed normal - not from the log likelihood)
 # Use normal approximation with Hessian from log likelihood for other co-ordinates
+#
+# Types in terms of dimensions and conditionedness:
+#                       L^this  condition^this
+# xx, xx0, dhsamp, samp      1      0
+# condition                  0      1
+# H                         -2      0
+# Hcond, Hcond_, Hcond__    -2     -2
+# eig[0]                    -2     -2
+# eig[1], t, s1              0      0
+# sd, u, s0                  1      1
 def getcondsamples(place,xx0,dhsamp):
   N=bmN+4
   H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
@@ -724,7 +733,7 @@ def getcondsamples(place,xx0,dhsamp):
   Hcond__=np.delete(np.delete(Hcond,2,0),2,1)# N-1 x N-1
   Hcond_=np.delete(Hcond[2],2,0)# N-1
   eig=np.linalg.eigh(Hcond__)
-  # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond__),eig[1])) ~= eig[0]
+  # np.matmul(np.matmul(np.transpose(eig[1]),Hcond__),eig[1]) ~= np.diag(eig[0])
   m=eig[0].min()
   if m<=0: print("Hessian not +ve definite in getcondsamples so can't do full confidence calculation");return None
   if m<1e-6: print("Warning: Hessian has a very low eigenvalue in getcondsamples:",m)
@@ -736,8 +745,7 @@ def getcondsamples(place,xx0,dhsamp):
   s1=np.insert(-np.linalg.solve(Hcond__,Hcond_),2,1,0)# N
   samp=s0/condition+dhsamp[:,None]*s1# nsamp x N
   SSS=np.zeros([nsamp,2,ndays])
-  # This is the slow bit. For the purposes of calculating AA[-2:] and BB[-2:] could do something much faster, but it would be
-  # annoyingly specialised and mean that you can't change NLL() without making a corresponding alteration here.
+  # This is the slow bit.
   for i in range(nsamp):
     xx=xx0+samp[i]
     AA,BB,GG=expand(xx)
@@ -781,14 +789,15 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   print("Rmed     = R mode confidence interval")
   print("Rmax     = R max confidence interval")
   print()
-  nsamp=len(samples)
+  # samples[ sample number, 0 or 1 for alpha/delta, day ] = cases
+  nsamp=samples.shape[0]
   nmin=int((1-conf)/2*nsamp)
   nmed=nsamp//2
   nmax=int((1+conf)/2*nsamp)
-  sa=np.sort(samples,axis=0)
+  sa=np.sort(samples,axis=0)# For each variant, day, put samples in order of cases
   sr0=(samples[:,:,1:]/samples[:,:,:-1])**mgt# sr, sr0 = R-numbers: R(V1), R(V2)
-  sr=np.sort(sr0,axis=0)#               
-  tr=np.sort(sr0[:,1,:]/sr0[:,0,:],axis=0)# tr = R(V2)/R(V1)
+  sr=np.sort(sr0,axis=0)# For each variant, day, put samples in order of scaled change from one day to next (R-number)
+  tr=np.sort(sr0[:,1,:]/sr0[:,0,:],axis=0)# For each day, d, put samples in order of R(Delta,d)/R(Alpha,d)
   QQ=sr[:,0,-1]
   RR=sr[:,1,-1]
   TT=list(tr[:,-1])
