@@ -1,7 +1,7 @@
 # py bestfit.py < alphadelta
 # Fits cols 3, 4 (Alpha, Delta) using
 # log(Delta/Alpha) ~= a + b*day
-# Square errors are weighted by 1/(1/a+1/b).
+# Square errors are weighted by 1/(1/Alpha+1/Delta).
 
 from stuff import *
 import numpy as np
