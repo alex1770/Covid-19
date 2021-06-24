@@ -6,8 +6,7 @@ lad2reg=read.csv('Local_Authority_District_to_Region__December_2019__Lookup_in_E
 sanger=read.csv('lineages_by_ltla_and_week.tsv',sep='\t')
 
 a=merge(sanger, lad2reg, by.x="LTLA", by.y="LAD19CD")# Could also use dplyr::left_join. See https://stackoverflow.com/questions/21888910/how-to-specify-names-of-columns-for-x-and-y-when-joining-in-dplyr
-b=a %>% filter(WeekEndDate>="2021-04-01") %>% filter(Lineage=="B.1.1.7" | Lineage=="B.1.617.2")
-# Using || instead of | in the above wouldn't work, perhaps because || does something odd with vectors. See: x=c(1:10);x>8||x<5;x>8|x<5. https://stackoverflow.com/a/22251971/7881139
+b=a %>% filter(as.Date(WeekEndDate)>="2021-04-01") %>% filter(Lineage=="B.1.1.7" | Lineage=="B.1.617.2")
 d=aggregate(b$Count, by=list(Variant=b$Lineage, Date=ymd(b$WeekEndDate), Region=b$RGN19NM), FUN=sum)
 e=spread(d,Variant,x)
 names(e)[names(e) == "B.1.1.7"] <- "Alpha"
