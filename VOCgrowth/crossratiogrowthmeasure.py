@@ -143,10 +143,10 @@ for region in regions:
     print("%6.0f%% ( %6.0f%% - %6.0f%% )"%((med-1)*100,(low-1)*100,(high-1)*100))
   for i in range(len(dates)-1):
     A,B=dat[dates[i]][VV[0]],dat[dates[i]][VV[1]]
-    if A>0 and B>0: break
+    if A>=100 and B>=100: break
   C,D=dat[dates[-1]][VV[0]],dat[dates[-1]][VV[1]]
   if A>0 and B>0 and C>0 and D>0:
-    print("First-Last"," "*13,end=' ')
+    print("First(>=100)-Last       ",end=' ')
     (low,med,high)=[x**(mgt/(7*(len(dates)-i-1))) for x in confint(A,B,C,D)]
-    print("%6.0f%% ( %6.0f%% - %6.0f%% )"%((med-1)*100,(low-1)*100,(high-1)*100))
+    print("%6.0f%% ( %6.0f%% - %6.0f%% )"%((med-1)*100,(low-1)*100,(high-1)*100),region)
   print()
