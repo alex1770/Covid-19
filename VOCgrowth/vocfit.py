@@ -789,13 +789,14 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   print("Rmed     = R mode confidence interval")
   print("Rmax     = R max confidence interval")
   print()
+  ave=1# Number of days over which to average to get growth rate estimates
   # samples[ sample number, 0 or 1 for alpha/delta, day ] = cases
   nsamp=samples.shape[0]
   nmin=int((1-conf)/2*nsamp)
   nmed=nsamp//2
   nmax=int((1+conf)/2*nsamp)
   sa=np.sort(samples,axis=0)# For each variant, day, put samples in order of cases
-  sr0=(samples[:,:,1:]/samples[:,:,:-1])**mgt# sr, sr0 = R-numbers: R(V1), R(V2)
+  sr0=(samples[:,:,ave:]/samples[:,:,:-ave])**(mgt/ave)# sr, sr0 = R-numbers: R(V1), R(V2)
   sr=np.sort(sr0,axis=0)# For each variant, day, put samples in order of scaled change from one day to next (R-number)
   tr=np.sort(sr0[:,1,:]/sr0[:,0,:],axis=0)# For each day, d, put samples in order of R(Delta,d)/R(Alpha,d)
   QQ=sr[:,0,-1]
@@ -821,13 +822,13 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     else:
       mprint("           -         -         -         - ",end='')
     #mprint(" %12g %12g"%(asc*(sa[nmed][0][i]-AA[i]),asc*(sa[nmed][1][i]-BB[i])),end='')
-    if i<ndays-1:
-      Q,R=((AA[i+1]/AA[i])**mgt,(BB[i+1]/BB[i])**mgt)
+    if i<ndays-ave:
+      Q,R=((AA[i+ave]/AA[i])**(mgt/ave),(BB[i+ave]/BB[i])**(mgt/ave))
       mprint("   %7.4f %7.4f"%(Q,R),end='')
     else:
       mprint("         -       -",end='')
     mprint(" %9.2f %9.2f %9.2f %9.2f %9.2f %9.2f"%(asc*sa[nmin,0,i],asc*sa[nmed,0,i],asc*sa[nmax,0,i],asc*sa[nmin,1,i],asc*sa[nmed,1,i],asc*sa[nmax,1,i]),end='')
-    if i<ndays-1:
+    if i<ndays-ave:
       mprint(" %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f"%(sr[nmin,0,i],sr[nmed,0,i],sr[nmax,0,i],sr[nmin,1,i],sr[nmed,1,i],sr[nmax,1,i]))
     else:
       mprint("       -       -       -       -       -       -")
@@ -857,7 +858,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     write('set timefmt "%Y-%m-%d"')
     write('set format x "%Y-%m-%d"')
     write('set xtics nomirror rotate by 45 right offset 0.5,0')
-    write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-2),EQ,ER,ETA))
+    write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-ave-1),EQ,ER,ETA))
     
     graphfnR=sanitise(args.graph_filename+'_'+area+'_R.png')
     write('set output "%s"'%graphfnR)
