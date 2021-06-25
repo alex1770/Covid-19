@@ -1,0 +1,11 @@
+set terminal pngcairo font "sans,13" size 1920,1280
+set output "growthrateCOG-UK.png"
+set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5
+set xdata time
+fmt="%Y-%m-%d"
+set timefmt fmt
+set format x fmt
+set xtics nomirror rotate by 45 right offset 0.5,0
+set ylabel "log ( number of Delta on given day / number of Alpha on given day )"
+set title "Progression of Delta compared with Alpha in the UK.\n Line corresponds to 73% relative growth of Delta over Alpha every 5 days (approx 73% advantage of R_t(Delta) compared with R_t(Alpha)).\n Source: COG-UK, 24 June 2021."
+plot "alphadelta" u 1:2 lw 3 lc 2 title "", (x-strptime(fmt,"2021-05-16"))/86400*.1106 lw 3 lc 6 title "Best fit line: gradient 0.111/day; zero on 2021-05-16"
