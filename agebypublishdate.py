@@ -1,12 +1,8 @@
 import time,calendar,os,json,sys,datetime
+from stuff import *
 
-def datetoday(x):
-  t=time.strptime(x+'UTC','%Y-%m-%d%Z')
-  return calendar.timegm(t)//86400
-
-def daytodate(r):
-  t=time.gmtime(r*86400)
-  return time.strftime('%Y-%m-%d',t)
+# Go back this number of days
+nprev=20
 
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
@@ -17,7 +13,7 @@ def parseage(x):
 
 now=max(os.listdir('apidata'))
 casedata=[]
-for day in range(datetoday(now)-20,datetoday(now)+1):
+for day in range(datetoday(now)-nprev,datetoday(now)+1):
   dt=daytodate(day)
   with open('apidata/'+dt,'r') as fp: td=json.load(fp)
   d={}
