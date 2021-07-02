@@ -77,8 +77,8 @@ args=parser.parse_args()
 # r_j ~ BetaBinomial(r_j+s_j, A_{I_j}nif2/(1-nif2), B_{I_j}nif2/(1-nif2))  (A_{I_j} means sum_{i in I_j}A_i)
 # g_0 ~ N(g_{-1},v_{-1})
 # X_n ~ N(0,1)
-# N=ndays-1
-# g_i = g_0 + bmscale*sqrt(N)*(i/N*X_0 + sqrt(2)/pi*sum_n e^{-(n*bmsig/N)^2/2}sin(n*pi*i/N)*X_n/n)
+# L=ndays+2*bmsig
+# g_i = g_0 + bmscale*sqrt(L)*(i/L*X_0 + sqrt(2)/pi*sum_n e^{-(n*bmsig/L)^2/2}sin(n*pi*i/L)*X_n/n)
 # h ~ N(0,tau^2)
 #
 ### End Model ###
@@ -512,13 +512,13 @@ print("Estimating competitive advantage using variant counts together with case 
 print("===============================================================================")
 print()
 
-# L=ndays-1
+# L=ndays+2*bmsig
 # i is time from start, in days
 # t=i/L
 # growth[i] = bmscale*sqrt(L)*(t*X_0 + sum_{n=1}^{N-1} sqrt(2)/pi*exp(-(n*bmsig/L)^2/2)*sin(n*pi*t)/n*X_n)
 # where X_n ~ N(0,1),  n=0,...,N; N=ceil(4*L/bmsig), say
 
-bmL=ndays+bmsig*2# Add on bmsig*2 to eliminate periodicity effects
+bmL=ndays+int(bmsig*2+0.999)# Add on bmsig*2 to eliminate periodicity effects
 bmN=int(2.5*bmL/bmsig+1)
 bmsin=[sin(r*pi/bmL) for r in range(2*bmL)]
 bmweight=[0]+[sqrt(2)/pi*exp(-(n*bmsig/bmL)**2/2)/n for n in range(1,bmN)]
