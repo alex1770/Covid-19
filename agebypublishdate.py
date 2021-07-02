@@ -24,17 +24,46 @@ for day in range(datetoday(now)-nprev,datetoday(now)+1):
 
 ages=sorted(list(casedata[-1]))
 
-for ph in [0,1]:
-  print("     Age:",end='')
-  for a in ages: print("%3d  "%a[0],end=' ')
-  print()
-  n=len(casedata)
-  for i in range(1,n):
-    print(daytodate(datetoday(now)+i-n+1),end=' ')
-    t=sum(casedata[i].values())-sum(casedata[i-1].values())
-    if ph==0: q=1
-    else: q=t/1000
-    for a in ages:
-      print("%5d"%((casedata[i][a]-casedata[i-1][a])/q+.5),end=' ')
-    print("= %d"%(t/q+.5))
-  print()
+newcases=[]
+dates=[]
+n=len(casedata)
+for i in range(1,n):
+  dates.append(daytodate(datetoday(now)+i-n+1))
+  newcases.append({})
+  for a in ages:
+    newcases[-1][a]=casedata[i][a]-casedata[i-1][a]
+
+agestr="     Age:"+'   '.join("%3d"%a[0] for a in ages)
+
+print(agestr)
+for i in range(n-1):
+  print(dates[i],end=' ')
+  t=sum(newcases[i].values())
+  for a in ages:
+    print("%5d"%(newcases[i][a]+.5),end=' ')
+  print("= %d"%(t+.5))
+print()
+
+print(agestr)
+for i in range(n-1):
+  print(dates[i],end=' ')
+  t=sum(newcases[i].values())
+  for a in ages:
+    print("%5d"%(newcases[i][a]/t*1000+.5),end=' ')
+  print("= 1000")
+print()
+
+print(agestr)
+ave=3
+for i in range(7+ave-1,n-1):
+  print(dates[i],end=' ')
+  for a in ages:
+    A,B=sum(newcases[i-j][a] for j in range(ave)),sum(newcases[i-7-j][a] for j in range(ave))
+    tA,tB=sum(sum(newcases[i-j].values()) for j in range(ave)),sum(sum(newcases[i-7-j].values()) for j in range(ave))
+    if B>0:
+      print("%5.2f"%(A/B),end=' ')
+    else:
+      print(" ????",end=' ')
+  print(": %5.2f"%(tA/tB))
+print(agestr)
+print()
