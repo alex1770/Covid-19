@@ -68,12 +68,6 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
-# Convert (eg) (15,20) to "15 - 19"
-def unparse(r):
-  (a,b)=r
-  if b==150: return "%d+"%a
-  return "%d - %d"%(a,b)
-
 # Convert dictionary from using '15_19' (etc) format to (15,20) format
 # At the same time remove age brackets such as '60+' and '00_59' that strictly contain other age brackets, so avoiding overcounting
 # Return list of ages
@@ -210,7 +204,7 @@ print()
 
 print()
 print("Cases -> Hospitalisations using National flu and COVID-19 surveillance report figures")
-h2=loadcsv("hosps_week25.csv")
+h2=loadcsv("hosps_byage.csv")
 conv={}
 for k in h2.keys():
   try:
