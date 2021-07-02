@@ -2,7 +2,7 @@ import time,calendar,os,json,sys,datetime
 from stuff import *
 
 # Go back this number of days
-nprev=20
+nprev=50
 
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
