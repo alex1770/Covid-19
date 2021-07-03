@@ -252,54 +252,50 @@ for i in range(n):
     h[conv[k]]=int(h2[k][i]*p[conv[k]]/1e5+.5)
   hosps2.append(h)
     
-for h in hosps2:
-  for a in ages:
-    h[a]=sum(h[x] for x in hospages2 if x[0]>=a[0] and x[1]<=a[1])
-
 def inc(date): return daytodate(datetoday(date)+1)
-    
+
+import gam
+
 # Dates of hosps2[-i] are those of cases[-i*7+offset+{0,...,6}] (and corresponds to precases[-i])
 offset=datetoday(hosps2[-1]['date'])-datetoday(cases[-1]['date'])
 precases=[{} for i in range(len(hosps2))]
 ave=7 # perforce, since this hosp data is grouped in weeks
 minlag=1
 maxlag=8
-back=180
+back=60
 for n in range(-back//7-2,0):
-  for a in ages:
+  for a in caseages:
     t=0
     for i in range(-maxlag,-minlag):
       for j in range(7):
         t+=cases[n*7+offset+j+i][a]
     precases[n][a]=t/(maxlag-minlag)
 
+topage=95
+hsl={}
+csl={}
 n0=-6
 for n in range(-back//7,0):
+  h={a:n for (a,n) in hosps2[n].items() if a!='date'}
+  hs=gam.smooth(topage,h)[0]
+  cs=gam.smooth(topage,precases[n])[0]
+  hsl[n]=hs
+  csl[n]=cs
   print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
-  for a in ages:
-    h=hosps2[n][a]
-    print(" %6d"%h,end='')
+  for i in range(0,topage,2): print(" %6.1f"%hs[i],end='')
   print()
   print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
-  for a in ages:
-    p=precases[n][a]
-    print(" %6d"%p,end='')
+  for i in range(0,topage,2): print(" %6.0f"%cs[i],end='')
   print()
   print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
-  for a in ages:
-    h=hosps2[n][a]
-    p=precases[n][a]
-    print(" %6.2f"%(h/p*100),end='')
+  for i in range(0,topage,2): print(" %6.1f"%(hs[i]/cs[i]*100),end='')
   print()
   if n>=n0:
     print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
-    for a in ages:
-      h=hosps2[n][a]
-      p=precases[n][a]
-      print(" %6.2f"%(h/p/(hosps2[n0][a]/precases[n0][a])),end='')
+    for i in range(0,topage,2): print(" %6.2f"%(hs[i]/cs[i]/(hsl[n0][i]/csl[n0][i])),end='')
     print()
   print()
 print("                       ",end='')
-for a in ages: print(" %6s"%("%d-%d"%a),end='')
+for a in range(0,topage,2): print(" %6d"%a,end='')
 print()
 

@@ -2,7 +2,9 @@ from stuff import *
 from scipy.optimize import minimize
 from scipy.special import gammaln
 import numpy as np
+import sys
 from math import log,exp,sqrt,sin,pi
+from random import random
 
 #np.set_printoptions(precision=3,linewidth=120)
 
@@ -52,9 +54,12 @@ def NLL(xx,const=False):
     tot+=max((-mu+n*log(nif*mu))*nif,-10000)
     if const: tot+=log(nif)-gammaln(nif*n+1)# Approx normalisation
   
-  for i in range(bmN):
-    tot+=-xx[i]**2/2
-  if const: tot-=bmN*log(2*pi)/2
+  for i in range(2+bmN):
+    if i==0: var=100
+    elif i==1: var=100
+    else: var=1
+    tot+=-xx[i]**2/(2*var)
+    if const: tot-=log(2*pi*var)/2
 
   return -tot
 
@@ -66,7 +71,7 @@ def f(x):
   if x<100: return exp(x)
   else: return 1e30
   
-def smooth(nsteps0,constr0,bmsig=13,nif0=1):
+def smooth(nsteps0,constr0,bmsig=13,nif0=.1):
   global nsteps,constr,bmL,bmN,bmsin,bmweight,bmsin2,nif
   nsteps=nsteps0
   constr=constr0
@@ -79,11 +84,18 @@ def smooth(nsteps0,constr0,bmsig=13,nif0=1):
   
   # 2+bmN parameters to be optimised: A, B, X_0, ..., X_{bmN-1}
   
-  xx=[1,1]+[0]*bmN
-  res=minimize(NLL,xx,method="SLSQP",bounds=[(0,20),(0,10)]+[(-3,3)]*bmN,options={"maxiter":10000,"eps":1e-4})
-  if not res.success: raise RuntimeError(res.message)
-  return expand(res.x),NLL(res.x,const=True)
-
+  xx=[0,0]+[(random()-.5)*.1 for i in range(bmN)]
+  best=(-1e30,)
+  for it in range(3):
+    res=minimize(NLL,xx,method="SLSQP",bounds=[(-20,20),(0,10)]+[(-3,3)]*bmN,options={"maxiter":1000,"eps":1e-4})
+    LL=-NLL(res.x,const=True)
+    if LL>best[0]: best=(LL,res.x)
+    xx=res.x+[(random()-.5)*.1 for i in range(bmN+2)]
+    xx[1]=abs(xx[1])
+  #if not res.success: raise RuntimeError(res.message)
+  if not res.success: print("Warning:",res.message,file=sys.stderr)
+  return expand(best[1]),best[0]
+    
 if __name__=='__main__':
   testnsteps=95
   testconstr={
@@ -107,12 +119,14 @@ if __name__=='__main__':
     (85,90): 36,
     (90,95): 10,
   }
+  testconstr={(0, 5): 0, (5, 10): 0, (10, 15): 0, (15, 20): 0, (20, 25): 0, (25, 30): 1, (30, 35): 2, (35, 40): 2, (40, 45): 2, (45, 50): 2, (50, 55): 2, (55, 60): 4, (60, 65): 10, (65, 70): 5, (70, 75): 6, (75, 80): 9, (80, 85): 7, (85, 90): 18, (90, 150): 15}
+
   yy,LL=smooth(testnsteps,testconstr)
 
   with open('tempgr','w') as fp:
     for (i,y) in enumerate(yy): print(i,y,file=fp)
   print(LL)
-  print([int(y+.5) for y in yy])
+  print(', '.join("%.2f"%y for y in yy))
   for (a,b) in constr:
     mu=yy[a:b].sum()
     n=testconstr[(a,b)]
