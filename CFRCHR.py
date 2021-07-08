@@ -197,10 +197,10 @@ print("                       ",end='')
 for a in ages: print(" %6s"%("%d-%d"%a),end='')
 print()
 
-#############################################################################################################
-# Cases -> Hospitalisations using dashboard hosp figures from National flu and COVID-19 surveillance report #
-# https://www.gov.uk/government/statistics/national-flu-and-covid-19-surveillance-reports                   #
-#############################################################################################################
+#################################################################################################################################
+# Cases -> Hospitalisations using hosp figures from National flu and COVID-19 surveillance report (Fig.40 SARIWatch-hospagegrp) #
+# https://www.gov.uk/government/statistics/national-flu-and-covid-19-surveillance-reports                                       #
+#################################################################################################################################
 
 print()
 print("Cases -> Hospitalisations using National flu and COVID-19 surveillance report figures")
