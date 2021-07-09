@@ -63,10 +63,10 @@ for i in range(n):
   for j in range(9):
     newcases[i][(10*j,10*j+10)]=newcases[i][(10*j,10*j+5)]+newcases[i][(10*j+5,10*j+10)]
     newcases[i][(90,100)]=newcases[i][(90,150)]
-agestr="       "
+agestr="      "
 for a in ages:
-  agestr+="  %4d"%a[0]
-agestr+="  %4d"%ages[-1][1]
+  agestr+="   %4d"%a[0]
+agestr+="   %4d"%ages[-1][1]
 
 mgt=5
 
@@ -77,12 +77,14 @@ gap=7
 print(agestr)
 for i in range(gap+ave-1,n):
   print(daytodate(minday+i),end='  ')
+  TA=TB=0
   for a in ages:
-    A=sum(newcases[i-gap-j][a] for j in range(ave))
-    B=sum(newcases[i-j][a] for j in range(ave))
-    if A>=10: print(" %5.2f"%((B/A)**(mgt/gap)),end='')
+    A=sum(newcases[i-gap-j][a] for j in range(ave));TA+=A
+    B=sum(newcases[i-j][a] for j in range(ave));TB+=B
+    if A>=10: print(" %6.2f"%((B/A)**(mgt/gap)),end='')
     else: print(" -----",end='')
-  print()
+  if TA>=10: print('  : %6.2f'%((TB/TA)**(mgt/gap)))
+  else: print()
 print(agestr)
 print()
 
@@ -95,28 +97,28 @@ for i in range(ave-1,n):
   for a in ages:
     B=sum(newcases[i-j][a] for j in range(ave))
     T+=B
-    print(" %5.0f"%(B/ave),end='')
-  print("   : %6.0f"%(T/ave))
+    print(" %6.0f"%(B/ave),end='')
+  print("   : %7.0f"%(T/ave))
   if daytodate(minday+i)>="2021-05-01" and T>Tmax: Tmax=T;imax=i
 print(agestr)
 print()
 
-print("Cumulative cases since peak Delta day")
+print("Cumulative cases since peak Delta day (%s)"%(daytodate(minday+imax)))
 print(agestr)
 tot={a:0 for a in ages}
 for i in range(imax,n):
   print(daytodate(minday+i),end=' ')
   for a in ages:
     tot[a]+=newcases[i][a]
-    print(" %5d"%tot[a],end='')
-  print("   : %6d"%(sum(tot.values())))
+    print(" %6d"%tot[a],end='')
+  print("   : %7d"%(sum(tot.values())))
 print(agestr)
 tot=0
 print(daytodate(minday+n-1),end=' ')
 for a in ages:
   t=sum(newcases[i][a] for i in range(n))
-  print(" %5d"%t,end='')
+  print(" %6d"%t,end='')
   tot+=t
-print("   : %6d (cumulative cases over whole pandemic)"%tot)
+print("   : %7d (cumulative cases over whole pandemic)"%tot)
 print(agestr)
 print()
