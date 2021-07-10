@@ -12,26 +12,34 @@ from datetime import datetime
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=vaccinationsAgeDemographics&format=csv' -O vaccinedata.csv
 # Sanger data from https://covid-surveillance-data.cog.sanger.ac.uk/download/lineages_by_ltla_and_week.tsv
 
-# NCU:
-# COG-UK data from https://cog-uk.s3.climb.ac.uk/phylogenetics/latest/cog_metadata.csv
-# SGTF   data from Fig.16 Tech Briefing 12: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/988608/Variants_of_Concern_Technical_Briefing_12_Data_England.xlsx
-
 # Case age bands (all English LTLAs): 0-5, 5-10, ..., 85-90, 90+ (18 5-year bands and 90+)
 # Vax and NIMS-population age bands for English LTLAs: 18-25, 25-30, 30-35, ..., 85-90, 90+ (18-25, 13 5-year bands, 90+)
 # Standardise on these age bands: 0-5, 5-10, 10-15, 15-18, 18-25, 25-30, ..., 85-90, 90+
 # by (i) zero-extending NIMS data, and
 #    (ii) using simple interpolation to convert case data from 15-20, 20-25 to 15-18, 18-25
-# These bands are hard-coded, perforce, including the assumption that there are equal number of case age bands and unified age bands (19)
-num2caseage=['%02d_%02d'%(i,i+4) for i in range(0,90,5)]+['90+']
-caseage2num=dict((a,i) for (i,a) in enumerate(num2caseage))
-caseage2num['00_59']=None
-caseage2num['60+']=None
-caseage2num['unassigned']=None
+# These bands are hard-coded, perforce, including the assumption that there are equal number of case age bands and unified age bands (17)
 
-# Unified age bands; serves for decoding vax data too.
-num2age=['00_05','05_10','10_15','15_18','18_24']+['%02d_%02d'%(i,i+4) for i in range(25,90,5)]+['90+']
-age2num=dict((a,i) for (i,a) in enumerate(num2age))
+# Unified age bands:
+num2age=['00_04','05_09','10_14','15_17','18_24']+['%02d_%02d'%(i,i+4) for i in range(25,80,5)]+['80+']
 numage=len(num2age)
+# Basic agestring -> ageband
+age2num={a:i for (i,a) in enumerate(num2age)}
+# Add decodes for vax ages
+for (a,age) in enumerate(num2age):
+  if '_' in age: age2num[age.replace('_','-')]=a
+# Flag unwanted age bands
+age2num['00_59']=None
+age2num['60+']=None
+age2num['unassigned']=None
+# Fuse case 80-84, 85-89, 90+ into 80+
+age2num['80_84']=numage-1
+age2num['85_89']=numage-1
+age2num['90+']=numage-1
+# Temporarily assign NIMS/ONS population U18s to band 0
+age2num['Under 18']=0
+# Temporarily assign case 15_19 and 20_24 to 15_17 and 18_24 respectively
+age2num['15_19']=age2num['15_17']
+age2num['20_24']=age2num['18_24']
 
 # Aim for numpy arrays:
 # ltlapop[ltla][age]
@@ -48,18 +56,23 @@ ltla2region=dict(zip(ltlaengdata['LAD21CD'],ltlaengdata['RGN21NM']))
 ltla2name=dict(zip(ltlaengdata['LAD21CD'],map(sanitise,ltlaengdata['LAD21NM'])))
 
 # 1. Sanger uses LAD19 except E06000053 (Isles of Scilly) isn't present. I assume it's fused into E06000052 (Cornwall).
-# 2. Dashboard/api use LAD19 except that E09000001 (City of London) has been fused into E09000012 (Hackney).
-#    and E06000053 (Isles of Scilly) is fused into E06000052 (Cornwall).
-# 3. NIMS (population and vaccine data) prior to July 2021 uses LAD20 (cf LAD19: E0700000[4567] fused into E06000060).
-# 4. NIMS (population and vaccine data) from July 2021 uses LAD21 (cf LAD20: E0700015[0236] fused into E06000061, E0700015[145] fused into E06000062).
-# Easier to fuse than to split, so standardise on LAD21 with E09000001 fused into E09000012 and E06000053 fused into E06000052.
+# 2. Dashboard/api (including NIMS/population/vax data) uses LAD19 except that E09000001 (City of London) has been fused into E09000012 (Hackney).
+#    and E06000053 (Isles of Scilly) is fused into E06000052 (Cornwall). Call this LAD19+.
+# 3. NIMS from NHS page, prior to July 2021 uses LAD20 (cf LAD19: E0700000[4567] fused into E06000060).
+# 4. NIMS from NHS page, from July 2021 uses LAD21 (cf LAD20: E0700015[0236] fused into E06000061, E0700015[145] fused into E06000062).
+# Could almost work solely from dashboard (incl populations), in which case could standardise on LAD19+, but then wouldn't have under 18 population, and perhaps more importantly
+# we wouldn't have the option to use ONS populations. So let's standardise on LAD21+ (=LAD21 with E09000001 fused into E09000012 and E06000053 fused into E06000052),
+# and get the populations (either NIMS or ONS) from the NHS page. Those only go up to age 80+, so let's also fuse age groups 80-84, 85-90, 90+ into 80+.
 fuseltla=dict(zip(ltlaengdata['LAD21CD'],ltlaengdata['LAD21CD']))
+# api/dashboard quirks (call this LAD19+)
+fuseltla['E09000001']='E09000012'
+fuseltla['E06000053']='E06000052'
+# fusings to use LAD20+
 fuseltla['E07000004']='E06000060'
 fuseltla['E07000005']='E06000060'
 fuseltla['E07000006']='E06000060'
 fuseltla['E07000007']='E06000060'
-fuseltla['E09000001']='E09000012'
-fuseltla['E06000053']='E06000052'
+# fusings to use LAD21+
 fuseltla['E07000150']='E06000061'
 fuseltla['E07000152']='E06000061'
 fuseltla['E07000153']='E06000061'
@@ -69,7 +82,7 @@ fuseltla['E07000154']='E06000062'
 fuseltla['E07000155']='E06000062'
 # Convert standardised (fused) ltlas to and from numbers:
 num2ltla=sorted(list(set(fuseltla.values())))
-ltla2num=dict((ltla,i) for (i,ltla) in enumerate(num2ltla))
+ltla2num={ltla:i for (i,ltla) in enumerate(num2ltla)}
 numltla=len(num2ltla)
 s=set(ltlaengdata['LAD21CD']);assert all(x in s for x in fuseltla.values())
 
@@ -179,17 +192,17 @@ for x in sorted(list(opts)): print("%s:"%x,opts[x])
 print()
 sys.stdout.flush()
 
-okplaces=set(ltla for ltla in fuseltla.values() if includeltla(ltla,ltlaset) and not ltla in ltlaexclude)
+okplaces=set(ltla for ltla in num2ltla if includeltla(ltla,ltlaset) and not ltla in ltlaexclude)
 places=sorted(list(okplaces))
-
 npl=len(places)
 # ltla2num={ltla:i for (i,ltla) in enumerate(places)}
 
 regions=sorted(list(set(ltla2region.values())))
 nreg=len(regions)
 reg2num={reg:i for (i,reg) in enumerate(regions)}
-ltla2regnum=np.array([reg2num[ltla2region[ltla]] for ltla in places])
+ltla2regnum=np.array([reg2num[ltla2region[ltla]] for ltla in num2ltla])
 
+# Get VOC data
 if source=="Sanger":
   fullsource="Wellcome Sanger Institute"
   assert voclen==7
@@ -216,40 +229,27 @@ else: raise RuntimeError("Unrecognised source: "+source)
 
 tvocnum=rvocnum.sum(axis=1)
 
-# Alter
+# Get population data
 ltlapopdata=loadcsv("LTLA-NIMS-populations.LAD21.18+.csv")
-ltlapop=np.zeros([numltla,numage],dtype=int)
-regionpop=np.zeros(nreg,dtype=int)
-for (lad21,n1,n2) in zip(ltlapopdata['LTLA Code'],ltlapopdata['Under 16'],ltlapopdata['16+']):
-  ltla=fuseltla[lad21]
-  if ltla not in okplaces: continue
-  i=ltla2num[ltla]
-  ltlapop[i]+=n1+n2
-  r=ltla2regnum[i]
-  regionpop[r]+=n1+n2
+ltlapop=np.zeros([numltla,numage])
+regionpop=np.zeros([nreg,numage])
+n=len(ltlapopdata['LTLA Code'])
+for age in ltlapopdata:
+  a=age2num.get(age)
+  if a!=None:
+    for (lad21,nump) in zip(ltlapopdata['LTLA Code'],ltlapopdata[age]):
+      i=ltla2num[fuseltla[lad21]]
+      ltlapop[i,a]+=nump
+# Estimate bands 0-5, 5-10, 10-15, 15-18 by assuming each year has an equal number
+t=np.copy(ltlapop[:,0])
+ltlapop[:,0]=5*t/18
+ltlapop[:,1]=5*t/18
+ltlapop[:,2]=5*t/18
+ltlapop[:,3]=3*t/18
+for i in range(numltla):
+  regionpop[ltla2regnum[i],:]+=ltlapop[i,:]
 rpopratio=np.array([ltlapop[i]/regionpop[ltla2regnum[i]] for i in range(numltla)])
-tpopratio=ltlapop/ltlapop.sum()
-
-# Input is of the form "5_9", "25_29", "60+" etc
-def parseage_api(age):
-  if '_' in age: x=age.split('_');return int(x[0]),int(x[1])+1
-  if age[-1]=='+': return int(age[:-1]),150
-  if age=='unassigned': return 0,150
-  else: raise RuntimeError("Unrecognised age band: "+age)
-
-# Input is of the form: D*.0-50, D*.50-55, ..., D1.0-30, D1.30-35, D1.35-40, D1.40-45, ..., D2.40-45, D2.45-50, ...
-def parseage_nimsvax(age):
-  if age[:1]!='D': return None,None
-  f=age.find('.')
-  g=age.find('-',f+1)
-  return (age[:f],(int(age[f+1:g]),int(age[g+1:])))
-
-# Under 16,16-29,30-34,35-39,40-44,45-49,50-54,55-59,60-64,65-69,70-74,75-79,80+,16+
-def parseage_nimspop(age):
-  if '-' in age: x=age.split('-');return int(x[0]),int(x[1])+1
-  if age[:5]=='Under': return 0,int(age[6:])
-  if age[-1]=='+': return int(age[:-1]),150
-  return None
+tpopratio=ltlapop/ltlapop.sum(axis=0)
 
 # Get case data into caseages[daynum,ltlanum,agebandnum]
 # The saved (pickled) format of case ages uses standardised (fused) ltlas, and standardised age bands
@@ -267,46 +267,47 @@ if not ok:
   caseday0=datetoday(min(la['date']))
   caseday1=datetoday(max(la['date']))
   n=caseday1-caseday0+1
-  caseages=np.zeros([n,numltla,len(num2caseage)])
+  caseages=np.zeros([n,numltla,numage])
   for lad19,date,age,cases in zip(la['areaCode'],la['date'],la['age'],la['cases']):
-    a=caseage2num[age]
+    a=age2num[age]
     if a!=None:
       ltla=fuseltla[lad19]
-      caseages[datetoday(date)-caseday0,ltla2num[ltla],caseage2num[age]]=cases
+      caseages[datetoday(date)-caseday0,ltla2num[ltla],a]+=cases
   t=caseages[:,:,3]+caseages[:,:,4]# (15-20) + (20-25)
   caseages[:,:,3]=3/10*t# Estimate of 15-18
   caseages[:,:,4]=7/10*t# Estimate of 18-25
   with open(fn,'wb') as fp:
     pickle.dump((caseages,caseday0),fp)
 
+# Get vax data into vax[,,,]
 # The saved (pickled) format of case ages uses standardised (fused) ltlas, and standardised age bands
 fn=os.path.join(indir,'vax_age_cases.pickle')
 ok=0
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
-    vaxages,vaxday0=pickle.load(fp)
-  ndays,nltlas,nages=vaxages.shape
+    vax,vaxday0=pickle.load(fp)
+  ndoses,ndays,nvaxltlas,nvaxages=vax.shape
+  assert nvaxages==nages and nvaxltlas==nltlas
   if vaxday0+ndays>=apiday-missingvaxdays: ok=1
 if not ok:
   print("Loading vax-age data from api")
-  #la=loadcsv_it(api_v2('areaType=ltla&metric=vaccinationsAgeDemographics&format=csv').text.split('\n'))
-  la=loadcsv("vaxdata.csv")
+  la=loadcsv_it(api_v2('areaType=ltla&metric=vaccinationsAgeDemographics&format=csv').text.split('\n'))
+  #la=loadcsv("vaccinedata.csv")
   print("Processing vax-age data")
   vaxday0=datetoday(min(la['date']))
   vaxday1=datetoday(max(la['date']))
   n=vaxday1-vaxday0+1
-  vax1=np.zeros([n,numltla,numage])
-  vax2=np.zeros([n,numltla,numage])
+  vax=np.zeros([2,n,numltla,numage],dtype=int)
   for lad21,date,age,dose1,dose2 in zip(la['areaCode'],la['date'],la['age'],la['cumPeopleVaccinatedFirstDoseByVaccinationDate'],la['cumPeopleVaccinatedSecondDoseByVaccinationDate']):
-    a=age2num[age]
-    if a!=None:
-      ltla=fuseltla[lad21]
-      vaxages[datetoday(date)-vaxday0,ltla2num[ltla],vaxage2num[age]]=vaxs
-  t=vaxages[:,:,3]+vaxages[:,:,4]# (15-20) + (20-25)
-  vaxages[:,:,3]=3/10*t# Estimate of 15-18
-  vaxages[:,:,4]=7/10*t# Estimate of 18-25
+    if lad21 in fuseltla:
+      a=age2num[age]
+      if a!=None:
+        d=datetoday(date)-vaxday0
+        i=ltla2num[fuseltla[lad21]]
+        vax[0,d,i,a]+=dose1
+        vax[1,d,i,a]+=dose2
   with open(fn,'wb') as fp:
-    pickle.dump((vaxages,vaxday0),fp)
+    pickle.dump((vax,vaxday0),fp)
 
 
 abcd
