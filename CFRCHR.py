@@ -153,19 +153,20 @@ print()
 # Cases -> Hospitalisations using dashboard hosp figures #
 ##########################################################
 
+# Interpolate cases to hospages bands, (0,6) (6,18) (18,65) (65,85) (85,150), based on school assumption: I.e., that 0-5, 5-18, 18+ groups are similar
 print("Cases -> Hospitalisations using dashboard hosp figures")
-ages=[(0,65),(65,85),(85,150),(0,150)]
+ages=hospages
 for c in cases:
-  for a in ages:
+  c[(0,6)]=c[(0,5)]+c[(5,10)]/5
+  c[(6,18)]=c[(5,10)]*4/5+c[(10,15)]*8/5
+  c[(18,65)]=c[(20,25)]*2/5+c[(20,25)]+c[(25,30)]+c[(30,35)]+c[(35,40)]+c[(40,45)]+c[(45,50)]+c[(50,55)]+c[(55,60)]+c[(60,65)]
+  for a in [(65,85),(85,150)]:
     c[a]=sum(c[x] for x in caseages if x[0]>=a[0] and x[1]<=a[1])
-for h in hosps:
-  for a in ages:
-    h[a]=sum(h[x] for x in hospages if x[0]>=a[0] and x[1]<=a[1])
     
 offset=datetoday(hosps[-1]['date'])-datetoday(cases[-1]['date'])
 precases=[{} for i in range(len(hosps))]
 ave=7
-minlag=1
+minlag=4
 maxlag=8
 back=180
 for n in range(-back-ave,0):
@@ -176,22 +177,23 @@ for n in range(-back-ave,0):
     precases[n][a]=t/(maxlag-minlag)
 
 for n in range(-back,0):
-  print(hosps[n-(ave-1)]['date'],'-',hosps[n]['date'],end='')
-  for a in ages:
-    h=sum(hosps[n-i][a] for i in range(ave))
-    print(" %6d"%h,end='')
-  print()
-  print(hosps[n-(ave-1)]['date'],'-',hosps[n]['date'],end='')
-  for a in ages:
-    p=sum(precases[n-i][a] for i in range(ave))
-    print(" %6d"%p,end='')
-  print()
+  if 0:
+    print()
+    print(hosps[n-(ave-1)]['date'],'-',hosps[n]['date'],end='')
+    for a in ages:
+      h=sum(hosps[n-i][a] for i in range(ave))
+      print(" %6d"%h,end='')
+    print()
+    print(hosps[n-(ave-1)]['date'],'-',hosps[n]['date'],end='')
+    for a in ages:
+      p=sum(precases[n-i][a] for i in range(ave))
+      print(" %6d"%p,end='')
+    print()
   print(hosps[n-(ave-1)]['date'],'-',hosps[n]['date'],end='')
   for a in ages:
     h=sum(hosps[n-i][a] for i in range(ave))
     p=sum(precases[n-i][a] for i in range(ave))
     print(" %6.2f"%(h/p*100),end='')
-  print()
   print()
 print("                       ",end='')
 for a in ages: print(" %6s"%("%d-%d"%a),end='')
@@ -262,7 +264,7 @@ def inc(date): return daytodate(datetoday(date)+1)
 offset=datetoday(hosps2[-1]['date'])-datetoday(cases[-1]['date'])
 precases=[{} for i in range(len(hosps2))]
 ave=7 # perforce, since this hosp data is grouped in weeks
-minlag=1
+minlag=4
 maxlag=8
 back=180
 for n in range(-back//7-2,0):
