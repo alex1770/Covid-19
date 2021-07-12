@@ -3,11 +3,11 @@ from scipy.stats import gamma as gammadist
 
 # Given al,be, need to specifiy three of g, V, NI, R, R0npi.
 # Decided that the first three of these, g, V, NI, are the most reliable / directly observable, so write the sim function in terms of these.
-# Results essentially only depend on al/be (=mgt), not on al or be separately (i.e., spread in infectivity distribution not actually important).
+# Results essentially only depend on al/be (=mgt), not on al or be separately (i.e., spread in infectivity distribution not actually important given g).
 
 def sim(al=7.886,be=1.633,# parameters for Gamma(al,be) = infectivity distribution
         NI=16e6,# Number infected to date (maybe downrate those infected in first wave due to waning)
-        g=0.0375,
+        g=0.04,
         newconfcases=30e3,car=0.4,# Current new confirmed cases per day, and estimated case ascertainment rate
         N=66.7e6,# Total population (ONS)
         dV=150e3,# Fully-vaccinate this number of people per day (i.e., dV = 1/2 daily dose rate)
@@ -35,7 +35,7 @@ def sim(al=7.886,be=1.633,# parameters for Gamma(al,be) = infectivity distributi
   V=V0# Current number vaccinated
   S=N*(1-veff*V/N)*(1-ieff*NI/N)
   R=(1+g/be)**al
-  R0npi=N*R/S
+  R0npi=N*R/S# R-number with current NPIs, but with no immunity
   I=[newconfcases*exp(g*i) for i in range(2-nid,1)]
   
   TI=0
@@ -54,7 +54,8 @@ def sim(al=7.886,be=1.633,# parameters for Gamma(al,be) = infectivity distributi
   
   return TI
 
-for Vmax in [53e6,57e6]:
-  for g in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]:
-    print("g=%.2f   Vmax=%4.1fm  %4.1fm"%(g,Vmax/1e6,sim(g=g,Vmax=Vmax)/1e6))
+for vhes in [0.05, 0.1, 0.15]:
+  for Vmax in [53e6,57e6]:
+    for g in [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]:
+      print("g=%.2f   Vmax=%4.1fm  vhes=%4.2f   %4.1fm"%(g,Vmax/1e6,vhes,sim(g=g,Vmax=Vmax,vhes=vhes)/1e6))
 
