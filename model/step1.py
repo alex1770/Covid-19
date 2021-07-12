@@ -152,7 +152,7 @@ conf=0.95
 ### End options ###
 
 opts={
-  "Source": source,
+  "VOC source": source,
   "LTLA set": ltlaset,
   "LTLA exclude": list(ltlaexclude),
   "Generation time (days)": mgt,
@@ -171,7 +171,7 @@ if args.load_options!=None:
   with open(args.load_options,'r') as fp: lopts=json.load(fp)
   for x in lopts: opts[x]=lopts[x]
 
-source=opts["Source"]
+source=opts["VOC source"]
 ltlaset=opts["LTLA set"]
 ltlaexclude=set(opts["LTLA exclude"])
 mgt=opts["Generation time (days)"]
@@ -251,14 +251,14 @@ for i in range(numltla):
 rpopratio=np.array([ltlapop[i]/regionpop[ltla2regnum[i]] for i in range(numltla)])
 tpopratio=ltlapop/ltlapop.sum(axis=0)
 
-# Get case data into caseages[daynum,ltlanum,agebandnum]
+# Get case data into cases[daynum,ltlanum,agebandnum]
 # The saved (pickled) format of case ages uses standardised (fused) ltlas, and standardised age bands
 fn=os.path.join(indir,'ltla_age_cases.pickle')
 ok=0
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
-    caseages,caseday0=pickle.load(fp)
-  ndays,nltlas,nages=caseages.shape
+    cases,caseday0=pickle.load(fp)
+  ndays,nltlas,nages=cases.shape
   if caseday0+ndays>=apiday-missingcasedays: ok=1
 if not ok:
   print("Loading case-age data from api")
@@ -267,17 +267,17 @@ if not ok:
   caseday0=datetoday(min(la['date']))
   caseday1=datetoday(max(la['date']))
   n=caseday1-caseday0+1
-  caseages=np.zeros([n,numltla,numage])
+  cases=np.zeros([n,numltla,numage])
   for lad19,date,age,cases in zip(la['areaCode'],la['date'],la['age'],la['cases']):
     a=age2num[age]
     if a!=None:
       ltla=fuseltla[lad19]
-      caseages[datetoday(date)-caseday0,ltla2num[ltla],a]+=cases
-  t=caseages[:,:,3]+caseages[:,:,4]# (15-20) + (20-25)
-  caseages[:,:,3]=3/10*t# Estimate of 15-18
-  caseages[:,:,4]=7/10*t# Estimate of 18-25
+      cases[datetoday(date)-caseday0,ltla2num[ltla],a]+=cases
+  t=cases[:,:,3]+cases[:,:,4]# (15-20) + (20-25)
+  cases[:,:,3]=3/10*t# Estimate of 15-18
+  cases[:,:,4]=7/10*t# Estimate of 18-25
   with open(fn,'wb') as fp:
-    pickle.dump((caseages,caseday0),fp)
+    pickle.dump((cases,caseday0),fp)
 
 # Get vax data into vax[,,,]
 # The saved (pickled) format of case ages uses standardised (fused) ltlas, and standardised age bands
@@ -309,94 +309,20 @@ if not ok:
   with open(fn,'wb') as fp:
     pickle.dump((vax,vaxday0),fp)
 
+cumcases=np.cumsum(cases,0)
 
-abcd
+ncasedays=cases.shape[0];maxcaseday=caseday0+ncasedays
+nvaxdays=vax.shape[1];maxvaxday=vaxday0+nvaxdays
+vaxslice=np.mean(vax[:,maxcaseday-14-vaxeffecttime-vaxday0,:,:],0)
+cumcasesslice=cumcases[-14,:,:]
+week1=cases[-14:-7,:,:].sum(axis=0)
+week2=cases[-7:,:,:].sum(axis=0)
 
-from random import random,seed
-#seed(42)
-pvax={place:[[] for w in range(nweeks-1)] for place in places}
-for w in range(nweeks-1):
-  date=daytodate(firstweek+w*7+10-vaxeffecttime)
-  id=max(dt for dt in vaxdat if dt<date)
-  print("Using NIMS vax w/e %s to correspond to Sanger w/e %s -> w/e %s"%(id,daytodate(firstweek+w*7),daytodate(firstweek+w*7+7)))
-  v=vaxdat[id]
-  
-  vaxnum={}# Map from LTLA -> age -> numvaxed
-  for (i,lad21) in enumerate(v['LTLA Code']):
-    ltla=fuseltla[lad21]
-    if ltla in okplaces:
-      if ltla not in vaxnum: vaxnum[ltla]={}
-      for age in v:
-        d,a=parseage_nimsvax(age)
-        if a!=None:
-          vaxnum[ltla][a]=vaxnum[ltla].get(a,0)+v[age][i]
+def err(ieff,veff,week1,week2):
+  pred0=week1*(1-ieff*cumcasesslice/ltlapop)*(1-veff*vaxslice/ltlapop)
+  G=(pred0*week2).sum()/(pred0*pred0).sum()
+  pred1=G*pred0
+  e=pred1-week2
+  return (e*e).sum()
 
-  vaxpop={}# Map from LTLA -> age -> population
-  for (i,lad21) in enumerate(ltlapopdata['LTLA Code']):
-    ltla=fuseltla[lad21]
-    if ltla in okplaces:
-      if ltla not in vaxpop: vaxpop[ltla]={}
-      for age in ltlapopdata:
-        a=parseage_nimspop(age)
-        if a!=None:
-          vaxpop[ltla][a]=vaxpop[ltla].get(a,0)+ltlapopdata[age][i]
-  
-  for ltla in caseages:
-    if ltla in okplaces:
-      cas=caseages[ltla]
-      vax=vaxnum[ltla]
-      pop=vaxpop[ltla]
-      pp=[]
-      for ca in cas:
-        n=cas[ca][w+1]
-        if n==0: continue
-        num=den=0
-        for va in vax:
-          # Want (vax number) as weighted by P(case age interval|vax age interval) = |ca intersect va|/|va|
-          num+=max(min(va[1],ca[1],100)-max(va[0],ca[0]),0)/(min(va[1],100)-va[0])*vax[va]
-        for pa in pop:
-          den+=max(min(pa[1],ca[1],100)-max(pa[0],ca[0]),0)/(min(pa[1],100)-pa[0])*pop[pa]
-        pp.append((n,min(num/den,1)))
-      pvax[ltla][w]=pp
 
-xx,L=optimise()
-print()
-
-print("Variables:",xx)
-print("Log likelihood:",L)
-NLL(xx*condition,const=True,pic=True)
-H=Hessian(xx)
-print("Hessian:");print(H)
-eig=np.linalg.eigh(H)
-print("Eigenvalues:",eig[0])
-print()
-
-h=xx[0]/7;dh=1/sqrt(H[0,0])/7
-print("Logarithmic growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%(h*100,(h-zconf*dh)*100,(h+zconf*dh)*100))
-print("Multiplicative growth rate advantage/day: %.1f%% (%.1f%% - %.1f%%)"%((exp(h)-1)*100,(exp(h-zconf*dh)-1)*100,(exp(h+zconf*dh)-1)*100))
-print("R-number advantage: %.2f (%.2f - %.2f)"%(exp(mgt*h),exp(mgt*(h-zconf*dh)),exp(mgt*(h+zconf*dh))))
-print()
-
-print("Confidence intervals from single variables:")
-for i in range(N):
-  x=xx[i];dx=1/sqrt(H[i,i])
-  print("%10s: %5.3f (%5.3f - %5.3f)"%(params[i][0],x,x-zconf*dx,x+zconf*dx))
-print()
-
-print("Confidence intervals from multivariate calculation:")
-C=np.linalg.inv(H)
-for i in range(N):
-  x=xx[i];dx=sqrt(C[i,i])
-  print("%10s: %5.3f (%5.3f - %5.3f)"%(params[i][0],x,x-zconf*dx,x+zconf*dx))
-print()
-
-samp,cc=makesamples(xx,H)
-print("Confidence intervals from multivariate simulation:")
-for i in range(N):
-  print("%10s: %5.3f (%5.3f - %5.3f)"%((params[i][0],)+cc[i]))
-
-if 0:
-  l=list(pvax)
-  l.sort(key=lambda x: pvax[x][3])
-  for x in l:
-    print(x,"%5.0f %5.0f %5.0f %5.0f"%tuple([z*100 for z in pvax[x]]),"  ",ltla2name[x])
