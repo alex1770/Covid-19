@@ -53,17 +53,68 @@ for i in range(n-1):
   print("= 1000")
 print()
 
+mgt=5
 print(agestr)
-ave=3
+ave=7
 for i in range(7+ave-1,n-1):
   print(dates[i],end=' ')
+  tA=tB=0
   for a in ages:
-    A,B=sum(newcases[i-j][a] for j in range(ave)),sum(newcases[i-7-j][a] for j in range(ave))
-    tA,tB=sum(sum(newcases[i-j].values()) for j in range(ave)),sum(sum(newcases[i-7-j].values()) for j in range(ave))
+    A=sum(newcases[i-j][a] for j in range(ave))
+    B=sum(newcases[i-7-j][a] for j in range(ave))
+    tA+=A;tB+=B
     if B>0:
-      print("%5.2f"%(A/B),end=' ')
+      print("%5.2f"%((A/B)**(mgt/7)),end=' ')
     else:
       print(" ????",end=' ')
   print(": %5.2f"%(tA/tB))
+print(agestr)
+print()
+
+extrapr=1
+mgt=5
+ages1=[(i*10,(i+1+5*(i==9))*10) for i in range(10)]
+for c in newcases:
+  for (a,b) in ages1:
+    c[(a,b)]=sum(c[(a1,b1)] for (a1,b1) in ages if a1>=a and b1<=b)
+agestr="     Age:"+'   '.join("%3d"%a[0] for a in ages1)
+print(agestr)
+ave=3
+for i in range(7+ave-1,n-1):
+  if extrapr:
+    print(dates[i],end=' ')
+    tA=tB=0
+    for a in ages1:
+      A=sum(newcases[i-j][a] for j in range(ave))
+      B=sum(newcases[i-7-j][a] for j in range(ave))
+      tA+=A;tB+=B
+      print("%5d"%A,end=' ')
+    print(": %6d"%tA)
+    
+    print(dates[i],end=' ')
+    tA=tB=0
+    for a in ages1:
+      A=sum(newcases[i-j][a] for j in range(ave))
+      B=sum(newcases[i-7-j][a] for j in range(ave))
+      tA+=A;tB+=B
+      print("%5d"%B,end=' ')
+    print(": %6d"%tB)
+
+  print(dates[i],end=' ')
+  tA=tB=0
+  s=0
+  for a in ages1:
+    A=sum(newcases[i-j][a] for j in range(ave))
+    B=sum(newcases[i-7-j][a] for j in range(ave))
+    tA+=A;tB+=B
+    if a[0]<=80: s+=(a[0]-40)*A/B
+    if B>0:
+      print("%5.2f"%((A/B)**(mgt/7)),end=' ')
+    else:
+      print(" ????",end=' ')
+  print(": %5.2f"%(tA/tB),s)
+
+  if extrapr: print()
+  
 print(agestr)
 print()
