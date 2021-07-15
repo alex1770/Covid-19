@@ -155,13 +155,16 @@ print()
 
 # Interpolate cases to hospages bands, (0,6) (6,18) (18,65) (65,85) (85,150), based on school assumption: I.e., that 0-5, 5-18, 18+ groups are similar
 print("Cases -> Hospitalisations using dashboard hosp figures")
-ages=hospages
+ages=hospages+[(0,150)]
+for h in hosps:
+  h[(0,150)]=sum(h[x] for x in hospages)
 for c in cases:
   c[(0,6)]=c[(0,5)]+c[(5,10)]/5
   c[(6,18)]=c[(5,10)]*4/5+c[(10,15)]*8/5
   c[(18,65)]=c[(20,25)]*2/5+c[(20,25)]+c[(25,30)]+c[(30,35)]+c[(35,40)]+c[(40,45)]+c[(45,50)]+c[(50,55)]+c[(55,60)]+c[(60,65)]
   for a in [(65,85),(85,150)]:
     c[a]=sum(c[x] for x in caseages if x[0]>=a[0] and x[1]<=a[1])
+  #c[(0,150)]=sum(c[x] for x in caseages)
     
 offset=datetoday(hosps[-1]['date'])-datetoday(cases[-1]['date'])
 precases=[{} for i in range(len(hosps))]
