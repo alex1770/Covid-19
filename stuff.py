@@ -1,4 +1,4 @@
-import csv,time,calendar,os,json,sys,datetime,requests
+import csv,time,calendar,os,json,sys,datetime,requests,pytz
 
 # Input: 'it' is an iterable (such as a file pointer)
 # Returns map: {headings} -> [list of entries]
@@ -62,3 +62,7 @@ def api_v2(req):
   if not response.ok:
     raise RuntimeError('Request failed: '+response.text)
   return response
+
+def apiday():
+  now=datetime.datetime.now(tz=pytz.timezone('Europe/London'))
+  return datetoday(now.strftime('%Y-%m-%d'))-(now.hour<16)
