@@ -7,6 +7,7 @@ from math import log,exp,sqrt,sin,pi
 import numpy as np
 from subprocess import Popen,PIPE
 from datetime import datetime
+import pytz
 
 # ltla_age.csv from https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=newCasesBySpecimenDateAgeDemographics&format=csv
 # wget 'https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=vaccinationsAgeDemographics&format=csv' -O vaccinedata.csv
@@ -88,8 +89,7 @@ s=set(ltlaengdata['LAD21CD']);assert all(x in s for x in fuseltla.values())
 
 indir='inputs'
 os.makedirs(indir,exist_ok=True)
-now=datetime.utcnow()
-apiday=datetoday(now.strftime('%Y-%m-%d'))-(now.hour<16)
+apiday0=apiday()
 
 def includeltla(ltla,ltlaset):
   if ltlaset=="London":
@@ -136,7 +136,7 @@ mgt=5# Mean generation time in days
 firstweek=datetoday('2021-05-01')
 
 # Case ascertainment rate
-asc=0.4
+car=0.4
 
 # Discard this many cases at the end of the list of cases by specimen day
 discardcasedays=2# Make need to increase to 3 to allow for Wales and NI late reporting at weekends and bank holidays
@@ -157,7 +157,7 @@ opts={
   "LTLA exclude": list(ltlaexclude),
   "Generation time (days)": mgt,
   "Earliest week (using end of week date) to use VOC count data": daytodate(firstweek),
-  "Case ascertainment rate": asc,
+  "Case ascertainment rate": car,
   "Number of days of case data to discard": discardcasedays,
   "Minimiser options": minopts,
   "Length of time period over which VOC counts are given (days)": voclen,
@@ -176,7 +176,7 @@ ltlaset=opts["LTLA set"]
 ltlaexclude=set(opts["LTLA exclude"])
 mgt=opts["Generation time (days)"]
 firstweek=datetoday(opts["Earliest week (using end of week date) to use VOC count data"])
-asc=opts["Case ascertainment rate"]
+car=opts["Case ascertainment rate"]
 discardcasedays=opts["Number of days of case data to discard"]
 minopts=opts["Minimiser options"]
 voclen=opts["Length of time period over which VOC counts are given (days)"]
@@ -184,7 +184,7 @@ conf=opts["Confidence level"]
 
 zconf=norm.ppf((1+conf)/2)
 
-np.set_printoptions(precision=3,linewidth=150)
+np.set_printoptions(precision=3,linewidth=200)
 
 print("Options:")
 print()
@@ -203,6 +203,7 @@ reg2num={reg:i for (i,reg) in enumerate(regions)}
 ltla2regnum=np.array([reg2num[ltla2region[ltla]] for ltla in num2ltla])
 
 # Get VOC data
+# Alter: get this to auto-update
 if source=="Sanger":
   fullsource="Wellcome Sanger Institute"
   assert voclen==7
@@ -259,7 +260,7 @@ if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     cases,caseday0=pickle.load(fp)
   ndays,nltlas,nages=cases.shape
-  if caseday0+ndays>=apiday-missingcasedays: ok=1
+  if caseday0+ndays>=apiday0-missingcasedays: ok=1
 if not ok:
   print("Loading case-age data from api")
   la=loadcsv_it(api_v2('areaType=ltla&metric=newCasesBySpecimenDateAgeDemographics&format=csv').text.split('\n'))
@@ -268,11 +269,11 @@ if not ok:
   caseday1=datetoday(max(la['date']))
   n=caseday1-caseday0+1
   cases=np.zeros([n,numltla,numage])
-  for lad19,date,age,cases in zip(la['areaCode'],la['date'],la['age'],la['cases']):
+  for lad19,date,age,ncases in zip(la['areaCode'],la['date'],la['age'],la['cases']):
     a=age2num[age]
     if a!=None:
       ltla=fuseltla[lad19]
-      cases[datetoday(date)-caseday0,ltla2num[ltla],a]+=cases
+      cases[datetoday(date)-caseday0,ltla2num[ltla],a]+=ncases
   t=cases[:,:,3]+cases[:,:,4]# (15-20) + (20-25)
   cases[:,:,3]=3/10*t# Estimate of 15-18
   cases[:,:,4]=7/10*t# Estimate of 18-25
@@ -288,7 +289,7 @@ if os.path.isfile(fn):
     vax,vaxday0=pickle.load(fp)
   ndoses,ndays,nvaxltlas,nvaxages=vax.shape
   assert nvaxages==nages and nvaxltlas==nltlas
-  if vaxday0+ndays>=apiday-missingvaxdays: ok=1
+  if vaxday0+ndays>=apiday0-missingvaxdays: ok=1
 if not ok:
   print("Loading vax-age data from api")
   la=loadcsv_it(api_v2('areaType=ltla&metric=vaccinationsAgeDemographics&format=csv').text.split('\n'))
@@ -313,16 +314,58 @@ cumcases=np.cumsum(cases,0)
 
 ncasedays=cases.shape[0];maxcaseday=caseday0+ncasedays
 nvaxdays=vax.shape[1];maxvaxday=vaxday0+nvaxdays
-vaxslice=np.mean(vax[:,maxcaseday-14-vaxeffecttime-vaxday0,:,:],0)
-cumcasesslice=cumcases[-14,:,:]
-week1=cases[-14:-7,:,:].sum(axis=0)
-week2=cases[-7:,:,:].sum(axis=0)
+vaxslice=np.mean(vax[:,maxcaseday-14-vaxeffecttime-vaxday0,:,:],0)# Average 1st+2nd doses
+#vaxslice=vax[1,maxcaseday-14-vaxeffecttime-vaxday0,:,:]
+cumcasesslice=cumcases[-14,:,:]#-cumcases[-100,:,:]
+back=-0
+week1=cases[back-14:ncasedays+back-7,:,:].sum(axis=0)
+week2=cases[back-7:ncasedays+back-0,:,:].sum(axis=0)
 
-def err(ieff,veff,week1,week2):
-  pred0=week1*(1-ieff*cumcasesslice/ltlapop)*(1-veff*vaxslice/ltlapop)
+def err(ieff,veff,week1,week2,cumcasesslice,vaxslice,ltlapop):
+  pred0=week1*(1-ieff/car*cumcasesslice/ltlapop)*(1-veff*vaxslice/ltlapop)
   G=(pred0*week2).sum()/(pred0*pred0).sum()
+  #G=week2.sum()/pred0.sum()
+  #G=1.4
   pred1=G*pred0
   e=pred1-week2
   return (e*e).sum()
 
+if 0:
+  a=0
+  week1=week1.sum(axis=a)
+  week2=week2.sum(axis=a)
+  cumcasesslice=cumcasesslice.sum(axis=a)
+  vaxslice=vaxslice.sum(axis=a)
+  ltlapop=ltlapop.sum(axis=a)
 
+ieff=1
+
+for a in range(nages):
+  print(num2age[a])
+  for veff in [.1*i for i in range(11)]:
+    print("%5.3f %5.3f %12g"%(ieff,veff,err(ieff,veff,week1[:,a],week2[:,a],cumcasesslice[:,a],vaxslice[:,a],ltlapop[:,a])))
+  print()
+  
+if 0:
+  a=8
+  rat=(week2+1)/(week1+1)
+  with open('tempg','w') as fp:
+    for i in range(nltlas):
+      print(cumcasesslice[i,a]/car/ltlapop[i,a],vaxslice[i,a]/ltlapop[i,a],rat[i,a],file=fp)
+  print("Written graph file 'tempg' for age group",num2age[a])
+
+if 1:
+  #yy=np.log(week2.sum(axis=1)/week1.sum(axis=1))
+  yy=np.log(week2.sum(axis=1))
+  with open('tempg','w') as fp:
+    for i in range(nltlas):
+      print(sum(cumcasesslice[i,:])/car/sum(ltlapop[i,:]),sum(vaxslice[i,:])/sum(ltlapop[i,:]),yy[i],file=fp)
+  print("Written graph file 'tempg'")
+
+if 0:
+  yy=np.log(week2)
+  with open('tempg','w') as fp:
+    for i in range(nltlas):
+      for a in range(nages):
+        print(cumcasesslice[i,a]/car/ltlapop[i,a],vaxslice[i,a]/ltlapop[i,a],yy[i,a],file=fp)
+  print("Written graph file 'tempg'")
