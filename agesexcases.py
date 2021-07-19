@@ -1,13 +1,13 @@
-import time,calendar,os,json,sys,datetime,requests
+import time,calendar,os,json,sys,datetime,requests,sys
 import numpy as np
 from stuff import *
 
 # Publish date or specimen date
 usepublishdate=False
-discardspecdays=0
+discardspecdays=1
 
 # Go back this number of days
-ndays=40
+ndays=60
 
 # Cache directory
 adir='apidata_agesex'
@@ -74,13 +74,19 @@ else:
   # Retrieve case data by specimen date
   print("Using specimen date with %d day%s discarded"%(discardspecdays,'' if discardspecdays==1 else 's'))
   print()
-  male=get_data('areaType=nation&areaName=England&metric=maleCases')
-  female=get_data('areaType=nation&areaName=England&metric=femaleCases')
+  if len(sys.argv)>1:
+    release='&release='+sys.argv[1]
+  else:
+    release=''
+  male=get_data('areaType=nation&areaName=England&metric=maleCases'+release)
+  female=get_data('areaType=nation&areaName=England&metric=femaleCases'+release)
+  male=male[:len(male)-discardspecdays]
+  female=female[:len(female)-discardspecdays]
   apiages=[x['age'] for x in male[-1]['maleCases']]
   ages=sorted([parseage(x) for x in apiages])
   nages=len(ages)
   cumcases=np.zeros([ndays+1,nages,2],dtype=int)
-  maxday=datetoday(male[-1]['date'])-discardspecdays
+  maxday=datetoday(male[-1]['date'])
   minday=maxday-ndays+1
   for (s,sex) in enumerate([male,female]):
     for d in range(ndays+1):
@@ -137,4 +143,4 @@ print('Showing:',sex)
 print("     Ages: %d-%d"%(ages[a0][0],ages[a1-1][1]))
 for d in range(ndays):
   print(daytodate(minday+d),"%5d"%(cases[d]+.5))
-print()
+
