@@ -39,7 +39,32 @@ for fn in sorted(listdir(tdir)):
       else:
         print("Discarding",fn)
 
+# Work out overall congestion as weighted sum of orange, red and dark red
+ll=sorted(levels);n=len(ll)
+l0=[]
+for x in sorted(ll):
+  m=levels[x]
+  c=m[2]+3*m[3]+10*m[4]
+  l0.append(c)
+
+# Work out cumulative version of l0 with padded ends
+l0pad=l0[:168]+l0+l0[-168:]
+cum=[]
+t=0
+for c in l0pad:
+  cum.append(t)
+  t+=c
+cum.append(t)
+
+# Create 24-hour and 168-hour moving averages
+l1=[];l2=[]
+for (a,l) in [(24,l1),(168,l2)]:
+  assert a%2==0;a2=a//2
+  for i in range(168,n+168):
+    l.append(int((cum[i+a2]-cum[i-a2+1]+(l0pad[i-a2]+l0pad[i+a2])/2+a2)/a))
+
 with open(cachefn,'w') as fp:
-  print("# Location      LocalDateTime    White    Green   Orange      Red  Darkred",file=fp)
-  for (loc,date) in sorted(levels):
-    print(loc,date,' '.join("%8d"%x for x in levels[(loc,date)]),file=fp)
+  print("# Location      LocalDateTime    White    Green   Orange      Red  Darkred     Cong   Cong24  Cong168",file=fp)
+  for i in range(n):
+    (loc,date)=ll[i]
+    print(loc,date,' '.join("%8d"%x for x in levels[(loc,date)][:5]),"%8d %8d %8d"%(l0[i],l1[i],l2[i]),file=fp)
