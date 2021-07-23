@@ -28,7 +28,7 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 #selectcountries=["UK","USA","Sweden","Germany","Hungary","S. Korea","France","Israel","Turkey","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile"]
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile","Paraguay"]
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Uruguay","Brazil","India","Chile","Paraguay","Namibia","Trinidad and Tobago","Mongolia"]
-selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Brazil","India","Chile","Namibia","Mongolia","Netherlands","Myanmar","Greece","Spain"]
+selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Brazil","India","Chile","Namibia","Netherlands","Myanmar","Greece","Spain","Vietnam"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
@@ -172,10 +172,10 @@ for zoomstate in [0,1]:
       write('set for [i=9:16] linetype i dashtype (20,7)')
       write('set key left')
       write('set logscale y')
-      title=("Average new "+desc+perstring+" over last %d day%s, starting when total "+desc+" to date"+perstring+" reached %g")%(period,"" if period==1 else "s",thr)
+      title=("Average new "+desc+perstring+" per day over last %d day%s, starting when total "+desc+" to date"+perstring+" reached %g")%(period,"" if period==1 else "s",thr)
       title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
       write('set title "%s"'%title)
-      write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
+      write('set xlabel "Days since '+desc+perstring+' per day reached %g'%thr)
       write('set grid ytics lc rgb "#dddddd" lt 1')
       s='plot '
       for country in countries:
@@ -197,10 +197,10 @@ for zoomstate in [0,1]:
     write('set for [i=9:16] linetype i dashtype (20,7)')
     write('set key left top')
     write('set logscale y')
-    title=("Average new "+desc+perstring+" over last %d day%s, aligned by date")%(period,"" if period==1 else "s")
+    title=("Average new "+desc+perstring+" per day over last %d day%s, aligned by date")%(period,"" if period==1 else "s")
     title+="\\nSelected countries. Source: %s, %s"%(source,maxdate)
     write('set title "%s"'%title)
-    #write('set xlabel "Days since '+desc+perstring+' reached %g'%thr)
+    #write('set xlabel "Days since '+desc+perstring+' per day reached %g'%thr)
     write('set xdata time')
     write('set format x "%Y-%m-%d"')
     write('set timefmt "%Y-%m-%d"')
@@ -256,7 +256,7 @@ for growth in [0,1]:
     write('set y2tics mirror')
     if growth==0: title="Average number of "+desc+perstring
     else: title="Growth in "+desc
-    title+=" over the last %d day%s"%(period,"" if period==1 else "s")
+    title+=" per day over the last %d day%s"%(period,"" if period==1 else "s")
     title+="\\nTop %d amongst countries with population >=1m. Source: %s, %s"%(numbar,source,maxdate)
     write('set title "%s"'%title)
     write('set grid ytics lc rgb "#dddddd" lt 1')
