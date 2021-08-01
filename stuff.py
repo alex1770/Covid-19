@@ -47,8 +47,13 @@ def csvrows_it(it,reqheadings,sep=","):
   
 def datetoday(x):
   if '/' in x:
+    # E.g., 05/06/2021
     t=time.strptime(x+'UTC',"%d/%m/%Y%Z")
+  elif ' ' in x:
+    # E.g., 05 June 2021
+    t=time.strptime(x+'UTC','%d %B %Y%Z')
   else:
+    # E.g., 2021-06-05
     t=time.strptime(x+'UTC','%Y-%m-%d%Z')
   return calendar.timegm(t)//86400
 
