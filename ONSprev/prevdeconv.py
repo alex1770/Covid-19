@@ -57,7 +57,8 @@ prevalence=parseONScsv()
 # Fix bug in ONS spreadsheet on 2021-05-02:
 fixind=datetoday('2021-05-02')-prevalence[0]
 prevalence[1][fixind]=(prevalence[1][fixind-1]+prevalence[1][fixind+1])/2
-prevalence[1]=prevalence[1]*engpop
+logprev=np.log(prevalence[1][:,0]*engpop)
+logprevsd=np.log(prevalence[1][:,2]/prevalence[1][:,1])
 # Note that data in 2021-01-02 - 2021-01-16 are anomalous
 # Also crazy behaviour before 2020-10-01
 # Also other minor anomalies
@@ -78,8 +79,26 @@ def makekernel(shape=2.595, scale=4.48):
     if x<1e-3: break
   return np.array(kernel)
 
-k=makekernel()
+ker=makekernel()
+con=np.convolve(cases[1],ker)
+logcon=np.log(con)
+# ker[i] = probability of still being +ve after i+.5 days
+# cases[1][j] = number of new confirmed cases on day cases[0]+j
+# con[k] = number of confirmed cases that are still positive on day cases[0]+k
+# con[k] is non-truncated if len(ker)-1 <= k < len(cases[1])
+
+offset=5
+delta=prevalence[0]-cases[0]-offset
+# Compare conv nominally at day d with prevalence nominally at day d+offset. (Expect offset>0.)
+# That means logcon[k] is compared with logprev[k+cases[0]-prevalence[0]+offset] = logprev[k-delta]
+# len(ker)-1 <= k < len(logcon)
+# 0 <= k-delta < len(logprev)
+# ==>
+# max(len(ker)-1, delta) <= k < min(len(logcon), len(logprev)+delta)
+k0=max(len(ker)-1, delta)
+k1=min(len(logcon), len(logprev)+delta)
 
 with open('graph','w') as fp:
-  for (i,x) in enumerate(prevalence[1][:,0]):
-    print(daytodate(prevalence[0]+i),x,file=fp)
+  for k in range(k0,k1):
+    l=k-delta
+    print(daytodate(cases[0]+k),logcon[k],daytodate(prevalence[0]+l),logprev[l],file=fp)
