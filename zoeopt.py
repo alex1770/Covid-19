@@ -12,8 +12,8 @@ else:
   
 if locationsize!="ltla" and locationsize!="region": raise RuntimeError("Unknown locationsize: "+locationsize)
 
-#mindate='2020-10-01'
-mindate='2021-03-01'
+mindate='2020-10-01'
+#mindate='2021-03-01'
 
 print("Using locations:",locationsize)
 
@@ -210,7 +210,8 @@ else:
   i=locs.index(region);a=zvals[i];b=apicases[i]
 
 kernel=PtoI_noncheat.getkernel()
-ad=PtoI_noncheat.deconvolve_noncheat(a,kernel,50)
+# A large sameweight combined with noncheat introduces lag in the inferred incidence
+ad=PtoI_noncheat.deconvolve_noncheat(a,kernel,5)
 #ad=PtoI_noncheat.deconvolve(a,kernel,5)
 
 with open('temp','w') as fp:
@@ -223,7 +224,7 @@ print("""gnuplot
 set timefmt "%Y-%m-%d"
 set format x "%Y-%m-%d"
 set xdata time""")
-print('plot "temp" u 1:2 w lines lw 3 title "%s: Zoe symptoms, non-cheat", "temp" u 1:6 w lines lw 3 title "%s: cases, 7 day lagged average"'%(region,region))
+print('plot "temp" u 1:2 w linespoints lw 3 title "%s: Zoe symptoms, non-cheat", "temp" u 1:6 w linespoints lw 3 title "%s: cases, 7 day lagged average"'%(region,region))
 
 # ad[] is about 7 days ahead of sum(b[t-7:t])/7
 # but that smoothing of b loses 3.5 days, and there might be a clever smoothing that doesn't lose any.
