@@ -33,6 +33,15 @@ req='filters=areaType=nation;areaName=england&structure={"date":"date","blah":"c
 req='filters=areaType=nation;areaName=england&structure={"date":"date","male":"maleCases"}';                                 malecases=get_data(req)
 req='filters=areaType=nation;areaName=england&structure={"date":"date","female":"femaleCases"}';                             femalecases=get_data(req)
 
+# Interpolate to get v[(a,b)] for (a,b) in l. Assumed that p is a partition = [(a0,a1), (a1,a2), (a2,a3), ...]
+def interpolate(v,p,l):
+  for (a,b) in l:
+    t=0
+    for (c,d) in p:
+      if b<=c or d<=a: continue
+      t+=(min(b,d)-max(a,c))/(d-c)*v[(c,d)]
+    v[(a,b)]=t
+  
 casedata=[]
 for (m,f) in zip(malecases,femalecases):
   d={'date': m['date']}
@@ -64,8 +73,8 @@ newfcases=newfcases[:-discard]
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
-  x=x.replace('_to_','_').replace(' to ','_')# cater for 65_to_69, 65_69, "65 to 69" formats
-  aa=[int(y) for y in x.split("_")]
+  x=x.replace('_to_','-').replace(' to ','-').replace('_','-')# cater for 65_to_69, 65_69, "65 to 69", 15-19 formats
+  aa=[int(y) for y in x.split("-")]
   return (aa[0],aa[1]+1)
 
 # Convert dictionary from using '15_19' (etc) format to (15,20) format
@@ -153,19 +162,20 @@ print()
 # Cases -> Hospitalisations using dashboard hosp figures #
 ##########################################################
 
-# Interpolate cases to hospages bands, (0,6) (6,18) (18,65) (65,85) (85,150), based on school assumption: I.e., that 0-5, 5-18, 18+ groups are similar
 print("Cases -> Hospitalisations using dashboard hosp figures")
 ages=hospages+[(0,150)]
 for h in hosps:
   h[(0,150)]=sum(h[x] for x in hospages)
+
 for c in cases:
-  c[(0,6)]=c[(0,5)]+c[(5,10)]/5
-  c[(6,18)]=c[(5,10)]*4/5+c[(10,15)]*8/5
-  c[(18,65)]=c[(20,25)]*2/5+c[(20,25)]+c[(25,30)]+c[(30,35)]+c[(35,40)]+c[(40,45)]+c[(45,50)]+c[(50,55)]+c[(55,60)]+c[(60,65)]
-  for a in [(65,85),(85,150)]:
-    c[a]=sum(c[x] for x in caseages if x[0]>=a[0] and x[1]<=a[1])
+  interpolate(c,caseages,[(0,6),(20,65),(25,35),(35,45),(45,55),(55,65),(65,75),(75,85),(65,85),(85,150)])
+  # Special hand-picked interpolation for these bands because want to assume that school children (5-18) are similar to each other
+  # and student age (18-25) are also similar to each other:
+  c[(6,18)]=c[(5,10)]*4/5+c[(10,15)]+c[(10,15)]*3/5
+  c[(18,25)]=c[(20,25)]*2/5+c[(20,25)]
+  c[(18,65)]=c[(20,25)]*2/5+c[(20,65)]
   #c[(0,150)]=sum(c[x] for x in caseages)
-    
+
 offset=datetoday(hosps[-1]['date'])-datetoday(cases[-1]['date'])
 precases=[{} for i in range(len(hosps))]
 ave=7
@@ -202,21 +212,34 @@ print("                       ",end='')
 for a in ages: print(" %6s"%("%d-%d"%a),end='')
 print()
 
-#################################################################################################################################
-# Cases -> Hospitalisations using hosp figures from National flu and COVID-19 surveillance report (Fig.40 SARIWatch-hospagegrp) #
-# https://www.gov.uk/government/statistics/national-flu-and-covid-19-surveillance-reports                                       #
-#################################################################################################################################
+#########################################################################################################################################
+# Cases -> Hospitalisations using hosp figures from (changes each week/month?)                                                          #
+# https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/08/Covid-Publication-05-08-2021-Supplementary-Dataagebands.xlsx #
+# contained in https://www.england.nhs.uk/statistics/statistical-work-areas/covid-19-hospital-activity/                                 #
+#########################################################################################################################################
 
 print()
 print("Cases -> Hospitalisations using National flu and COVID-19 surveillance report figures")
-h2=loadcsv("hosps_byage.csv")
-conv={}
-for k in h2.keys():
-  try:
-    a=parseage(k)
-    conv[k]=a
-  except:
-    pass
+h2=loadcsv("Englandadmissionsbyfineage.csv")
+age2ind={}
+for (i,s) in enumerate(h2['Measure']):
+  t=s.split()[-1]
+  if t[0].isdigit():
+    age2ind[parseage(t)]=i
+hospages2=sorted(list(age2ind))
+ages=hospages2+[(0,150)]
+
+hdays=sorted(datetoday(x) for x in h2.keys() if x!='Measure')
+nhdays=len(hdays)
+minhday=hdays[0]
+assert hdays==list(range(minhday,minhday+nhdays))# Checking contiguous
+hospcases2=[{} for i in range(nhdays)]
+for x in h2:
+  if x!='Measure':
+    i=datetoday(x)-minhday
+    for a in hospages2:
+      hospcases2[i][a]=h2[x][age2ind[a]]
+    interpolate(hospcases2[i],hospages2,[(0,150)])
 
 pop={     (0,5):   3937768,
          (5,10):   4116901,
@@ -238,71 +261,53 @@ pop={     (0,5):   3937768,
         (85,90):   1070495,
         (90,150):   646294}
 
-hospages2=sorted(list(conv.values()))
-ages=hospages2+[(0,150)]
-popages=list(pop)
-for c in cases:
-  for a in ages:
-    c[a]=sum(c[x] for x in caseages if x[0]>=a[0] and x[1]<=a[1])
+popages=sorted(list(pop))
 for p in [pop]:
   for a in ages:
     p[a]=sum(p[x] for x in popages   if x[0]>=a[0] and x[1]<=a[1])
+interpolate(pop,popages,ages)
 
-n=len(h2['w/e'])
-hosps2=[]
-for i in range(n):
-  h={}
-  h['date']=h2['w/e'][i]
-  for k in conv:
-    h[conv[k]]=int(h2[k][i]*p[conv[k]]/1e5+.5)
-  hosps2.append(h)
-    
-for h in hosps2:
-  for a in ages:
-    h[a]=sum(h[x] for x in hospages2 if x[0]>=a[0] and x[1]<=a[1])
-
-def inc(date): return daytodate(datetoday(date)+1)
-    
 # Dates of hosps2[-i] are those of cases[-i*7+offset+{0,...,6}] (and corresponds to precases[-i])
-offset=datetoday(hosps2[-1]['date'])-datetoday(cases[-1]['date'])
-precases=[{} for i in range(len(hosps2))]
-ave=7 # perforce, since this hosp data is grouped in weeks
+offset=minhday+nhdays-1-datetoday(cases[-1]['date'])
+ave=1
 minlag=4
 maxlag=8
 back=180
+precases=[{} for i in range(back//ave+3)]
 for n in range(-back//ave-2,0):
   for a in ages:
     t=0
     for i in range(-maxlag,-minlag):
       for j in range(ave):
         t+=cases[n*ave+offset+j+i][a]
-    precases[n][a]=t/(maxlag-minlag)
+    precases[n][a]=t/(maxlag-minlag)/ave
 
-n0=-6
+hospave=[{} for i in range(back//ave+1)]
 for n in range(-back//ave,0):
-  print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
   for a in ages:
-    h=hosps2[n][a]
+    t=0
+    for j in range(ave):
+      t+=hospcases2[n*ave+j][a]
+    hospave[n][a]=t/ave
+    
+for n in range(-back//ave,0):
+  dates=daytodate(minhday+nhdays+n*ave)+' - '+daytodate(minhday+nhdays+(n+1)*ave-1)
+  print(dates,end='')
+  for a in ages:
+    h=hospave[n][a]
     print(" %6d"%h,end='')
-  print()
-  print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
+  print("   Hospitalisations")
+  print(dates,end='')
   for a in ages:
     p=precases[n][a]
     print(" %6d"%p,end='')
-  print()
-  print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
+  print("   Cases")
+  print(dates,end='')
   for a in ages:
-    h=hosps2[n][a]
+    h=hospave[n][a]
     p=precases[n][a]
     print(" %6.2f"%(h/p*100),end='')
-  print()
-  if n>=n0:
-    print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
-    for a in ages:
-      h=hosps2[n][a]
-      p=precases[n][a]
-      print(" %6.2f"%(h/p/(hosps2[n0][a]/precases[n0][a])),end='')
-    print()
+  print("   Percent hospitalised")
   print()
 print("                       ",end='')
 for a in ages: print(" %6s"%("%d-%d"%a),end='')
