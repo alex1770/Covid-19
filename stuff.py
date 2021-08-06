@@ -46,15 +46,19 @@ def csvrows_it(it,reqheadings,sep=","):
     yield [row[i] for i in cols]
   
 def datetoday(x):
+  format=None
   if '/' in x:
-    # E.g., 05/06/2021
-    t=time.strptime(x+'UTC',"%d/%m/%Y%Z")
+    format='%d/%m/%Y';# E.g., 05/06/2021
   elif ' ' in x:
-    # E.g., 05 June 2021
-    t=time.strptime(x+'UTC','%d %B %Y%Z')
-  else:
-    # E.g., 2021-06-05
-    t=time.strptime(x+'UTC','%Y-%m-%d%Z')
+    format='%d %B %Y';# E.g., 05 June 2021
+  elif '-' in x:
+    y=x.split('-')
+    if len(y[0])==4 and y[1].isdigit():
+      format='%Y-%m-%d';# E.g., 2021-06-05
+    elif y[1].isalpha() and len(y[2])==2:
+      format='%d-%b-%y';# E.g., 29-Oct-20
+  if format==None: raise RuntimeError('Unrecognised date format: '+x)
+  t=time.strptime(x+'UTC',format+'%Z')
   return calendar.timegm(t)//86400
 
 def daytodate(r):
