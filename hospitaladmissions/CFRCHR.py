@@ -270,16 +270,16 @@ ave=7 # perforce, since this hosp data is grouped in weeks
 minlag=4
 maxlag=8
 back=180
-for n in range(-back//7-2,0):
+for n in range(-back//ave-2,0):
   for a in ages:
     t=0
     for i in range(-maxlag,-minlag):
-      for j in range(7):
-        t+=cases[n*7+offset+j+i][a]
+      for j in range(ave):
+        t+=cases[n*ave+offset+j+i][a]
     precases[n][a]=t/(maxlag-minlag)
 
 n0=-6
-for n in range(-back//7,0):
+for n in range(-back//ave,0):
   print(inc(hosps2[n-1]['date']),'-',hosps2[n]['date'],end='')
   for a in ages:
     h=hosps2[n][a]
