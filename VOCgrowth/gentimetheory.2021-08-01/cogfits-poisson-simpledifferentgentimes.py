@@ -54,7 +54,7 @@ def Fisher(xx,eps=1e-4):
   zconf=1.96
   return zconf/sqrt(fi)
 
-res=minimize(NLL,[0,0.1,1],bounds=[(-50,50), (-0.2,0.2), (0.1,10)], method="SLSQP")
+res=minimize(NLL,[0,0.1,1],bounds=[(40,60), (-0.2,0.2), (0.1,10)], method="SLSQP")
 if not res.success: raise RuntimeError(res.message)
 t0,lam,rho=res.x
 dlam=Fisher(res.x)

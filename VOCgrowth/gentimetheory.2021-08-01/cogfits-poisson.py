@@ -39,7 +39,8 @@ def Fisher(xx,eps=1e-4):
   zconf=1.96
   return zconf/sqrt(fi)
 
-res=minimize(NLL,[0,0.1],bounds=[(-50,50), (-0.2,0.2)], method="SLSQP")
+d0=datetoday('2021-05-15')-datetoday(mindate)
+res=minimize(NLL,[0,0.1],bounds=[(d0-10,d0+10), (-0.2,0.2)], method="SLSQP")
 if not res.success: raise RuntimeError(res.message)
 t0,lam=res.x
 dlam=Fisher(res.x)
