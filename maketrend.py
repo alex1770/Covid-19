@@ -28,7 +28,9 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 #selectcountries=["UK","USA","Sweden","Germany","Hungary","S. Korea","France","Israel","Turkey","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile"]
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile","Paraguay"]
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Uruguay","Brazil","India","Chile","Paraguay","Namibia","Trinidad and Tobago","Mongolia"]
-selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Brazil","India","Chile","Namibia","Netherlands","Myanmar","Greece","Spain","Vietnam"]
+#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Brazil","India","Chile","Namibia","Netherlands","Myanmar","Greece","Spain","Vietnam"]
+#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","India","Namibia","Netherlands","Greece","Spain","Vietnam","Cyprus","Botswana","Cuba"]
+selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Namibia","Netherlands","Greece","Vietnam","Cyprus","Botswana","Cuba","Tunisia","Japan"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
