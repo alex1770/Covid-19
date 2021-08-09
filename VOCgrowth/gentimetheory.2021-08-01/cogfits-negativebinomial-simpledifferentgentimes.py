@@ -2,11 +2,8 @@ from stuff import *
 import numpy as np
 from math import exp,log,sqrt
 import scipy
-from distutils.version import LooseVersion
-if LooseVersion(scipy.__version__)<LooseVersion('1.3.3'): raise RuntimeError('Need scipy>=1.3.3 to support re-entrant miminize function')
 from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
-from distutils.version import LooseVersion
 
 mindate='2021-04-15'
 
@@ -46,13 +43,9 @@ def NLLt(xx,a,d,e,rho,p):
 def NLLt1(xx,a,d,e,rho,p):
   return -LLt1(xx[0],a,d,e,rho,p)
 
-from time import process_time as clock
-tim0=0.0
-n0=0
 # rho = T_a/T_d
 # q = p/(1-p) = mu/r
 def LL(xx):
-  global n0,tim0
   t0,lam,rho,q=xx
   p=q/(1+q)
   LL=0
@@ -64,36 +57,14 @@ def LL(xx):
     mu0=1e-5
     mu1=2*(a*q+(d*q/e)**(1/rho))
 
-    cl0=clock()
     # Annoyingly LLt isn't log-concave in general
-    res=minimize(NLLt,[(mu0+mu1)/2],jac=NLLt1,args=(a,d,e,rho,p),bounds=[(mu0,mu1)], method="SLSQP", options={'ftol':1e-12})
-    assert res.success
-    mu=res.x[0]
-    eps=1e-2
-    if not (LLt(mu,a,d,e,rho,p)>LLt(mu-eps,a,d,e,rho,p) and LLt(mu,a,d,e,rho,p)>LLt(mu+eps,a,d,e,rho,p)):
-      print(mu0,mu,mu1,a,d,e,rho,p)
-      print(LLt(mu-eps,a,d,e,rho,p),LLt(mu,a,d,e,rho,p),LLt(mu+eps,a,d,e,rho,p))
-      print(LLt1(mu-eps,a,d,e,rho,p),LLt1(mu,a,d,e,rho,p),LLt1(mu+eps,a,d,e,rho,p))
-    assert LLt(mu,a,d,e,rho,p)>LLt(mu-1e-3,a,d,e,rho,p) and LLt(mu,a,d,e,rho,p)>LLt(mu+1e-3,a,d,e,rho,p)
-
     assert LLt1(mu0,a,d,e,rho,p)>0 and LLt1(mu1,a,d,e,rho,p)<0
     while mu1-mu0>1e-12*(mu0+mu1):
       mu=(mu0+mu1)/2
       if LLt1(mu,a,d,e,rho,p)>0: mu0=mu
       else: mu1=mu
     mu=(mu0+mu1)/2
-    if abs(mu-res.x[0])>1e-3:
-      print("*",mu,res.x[0],a,d,e,rho,p)
     
-    cl1=clock()
-    tim0+=cl1-cl0
-    n0+=1
-    if n0%1000==0:
-      print(n0,tim0/n0)
-    #print(mu-res.x[0],mu)
-    #if abs(mu-res.x[0])>1:
-    #  print(a,d,e,rho,mu,res.x)
-    #  assert 0
     LL+=LLt(mu,a,d,e,rho,p)
   return LL
 
