@@ -55,9 +55,9 @@ def LL(xx):
     if a==0 and d==0: continue
 
     mu0=1e-5
-    mu1=2*(a*q+(d*q/e)**(1/rho))
+    mu1=max(-a*q/log(1-p),(-d*q/log(1-p)/e)**(1/rho))
 
-    # Annoyingly LLt isn't log-concave in general
+    # (Annoyingly LLt isn't log-concave in general)
     assert LLt1(mu0,a,d,e,rho,p)>0 and LLt1(mu1,a,d,e,rho,p)<0
     while mu1-mu0>1e-12*(mu0+mu1):
       mu=(mu0+mu1)/2
