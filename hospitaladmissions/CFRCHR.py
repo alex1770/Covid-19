@@ -219,7 +219,7 @@ print()
 #########################################################################################################################################
 
 print()
-print("Cases -> Hospitalisations using National flu and COVID-19 surveillance report figures")
+print("Cases -> Hospitalisations, using NHS admissions analysis by age group")
 h2=loadcsv("Englandadmissionsbyfineage.csv")
 age2ind={}
 for (i,s) in enumerate(h2['Measure']):
