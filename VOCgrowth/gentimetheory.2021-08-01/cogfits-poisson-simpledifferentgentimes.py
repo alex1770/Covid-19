@@ -5,6 +5,8 @@ from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
 
 mindate='2021-04-15'
+maxdate='2021-05-31'
+print("Using date range",mindate,"-",maxdate)
 
 # Alpha, Delta counts by day
 A=np.zeros(1000,dtype=int)
@@ -13,7 +15,7 @@ with open('alphadelta','r') as fp:
   maxd=0
   for x in fp:
     y=x.strip().split()
-    if y[0]>=mindate:
+    if y[0]>=mindate and y[0]<=maxdate:
       d=datetoday(y[0])-datetoday(mindate)
       A[d]=int(y[1])
       D[d]=int(y[2])

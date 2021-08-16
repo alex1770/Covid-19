@@ -5,7 +5,9 @@ import scipy
 from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
 
-mindate='2021-04-15'
+mindate='2021-04-20'
+maxdate='2021-05-31'
+print("Using date range",mindate,"-",maxdate)
 
 # Alpha, Delta counts by day
 A=np.zeros(1000,dtype=int)
@@ -14,7 +16,7 @@ with open('alphadelta','r') as fp:
   maxd=0
   for x in fp:
     y=x.strip().split()
-    if y[0]>=mindate:
+    if y[0]>=mindate and y[0]<=maxdate:
       d=datetoday(y[0])-datetoday(mindate)
       A[d]=int(y[1])
       D[d]=int(y[2])
@@ -77,7 +79,7 @@ def Fisher(xx,eps=1e-4):
   zconf=1.96
   return zconf/sqrt(fi)
 
-
+# Todo: choose bounds and initial t0 better
 res=minimize(NLL,[50,0.1,1,1],bounds=[(40,60), (0,0.2), (0.5,2), (1e-4,100)], method="SLSQP")
 if not res.success: raise RuntimeError(res.message)
 t0,lam,rho,q=res.x
