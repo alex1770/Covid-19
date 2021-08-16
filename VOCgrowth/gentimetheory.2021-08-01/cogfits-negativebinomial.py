@@ -15,8 +15,8 @@ with open('alphadelta','r') as fp:
     y=x.strip().split()
     if y[0]>=mindate:
       d=datetoday(y[0])-datetoday(mindate)
-      A[d]=int(y[2])
-      D[d]=int(y[3])
+      A[d]=int(y[1])
+      D[d]=int(y[2])
       maxd=max(maxd,d)
 ndays=maxd+1
 
