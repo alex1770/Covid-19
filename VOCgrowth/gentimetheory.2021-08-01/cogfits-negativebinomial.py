@@ -5,7 +5,9 @@ from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
 
 mindate='2021-04-20'
-maxdate='2021-05-31'
+maxdate='2021-06-20'
+if len(sys.argv)>1: mindate=sys.argv[1]
+if len(sys.argv)>2: maxdate=sys.argv[2]
 print("Using date range",mindate,"-",maxdate)
 
 # Alpha, Delta counts by day
@@ -54,15 +56,43 @@ def LL(xx):
 condition=1e3
 def NLL(xx): return -LL(xx)/condition
 
-def Fisher(xx,eps=1e-4):
-  t0,lam,q=xx
-  fi=(-LL([t0,lam-eps,q])+2*LL([t0,lam,q])-LL([t0,lam+eps,q]))/eps**2
+def Hessian(xx,eps):
+  N=len(xx)
+  H=np.zeros([N,N])
+  for i in range(N-1):
+    for j in range(i+1,N):
+      v=0
+      for (s1,s2) in [(-1,-1),(-1,1),(1,-1),(1,1)]:
+        x=np.copy(xx)
+        x[i]+=s1*eps[i]
+        x[j]+=s2*eps[j]
+        v+=s1*s2*LL(x)
+      e=v/(4*eps[i]*eps[j])
+      H[i,j]=e
+      H[j,i]=e
+  for i in range(N):
+    x=np.copy(xx)
+    v=0
+    for s in [-1,0,1]:
+      x=np.copy(xx)
+      x[i]+=s*eps[i]
+      v+=(s*s*3-2)*LL(x)
+    H[i,i]=v/eps[i]**2
+  return H
+
+def Fisher(xx):
   zconf=1.96
-  return zconf/sqrt(fi)
+  t0,lam,q=xx
+  eps=(5e-3,1e-4,1e-3)
+  H=Hessian(xx,eps)
+  HI=np.linalg.inv(H)
+  N=len(xx)
+  err=[zconf*sqrt(-HI[i,i]) for i in range(N)]
+  return err
 
 d0=datetoday('2021-05-15')-datetoday(mindate)
-res=minimize(NLL,[0,0.1,1],bounds=[(d0-10,d0+10), (-0.2,0.2), (1e-4,100)], method="SLSQP")
+res=minimize(NLL,[0,0.1,1],bounds=[(d0-20,d0+10), (-0.2,0.2), (1e-4,100)], method="SLSQP")
 if not res.success: raise RuntimeError(res.message)
 t0,lam,q=res.x
-dlam=Fisher(res.x)
+dt0,dlam,dq=Fisher(res.x)
 print("%6.2f    %5.3f (%5.3f - %5.3f)     %8.3f"%(t0,lam,lam-dlam,lam+dlam,LL(res.x)),q)

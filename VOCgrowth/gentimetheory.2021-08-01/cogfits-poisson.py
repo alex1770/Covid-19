@@ -4,7 +4,7 @@ from math import exp,log,sqrt
 from scipy.optimize import minimize
 from scipy.special import gammaln
 
-mindate='2021-04-15'
+mindate='2021-04-20'
 maxdate='2021-05-31'
 print("Using date range",mindate,"-",maxdate)
 
