@@ -132,10 +132,9 @@ ndates=(day1-day0)//7+1
 dates=[daytodate(x) for x in range(day0,day1+7,7)]
 # Some regions have missing dates. Not got around to working around this, so just restrict to regions that are complete
 regions=sorted(region for region in data if [x.date for x in data[region]]==dates)
-# regions=['London']# alter
 nregions=len(regions)
 nparams=3+1+nregions*2+ndates-2
-smoothness=5.0
+smoothness=1
 
 # Work out expected dropout matrix for region r, dropout matrix, date and Ct distribution d, model parameters xx[]
 def estimatedropoutmatrix(r,d,robustness,ctmult,logodds):
