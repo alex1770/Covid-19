@@ -23,7 +23,7 @@
 #   logodds0[r]  : nregions parameters encoding logodds in region r at time index 0
 #   dlogodds0[r] : nregions parameters encoding dlogodds in region r at time index 0
 #   ddlogodds[t] : ndates-2 parameters encoding difference in dlogodds at time index t (independent of region)
-# which expand to dlogodds[r,t] and logodds[r,t] (t=0,...,ndates-1; r=0,...,nregions-1) satisfying:
+# from which derive dlogodds[r,t] and logodds[r,t] (t=0,...,ndates-1; r=0,...,nregions-1) satisfying:
 #   dlogodds[r,0] = dlogodds0[r]
 #   dlogodds[r,t+1] - dlogodds[r,t] = ddlogodds[t] (t=0,...,ndates-2)
 #   logodds[r,0] = logodds0[r]
@@ -40,7 +40,8 @@ from math import log,exp,sqrt
 import numpy as np
 from scipy.optimize import minimize
 
-mode="region"
+#mode="region"
+mode="country"
 mindate="2020-10-01"
 
 def datetoday(x):
@@ -130,7 +131,7 @@ day0=datetoday(min(x[0].date for x in data.values()))
 day1=datetoday(max(x[-1].date for x in data.values()))
 ndates=(day1-day0)//7+1
 dates=[daytodate(x) for x in range(day0,day1+7,7)]
-# Some regions have missing dates. Not got around to working around this, so just restrict to regions that are complete
+# Some regions have missing dates. Not got around to working around this right now, so just restrict to regions that are complete
 regions=sorted(region for region in data if [x.date for x in data[region]]==dates)
 nregions=len(regions)
 nparams=3+1+nregions*2+ndates-2
@@ -187,16 +188,44 @@ def err0():
       E-=(d.p*np.log(d.p+1e-100)).sum()
   return E
 
-# Initial parameter values and bounds
-xx=np.zeros(nparams);(robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames(xx)
+# Initial parameter values
+xx=np.zeros(nparams)
+(robustness,ctmult,logodds0,dlogodds0,ddlogodds)=paramnames(xx)
+# Initial value from optimum of London on some run. Assumes starts at 2020-10-05.
+robustness[:]=np.array([ 33.56315511,  33.16996625,  31.96214098])
+ctmult[:]=np.array([ 1.67827597])
+logodds0[:]=np.array([-3.56203544]*nregions)
+dlogodds0[:]=np.array([ 0.43126755]*nregions)
+l=np.array([  4.20845618e-04,   1.92218047e-03,   4.41367355e-03,
+              7.40479378e-03,   9.50326029e-03,   1.01835524e-02,
+              4.90809206e-03,  -5.00863795e-03,  -2.00233554e-02,
+              -3.32267266e-02,  -4.17404311e-02,  -4.55025962e-02,
+              -4.59453737e-02,  -4.44876514e-02,  -4.30748611e-02,
+              -4.13296148e-02,  -4.23610707e-02,  -4.38003801e-02,
+              -4.48307603e-02,  -4.43511105e-02,  -4.23665500e-02,
+              -4.10731433e-02,  -3.71407363e-02,  -3.60321159e-02,
+              -4.28123834e-02,  -4.83447238e-02,  -5.21816168e-02,
+              -5.77126579e-02,  -6.48692255e-02,  -5.85077972e-02,
+              -4.11469402e-02,  -1.49220429e-02,  -1.95745206e-03,
+              -6.33398445e-03,  -3.55703990e-03,  -4.21122281e-03,
+              -3.57586671e-03,  -2.04329160e-03,  -1.10897678e-03,
+              -5.85719132e-04,  -2.61246719e-04,  -1.35914824e-04,
+              -4.27045670e-05,  -1.18049268e-05])
+if ndates-2<=len(l): ddlogodds[:]=l[:ndates-2]
+else: ddlogodds[:]=np.concatenate([l,[0]*(ndates-2-len(l))])
+
+# Bounds
 lbound=np.zeros(nparams);(lbound_r,lbound_c,lbound_l,lbound_d0,lbound_dd)=paramnames(lbound)
 ubound=np.zeros(nparams);(ubound_r,ubound_c,ubound_l,ubound_d0,ubound_dd)=paramnames(ubound)
-robustness.fill(28);lbound_r.fill(10);ubound_r.fill(50)
-ctmult[0]=1.5;lbound_c[0]=-1;ubound_c[0]=3
-logodds0.fill(-10);lbound_l.fill(-30);ubound_l.fill(30)
-dlogodds0.fill(1.0);lbound_d0.fill(-1);ubound_d0.fill(1)
-ddlogodds.fill(0.0);lbound_dd.fill(-1);ubound_dd.fill(1)
+lbound_r.fill(10);ubound_r.fill(50)
+lbound_c[0]=-1;ubound_c[0]=3
+lbound_l.fill(-30);ubound_l.fill(30)
+lbound_d0.fill(-1);ubound_d0.fill(1)
+lbound_dd.fill(-1);ubound_dd.fill(1)
 bounds=list(zip(lbound,ubound))
+
+# Check within bounds
+assert (xx>lbound).all() and (xx<ubound).all()
 
 print("Initial total KL divergence + prior on 2nd diffs = %.2f bits"%((err(xx)-err0())/log(2)))
 print("Using smoothness coefficient %.3f"%smoothness)
@@ -249,7 +278,9 @@ for (r,region) in enumerate(regions):
 
 print()
 
-with open('dropoutmodel.csv','w') as fp:
+fn='dropoutmodel.csv'
+#fn='dropoutmodel.mode=%s.smoothness=%g.csv'%(mode,smoothness)
+with open(fn,'w') as fp:
   print(", ".join(["date"]+regions),file=fp)
   for t in range(tnow+1):
     print(daytodate(day0+t),end="",file=fp)
