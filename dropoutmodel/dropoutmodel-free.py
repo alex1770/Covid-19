@@ -1,6 +1,6 @@
 # Starting from ONS dropout data, try to make model predicting proportions of dropouts of ORF1ab (abbreviated to OR), N, S.
 # Following on from Theo Sanderson's analysis at https://theo.io/post/2021-01-22-ons-data/.
-# Data from tabs 6a, 6b of spreadsheet here https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/bulletins/coronaviruscovid19infectionsurveypilot/22january2021/relateddata
+# Data from tabs 1a, 1b of spreadsheet here https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/covid19infectionsurveytechnicaldata
 # converted to ons_ct.csv using convertfromons.py
 # This differs from dropoutmodel.py in that it doesn't assume constant logistic growth.
 
@@ -11,16 +11,18 @@
 
 # Model:
 # Let logistic(x)=exp(x)/(1+exp(x))
+# Assume Ct distributed according to an interpolated version of the quantiles given in the ONS data.
+# The probability of dropout for gene X (N, ORF1ab or S) is taken to be expected value (wrt Ct) of logistic(b*(Ct-a_X)).
+# "Dropout" means a gene that is meant to be present in the virus has not been detected because it is too weak in the sample.
+# In addition to this reason (dropout) for not seeing a gene, B.1.1.7 causes the S gene to not be seen (SGTF).
 # Relative prevalence of B.1.1.7 = logistic(logodds(r,t)), where r=region and logodds(r,t) has approx constant growth in t (see below for how logodds(r,t) is defined in terms of parameters)
-# Choose Ct distributed according to an interpolated version of the quantiles given in the ONS data
-# then the probability of dropout for gene X (N, ORF1ab or S) = logistic(b*(Ct-a_X)).
-# The probability of SGTF (mandatory S dropout, assumed to be due to B.1.1.7) is exp(logodds[r,t]) with logodds[r,t] given as below:
+# The odds of SGTF (assumed to be due to B.1.1.7) is exp(logodds[r,t]) with logodds[r,t] given as below:
 # Parameters (4+2*nregions+ndates-2):
-#   a_X        : 3 parameters, one for each gene N, ORF1ab and S, encoding their "robustness" (lower = more fragile)
-#   b          : 1 parameter ("ctmult") encoding dependence of dropout probability on Ct
-#   logodds0   : nregions parameters encoding logodds in region r at time index 0
-#   dlogodds0  : nregions parameters encoding dlogodds in region r at time index 0
-#   ddlogodds  : ndates-2 parameters encoding difference in dlogodds at time index t (independent of region)
+#   a_X          : 3 parameters, one for each gene N, ORF1ab and S, encoding their "robustness" (lower = more fragile)
+#   b            : 1 parameter ("ctmult") encoding dependence of dropout probability on Ct
+#   logodds0[r]  : nregions parameters encoding logodds in region r at time index 0
+#   dlogodds0[r] : nregions parameters encoding dlogodds in region r at time index 0
+#   ddlogodds[t] : ndates-2 parameters encoding difference in dlogodds at time index t (independent of region)
 # which expand to dlogodds[r,t] and logodds[r,t] (t=0,...,ndates-1; r=0,...,nregions-1) satisfying:
 #   dlogodds[r,0] = dlogodds0[r]
 #   dlogodds[r,t+1] - dlogodds[r,t] = ddlogodds[t] (t=0,...,ndates-2)
@@ -124,10 +126,14 @@ with open("ons_ct.csv","r") as fp:
         d.qq=[float(row[i]) for i in range(11,16)]
         data.setdefault(row[1],[]).append(d)
 
-regions=sorted(list(data))
+day0=datetoday(min(x[0].date for x in data.values()))
+day1=datetoday(max(x[-1].date for x in data.values()))
+ndates=(day1-day0)//7+1
+dates=[daytodate(x) for x in range(day0,day1+7,7)]
+# Some regions have missing dates. Not got around to working around this, so just restrict to regions that are complete
+regions=sorted(region for region in data if [x.date for x in data[region]]==dates)
+# regions=['London']# alter
 nregions=len(regions)
-x=set(len(x) for x in data.values());assert len(x)==1
-ndates=x.pop()
 nparams=3+1+nregions*2+ndates-2
 smoothness=5.0
 
@@ -139,7 +145,10 @@ def estimatedropoutmatrix(r,d,robustness,ctmult,logodds):
   # interpolated distribution of Ct values and linking the predictions to the distribution of
   # dropout outcomes instead because that's the information that's available.
   nsubdiv=10# Surprisingly 5 seems to be enough, but using 10 to make sure
-  p=1/(1+exp(-logodds[r][d.t//7]))# Relative prevalence of B.1.1.7
+  l=logodds[r][d.t//7]
+  if l<-40: p=0
+  elif l>40: p=1
+  else: p=1/(1+exp(-l))# Relative prevalence of B.1.1.7
   for quantile in range(nsubdiv):
     ct=interp(d.pp,d.qq,(quantile+.5)/nsubdiv)
     dp=[1/(1+exp(-ctmult[0]*(ct-a))) for a in robustness]# Probability of dropout for each gene
@@ -193,7 +202,7 @@ bounds=list(zip(lbound,ubound))
 print("Initial total KL divergence + prior on 2nd diffs = %.2f bits"%((err(xx)-err0())/log(2)))
 print("Using smoothness coefficient %.3f"%smoothness)
 
-res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":1000})
+res=minimize(err,xx,method="SLSQP",bounds=bounds,options={"maxiter":2000})
 print(res.message)
 if not res.success: sys.exit(1)
 

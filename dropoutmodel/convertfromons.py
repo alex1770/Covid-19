@@ -1,6 +1,6 @@
-# From https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/coronaviruscovid19infectionsurveydata
-# save tables 6a and 6b (countries and regions), then do
-# python convertfromons.py <table6aname.csv> <table6bname.csv> > ons_ct.csv
+# From https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/covid19infectionsurveytechnicaldata
+# save tables 1a and 1b (countries and regions), then do
+# python convertfromons.py <table1aname.csv> <table1bname.csv> > ons_ct.csv
 
 import sys,re
 
@@ -27,8 +27,8 @@ print("RegionType,Region,Week started,N only,OR only,S only,OR+N,OR+S,N+S,OR+N+S
 for (fn,ty) in [(sys.argv[1],"Country"), (sys.argv[2],"EnglandRegion")]:
   with open(fn,"r") as fp:
     for l in fp:
-      m=re.search('^"Percentage and CT Values of COVID-19 cases, (.*)",',l)
+      m=re.search('^"Percentage of COVID-19 positive cases by gene pattern and Ct values?, (.*)",',l)
       if m!=None: region=m.group(1)
-      m=re.search('^(\w+ \w+ 202[0-9]),([1-9].*)',l)
+      m=re.search('^(\w+ \w+ 202[0-9]),([0-9].*)',l)
       if m!=None:
         print("%s,%s,%s,%s"%(ty,region,m.group(1),m.group(2).rstrip(',')))
