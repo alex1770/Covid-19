@@ -20,8 +20,8 @@ specmode="TTP"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
 
-smoothmode="SimpleAverage"
-#smoothmode="MinSquareLogRatios"
+#smoothmode="SimpleAverage"
+smoothmode="MinSquareLogRatios"
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -51,6 +51,11 @@ ONSpop[(20,25)]=ONSpop[(18,25)]*5/7
 ONSpop[(80,85)]=ONSpop[(80,150)]*254/(254+158+95)
 ONSpop[(85,90)]=ONSpop[(80,150)]*158/(254+158+95)
 ONSpop[(90,150)]=ONSpop[(80,150)]*95/(254+158+95)
+
+def prod(l):
+  p=1.
+  for x in l: p*=x
+  return p
 
 def get_data(req):
   url='https://api.coronavirus.data.gov.uk/v2/data?'
@@ -210,18 +215,27 @@ if smoothmode=="SimpleAverage":
     dowweight[d]+=sps[i]
     dowcount[d]+=1
   dowweight/=dowcount
-  dowweight*=7/dowweight.sum()
+  dowweight/=prod(dowweight)**(1/7)
   for i in range(nsamp): sp[i,:]/=dowweight[dow(i)]
 elif smoothmode=="MinSquareLogRatios":
+  dows=np.array([dow(i) for i in range(nsamp)])
   def slr(xx):
-    pass
-  pass
+    yy=sps/xx[dows]
+    e=0
+    for i in range(nsamp-1):
+      e+=log(yy[i+1]/yy[i])**2
+    return e
+  res=minimize(slr,[1]*7,method="SLSQP",bounds=[(1,1)]+[(.5,1.5)]*6,options={"maxiter":10000})
+  if not res.success: raise RuntimeError(res.message)
+  xx=np.copy(res.x)
+  xx/=prod(xx)**(1/7)
+  sp/=np.expand_dims(xx[dows],1)
 else: 
   raise RuntimeError('Unrecognised smoothmode '+smoothmode)
 
 #print(sp[:,-6:].sum(axis=1))
 
-title='Log_2 confirmed cases per 100k per day in England by age range. Source: https://coronavirus.data.gov.uk/ at '+daytodate(today)
+title='Log_2 confirmed cases per 100k per day in England by age range. Methods: '+specmode+'+'+smoothmode+'\\nSource: https://coronavirus.data.gov.uk/ at '+daytodate(today)
 data=[]
 for ar in [(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]:
   subages=[a for a in range(nages) if ages[a][0]>=ar[0] and ages[a][1]<=ar[1]]
