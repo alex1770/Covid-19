@@ -11,7 +11,17 @@ np.set_printoptions(edgeitems=30, linewidth=10000)
 
 cachedir='apidata_allcaseages'
 infinity=7# Assume cases stabilise after this many days have elapsed
+
+# Treat public holidays (England) like Sundays
+holidays=["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]
 monday=datetoday('2021-09-20')# Any Monday
+
+specmode="TTP"
+#specmode="SimpleRestrict"
+#specmode="ByPublish"
+
+smoothmode="SimpleAverage"
+smoothmode="MinSquareLogRatios"
 
 def get_data(req):
   url='https://api.coronavirus.data.gov.uk/v2/data?'
@@ -29,11 +39,12 @@ def parseage(x):
   return (aa[0],aa[1]+1)
 
 minday=datetoday('2021-06-01')
-skipdays=1
+skipdays=0
+if specmode=="ByPublish": skipdays=0
 
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
-if d.hour+d.minute/60<16+15/60: today-=1
+if d.hour+d.minute/60<16+15/60: today-=1# Dashboard/api updates at 4pm UK time
 
 ages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 astrings=["%d_%d"%a for a in ages]
@@ -110,8 +121,58 @@ hh=gg[1:,:,:]-gg[:-1,:,:]
 jj=np.zeros([npub-infinity,infinity,nages],dtype=int)
 for i in range(npub-infinity):
   jj[i,:,:]=hh[i+1:i+infinity+1,i,:]
-  
-for d in range(7):
-  t=jj[d::7,:,:].sum(axis=(0,2))
-  print(t,t/t.sum()*100)
-  
+
+sp=np.zeros([nspec,nages],dtype=float)
+
+if specmode=="TTP":
+  # Use time-to-publish, based on day of week, to re-estimate full no. of cases by spec date.
+  # Use more publishing days (up to "infinity") where possible; extrapolate where not (the recent days)
+
+  # These 'time-to-publish' stats don't seem to depend that much on time of year (schools open/closed)
+  # ttp[dow,dtp-1] = proportion of cases with specimen day-of-week = dow (counting from minday) , and dtp days to publish
+  #                  0<=dow<7, 1<=dtp<=infinity
+  ttp=np.zeros([7,infinity])
+  for d in range(7):
+    t=jj[d::7,:,:].sum(axis=2).mean(axis=0)
+    #print("%9.1f"%(t.sum()),t/t.sum()*100)
+    ttp[d]=t/t.sum()
+
+  for i in range(nspec):
+    n=min(npub-(i+1),infinity)
+    sp[i]=hh[i+1:i+infinity+1,i,:].sum(axis=0)/ttp[i%7][:n].sum()
+    #print(hh[i+1:i+infinity+1,i,:].sum(),ttp[i%7][:n].sum())
+
+elif specmode=="SimpleRestrict":
+  for i in range(nspec):
+    sp[i]=hh[i+1:i+2+skipdays,i,:].sum(axis=0)
+
+elif specmode=="ByPublish":
+  sp=hh[infinity:,:,:].sum(axis=1)
+  minday+=infinity-2# 2 = est phase lag from using publish day
+
+else: 
+  raise RuntimeError('Unrecognised specmode '+specmode)
+
+nsamp=sp.shape[0]
+
+# Now sp[specimenday-minday][age index] = Est no. of samples. (In "ByPublish" mode, it's a bit of a fudged specimen day.)
+
+print(sp[:,-6:].sum(axis=1))
+
+#sp=sp[:,-6:]#alter
+
+sps=sp.sum(axis=1)
+if smoothmode=="SimpleAverage":
+  dow=np.zeros(7)
+  for d in range(7):
+    dow[d]=sps[d::7].sum()/len(sps[d::7])
+  dow*=7/dow.sum()
+  for i in range(nsamp): sp[i,:]/=dow[i%7]
+elif smoothmode=="MinSquareLogRatios":
+  def slr(xx):
+    pass
+  pass
+else: 
+  raise RuntimeError('Unrecognised smoothmode '+smoothmode)
+
+print(sp[:,-6:].sum(axis=1))
