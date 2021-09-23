@@ -21,7 +21,8 @@ specmode="TTP"
 #specmode="ByPublish"
 
 #smoothmode="SimpleAverage"
-smoothmode="MinSquareLogRatios"
+#smoothmode="MinSquareLogRatios"
+smoothmode="MagicDeconv"
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -82,6 +83,7 @@ if d.hour+d.minute/60<16+15/60: today-=1# Dashboard/api updates at 4pm UK time
 
 ages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 #ages=[(a,a+5) for a in range(65,90,5)]+[(90,150)]# alter
+#ages=[(10,15),(15,20)]#alter
 astrings=["%d_%d"%a for a in ages]
 nages=len(ages)
 
@@ -206,19 +208,35 @@ nsamp=sp.shape[0]
 
 # Sum over ages for the purposes of correcting day-of-week effect (may need to change this)
 sps=sp.sum(axis=1)
+pad=8
+# Postfix underscore indicates padded variable
+dows=np.array([dow(i) for i in range(nsamp)])
+dows_=np.array([dow(i-pad) for i in range(pad+nsamp)])
+
+# Make get-tested-matrix: tm[pad+i,j]=probability of getting tested on day j from testable infection on day i
+# pdrop=dropout probability
+# ptest[j]=probability of getting tested on day j
+def maketestmatrix(pdrop,ptest_):
+  tm=np.zeros([nsamp+pad,nsamp])
+  for i in range(nsamp+pad):
+    p=1# Probability of having "survived" up to this point (i.e., still infected, not tested, not given up the idea of getting tested)
+    for j_ in range(i,nsamp+pad):
+      if j_>=pad: tm[i,j_-pad]=p*ptest_[j_]
+      p*=1-pdrop
+      p*=1-ptest_[j_]
+  return tm
 
 if smoothmode=="SimpleAverage":
   dowweight=np.zeros(7)
   dowcount=np.zeros(7,dtype=int)
   for i in range(nsamp):
-    d=dow(i)
+    d=dows[i]
     dowweight[d]+=sps[i]
     dowcount[d]+=1
   dowweight/=dowcount
   dowweight/=prod(dowweight)**(1/7)
   for i in range(nsamp): sp[i,:]/=dowweight[dow(i)]
 elif smoothmode=="MinSquareLogRatios":
-  dows=np.array([dow(i) for i in range(nsamp)])
   def slr(xx):
     yy=sps/xx[dows]
     e=0
@@ -230,6 +248,38 @@ elif smoothmode=="MinSquareLogRatios":
   xx=np.copy(res.x)
   xx/=prod(xx)**(1/7)
   sp/=np.expand_dims(xx[dows],1)
+elif smoothmode=="MagicDeconv":
+  # (infectionincidence) . (get tested matrix) = sps
+  # [nsamp+pad] . [nsamp+pad x nsamp] = [nsamp]
+  def getinfect_(xx,spec):
+    pdrop,ptest_=xx[0],xx[1:8][dows_]
+    tm=maketestmatrix(pdrop,ptest_)
+    u,s,vt=np.linalg.svd(tm)
+    assert len(s)==nsamp
+    ut=u.transpose()
+    v=vt.transpose()
+    # tm = u[:,:-pad] @ np.diag(s) @ vt
+    # ut[-1],...,ut[-pad] @ tm = 0
+    # Was going to parametrise x s.t. x @ tm = sps  (x=infections), but actually that only affects [0:pad+1] of infect, so can just truncate
+    # Ah, I see why now. The information being pushed forward is squeezed through 1 dimension - the number of "surviving" infections at a particular date.
+    infect_=((spec @ v) @ np.diag(1/s)) @ ut[:-pad,:]
+    return infect_
+  def err(xx):
+    infect_=getinfect_(xx,sps)
+    infect=infect_[pad+1:]
+    e=0
+    for i in range(nsamp-1):
+      if infect[i]<=0: e+=10+sqrt(-infect[i])
+    for i in range(nsamp-2):
+      if infect[i]>0 and infect[i+1]>0: e+=log(infect[i+1]/infect[i])**2
+    return e
+  res=minimize(err,[0.1]+[0.5]*7,method="SLSQP",bounds=[(0.01,0.9)]+[(0.01,0.99)]*7,options={"maxiter":10000})
+  if not res.success: raise RuntimeError(res.message)
+  spnew=np.zeros([nsamp-1,nages],dtype=float)
+  for a in range(nages):
+    spnew[:,a]=getinfect_(res.x,sp[:,a])[pad+1:]
+  sp=spnew
+  minday+=1
 else: 
   raise RuntimeError('Unrecognised smoothmode '+smoothmode)
 
@@ -242,6 +292,6 @@ for ar in [(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]:
   pop=sum(ONSpop[ages[a]] for a in subages)
   data.append({
     'title': "%d - %d"%(ar[0],ar[1]),
-    'values': [(daytodate(minday+i),log(sum(sp[i][a] for a in subages)/pop*1e5)/log(2)) for i in range(nsamp)]
+    'values': [(daytodate(minday+i),log(sum(sp[i][a] for a in subages)/pop*1e5)/log(2)) for i in range(sp.shape[0])]
   })
 makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top center"])
