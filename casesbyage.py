@@ -290,7 +290,7 @@ def smooth(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-title='Log_2 confirmed cases per 100k per day in England by age range. Methods: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nSource: https://coronavirus.data.gov.uk/ at '+daytodate(today)
+title='Log_2 confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)
 data=[]
 n=sm.shape[0]
 for ar in [(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]:
