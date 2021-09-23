@@ -16,13 +16,13 @@ infinity=7# Assume cases stabilise after this many days have elapsed
 holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]]
 monday=datetoday('2021-09-20')# Any Monday
 
-specmode="TTP"
+specmode="TimeToPublishAdjustment"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
 
-#smoothmode="SimpleAverage"
-#smoothmode="MinSquareLogRatios"
-smoothmode="MagicDeconv"
+#weekdayfix="SimpleAverage"
+weekdayfix="MinSquareLogRatios"
+#weekdayfix="MagicDeconv"
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -82,8 +82,6 @@ today=datetoday(d.strftime('%Y-%m-%d'))
 if d.hour+d.minute/60<16+15/60: today-=1# Dashboard/api updates at 4pm UK time
 
 ages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
-#ages=[(a,a+5) for a in range(65,90,5)]+[(90,150)]# alter
-#ages=[(10,15),(15,20)]#alter
 astrings=["%d_%d"%a for a in ages]
 nages=len(ages)
 
@@ -152,7 +150,6 @@ for i in range(nspec): gg[i+1,i,:]=0
 # Convert from total up to publish day, to newly published this day
 # hh[publishday - minday][specimenday - minday][index into ages] = new cases on specimen day that were first reported on publish day
 hh=gg[1:,:,:]-gg[:-1,:,:]
-#ii=hh[:,:,-6:].sum(axis=2)
 
 # Convert into (spec day, delay) co-ords
 # jj[specimenday - minday][publishday-(specimenday+1)][index into ages] = new cases on specimen day that were first reported on publish day
@@ -169,7 +166,7 @@ def dow(i):
   return (d-monday)%7
 
 # Try to undo the effect of delay from specimen to published test result
-if specmode=="TTP":
+if specmode=="TimeToPublishAdjustment":
   # Use time-to-publish, based on day of week, to re-estimate full no. of cases by spec date.
   # Use more publishing days (up to "infinity") where possible; extrapolate where not (the recent days)
 
@@ -200,12 +197,6 @@ nsamp=sp.shape[0]
 
 # Now sp[specimenday-minday][age index] = Est no. of samples. (In "ByPublish" mode, it's a bit of a fudged specimen day.)
 
-#print(sp[:,-6:].sum(axis=1))
-
-#sp=sp[:,-6:]#alter
-
-# Try to undo the effect of delay to get tested
-
 # Sum over ages for the purposes of correcting day-of-week effect (may need to change this)
 sps=sp.sum(axis=1)
 pad=8
@@ -226,7 +217,7 @@ def maketestmatrix(pdrop,ptest_):
       p*=1-ptest_[j_]
   return tm
 
-if smoothmode=="SimpleAverage":
+if weekdayfix=="SimpleAverage":
   dowweight=np.zeros(7)
   dowcount=np.zeros(7,dtype=int)
   for i in range(nsamp):
@@ -235,8 +226,8 @@ if smoothmode=="SimpleAverage":
     dowcount[d]+=1
   dowweight/=dowcount
   dowweight/=prod(dowweight)**(1/7)
-  for i in range(nsamp): sp[i,:]/=dowweight[dow(i)]
-elif smoothmode=="MinSquareLogRatios":
+  sm=sp/dowweight[dows][:,None]
+elif weekdayfix=="MinSquareLogRatios":
   def slr(xx):
     yy=sps/xx[dows]
     e=0
@@ -247,8 +238,10 @@ elif smoothmode=="MinSquareLogRatios":
   if not res.success: raise RuntimeError(res.message)
   xx=np.copy(res.x)
   xx/=prod(xx)**(1/7)
-  sp/=np.expand_dims(xx[dows],1)
-elif smoothmode=="MagicDeconv":
+  sm=sp/xx[dows][:,None]
+elif weekdayfix=="MagicDeconv":
+  # (This is a general model that simulates delays in getting tested, but the optimiser ends up choosing a solution that
+  # amounts to MinSquareLogRatios, so not continuing to develop this.)
   # (infectionincidence) . (get tested matrix) = sps
   # [nsamp+pad] . [nsamp+pad x nsamp] = [nsamp]
   def getinfect_(xx,spec):
@@ -275,23 +268,37 @@ elif smoothmode=="MagicDeconv":
     return e
   res=minimize(err,[0.1]+[0.5]*7,method="SLSQP",bounds=[(0.01,0.9)]+[(0.01,0.99)]*7,options={"maxiter":10000})
   if not res.success: raise RuntimeError(res.message)
-  spnew=np.zeros([nsamp-1,nages],dtype=float)
+  sm=np.zeros([nsamp-1,nages],dtype=float)
   for a in range(nages):
-    spnew[:,a]=getinfect_(res.x,sp[:,a])[pad+1:]
-  sp=spnew
+    sm[:,a]=getinfect_(res.x,sp[:,a])[pad+1:]
   minday+=1
 else: 
-  raise RuntimeError('Unrecognised smoothmode '+smoothmode)
+  raise RuntimeError('Unrecognised weekdayfix '+weekdayfix)
 
-#print(sp[:,-6:].sum(axis=1))
+smoothmode="PseudoPoissonandSquareLogRatios"
+# lam sets the scale on which the smoothed function can change per timestep. E.g., lam=0.03 <-> order of 3% change per timestep.
+def smooth(seq,lam):
+  n=len(seq)
+  def nll(xx):
+    ll=0
+    for i in range(n):
+      ll+=-exp(xx[i])+seq[i]*xx[i]
+    for i in range(n-1):
+      ll-=((xx[i]-xx[i+1])/lam)**2
+    return -ll
+  res=minimize(nll,np.log(seq),method="SLSQP",bounds=[(-10,20)]*n,options={"maxiter":10000})
+  if not res.success: raise RuntimeError(res.message)
+  return np.exp(res.x)
 
-title='Log_2 confirmed cases per 100k per day in England by age range. Methods: '+specmode+'+'+smoothmode+'\\nSource: https://coronavirus.data.gov.uk/ at '+daytodate(today)
+title='Log_2 confirmed cases per 100k per day in England by age range. Methods: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nSource: https://coronavirus.data.gov.uk/ at '+daytodate(today)
 data=[]
+n=sm.shape[0]
 for ar in [(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]:
   subages=[a for a in range(nages) if ages[a][0]>=ar[0] and ages[a][1]<=ar[1]]
   pop=sum(ONSpop[ages[a]] for a in subages)
+  sa=smooth(sm[:,subages].sum(axis=1),0.03)/pop*1e5
   data.append({
-    'title': "%d - %d"%(ar[0],ar[1]),
-    'values': [(daytodate(minday+i),log(sum(sp[i][a] for a in subages)/pop*1e5)/log(2)) for i in range(sp.shape[0])]
+    'title': ("%d - %d years"%(ar[0],ar[1]) if ar[1]<150 else "%d+ years"%ar[0]),
+    'values': [(daytodate(minday+i),log(sa[i])/log(2)) for i in range(n)]
   })
 makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top center"])
