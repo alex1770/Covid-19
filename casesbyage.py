@@ -1,4 +1,4 @@
-import time,calendar,os,json,sys,datetime,pytz
+import os,json,sys,datetime,pytz
 from requests import get
 from subprocess import Popen,PIPE
 from math import sqrt,log,exp
@@ -73,13 +73,15 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
-minday=datetoday('2021-06-01')
-skipdays=0
-if specmode=="ByPublish": skipdays=0
-
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
 if d.hour+d.minute/60<16+15/60: today-=1# Dashboard/api updates at 4pm UK time
+
+#minday=datetoday('2021-06-01')
+minday=today-120
+
+skipdays=0
+if specmode=="ByPublish": skipdays=0
 
 ages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 astrings=["%d_%d"%a for a in ages]
