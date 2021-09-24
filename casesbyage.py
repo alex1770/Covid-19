@@ -303,4 +303,4 @@ for ar in [(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]:
     'title': ("%d - %d years"%(ar[0],ar[1]) if ar[1]<150 else "%d+ years"%ar[0]),
     'values': [(daytodate(minday+i),log(sa[i])/log(2)) for i in range(n)]
   })
-makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top center"])
+makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
