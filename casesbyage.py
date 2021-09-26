@@ -201,23 +201,7 @@ nsamp=sp.shape[0]
 
 # Sum over ages for the purposes of correcting day-of-week effect (may need to change this)
 sps=sp.sum(axis=1)
-pad=8
-# Postfix underscore indicates padded variable
 dows=np.array([dow(i) for i in range(nsamp)])
-dows_=np.array([dow(i-pad) for i in range(pad+nsamp)])
-
-# Make get-tested-matrix: tm[pad+i,j]=probability of getting tested on day j from testable infection on day i
-# pdrop=dropout probability
-# ptest[j]=probability of getting tested on day j
-def maketestmatrix(pdrop,ptest_):
-  tm=np.zeros([nsamp+pad,nsamp])
-  for i in range(nsamp+pad):
-    p=1# Probability of having "survived" up to this point (i.e., still infected, not tested, not given up the idea of getting tested)
-    for j_ in range(i,nsamp+pad):
-      if j_>=pad: tm[i,j_-pad]=p*ptest_[j_]
-      p*=1-pdrop
-      p*=1-ptest_[j_]
-  return tm
 
 if weekdayfix=="SimpleAverage":
   dowweight=np.zeros(7)
@@ -246,6 +230,21 @@ elif weekdayfix=="MagicDeconv":
   # amounts to MinSquareLogRatios, so not continuing to develop this.)
   # (infectionincidence) . (get tested matrix) = sps
   # [nsamp+pad] . [nsamp+pad x nsamp] = [nsamp]
+  pad=8
+  # Postfix underscore indicates padded variable
+  dows_=np.array([dow(i-pad) for i in range(pad+nsamp)])
+  # Make get-tested-matrix: tm[pad+i,j]=probability of getting tested on day j from testable infection on day i
+  # pdrop=dropout probability
+  # ptest[j]=probability of getting tested on day j
+  def maketestmatrix(pdrop,ptest_):
+    tm=np.zeros([nsamp+pad,nsamp])
+    for i in range(nsamp+pad):
+      p=1# Probability of having "survived" up to this point (i.e., still infected, not tested, not given up the idea of getting tested)
+      for j_ in range(i,nsamp+pad):
+        if j_>=pad: tm[i,j_-pad]=p*ptest_[j_]
+        p*=1-pdrop
+        p*=1-ptest_[j_]
+    return tm
   def getinfect_(xx,spec):
     pdrop,ptest_=xx[0],xx[1:8][dows_]
     tm=maketestmatrix(pdrop,ptest_)
