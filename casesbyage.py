@@ -24,6 +24,10 @@ specmode="TimeToPublishAdjustment"
 weekdayfix="MinSquareLogRatios"
 #weekdayfix="MagicDeconv"
 
+# These need to be disjoint at the moment
+displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
+#displayages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
+
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
   (0,18): 12093288,
@@ -83,15 +87,14 @@ minday=today-120
 skipdays=0
 if specmode=="ByPublish": skipdays=0
 
-ages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
-astrings=["%d_%d"%a for a in ages]
-nages=len(ages)
+origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
+astrings=["%d_%d"%a for a in origages]
 
 # Target save format is
 # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
 # having converted agerange to open-closed format and eliminated superfluous ranges, but kept as a string because json can't handle tuples
 # Note that specimendate goes back to the dawn of time, whatever minday is, because we want to save everything.
-# Collect dd[publishdate]=td
+# Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
 dd={}
 os.makedirs(cachedir,exist_ok=True)
 for day in range(minday-1,today+1):
@@ -112,19 +115,28 @@ for day in range(minday-1,today+1):
         x=d[d['metric']]
         for y in x:
           a=parseage(y['age'])
-          if a in ages:
+          if a in origages:
             td[sexname][specdate]["%d_%d"%a]=y['value']
     with open(fn,'w') as fp: json.dump(td,fp,indent=2)
     print("Retrieved api data at",date)
   dd[date]=td
 
 # Convert to numpy array
-# ee[publishday - minday][sex 0=m, 1=f][specimenday - (minday-1)][index into ages] = publishday's version of cumulative cases up to specimen day
+# ee[publishday - minday][sex 0=m, 1=f][specimenday - (minday-1)][index into displayages] = publishday's version of cumulative cases up to specimen day
+
+reduceages={}
+for (a,astr) in enumerate(astrings):
+  for (da,dat) in enumerate(displayages):
+    if origages[a][0]>=dat[0] and origages[a][1]<=dat[1]: reduceages[astr]=da;break
+nages=len(displayages)
+ONSpop_reduced=np.zeros(nages)
+for (a,astr) in enumerate(astrings):
+  if astr in reduceages: ONSpop_reduced[reduceages[astr]]+=ONSpop[origages[a]]
 
 npub=today-minday+1
 nspec=today-minday-skipdays
 ee=np.zeros([npub+1,2,nspec+1,nages],dtype=int)
-smindate=daytodate(minday-1)# Compare strings because datetoday is slow
+smindate=daytodate(minday-1)# Prepare this to compare strings because datetoday is slow
 for pubdate in dd:
   pday=datetoday(pubdate)-(minday-1)
   assert pday>=0
@@ -136,25 +148,24 @@ for pubdate in dd:
         assert sday>=0
         if sday<nspec+1:
           for astring in dd[pubdate][sex][specdate]:
-            if astring in astrings:
-              a=astrings.index(astring)
-              ee[pday][s][sday][a]=dd[pubdate][sex][specdate][astring]
+            if astring in reduceages:
+              ee[pday][s][sday][reduceages[astring]]+=dd[pubdate][sex][specdate][astring]
 
 # Sum over sex
-# ff[publishday - (minday-1)][specimenday - (minday-1)][index into ages] = publishday's version of cumulative cases up to specimen day
+# ff[publishday - (minday-1)][specimenday - (minday-1)][index into displayages] = publishday's version of cumulative cases up to specimen day
 ff=ee.sum(axis=1)
 
 # Convert from cumulative cases to new cases
-# gg[publishday - (minday-1)][specimenday - minday][index into ages] = publishday's version of new cases on specimen day
+# gg[publishday - (minday-1)][specimenday - minday][index into displayages] = publishday's version of new cases on specimen day
 gg=ff[:,1:,:]-ff[:,:-1,:]
 for i in range(nspec): gg[i+1,i,:]=0
 
 # Convert from total up to publish day, to newly published this day
-# hh[publishday - minday][specimenday - minday][index into ages] = new cases on specimen day that were first reported on publish day
+# hh[publishday - minday][specimenday - minday][index into displayages] = new cases on specimen day that were first reported on publish day
 hh=gg[1:,:,:]-gg[:-1,:,:]
 
 # Convert into (spec day, delay) co-ords
-# jj[specimenday - minday][publishday-(specimenday+1)][index into ages] = new cases on specimen day that were first reported on publish day
+# jj[specimenday - minday][publishday-(specimenday+1)][index into displayages] = new cases on specimen day that were first reported on publish day
 jj=np.zeros([npub-infinity,infinity,nages],dtype=int)
 for i in range(npub-infinity):
   jj[i,:,:]=hh[i+1:i+infinity+1,i,:]
@@ -194,6 +205,7 @@ elif specmode=="ByPublish":
   minday+=infinity-2# 2 = est phase lag from using publish day
 else: 
   raise RuntimeError('Unrecognised specmode '+specmode)
+print("GH0")
 
 nsamp=sp.shape[0]
 
@@ -201,7 +213,47 @@ nsamp=sp.shape[0]
 
 # Sum over ages for the purposes of correcting day-of-week effect (may need to change this)
 sps=sp.sum(axis=1)
+#sps=sp[:,2:3].sum(axis=1)#alter
 dows=np.array([dow(i) for i in range(nsamp)])
+
+# lam sets the scale on which the smoothed function can change per timestep. E.g., lam=0.03 <-> order of 3% change per timestep.
+# Not currently used
+def smoothSLR(seq,lam):
+  logseq=np.log(seq)
+  n=len(seq)
+  def nll(xx):
+    ll=0
+    for i in range(n):
+      ll+=-(logseq[i]-xx[i])**2/2
+    for i in range(n-1):
+      ll+=-((xx[i]-xx[i+1])/lam)**2/2
+    return -ll
+  res=minimize(nll,logseq,method="SLSQP",bounds=[(-10,20)]*n,options={"maxiter":10000})
+  if not res.success: raise RuntimeError(res.message)
+  return np.exp(res.x)
+
+# Meta investigation to see what age bands should be grouped together for the purposes of weekday correction
+if 0:
+  dw=np.zeros([nages,7])
+  for a in range(nages):
+    dowweight=np.zeros(7)
+    dowcount=np.zeros(7,dtype=int)
+    for i in range(nsamp):
+      d=dows[i]
+      dowweight[d]+=sp[i,a]
+      dowcount[d]+=1
+    dowweight/=dowcount
+    dowweight/=prod(dowweight)**(1/7)
+    dw[a]=dowweight
+    print("%2d %10s %5.3f"%(a,displayages[a],dowweight[0]/dowweight[2]),dowweight)
+  print()
+  dws=np.zeros([nages,7])
+  for i in range(7):
+    dws[:,i]=smoothSLR(dw[:,i],1)
+    print("GH",i)
+  for a in range(nages):
+    print("%2d %10s %5.3f"%(a,displayages[a],dws[a,0]/dws[a,2]),dws[a])
+  poi
 
 if weekdayfix=="SimpleAverage":
   dowweight=np.zeros(7)
@@ -275,10 +327,11 @@ elif weekdayfix=="MagicDeconv":
   minday+=1
 else: 
   raise RuntimeError('Unrecognised weekdayfix '+weekdayfix)
+print("GH1")
 
 smoothmode="PseudoPoissonandSquareLogRatios"
 # lam sets the scale on which the smoothed function can change per timestep. E.g., lam=0.03 <-> order of 3% change per timestep.
-def smooth(seq,lam):
+def smoothpoisson(seq,lam):
   n=len(seq)
   def nll(xx):
     ll=0
@@ -294,12 +347,15 @@ def smooth(seq,lam):
 title='Log_2 confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)
 data=[]
 n=sm.shape[0]
-for ar in [(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]:
-  subages=[a for a in range(nages) if ages[a][0]>=ar[0] and ages[a][1]<=ar[1]]
-  pop=sum(ONSpop[ages[a]] for a in subages)
-  sa=smooth(sm[:,subages].sum(axis=1),0.03)/pop*1e5
+for (a,ar) in enumerate(displayages):
+  sa=smoothpoisson(sm[:,a],0.03)/ONSpop_reduced[a]*1e5
   data.append({
     'title': ("%d - %d years"%(ar[0],ar[1]) if ar[1]<150 else "%d+ years"%ar[0]),
     'values': [(daytodate(minday+i),log(sa[i])/log(2)) for i in range(n)]
   })
 makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
+
+# Todo:
+## (Probably) Move choice of output bands upfront, and immediately reduce to these (so nages becomes 7 or whatever)
+# Work out weekday correction for each such output band
+# Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
