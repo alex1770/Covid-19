@@ -16,7 +16,8 @@ infinity=7# Assume cases stabilise after this many days have elapsed
 holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]]
 monday=datetoday('2021-09-20')# Any Monday
 
-specmode="TimeToPublishAdjustment"
+#specmode="TimeToPublishAdjustment"
+specmode="TTPadj_runningweekly"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
 
@@ -195,8 +196,16 @@ if specmode=="TimeToPublishAdjustment":
     ttp[d]/=ttp[d].sum()
   for i in range(nspec):
     n=min(npub-(i+1),infinity)
-    sp[i]=hh[i+1:i+infinity+1,i,:].sum(axis=0)/ttp[dow(i)][:n].sum()
-    #print(hh[i+1:i+infinity+1,i,:].sum(),ttp[dow(i)][:n].sum())
+    sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/ttp[dow(i)][:n].sum()
+    #print(hh[i+1:i+n+1,i,:].sum(),ttp[dow(i)][:n].sum())
+elif specmode=="TTPadj_runningweekly":
+  for i in range(nspec):
+    n=min(npub-(i+1),infinity)
+    if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
+    else:
+      #print(hh[i+1:i+n+1,i,:].sum(axis=0),hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0),hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0))
+      sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0)*hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0)
+    #print(hh[i+1:i+n+1,i,:].sum(),ttp[dow(i)][:n].sum())
 elif specmode=="SimpleRestrict":
   for i in range(nspec):
     sp[i]=hh[i+1:i+2+skipdays,i,:].sum(axis=0)
@@ -205,15 +214,11 @@ elif specmode=="ByPublish":
   minday+=infinity-2# 2 = est phase lag from using publish day
 else: 
   raise RuntimeError('Unrecognised specmode '+specmode)
-print("GH0")
 
 nsamp=sp.shape[0]
 
 # Now sp[specimenday-minday][age index] = Est no. of samples. (In "ByPublish" mode, it's a bit of a fudged specimen day.)
 
-# Sum over ages for the purposes of correcting day-of-week effect (may need to change this)
-sps=sp.sum(axis=1)
-#sps=sp[:,2:3].sum(axis=1)#alter
 dows=np.array([dow(i) for i in range(nsamp)])
 
 # lam sets the scale on which the smoothed function can change per timestep. E.g., lam=0.03 <-> order of 3% change per timestep.
@@ -232,7 +237,7 @@ def smoothSLR(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-# Meta investigation to see what age bands should be grouped together for the purposes of weekday correction
+# Investigation to see what age bands should be grouped together for the purposes of weekday correction
 if 0:
   dw=np.zeros([nages,7])
   for a in range(nages):
@@ -256,6 +261,7 @@ if 0:
   poi
 
 if weekdayfix=="SimpleAverage":
+  #sps=sp[:,2:3].sum(axis=1)#alter
   dowweight=np.zeros(7)
   dowcount=np.zeros(7,dtype=int)
   for i in range(nsamp):
@@ -266,20 +272,22 @@ if weekdayfix=="SimpleAverage":
   dowweight/=prod(dowweight)**(1/7)
   sm=sp/dowweight[dows][:,None]
 elif weekdayfix=="MinSquareLogRatios":
-  def slr(xx):
+  def slr(xx,sps):
     yy=sps/xx[dows]
     e=0
-    for i in range(nsamp-1):
+    for i in range(nsamp-1):#alter
       e+=log(yy[i+1]/yy[i])**2
     return e
-  res=minimize(slr,[1]*7,method="SLSQP",bounds=[(1,1)]+[(.5,1.5)]*6,options={"maxiter":10000})
-  if not res.success: raise RuntimeError(res.message)
-  xx=np.copy(res.x)
-  xx/=prod(xx)**(1/7)
-  sm=sp/xx[dows][:,None]
+  sm=np.zeros(sp.shape)
+  for a in range(nages):
+    res=minimize(slr,[1]*7,args=(sp[:,a],),method="SLSQP",bounds=[(1,1)]+[(.5,1.5)]*6,options={"maxiter":10000})
+    if not res.success: raise RuntimeError(res.message)
+    xx=np.copy(res.x)
+    xx/=prod(xx)**(1/7)
+    sm[:,a]=sp[:,a]/xx[dows]
 elif weekdayfix=="MagicDeconv":
   # (This is a general model that simulates delays in getting tested, but the optimiser ends up choosing a solution that
-  # amounts to MinSquareLogRatios, so not continuing to develop this.)
+  # is pretty close to MinSquareLogRatios, so not continuing to develop this.)
   # (infectionincidence) . (get tested matrix) = sps
   # [nsamp+pad] . [nsamp+pad x nsamp] = [nsamp]
   pad=8
@@ -327,7 +335,6 @@ elif weekdayfix=="MagicDeconv":
   minday+=1
 else: 
   raise RuntimeError('Unrecognised weekdayfix '+weekdayfix)
-print("GH1")
 
 smoothmode="PseudoPoissonandSquareLogRatios"
 # lam sets the scale on which the smoothed function can change per timestep. E.g., lam=0.03 <-> order of 3% change per timestep.
@@ -344,7 +351,7 @@ def smoothpoisson(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-title='Log_2 confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)
+title='Log_2 confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
 data=[]
 n=sm.shape[0]
 for (a,ar) in enumerate(displayages):
@@ -356,6 +363,4 @@ for (a,ar) in enumerate(displayages):
 makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
 
 # Todo:
-## (Probably) Move choice of output bands upfront, and immediately reduce to these (so nages becomes 7 or whatever)
-# Work out weekday correction for each such output band
 # Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
