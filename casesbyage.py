@@ -17,7 +17,7 @@ holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05
 monday=datetoday('2021-09-20')# Any Monday
 
 #specmode="TimeToPublishAdjustment"
-specmode="TTPadj_runningweekly"
+specmode="TTPadjrunningweekly"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
 
@@ -27,6 +27,7 @@ weekdayfix="MinSquareLogRatios"
 
 # These need to be disjoint at the moment
 displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
+#displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,40),(40,50),(50,150)]
 #displayages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
@@ -198,14 +199,11 @@ if specmode=="TimeToPublishAdjustment":
     n=min(npub-(i+1),infinity)
     sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/ttp[dow(i)][:n].sum()
     #print(hh[i+1:i+n+1,i,:].sum(),ttp[dow(i)][:n].sum())
-elif specmode=="TTPadj_runningweekly":
+elif specmode=="TTPadjrunningweekly":
   for i in range(nspec):
     n=min(npub-(i+1),infinity)
     if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
-    else:
-      #print(hh[i+1:i+n+1,i,:].sum(axis=0),hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0),hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0))
-      sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0)*hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0)
-    #print(hh[i+1:i+n+1,i,:].sum(),ttp[dow(i)][:n].sum())
+    else: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0)*hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0)
 elif specmode=="SimpleRestrict":
   for i in range(nspec):
     sp[i]=hh[i+1:i+2+skipdays,i,:].sum(axis=0)
@@ -339,6 +337,7 @@ else:
 smoothmode="PseudoPoissonandSquareLogRatios"
 # lam sets the scale on which the smoothed function can change per timestep. E.g., lam=0.03 <-> order of 3% change per timestep.
 def smoothpoisson(seq,lam):
+  #return seq
   n=len(seq)
   def nll(xx):
     ll=0
@@ -351,16 +350,16 @@ def smoothpoisson(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-title='Log_2 confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
+title='Log_2 new confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
 data=[]
 n=sm.shape[0]
 for (a,ar) in enumerate(displayages):
   sa=smoothpoisson(sm[:,a],0.03)/ONSpop_reduced[a]*1e5
   data.append({
-    'title': ("%d - %d years"%(ar[0],ar[1]) if ar[1]<150 else "%d+ years"%ar[0]),
+    'title': ("%d - %d years"%(ar[0],ar[1]-1) if ar[1]<150 else "%d+ years"%ar[0]),
     'values': [(daytodate(minday+i),log(sa[i])/log(2)) for i in range(n)]
   })
-makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 cases per 100k', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
+makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 new cases per 100k per day', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
 
 # Todo:
 # Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
