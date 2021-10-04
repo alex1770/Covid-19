@@ -33,7 +33,12 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Namibia","Netherlands","Greece","Vietnam","Cyprus","Botswana","Cuba","Tunisia","Japan"]
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Namibia","Greece","Vietnam","Cyprus","Botswana","Cuba","Tunisia","Japan","Georgia"]
 #selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Vietnam","Botswana","Cuba","Tunisia","Japan","Georgia","North Macedonia","Palestine","Australia"]
-selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Botswana","Cuba","Tunisia","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia"]
+#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Botswana","Cuba","Tunisia","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia"]
+#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Cuba","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia","Singapore","Serbia"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia","Singapore","Serbia","Malaysia"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Malaysia","Botswana"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Malaysia","Romania"]
+selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
