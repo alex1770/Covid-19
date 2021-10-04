@@ -2,7 +2,7 @@ set terminal pngcairo font "sans,10" size 4800,640
 set bmargin 5;set lmargin 12;set rmargin 12;set tmargin 4
 set output "trafficgraph.png"
 set tics nomirror
-set title "Congestion levels in London as derived from Google maps images; vertical lines are at the start of Mondays (midnight)"
+set title "Congestion levels in London as derived from Google maps images; vertical lines are at the start of Mondays (midnight)\nFor details: http://sonorouschocolate.com/covid19/index.php?title=LondonTraffic"
 set key left
 set timefmt "%Y-%m-%dT%H:%M:%S"
 set xdata time
@@ -12,4 +12,12 @@ set tics scale 2,0.5
 set grid xtics noytics lc rgb "#dddddd" lt 1
 set xtics "2020-03-16", 604800
 set xtics rotate by 45 right offset 0.5,0
-plot "trafficlevels" u 2:8 w lines title "Congestion measure, hourly", "trafficlevels" u 2:9 w lines lt 3 lw 3 title "Congestion measure, 24 hour average", "trafficlevels" u 2:10 w lines lt 7 lw 3 title "Congestion measure, 7 day average"
+set ylabel "Congestion level (arbitrary units)"
+plot "trafficlevels" u 2:($8)/1000 w lines title "Congestion measure, hourly", "trafficlevels" u 2:($9)/1000 w lines lt 3 lw 3 title "Congestion measure, 24 hour average", "trafficlevels" u 2:($10)/1000 w lines lt 7 lw 3 title "Congestion measure, 7 day average"
+
+set terminal pngcairo font "sans,10" size 1200,640
+set output "trafficgraph_condensed.png"
+set title "Congestion levels in London as derived from Google maps images\nFor details: http://sonorouschocolate.com/covid19/index.php?title=LondonTraffic"
+set xtics 3600*24*30 timedate
+set mxtics 1
+plot "trafficlevels" u 2:($9)/1000 w lines lt 3 lw 2 title "Congestion measure, 24 hour average", "trafficlevels" u 2:($10)/1000 w lines lt 7 lw 3 title "Congestion measure, 7 day average"
