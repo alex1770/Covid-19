@@ -11,8 +11,8 @@ from selenium.webdriver.common.by import By
 #from proczoemap_reg import processdata_reg
 from subprocess import Popen
 
-floatkeys=["long", "lat", "st_areasha", "st_lengths", "corrected_covid_positive", "cases", "cases_pm", "percentage", "discrete_percentage"]
-intkeys=["cartodb_id", "objectid", "bng_e", "bng_n", "respondent", "predicted_covid_positive_count", "population", "discrete_cases_pm"]
+floatkeys=["long", "lat", "st_areasha", "st_lengths", "corrected_covid_positive", "cases", "cases_pm", "percentage", "discrete_percentage", "respondent", "predicted_covid_positive_count"]
+intkeys=["cartodb_id", "objectid", "bng_e", "bng_n", "population", "discrete_cases_pm"]
 
 opts=Options()
 opts.add_argument("--headless")
