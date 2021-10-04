@@ -27,27 +27,30 @@ def processdata(tdir):
     writer=csv.writer(fp)
     writer.writerow(['Date']+locs)
     for date in dates:
-      tot=defaultdict(float)
-      totlon=defaultdict(float)
-      with open(join(tdir,date),'r') as fp:
-        dd=json.load(fp)
-        for d in dd.values():
-          for x in keys:
-            tot[x]+=d[x]
-            if d["region"]=="London": totlon[x]+=d[x]
-      #shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
-      shdate=date# Change to simple recording by publication date. Adjust for lag later in the pipeline.
-      row=[shdate]
-      shifteddates.append(shdate)
-      for loc in locs:
-        if loc=="London": src=totlon
-        elif loc=="UK": src=tot
-        else: src=dd[loc]
-        v=src["corrected_covid_positive"]#/src["population"]*1e3
-        row.append("%d"%v)
-        data[loc].append(v/src["population"]*1e3)
-        if date==dates[-1]: pop[loc]=src['population']
-      writer.writerow(row)
+      try:
+        tot=defaultdict(float)
+        totlon=defaultdict(float)
+        with open(join(tdir,date),'r') as fp:
+          dd=json.load(fp)
+          for d in dd.values():
+            for x in keys:
+              tot[x]+=d[x]
+              if d["region"]=="London": totlon[x]+=d[x]
+        #shdate=daytodate(datetoday(date)-1)# Go back a day because Zoe values are reported (and timestamped) the day after they occur
+        shdate=date# Change to simple recording by publication date. Adjust for lag later in the pipeline.
+        row=[shdate]
+        shifteddates.append(shdate)
+        for loc in locs:
+          if loc=="London": src=totlon
+          elif loc=="UK": src=tot
+          else: src=dd[loc]
+          v=src["corrected_covid_positive"]#/src["population"]*1e3
+          row.append("%d"%v)
+          data[loc].append(v/src["population"]*1e3)
+          if date==dates[-1]: pop[loc]=src['population']
+        writer.writerow(row)
+      except:
+        pass
   print("Written %s"%zoetrendfn)
 
   # Smooth the small regions in time
