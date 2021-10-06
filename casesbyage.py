@@ -29,6 +29,8 @@ weekdayfix="MinSquareLogRatios"
 displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,40),(40,50),(50,150)]
 #displayages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
+#displayages=[(a,a+10) for a in range(0,80,10)]+[(80,150)]
+#displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,50),(50,65),(65,150)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -105,8 +107,9 @@ for day in range(minday-1,today+1):
   if os.path.isfile(fn):
     with open(fn,'r') as fp: td=json.load(fp)
   else:
-    male=get_data('areaType=nation&areaName=England&metric=maleCases&release='+date)
-    female=get_data('areaType=nation&areaName=England&metric=femaleCases&release='+date)
+    # As of 2021-10-06, areaName=England stopped working, so specified England using areaCode instead
+    male=get_data('areaType=nation&areaCode=E92000001&metric=maleCases&release='+date)
+    female=get_data('areaType=nation&areaCode=E92000001&metric=femaleCases&release='+date)
     td={}
     for sex in [male,female]:
       sexname=sex[0]['metric'][:-5]
@@ -259,7 +262,6 @@ if 0:
   poi
 
 if weekdayfix=="SimpleAverage":
-  #sps=sp[:,2:3].sum(axis=1)#alter
   dowweight=np.zeros(7)
   dowcount=np.zeros(7,dtype=int)
   for i in range(nsamp):
@@ -273,7 +275,7 @@ elif weekdayfix=="MinSquareLogRatios":
   def slr(xx,sps):
     yy=sps/xx[dows]
     e=0
-    for i in range(nsamp-1):#alter
+    for i in range(nsamp-1):#range(110,nsamp-1)
       e+=log(yy[i+1]/yy[i])**2
     return e
   sm=np.zeros(sp.shape)
