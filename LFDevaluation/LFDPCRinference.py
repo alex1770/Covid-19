@@ -75,29 +75,28 @@ if 0:
     pio
 
 if 1:
+  nhist=3
   for specdate in dates[:-3]:
   #for specdate in ['2021-10-01']:
     nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
     oo=np.array([dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate])
     cc=np.array([dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate])
-    su=oo+cc
-    #p=(nn[0]*su[-1]/nn[-1]-su[0])/(su[1]-su[0])
-    #print(specdate,p)
-    #if specdate=='2021-09-13': opiu
-    #print(specdate,((su/nn-su[-1]/nn[-1])*10000)[1:9])
-    #tt=oo+cc/ppv
-    #plfdpos=tt[-1]/nn[-1]
-    # Try to find best a,b,c s.t. a*nn+b*(0,nn[:-1])+c*(0,0,nn[:-2])-lam*cc is close to oo
+    # Try to find (e.g., nhist=3) best a,b,c,lam s.t. a*nn+b*(0,nn[:-1])+c*(0,0,nn[:-2]) is close to oo+lam*cc
     # lam should be 1/PPV
     if specdate=='2021-10-01': nn=nn[1:];cc=cc[1:];oo=oo[1:]# Workaround presumed error in LFD test count on 2021-10-01
-    nnn=np.transpose([nn,np.concatenate([[0],nn[:-1]]),np.concatenate([[0,0],nn[:-2]]),-cc])
+    nnl=[]
+    for i in range(nhist):
+      nnl.append(np.concatenate([[0]*i,nn[:len(nn)-i]]))
+    nnl.append(-cc)
+    nnn=np.transpose(np.array(nnl,dtype=float))
     condition=100
-    nnn[:,:3]=nnn[:,:3]/condition
+    nnn[:,:nhist]=nnn[:,:nhist]/condition
     rr=np.linalg.lstsq(nnn,oo)
-    r=rr[0];r[:3]=r[:3]/condition
+    r=rr[0];r[:nhist]=r[:nhist]/condition
     
-    print(specdate,"%5.3f %6.1f"%(1/r[3],cc[-1]*(r[3]-1)),end='')
+    print(specdate,"%5.3f %6.1f"%(1/r[nhist],cc[-1]*(r[nhist]-1)),end='')
+    ccn=cc/nn;oon=oo/nn
     for i in range(min(len(nn)-1,5)):
-      ppv=(cc[-1]-cc[i])/(oo[i]-oo[-1])
+      ppv=(ccn[-1]-ccn[i])/(oon[i]-oon[-1])
       print(" %5.3f"%ppv,end='')
-    print(" ",rr[1],r[:3]*1000,r[1:3]/r[0]*100)
+    print(" ",rr[1],r[:nhist]*1000,r[1:nhist]/r[0]*100)
