@@ -8,17 +8,17 @@ from stuff import *
 np.set_printoptions(precision=3,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=100000)
 
-# Try to reverse-engineer PCR-retest-negatives using the assumption that the LFD+ves and PCR-retest+ves follow newLFDTests
-# in a uniform way
+# Try to reverse-engineer PCR-retest-negatives-by-specimen-date using the assumption that the LFD+ves and PCR-retest+ves follow newLFDTests
+# in a uniform way, and cross-checking with PCR-retest-negatives-by-publication-date
 
 # https://api.coronavirus.data.gov.uk/v2/data?areaType=nation&areaName=England&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newCasesPCROnlyBySpecimenDate&metric=newLFDTests&metric=newCasesBySpecimenDate&format=csv&release=2021-04-18
 # https://docs.google.com/spreadsheets/d/1yItIPgFTItAM29BZ6D8unah53EkOWMkiCW-T5TcGePI/edit#gid=0
 
 lfddir='../apidata_lfd'
 
-#mindate='2021-04-10'
+#mindate='2021-05-18'
 mindate='2021-08-16'
-#mindate='2021-10-01'#alter
+#mindate='2021-09-28'
 
 dates=sorted(x for x in os.listdir(lfddir) if x[:2]=='20' and x>=mindate)
 
@@ -78,7 +78,7 @@ if 0:
     pio
 
 if len(sys.argv)>1: nhist=int(sys.argv[1])
-else: nhist=2
+else: nhist=3
 
 def get_data(req):
   url='https://api.coronavirus.data.gov.uk/v2/data?'
@@ -163,22 +163,34 @@ if 0:
 if 1:
   maxdays=10
   tnnn=too=None
-  for specday in range(minday,today-3):
+  lastday=today-nhist+1
+  nspec=lastday-minday
+  baddays=set(i for i in range(today-minday) if removed[i]==0)
+  baddays.add(datetoday('2021-10-01')-minday)
+  eqq=np.zeros([nspec-maxdays,nspec*(nhist+1)])
+  removedadj=removed.copy()
+  for i in baddays: removedadj[i+1]+=removed[i];removedadj[i]=0
+  eqo=removedadj[maxdays:nspec].copy()
+  for specday in range(minday,lastday):
     # i^th element of arrays corresponds to publiction day specday+i
     specdate=daytodate(specday)
+    s=specday-minday# specimen day (as an offset from minday)
     nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
     oo=np.array([dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate])
     cc=np.array([dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate])
-    drr=removed[specday-minday:][:maxdays]
+    drr=removed[s:][:maxdays]
     nn=nn[:maxdays]
     oo=oo[:maxdays]
     cc=cc[:maxdays]
-    badrows=[i for i in range(len(drr)) if drr[i]==0 or specday+i==datetoday('2021-10-01')]
+    pp=np.arange(s,s+maxdays)# list of publication days (as an offset from minday)
+    badrows=[i for i in range(len(drr)) if s+i in baddays]
     # Remove bad reporting days
     nn=np.delete(nn,badrows)
     oo=np.delete(oo,badrows)
     cc=np.delete(cc,badrows)
+    pp=np.delete(pp,badrows)
     drr=np.delete(drr,badrows)
+    # Make delta by publication date
     n=len(nn)
     dnn=nn-np.concatenate([[0],nn])[:n]
     doo=oo-np.concatenate([[0],oo])[:n]
@@ -198,9 +210,19 @@ if 1:
     else:
       tnnn=block_diag(tnnn,dnnn)
       too=np.concatenate([too,doo])
-  
+    for i in range(n):
+      s=specday-minday# s=spec day counted from minday
+      p=pp[i]         # p=pub day counted from minday
+      if p>=maxdays and p<nspec:
+        eqq[p-maxdays,s*(nhist+1)+nhist]+=dcc[i]
+        eqo[p-maxdays]+=dcc[i]
+  weight=1
+  tnnn=np.concatenate([tnnn,eqq*weight])
+  too=np.concatenate([too,eqo*weight])
   trr=np.linalg.lstsq(tnnn,too)
   tr=trr[0]
+  #z=eqq@tr
+  #for x in zip(dates[maxdays:-3],eqo,z): print(x)
   for specday in range(minday,today-3):
     specdate=daytodate(specday)
     s=specday-minday
