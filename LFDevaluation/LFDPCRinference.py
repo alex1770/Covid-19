@@ -1,5 +1,6 @@
 import os,json,sys
 from scipy.special import gammaln
+from scipy.linalg import block_diag
 from math import log
 import numpy as np
 from stuff import *
@@ -17,6 +18,7 @@ lfddir='../apidata_lfd'
 
 #mindate='2021-04-10'
 mindate='2021-08-16'
+#mindate='2021-10-01'#alter
 
 dates=sorted(x for x in os.listdir(lfddir) if x[:2]=='20' and x>=mindate)
 
@@ -78,35 +80,6 @@ if 0:
 if len(sys.argv)>1: nhist=int(sys.argv[1])
 else: nhist=2
 
-if 0:
-  maxdays=10
-  for specdate in dates[:-3]:
-    nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
-    oo=np.array([dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate])
-    cc=np.array([dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate])
-    nn=nn[:maxdays]
-    oo=oo[:maxdays]
-    cc=cc[:maxdays]
-    # Try to find (e.g., nhist=3) best a,b,c,lam s.t. a*nn+b*(0,nn[:-1])+c*(0,0,nn[:-2]) is close to oo+lam*cc
-    # lam should be 1/PPV
-    if specdate=='2021-10-01': nn=nn[1:];cc=cc[1:];oo=oo[1:]# Workaround presumed error in LFD test count on 2021-10-01
-    nnl=[]
-    for i in range(nhist):
-      nnl.append(np.concatenate([[0]*i,nn[:len(nn)-i]]))
-    nnl.append(-cc)
-    nnn=np.transpose(np.array(nnl,dtype=float))
-    condition=100
-    nnn[:,:nhist]=nnn[:,:nhist]/condition
-    rr=np.linalg.lstsq(nnn,oo)
-    r=rr[0];r[:nhist]=r[:nhist]/condition
-    
-    print(specdate,"%5.3f %6.1f"%(1/r[nhist],cc[-1]*(r[nhist]-1)),end='')
-    ccn=cc/nn;oon=oo/nn
-    for i in range(min(len(nn)-1,5)):
-      ppv=(ccn[-1]-ccn[i])/(oon[i]-oon[-1])
-      print(" %5.3f"%ppv,end='')
-    print(" ",rr[1],r[:nhist]*1000,r[1:nhist]/r[0]*100)
-
 def get_data(req):
   url='https://api.coronavirus.data.gov.uk/v2/data?'
   for t in range(3):
@@ -139,11 +112,7 @@ for x in cases:
     cumcasespub[i]=x['cumCasesByPublishDate']
     newcasespub[i]=x['newCasesByPublishDate']
 
-removed0=newcasespub[1:]-(cumcasespub[1:]-cumcasespub[:-1])
-removed=removed0.copy()
-baddays=set()
-for i in range(today-minday-1):
-  if removed[i]==0: baddays.add(minday+i);removed[i]=removed[i+1]//2;removed[i+1]-=removed[i]
+removed=newcasespub[1:]-(cumcasespub[1:]-cumcasespub[:-1])
 
 l=[]
 for day in range(minday-1,today):
@@ -155,7 +124,7 @@ lfdnewconfbypub=lfdconfirmed[1:]-lfdconfirmed[:-1]
 for i in range(today-minday-1):
   if lfdnewconfbypub[i]<=0: t=lfdnewconfbypub[i]+lfdnewconfbypub[i+1];lfdnewconfbypub[i]=t//2;lfdnewconfbypub[i+1]=(t+1)//2
 
-if 1:
+if 0:
   maxdays=10
   for specdate in dates[:-3]:
     nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
@@ -168,8 +137,7 @@ if 1:
     # lam should be 1/PPV
     n=len(nn)
     specday=datetoday(specdate)
-    badrows=[i for i in range(n) if specday+i in baddays]# Exclude publication days where LFD+vePCR-ves weren't removed
-    if specdate=='2021-10-01': badrows.append(0)# Workaround presumed error in LFD test count on 2021-10-01
+    badrows=[i for i in range(n) if removed[specday+i-minday]==0 or specday+i==datetoday('2021-10-01')]
     nn=np.delete(nn,badrows)
     oo=np.delete(oo,badrows)
     cc=np.delete(cc,badrows)
@@ -191,4 +159,59 @@ if 1:
       ppv=(ccn[-1]-ccn[i])/(oon[i]-oon[-1])
       print(" %5.3f"%ppv,end='')
     print(" ",rr[1],r[:nhist]*1000,r[1:nhist]/r[0]*100)
-
+    
+if 1:
+  maxdays=10
+  tnnn=too=None
+  for specday in range(minday,today-3):
+    # i^th element of arrays corresponds to publiction day specday+i
+    specdate=daytodate(specday)
+    nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
+    oo=np.array([dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate])
+    cc=np.array([dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate])
+    rr=removed[specday-minday:]
+    nn=nn[:maxdays]
+    oo=oo[:maxdays]
+    cc=cc[:maxdays]
+    rr=rr[:maxdays]# already deltad by publication date
+    # Try to find (e.g., nhist=3) best a,b,c,lam s.t. a*nn+b*(0,nn[:-1])+c*(0,0,nn[:-2]) is close to oo+lam*cc
+    # lam should be 1/PPV
+    n=len(nn)
+    badrows=[i for i in range(n) if removed[specday+i-minday]==0 or specday+i==datetoday('2021-10-01')]
+    nn=np.delete(nn,badrows)
+    oo=np.delete(oo,badrows)
+    cc=np.delete(cc,badrows)
+    rr=np.delete(rr,badrows)
+    n=len(nn)
+    nnl=[]
+    for i in range(nhist):
+      nnl.append(np.concatenate([[0]*i,nn[:len(nn)-i]]))
+    nnl.append(-cc)
+    nnn=np.transpose(np.array(nnl,dtype=float))
+    dnnn=nnn-np.concatenate([[[0]*(nhist+1)],nnn])[:n]
+    doo=oo-np.concatenate([[0],oo])[:n]
+    condition=100
+    dnnn[:,:nhist]=dnnn[:,:nhist]/condition
+    #rr=np.linalg.lstsq(dnnn,doo)
+    if tnnn is None:
+      tnnn=dnnn;too=doo
+    else:
+      tnnn=block_diag(tnnn,dnnn)
+      too=np.concatenate([too,doo])
+  
+  trr=np.linalg.lstsq(tnnn,too)
+  tr=trr[0]
+  for specday in range(minday,today-3):
+    specdate=daytodate(specday)
+    s=specday-minday
+    r=tr[s*(nhist+1):(s+1)*(nhist+1)]
+    r[:nhist]=r[:nhist]/condition
+    nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
+    oo=np.array([dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate])
+    cc=np.array([dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate])
+    print(specdate,"%5.3f %6.1f"%(1/r[nhist],cc[-1]*(r[nhist]-1)),end='')
+    ccn=cc/nn;oon=oo/nn
+    for i in range(min(len(nn)-1,5)):
+      ppv=(ccn[-1]-ccn[i])/(oon[i]-oon[-1])
+      print(" %5.3f"%ppv,end='')
+    print(" ",trr[1],r[:nhist]*1000,r[1:nhist]/r[0]*100)
