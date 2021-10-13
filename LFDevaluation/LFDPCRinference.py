@@ -169,27 +169,27 @@ if 1:
     nn=np.array([dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate])
     oo=np.array([dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate])
     cc=np.array([dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate])
-    rr=removed[specday-minday:]
+    drr=removed[specday-minday:][:maxdays]
     nn=nn[:maxdays]
     oo=oo[:maxdays]
     cc=cc[:maxdays]
-    rr=rr[:maxdays]# already deltad by publication date
-    # Try to find (e.g., nhist=3) best a,b,c,lam s.t. a*nn+b*(0,nn[:-1])+c*(0,0,nn[:-2]) is close to oo+lam*cc
-    # lam should be 1/PPV
-    n=len(nn)
-    badrows=[i for i in range(n) if removed[specday+i-minday]==0 or specday+i==datetoday('2021-10-01')]
+    badrows=[i for i in range(len(drr)) if drr[i]==0 or specday+i==datetoday('2021-10-01')]
+    # Remove bad reporting days
     nn=np.delete(nn,badrows)
     oo=np.delete(oo,badrows)
     cc=np.delete(cc,badrows)
-    rr=np.delete(rr,badrows)
+    drr=np.delete(drr,badrows)
     n=len(nn)
-    nnl=[]
-    for i in range(nhist):
-      nnl.append(np.concatenate([[0]*i,nn[:len(nn)-i]]))
-    nnl.append(-cc)
-    nnn=np.transpose(np.array(nnl,dtype=float))
-    dnnn=nnn-np.concatenate([[[0]*(nhist+1)],nnn])[:n]
+    dnn=nn-np.concatenate([[0],nn])[:n]
     doo=oo-np.concatenate([[0],oo])[:n]
+    dcc=cc-np.concatenate([[0],cc])[:n]
+    # Try to find (e.g., nhist=3) best a,b,c,lam s.t. a*nn+b*(0,nn[:-1])+c*(0,0,nn[:-2]) is close to oo+lam*cc
+    # lam should be 1/PPV
+    dnnl=[]
+    for i in range(nhist):
+      dnnl.append(np.concatenate([[0]*i,dnn[:n-i]]))
+    dnnl.append(-dcc)
+    dnnn=np.transpose(np.array(dnnl,dtype=float))
     condition=100
     dnnn[:,:nhist]=dnnn[:,:nhist]/condition
     #rr=np.linalg.lstsq(dnnn,doo)
