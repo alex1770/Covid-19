@@ -206,16 +206,34 @@ if 1:
     print(" ",r[:nhist]*1000,r[1:nhist]/r[0]*100)
 
 """
-py LFDPCRinference.py > LFDPCRoutput
-py 7dma.py 2 3 4 5 6 7 < LFDPCRoutput > LFDPCRoutput.7dma
+py LFDPCRinference.py 2 0 > LFDPCRoutput.w0
+py LFDPCRinference.py 2 1 > LFDPCRoutput.w1
+py 7dma.py 2 3 4 5 6 7 < LFDPCRoutput.w0 > LFDPCRoutput.w0.7dma
+py 7dma.py 2 3 4 5 6 7 < LFDPCRoutput.w1 > LFDPCRoutput.w1.7dma
 gnuplot
 set xdata time;set timefmt "%Y-%m-%d";set format x "%Y-%m-%d"
 set xtics rotate by 45 right offset 0.5,0
 set terminal pngcairo font "sans,13" size 2560,1280
 set bmargin 6;set lmargin 14;set rmargin 15;set tmargin 5
-set output "LFDPCR.png"
 set xtics "2020-01-06", 604800
 set grid xtics lc rgb "#dddddd" lt 1
+set ylabel "Probability of positive PCR-retest (PPV)"
+
+set output "LFDPCR.png"
 set title "Estimated probability that a positive LFD test in England that is PCR-retested will be PCR positive"
-plot "LFDPCRoutput" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date", "LFDPCRoutput.7dma" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date (7 day moving average)", "LFDPCRoutput" u 1:(($6)/(($6)+($7))) w linespoints pt 5 title "PPV by publication date", "LFDPCRoutput.7dma" u 1:(($6)/(($6)+($7))) w linespoints pt 5 title "PPV by publication date (7 day moving average)"
+plot "LFDPCRoutput.w0" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date", "LFDPCRoutput.w0.7dma" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date (7 day moving average)", "LFDPCRoutput.w0" u 1:(($6)/(($6)+($7))) w linespoints pt 5 title "PPV by publication date", "LFDPCRoutput.w0.7dma" u 1:(($6)/(($6)+($7))) w linespoints pt 5 title "PPV by publication date (7 day moving average)"
+
+set output "LFDPCR.smooth.png"
+set title "Estimated probability that a positive LFD test in England that is PCR-retested will be PCR positive"
+plot "LFDPCRoutput.w0.7dma" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date (7 day moving average)", "LFDPCRoutput.w0.7dma" u 1:(($6)/(($6)+($7))) w linespoints pt 5 title "PPV by publication date (7 day moving average)"
+
+set output "LFDPCR.byspec.png"
+set title "Estimated probability that a positive LFD test in England that is PCR-retested will be PCR positive"
+plot "LFDPCRoutput.w0" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date", "LFDPCRoutput.w0.7dma" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date (7 day moving average)"
+
+set output "LFDPCR.smooth.w1.png"
+set title "Estimated probability that a positive LFD test in England that is PCR-retested will be PCR positive"
+plot "LFDPCRoutput.w1.7dma" u 1:(($3)/(($3)+($4))) w linespoints pt 5 title "PPV by specimen date, influenced by publication date method (7 day moving average)", "LFDPCRoutput.w1.7dma" u 1:(($6)/(($6)+($7))) w linespoints pt 5 title "PPV by publication date (7 day moving average)"
+
+
 """
