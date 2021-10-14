@@ -1,5 +1,4 @@
 import os,json,sys
-from scipy.special import gammaln
 from scipy.linalg import block_diag
 from math import log
 import numpy as np
@@ -30,52 +29,6 @@ for fn in dates:
 # dd[adjustedpublishdate][historical specimen date]={historical data}
 
 now=dates[-1]
-
-def lbin(n,r): return gammaln(n+1)-gammaln(r+1)-gammaln(n-r+1)
-
-if 0:
-  for specdate in dates:
-    (o0,c0)=dd[now][specdate]['newCasesLFDOnlyBySpecimenDate'], dd[now][specdate]['newCasesLFDConfirmedPCRBySpecimenDate']
-    for repdate in dates:
-      if repdate>=specdate:
-        (t,o,c)=dd[repdate][specdate]['newLFDTests'], dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'], dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate']
-        print(specdate,repdate," %7d %4d %4d %4d  %5.3f"%(t,o,c,o+c,(o+c)/t*1000))
-    print()
-  print()
-  
-if 0:
-  for specdate in dates:
-    nn=[0]+[dd[repdate][specdate]['newLFDTests'] for repdate in dates if repdate>=specdate]
-    oo=[0]+[dd[repdate][specdate]['newCasesLFDOnlyBySpecimenDate'] for repdate in dates if repdate>=specdate]
-    cc=[0]+[dd[repdate][specdate]['newCasesLFDConfirmedPCRBySpecimenDate'] for repdate in dates if repdate>=specdate]
-    n=len(oo)
-    for i in range(1,n):
-      if cc[i]<cc[i-1] or nn[i]==nn[i-1]:
-        nn=nn[:i]
-        oo=oo[:i]
-        cc=cc[:i]
-        n=i;break
-    print(nn)
-    print(oo)
-    print(cc)
-    # tr=total removed for PCR testing
-    for tr in range(cc[-1],cc[-1]+10):
-      rr=[int(c*tr/cc[-1]+.5) for c in cc]
-      ll=[o+r for (o,r) in zip(oo,rr)]
-      if not all(ll[i]<=ll[i+1] for i in range(n-1)): continue
-      al=ll[-1]/nn[-1]
-      p=cc[-1]/rr[-1]
-      LL=0
-      for i in range(n-1):
-        dn=nn[i+1]-nn[i]
-        dl=ll[i+1]-ll[i]
-        dc=cc[i+1]-cc[i]
-        dr=rr[i+1]-rr[i]
-        LL+=-al*dn+dl*log(al*dn)-gammaln(dl+1)
-        LL+=lbin(dr,dc)+(dc*log(p) if dc>0 else 0)+((dr-dc)*log(1-p) if dr-dc>0 else 0)
-      print(tr,al,p,LL)
-    print()
-    pio
 
 # nhist = number of days of LFD history to use to predict retest results
 if len(sys.argv)>1: nhist=int(sys.argv[1])
