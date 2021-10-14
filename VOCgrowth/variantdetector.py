@@ -28,7 +28,7 @@ for (dt,lin,var,mut) in csvrows_it(fp,['sample_date','lineage','scorpio_call','m
 growth={}
 for mut in mutcounts:
   if mutcounts[mut]<100: continue
-  if mut!='synSNP:C27143T': continue
+  #if mut!='synSNP:C27143T': continue
   m=np.zeros([2,2])
   r=np.zeros(2)
   for day in mutdaycounts[mut]:
@@ -46,7 +46,7 @@ for mut in mutcounts:
       r[1]+=w*x*y
   mi=np.linalg.pinv(m)
   c=np.linalg.solve(m,r)
-  cv=[mi[0,0],mi[1,1]]# This should be the variances of c[0],c[1]
+  cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
   #print(c[1],sqrt(cv[1]))
   #print("Continuous growth rate = %.4f/day"%(c[1]))
   #print("Crossover on",daytodate(datetoday(dt[0])+int(-c[0]/c[1]+.5)))
