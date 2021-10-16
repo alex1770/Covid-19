@@ -352,7 +352,7 @@ def smoothpoisson(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-title='Log_2 new confirmed cases per 100k per day in England by age range.\\nProgram: https://github.com/alex1770/Covid-19/blob/master/casesbyage.py with options: '+specmode+'+'+weekdayfix+'+'+smoothmode+'\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
+title='Log_2 new confirmed cases per 100k per day in England by age range.\\nDescription: http://sonorouschocolate.com/covid19/index.php?title=CasesByAge\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
 data=[]
 n=sm.shape[0]
 for (a,ar) in enumerate(displayages):
