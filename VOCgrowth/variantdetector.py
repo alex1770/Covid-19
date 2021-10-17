@@ -7,39 +7,58 @@ mindate='2021-07-01'
 maxdate='9999-12-31'
 
 minday=datetoday(mindate)
-
+minmutcount=50# Ignore mutations that have occurred less than this often
 cachedir='cogdatacachedir'
+datafile='cog_metadata.csv'
 
-print("GH0",time.clock())
-id=mindate+'.'+maxdate
+tim0=time.clock()
+datamtime=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile)).strftime('%Y-%m-%d-%H-%M-%S')
+id=datamtime+'_'+mindate+'_'+maxdate+'_'+str(minmutcount)
 fn=os.path.join(cachedir,id)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
-    (mutcounts,daycounts,mutdaycounts)=pickle.load(fp)
+    (linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts)=pickle.load(fp)
+  nmut=len(num2name)
 else:
-  #fp=sys.stdin
-  fp=open('cog_metadata.csv','r')#alter
   mutcounts={}
+  with open(datafile,'r') as fp:
+    for (dt,lin,var,mut) in csvrows_it(fp,['sample_date','lineage','scorpio_call','mutations']):
+      if dt<mindate or dt>maxdate: continue# (can't exit early because dates can be out of order)
+      day=datetoday(dt)
+      muts=mut.split('|')
+      for mut in muts:
+        mutcounts[mut]=mutcounts.get(mut,0)+1
+  num2name=[]
+  name2num={}
+  for mut in sorted(mutcounts):
+    if mutcounts[mut]>=minmutcount:
+      name2num[mut]=len(num2name)
+      num2name.append(mut)
+  print("Found %d mutations of which %d occur at least %d times in %.3fs"%(len(mutcounts),len(num2name),minmutcount,time.clock()-tim0))
+  nmut=len(num2name)
+  linelist=[]
+  mutcounts=[mutcounts[mut] for mut in num2name]
   daycounts={}
-  mutdaycounts={}
-  for (dt,lin,var,mut) in csvrows_it(fp,['sample_date','lineage','scorpio_call','mutations']):
-    if dt>maxdate: continue
-    day=datetoday(dt)
-    #if day<minday-30: break# Can't use this cutoff in a simple way because of lots of erroneous dates
-    if day<minday: continue
-    daycounts[day]=daycounts.get(day,0)+1
-    muts=mut.split('|')
-    for mut in muts:
-      mutcounts[mut]=mutcounts.get(mut,0)+1
-      if mut not in mutdaycounts: mutdaycounts[mut]={}
-      mutdaycounts[mut][day]=mutdaycounts[mut].get(day,0)+1
+  mutdaycounts=[{} for m in range(nmut)]
+  with open(datafile,'r') as fp:
+    for (dt,lin,var,mut) in csvrows_it(fp,['sample_date','lineage','scorpio_call','mutations']):
+      if dt<mindate or dt>maxdate: continue# (can't exit early because dates can be out of order)
+      day=datetoday(dt)
+      daycounts[day]=daycounts.get(day,0)+1
+      muts=mut.split('|')
+      l=[]
+      for mut in muts:
+        if mut in name2num: l.append(name2num[mut])
+      linelist.append((day,lin,var,l))
+      for m in l: mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
+    linelist.sort(reverse=True)# Sort into reverse date order
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
-    pickle.dump((mutcounts,daycounts,mutdaycounts),fp)
+    pickle.dump((linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts),fp)
 
-print("GH1",time.clock())
+print("GH0",time.clock()-tim0)
 growth={}
-for mut in mutcounts:
+for mut in range(nmut):
   if mutcounts[mut]<100: continue
   #if mut!='synSNP:C27143T': continue
   m=np.zeros([2,2])
@@ -66,17 +85,16 @@ for mut in mutcounts:
   #print("%-20s  %7.4f   %s"%(mut,c[1],daytodate(minday+int(-c[0]/c[1]+.5))))
   growth[mut]=c[1],sqrt(cv[1])
 
-print("GH2",time.clock())
 sd=6
 l=[mut for mut in growth if growth[mut][1]>0]
 #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
-l.sort(key=lambda x:-((growth[x][0]-0.01)/growth[x][1]))
+l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
 nm=0
 for mut in l:
   gr=growth[mut]
   (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
   if gl<0: break
-  print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %8d"%(mut,g,gl,gh,gr[0]/gr[1],mutcounts[mut]))
+  print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %8d"%(num2name[mut],g,gl,gh,gr[0]/gr[1],mutcounts[mut]))
   nm+=1
 
 nmd=min(nm,10)
@@ -84,7 +102,7 @@ print()
 days=set()
 for mut in l[:nmd]: days.update(mutdaycounts[mut])
 print("                All",end='')
-for mut in l[:nmd]: print(" %20s"%mut,end='')
+for mut in l[:nmd]: print(" %20s"%num2name[mut],end='')
 print()
 days=sorted(days)
 for day in days:
