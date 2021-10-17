@@ -49,42 +49,49 @@ else:
       l=[]
       for mut in muts:
         if mut in name2num: l.append(name2num[mut])
-      linelist.append((day,lin,var,l))
+      linelist.append([day,lin,var,l])
       for m in l: mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
     linelist.sort(reverse=True)# Sort into reverse date order
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
-    pickle.dump((linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts),fp)
+    pickle.dump([linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts],fp)
+
+def getgrowth(linelist,given=set()):
+  daycounts={}
+  mutdaycounts=[{} for m in range(nmut)]
+  growth={}
+  for (day,lin,var,muts) in linelist:
+    if given.issubset(muts):
+      daycounts[day]=daycounts.get(day,0)+1
+      for m in muts:
+        mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
+  for mut in range(nmut):
+    m=np.zeros([2,2])
+    r=np.zeros(2)
+    for day in mutdaycounts[mut]:
+      x=day-minday
+      vm=mutdaycounts[mut][day]
+      v0=daycounts[day]
+      if v0>0 and vm>0:
+        y=log(vm/v0)
+        w=1/(1/v0+1/vm)
+        m[0,0]+=w
+        m[0,1]+=w*x
+        m[1,0]+=w*x
+        m[1,1]+=w*x*x
+        r[0]+=w*y
+        r[1]+=w*x*y
+    mi=np.linalg.pinv(m)
+    c=np.linalg.solve(m,r)
+    cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
+    growth[mut]=c[1],sqrt(cv[1])
+  return growth
+
 
 print("GH0",time.clock()-tim0)
-growth={}
-for mut in range(nmut):
-  if mutcounts[mut]<100: continue
-  #if mut!='synSNP:C27143T': continue
-  m=np.zeros([2,2])
-  r=np.zeros(2)
-  for day in mutdaycounts[mut]:
-    x=day-minday
-    vm=mutdaycounts[mut][day]
-    v0=daycounts[day]
-    if v0>0 and vm>0:
-      y=log(vm/v0)
-      w=1/(1/v0+1/vm)
-      m[0,0]+=w
-      m[0,1]+=w*x
-      m[1,0]+=w*x
-      m[1,1]+=w*x*x
-      r[0]+=w*y
-      r[1]+=w*x*y
-  mi=np.linalg.pinv(m)
-  c=np.linalg.solve(m,r)
-  cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
-  #print(c[1],sqrt(cv[1]))
-  #print("Continuous growth rate = %.4f/day"%(c[1]))
-  #print("Crossover on",daytodate(datetoday(dt[0])+int(-c[0]/c[1]+.5)))
-  #print("%-20s  %7.4f   %s"%(mut,c[1],daytodate(minday+int(-c[0]/c[1]+.5))))
-  growth[mut]=c[1],sqrt(cv[1])
-
+growth=getgrowth(linelist)
+print("GH1",time.clock()-tim0)
+  
 sd=6
 l=[mut for mut in growth if growth[mut][1]>0]
 #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
