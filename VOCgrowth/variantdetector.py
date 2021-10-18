@@ -56,42 +56,48 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump([linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts],fp)
 
-def getgrowth(linelist,given=set()):
+def getmutday(linelist,given=set()):
   daycounts={}
   mutdaycounts=[{} for m in range(nmut)]
-  growth={}
   for (day,lin,var,muts) in linelist:
     if given.issubset(muts):
       daycounts[day]=daycounts.get(day,0)+1
       for m in muts:
         mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
-  for mut in range(nmut):
-    m=np.zeros([2,2])
-    r=np.zeros(2)
-    for day in mutdaycounts[mut]:
-      x=day-minday
-      vm=mutdaycounts[mut][day]
-      v0=daycounts[day]
-      if v0>0 and vm>0:
-        y=log(vm/v0)
-        w=1/(1/v0+1/vm)
-        m[0,0]+=w
-        m[0,1]+=w*x
-        m[1,0]+=w*x
-        m[1,1]+=w*x*x
-        r[0]+=w*y
-        r[1]+=w*x*y
-    mi=np.linalg.pinv(m)
-    c=np.linalg.solve(m,r)
-    cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
-    growth[mut]=c[1],sqrt(cv[1])
-  return growth
+  return daycounts,mutdaycounts
 
+def getgrowth(daycounts,mutdaycount,minday):
+  # log(varcount/backgroundcount) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
+  m=np.zeros([2,2])
+  r=np.zeros(2)
+  for day in mutdaycount:
+    x=day-minday
+    vm=mutdaycount[day]
+    v0=daycounts[day]
+    if v0>0 and vm>0:
+      y=log(vm/v0)
+      w=1/(1/v0+1/vm)
+      m[0,0]+=w
+      m[0,1]+=w*x
+      m[1,0]+=w*x
+      m[1,1]+=w*x*x
+      r[0]+=w*y
+      r[1]+=w*x*y
+  mi=np.linalg.pinv(m)
+  c=np.linalg.solve(m,r)
+  cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
+  return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1]))
+  # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0
+  #return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
 print("GH0",time.clock()-tim0)
-growth=getgrowth(linelist)
+#daycounts,mutdaycounts=getmutday(linelist)
 print("GH1",time.clock()-tim0)
-  
+
+growth={}
+for mut in range(nmut):
+  growth[mut]=getgrowth(daycounts,mutdaycounts[mut],minday)[1]
+
 sd=6
 l=[mut for mut in growth if growth[mut][1]>0]
 #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
