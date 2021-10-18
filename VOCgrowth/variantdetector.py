@@ -3,7 +3,7 @@ from stuff import *
 import numpy as np
 from math import log,sqrt
 
-mindate='2021-07-01'
+mindate='2021-01-01'
 maxdate='9999-12-31'
 
 minday=datetoday(mindate)
@@ -20,6 +20,7 @@ if os.path.isfile(fn):
     (linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts)=pickle.load(fp)
   nmut=len(num2name)
 else:
+  print("Reading %s"%datafile)
   mutcounts={}
   with open(datafile,'r') as fp:
     for (dt,lin,var,mut) in csvrows_it(fp,['sample_date','lineage','scorpio_call','mutations']):
@@ -34,7 +35,7 @@ else:
     if mutcounts[mut]>=minmutcount:
       name2num[mut]=len(num2name)
       num2name.append(mut)
-  print("Found %d mutations of which %d occur at least %d times in %.3fs"%(len(mutcounts),len(num2name),minmutcount,time.clock()-tim0))
+  print("Found %d mutations of which %d occur at least %d times, in %.3fs"%(len(mutcounts),len(num2name),minmutcount,time.clock()-tim0))
   nmut=len(num2name)
   linelist=[]
   mutcounts=[mutcounts[mut] for mut in num2name]
@@ -56,7 +57,7 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump([linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts],fp)
 
-def getmutday(linelist,given=set()):
+def getmutday(linelist,given=set()):# Going to need a givennot argument too
   daycounts={}
   mutdaycounts=[{} for m in range(nmut)]
   for (day,lin,var,muts) in linelist:
@@ -99,7 +100,7 @@ for mut in range(nmut):
   growth[mut]=getgrowth(daycounts,mutdaycounts[mut],minday)[1]
 
 sd=6
-l=[mut for mut in growth if growth[mut][1]>0]
+l=[mut for mut in growth if growth[mut][0]>0]
 #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
 l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
 nm=0
