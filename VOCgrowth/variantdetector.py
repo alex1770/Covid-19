@@ -73,10 +73,10 @@ def getgrowth(daycounts,mutdaycount,minday):
   for day in mutdaycount:
     x=day-minday
     vm=mutdaycount[day]
-    v0=daycounts[day]
-    if v0>0 and vm>0:
-      y=log(vm/v0)
-      w=1/(1/v0+1/vm)
+    v1=daycounts[day]-vm
+    if v1>0 and vm>0:
+      y=log(vm/v1)
+      w=1/(1/v1+1/vm)
       m[0,0]+=w
       m[0,1]+=w*x
       m[1,0]+=w*x
@@ -87,8 +87,8 @@ def getgrowth(daycounts,mutdaycount,minday):
   c=np.linalg.solve(m,r)
   cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
   return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1]))
-  # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0
-  #return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
+  # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
+  # return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
 print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts=getmutday(linelist)
@@ -123,7 +123,8 @@ for day in days:
   print(daytodate(day),"  %6d"%v0,end='')
   for mut in l[:nmd]:
     vm=mutdaycounts[mut].get(day,0)
-    if vm>0 and v0>0: print("         %6.3f"%(log(vm/v0)),end='')
+    v1=v0-vm
+    if vm>0 and v1>0: print("         %6.3f"%(log(vm/v1)),end='')
     else: print("              -",end='')
     print(" %5d"%vm,end='')
   print()
