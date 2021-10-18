@@ -57,15 +57,17 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump([linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts],fp)
 
-def getmutday(linelist,given=set()):# Going to need a givennot argument too
+def getmutday(linelist,minday1=0,maxday1=1000000,given=set()):# Might need a givennot argument too
   daycounts={}
   mutdaycounts=[{} for m in range(nmut)]
+  lincounts={}
   for (day,lin,var,muts) in linelist:
-    if given.issubset(muts):
+    if day>=minday1 and day<maxday1 and given.issubset(muts):
       daycounts[day]=daycounts.get(day,0)+1
+      lincounts[lin]=lincounts.get(lin,0)+1
       for m in muts:
         mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
-  return daycounts,mutdaycounts
+  return daycounts,mutdaycounts,lincounts
 
 def getgrowth(daycounts,mutdaycount,minday):
   # log(varcount/backgroundcount) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
@@ -84,6 +86,7 @@ def getgrowth(daycounts,mutdaycount,minday):
       m[1,1]+=w*x*x
       r[0]+=w*y
       r[1]+=w*x*y
+  if m[0,0]<20: return (0,1000),(0,10)
   mi=np.linalg.pinv(m)
   c=np.linalg.solve(m,r)
   cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
@@ -91,42 +94,91 @@ def getgrowth(daycounts,mutdaycount,minday):
   # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
   # return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
-print("GH0",time.clock()-tim0)
-#daycounts,mutdaycounts=getmutday(linelist)
-print("GH1",time.clock()-tim0)
+#print("GH0",time.clock()-tim0)
+#daycounts,mutdaycounts,lincounts=getmutday(linelist)
+#print("GH1",time.clock()-tim0)
 
-growth={}
-for mut in range(nmut):
-  growth[mut]=getgrowth(daycounts,mutdaycounts[mut],minday)[1]
-
-sd=6
-l=[mut for mut in growth if growth[mut][0]>0]
-#l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
-l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
-nm=0
-for mut in l:
-  gr=growth[mut]
-  (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
-  if gl<0: break
-  print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %8d"%(num2name[mut],g,gl,gh,gr[0]/gr[1],mutcounts[mut]))
-  nm+=1
-
-nmd=min(nm,10)
-print()
-days=set()
-for mut in l[:nmd]: days.update(mutdaycounts[mut])
-print("                All",end='')
-for mut in l[:nmd]: print(" %20s"%num2name[mut],end='')
-print()
-days=sorted(days)
-for day in days:
-  v0=daycounts[day]
-  print(daytodate(day),"  %6d"%v0,end='')
-  for mut in l[:nmd]:
-    vm=mutdaycounts[mut].get(day,0)
-    v1=v0-vm
-    if vm>0 and v1>0: print("         %6.3f"%(log(vm/v1)),end='')
-    else: print("              -",end='')
-    print(" %5d"%vm,end='')
+if 0:
+  growth={}
+  for mut in range(nmut):
+    growth[mut]=getgrowth(daycounts,mutdaycounts[mut],minday)[1]
+  
+  sd=6
+  l=[mut for mut in growth if growth[mut][0]>0]
+  #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
+  l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
+  nm=0
+  for mut in l:
+    gr=growth[mut]
+    (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
+    if gl<0: break
+    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %8d"%(num2name[mut],g,gl,gh,gr[0]/gr[1],mutcounts[mut]))
+    nm+=1
+  
+  nmd=min(nm,10)
   print()
+  days=set()
+  for mut in l[:nmd]: days.update(mutdaycounts[mut])
+  print("                All",end='')
+  for mut in l[:nmd]: print(" %20s"%num2name[mut],end='')
+  print()
+  days=sorted(days)
+  for day in days:
+    v0=daycounts[day]
+    print(daytodate(day),"  %6d"%v0,end='')
+    for mut in l[:nmd]:
+      vm=mutdaycounts[mut].get(day,0)
+      v1=v0-vm
+      if vm>0 and v1>0: print("         %6.3f"%(log(vm/v1)),end='')
+      else: print("              -",end='')
+      print(" %5d"%vm,end='')
+    print()
 
+def pr(daycounts,mutdaycounts,muts):
+  print()
+  days=set()
+  for mut in muts: days.update(mutdaycounts[mut])
+  print("                All",end='')
+  for mut in muts: print(" %20s"%num2name[mut],end='')
+  print()
+  days=sorted(days)
+  for day in days:
+    v0=daycounts[day]
+    print(daytodate(day),"  %6d"%v0,end='')
+    for mut in muts:
+      vm=mutdaycounts[mut].get(day,0)
+      v1=v0-vm
+      if vm>0 and v1>0: print("         %6.3f"%(log(vm/v1)),end='')
+      else: print("              -",end='')
+      print(" %5d"%vm,end='')
+    print()
+
+window=60
+step=30
+minday1=minday
+currentmuts=set()
+sd=10
+
+while 1:
+  daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=minday1,maxday1=minday1+window,given=currentmuts)
+  l=list(lincounts);l.sort(key=lambda lin:-lincounts[lin])
+  print(l[0],sum(lincounts.values()),lincounts[l[0]])
+  if daycounts=={}: break
+  growth={}
+  for mut in range(nmut):
+    if mut not in currentmuts:
+      growth[mut]=getgrowth(daycounts,mutdaycounts[mut],minday)[1]
+
+  l=[mut for mut in growth if growth[mut][0]>0]
+  l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
+  #l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
+
+  if len(l)>0:
+    mut=l[0]
+    if growth[mut][0]-sd*growth[mut][1]>0:
+      print("%s - %s: adding mutation %s with relative growth %.3f (%.3f - %.3f)"%(daytodate(minday1),daytodate(minday1+window),num2name[mut],growth[mut][0],growth[mut][0]-sd*growth[mut][1],growth[mut][0]+sd*growth[mut][1]))
+      currentmuts.add(mut)
+      continue
+  
+  print("No new mutations found at %s - %s"%(daytodate(minday1),daytodate(minday1+window)))
+  minday1+=step
