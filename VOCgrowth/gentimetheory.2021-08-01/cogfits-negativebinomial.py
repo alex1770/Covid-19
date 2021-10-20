@@ -4,16 +4,18 @@ from math import exp,log,sqrt
 from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
 
-mindate='2021-06-01'
-maxdate='2021-10-20'
+mindate='0000-00-00'
+maxdate='9999-99-99'
+prlevel=1
 if len(sys.argv)>1: mindate=sys.argv[1]
 if len(sys.argv)>2: maxdate=sys.argv[2]
+if len(sys.argv)>3: prlevel=int(sys.argv[3])
 print("Using date range",mindate,"-",maxdate)
 
 # Variant0, Variant1 counts by day
 V0=[];V1=[];DT=[]
 #fp=sys.stdin
-fp=open('tempay.4.2.comp.v3','r')
+fp=open('alphadelta','r')
 if 1:
   for x in fp:
     y=x.strip().split()
@@ -21,7 +23,7 @@ if 1:
       d=datetoday(y[0])
       v0=int(y[1])
       v1=int(y[2])
-      if v0>0 or v1>0: V0.append(v0);V1.append(v1);DT.append(d)
+      if v0>0 and v1>0: V0.append(v0);V1.append(v1);DT.append(d)
 ndays=len(V0)
 
 def mumax(r,a,d,e,p):
@@ -89,28 +91,44 @@ def Fisher(xx):
   err=[zconf*sqrt(-HI[i,i]) for i in range(N)]
   return err
 
-dayoffset=datetoday('2021-12-15')
-res=minimize(NLL,[0,0.1,1],bounds=[(-20,20), (-0.2,0.2), (1e-4,100)], method="SLSQP", options={'ftol':1e-20})
+# Do simple regression to get good initial values for NB regression
+A=np.array(V0)
+D=np.array(V1)
+W=1/(1/A+1/D)
+day0=int(round(sum(DT)/len(DT)))
+X=np.array(DT)-day0
+Y=np.log((D+1e-20)/(A+1e-20))
+m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
+r=np.array([sum(W*Y),sum(W*X*Y)])
+c=np.linalg.solve(m,r)
+mi=np.linalg.pinv(m)
+dayoffset=day0-c[0]/c[1]
+# Could estimate overdispersion parameter, but it's not likely to be that close to what NB finds because NB
+# is quite insensitive to its exact value. Which actually suggests there is not much point in using NB instead
+# of Poisson. Ho hum.
+# R=c[0]+c[1]*X-Y
+# q0=(R*R*W).sum()/len(R)-1
+
+res=minimize(NLL,[0,c[1],1],bounds=[(-20,20), (-0.2,0.2), (1e-4,100)], method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
 if not res.success: raise RuntimeError(res.message)
 t0,lam,q=res.x
 dt0,dlam,dq=Fisher(res.x)
 print("Log likelihood: %.3f"%(LL(res.x)))
 print("Growth of V1 rel V0: %.4f (%.4f - %.4f)"%(lam,lam-dlam,lam+dlam))
-print("Crossover date: %s %.2f"%(daytodate(dayoffset+int(round(t0))),t0))
+print("Crossover date: %s"%(daytodate(int(round(dayoffset+t0)))))
 print("Variance overdispersion: %.3f (%.3f - %.3f)"%(1+q,1+q-dq,1+q+dq))
-
-if 1:
+if prlevel>=2:
   print()
   print("Num V0  Num V1     Pred   Actual    Resid")
-  s0=s1=0
-  for i in range(ndays):
-    a,d,day=V0[i],V1[i],DT[i]
-    if a==0 or d==0: continue
-    pred=lam*(day-dayoffset-t0)
-    actual=log(d/a)
-    v=1/a+1/d
-    s0+=1
-    s1+=(pred-actual)**2/v
+s0=s1=0
+for i in range(ndays):
+  a,d,day=V0[i],V1[i],DT[i]
+  if a==0 or d==0: continue
+  pred=lam*(day-dayoffset-t0)
+  actual=log(d/a)
+  v=1/a+1/d
+  s0+=1
+  s1+=(pred-actual)**2/v
+  if prlevel>=2:
     print("%6d  %6d  %7.3f  %7.3f  %7.3f"%(a,d,pred,actual,(pred-actual)/sqrt(v*(1+q))))
-  print("Variance overdispersion as estimated from NB regression:",1+q)
-  print("Variance overdispersion as estimated residuals:",s1/s0)
+print("Variance overdispersion as estimated from residuals: %.3f"%(s1/s0))
