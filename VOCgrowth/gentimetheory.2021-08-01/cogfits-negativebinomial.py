@@ -4,27 +4,25 @@ from math import exp,log,sqrt
 from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
 
-mindate='2021-04-20'
-maxdate='2021-06-20'
+mindate='2021-06-01'
+maxdate='2021-10-20'
 if len(sys.argv)>1: mindate=sys.argv[1]
 if len(sys.argv)>2: maxdate=sys.argv[2]
 print("Using date range",mindate,"-",maxdate)
 
-# Alpha, Delta counts by day
-A=np.zeros(1000,dtype=int)
-D=np.zeros(1000,dtype=int)
+# Variant0, Variant1 counts by day
+V0=[];V1=[];DT=[]
 #fp=sys.stdin
-fp=open('alphadelta','r')
+fp=open('tempay.4.2.comp.v3','r')
 if 1:
-  maxd=0
   for x in fp:
     y=x.strip().split()
     if y[0]>=mindate and y[0]<=maxdate:
-      d=datetoday(y[0])-datetoday(mindate)
-      A[d]=int(y[1])
-      D[d]=int(y[2])
-      maxd=max(maxd,d)
-ndays=maxd+1
+      d=datetoday(y[0])
+      v0=int(y[1])
+      v1=int(y[2])
+      if v0>0 or v1>0: V0.append(v0);V1.append(v1);DT.append(d)
+ndays=len(V0)
 
 def mumax(r,a,d,e,p):
   return gammaln(a+r)+gammaln(d+e*r)-gammaln(r)-gammaln(e*r)+r*(1+e)*log(1-p)
@@ -37,10 +35,9 @@ def LL(xx):
   t0,lam,q=xx
   p=q/(1+q)
   LL=0
-  for day in range(ndays):
-    e=exp(lam*(day-t0))
-    a,d=A[day],D[day]
-    if a==0 and d==0: continue
+  for i in range(ndays):
+    a,d,day=V0[i],V1[i],DT[i]
+    e=exp(lam*(day-dayoffset-t0))
     # Need to set r to maximise this:
     # Gamma(a+r)Gamma(d+e*r)/(Gamma(r)*Gamma(e*r))*(1-p)**(r*(1+e))
     r0=-1/((1+e)*log(1-p))
@@ -92,25 +89,24 @@ def Fisher(xx):
   err=[zconf*sqrt(-HI[i,i]) for i in range(N)]
   return err
 
-minday=datetoday(mindate)
-d0=datetoday('2021-05-15')-minday
-res=minimize(NLL,[0,0.1,1],bounds=[(d0-20,d0+10), (-0.2,0.2), (1e-4,100)], method="SLSQP", options={'ftol':1e-20})
+dayoffset=datetoday('2021-12-15')
+res=minimize(NLL,[0,0.1,1],bounds=[(-20,20), (-0.2,0.2), (1e-4,100)], method="SLSQP", options={'ftol':1e-20})
 if not res.success: raise RuntimeError(res.message)
 t0,lam,q=res.x
 dt0,dlam,dq=Fisher(res.x)
 print("Log likelihood: %.3f"%(LL(res.x)))
 print("Growth of V1 rel V0: %.4f (%.4f - %.4f)"%(lam,lam-dlam,lam+dlam))
-print("Crossover date: %s %.2f"%(daytodate(minday+int(round(t0))),t0))
+print("Crossover date: %s %.2f"%(daytodate(dayoffset+int(round(t0))),t0))
 print("Variance overdispersion: %.3f (%.3f - %.3f)"%(1+q,1+q-dq,1+q+dq))
 
 if 1:
   print()
   print("Num V0  Num V1     Pred   Actual    Resid")
   s0=s1=0
-  for day in range(ndays):
-    a,d=A[day],D[day]
+  for i in range(ndays):
+    a,d,day=V0[i],V1[i],DT[i]
     if a==0 or d==0: continue
-    pred=lam*(day-t0)
+    pred=lam*(day-dayoffset-t0)
     actual=log(d/a)
     v=1/a+1/d
     s0+=1
