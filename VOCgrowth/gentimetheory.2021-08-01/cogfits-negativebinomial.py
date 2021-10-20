@@ -13,7 +13,9 @@ print("Using date range",mindate,"-",maxdate)
 # Alpha, Delta counts by day
 A=np.zeros(1000,dtype=int)
 D=np.zeros(1000,dtype=int)
-with open('alphadelta','r') as fp:
+#fp=sys.stdin
+fp=open('alphadelta','r')
+if 1:
   maxd=0
   for x in fp:
     y=x.strip().split()
@@ -90,9 +92,29 @@ def Fisher(xx):
   err=[zconf*sqrt(-HI[i,i]) for i in range(N)]
   return err
 
-d0=datetoday('2021-05-15')-datetoday(mindate)
-res=minimize(NLL,[0,0.1,1],bounds=[(d0-20,d0+10), (-0.2,0.2), (1e-4,100)], method="SLSQP")
+minday=datetoday(mindate)
+d0=datetoday('2021-05-15')-minday
+res=minimize(NLL,[0,0.1,1],bounds=[(d0-20,d0+10), (-0.2,0.2), (1e-4,100)], method="SLSQP", options={'ftol':1e-20})
 if not res.success: raise RuntimeError(res.message)
 t0,lam,q=res.x
 dt0,dlam,dq=Fisher(res.x)
-print("%6.2f    %5.3f (%5.3f - %5.3f)     %8.3f"%(t0,lam,lam-dlam,lam+dlam,LL(res.x)),q)
+print("Log likelihood: %.3f"%(LL(res.x)))
+print("Growth of V1 rel V0: %.4f (%.4f - %.4f)"%(lam,lam-dlam,lam+dlam))
+print("Crossover date: %s %.2f"%(daytodate(minday+int(round(t0))),t0))
+print("Variance overdispersion: %.3f (%.3f - %.3f)"%(1+q,1+q-dq,1+q+dq))
+
+if 1:
+  print()
+  print("Num V0  Num V1     Pred   Actual    Resid")
+  s0=s1=0
+  for day in range(ndays):
+    a,d=A[day],D[day]
+    if a==0 or d==0: continue
+    pred=lam*(day-t0)
+    actual=log(d/a)
+    v=1/a+1/d
+    s0+=1
+    s1+=(pred-actual)**2/v
+    print("%6d  %6d  %7.3f  %7.3f  %7.3f"%(a,d,pred,actual,(pred-actual)/sqrt(v*(1+q))))
+  print("Variance overdispersion as estimated from NB regression:",1+q)
+  print("Variance overdispersion as estimated residuals:",s1/s0)
