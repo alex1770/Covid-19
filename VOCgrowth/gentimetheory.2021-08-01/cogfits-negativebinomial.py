@@ -14,8 +14,8 @@ print("Using date range",mindate,"-",maxdate)
 
 # Variant0, Variant1 counts by day
 V0=[];V1=[];DT=[]
-#fp=sys.stdin
-fp=open('alphadelta','r')
+fp=sys.stdin
+#fp=open('alphadelta','r')
 if 1:
   for x in fp:
     y=x.strip().split()
