@@ -25,6 +25,9 @@ ltla2country=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['CTRY19NM']))
 ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN19NM'])))
 ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 
+variant="B.1.617.2"
+#variant="AY.4.2"
+
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
 def coglab2coglab(x): return x
@@ -281,7 +284,7 @@ if source=="Sanger":
     if week>=0 and week<nweeks:
       place=reduceltla[ltla]
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var=="B.1.617.2": vocnum[place][week][1]+=n
+      if var==variant: vocnum[place][week][1]+=n
       else: vocnum[place][week][0]+=n
 elif source=="COG-UK":
   fullsource="COG-UK"
@@ -309,7 +312,7 @@ elif source=="COG-UK":
       coglab=seqname[:r.end()-1]
       place=reducecog(coglab)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var=="B.1.617.2": vocnum[place][week][1]+=1
+      if var==variant: vocnum[place][week][1]+=1
       else: vocnum[place][week][0]+=1
 elif source=="SGTF":
   fullsource="SGTF data from PHE Technical briefing 13"
@@ -443,6 +446,9 @@ def Rdesc(h0,dh):
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
 
+def Gdesc(h0,dh):
+  return "%.2f%% (%.2f%% - %.2f%%)"%(h0*100,(h0-zconf*dh)*100,(h0+zconf*dh)*100)
+
 print("Estimating competitive advantage using variant counts only (not case counts)")
 print("============================================================================")
 print()
@@ -472,16 +478,20 @@ def crossratiosubdivide(matgen,duration=voclen):
         A=Y+Z-X
         B=Y/e+Z-X*(1+1/e)
         C=-X/e
-        z=(-B+sqrt(B**2-4*A*C))/(2*A)
-        l1=(b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z)
-        res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
-        logp[i]+=log(res[0])+l0+l1
+        z0=(-B+sqrt(B**2-4*A*C))/(2*A)
+        l1=(b+d-1)*log(z0) - (a+b)*log(1+z0) - (c+d)*log(1+e*z0)
+        sc=sqrt((b+d-1)/z0**2-(a+b)/(1+z0)**2-(c+d)*e**2/(1+e*z0)**2)# Set inverse length scale
+        #res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
+        res=quad(lambda x: exp( (b+d-1)*log(x/sc) - (a+b)*log(1+x/sc) - (c+d)*log(1+e*x/sc) - l1 ), 0, inf)
+        logp[i]+=log(res[0]/sc)+l0+l1
   if (tot==0).any():
     print("Can't estimate best transmission factor because VOC count matrix has 1 or more zero entries");return
   g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/duration
   dg=sqrt((1/tot.flatten()).sum())/duration
-  print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
-  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/duration,1/sqrt(L1)/duration))
+  print("Overall cross ratio:",Gdesc(g,dg),Rdesc(g,dg),tot.flatten())
+  g=L0/L1/duration
+  dg=1/sqrt(L1)/duration
+  print("Inverse variance weighting method using log(CR):",Gdesc(g,dg),Rdesc(g,dg))
   i=np.argmax(logp)
   if i==0 or i==ndiv-1:
     print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
@@ -494,7 +504,7 @@ def crossratiosubdivide(matgen,duration=voclen):
   irange=1/sqrt(c)
   g0=(hmin+(hmax-hmin)*(imax+.5)/ndiv)
   dg=(hmax-hmin)*irange/ndiv
-  print("Likelihood method using log(CR):",Rdesc(g0,dg))
+  print("Likelihood method using log(CR):",Gdesc(g0,dg),Rdesc(g0,dg))
   print()
 
 if voclen>=7:
@@ -946,7 +956,10 @@ if (type(mode)==tuple or type(mode)==list) and mode[0]=="fixed growth rate":
   printsummary(summary)
   
 if mode=="global growth rate":
-  ndiv=11;hmin=0.03;hmax=0.15
+  ndiv=11
+  hmin=0.0;hmax=0.2
+  if variant=="B.1.617.2": hmin=0.03;hmax=0.15
+  if variant=="AY.4.2": hmin=0.0;hmax=0.1
   logp=np.zeros(ndiv)
   for place in places:
     printplaceinfo(place)
