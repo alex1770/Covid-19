@@ -183,6 +183,10 @@ elif locationsize=="region": locs,dates,zvals,apicases=getdata_region(mindate)
 else: assert 0  
 print("Done")
 
+with open('tempzoeprevuk','w') as fp:
+  tz=zvals.sum(axis=0)
+  for (dt,z) in zip(dates,tz):
+    print(dt,"%10.1f"%z,file=fp)
 
 N=len(locs)
 n=len(dates)
