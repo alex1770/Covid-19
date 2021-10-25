@@ -157,7 +157,7 @@ discardcogdays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":10000,"eps":1e-4}
+minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-14}
 
 #mode="local growth rates"
 mode="global growth rate"
@@ -1080,8 +1080,8 @@ if mode=="global growth rate":
     TSS0[areacovered][0,:]+=AA0;TSS0[areacovered][1,:]+=BB0
     if makeregions: reg=ltla2region[place];TSS0[0,reg]+=AA0;TSS0[1,reg]+=BB0
     SSS=getcondsamples(place,xx0,dhsamp)
-    assert SSS[:,1,-2:].max()<1e20
     if not SSS is None:
+      assert SSS[:,1,-2:].max()<1e20
       TSSS[areacovered]+=SSS
       if makeregions: TSSS[reg]+=SSS
     print("Globally optimised growth advantage")
