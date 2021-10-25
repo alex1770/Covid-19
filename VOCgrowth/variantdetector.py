@@ -73,42 +73,60 @@ def getgrowth(daycounts,mutdaycount):
   # log(varcount/backgroundcount) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
   m=np.zeros([2,2])
   r=np.zeros(2)
+  s0=syy=0
+  tv0=tv1=0
   for day in mutdaycount:
     x=day-minday
-    vm=mutdaycount[day]
-    v1=daycounts.get(day,0)-vm
-    if v1>0 and vm>0:
-      y=log(vm/v1)
-      w=1/(1/v1+1/vm)
+    v1=mutdaycount[day]
+    v0=daycounts.get(day,0)-v1
+    if v0>0 and v1>0:
+      y=log(v1/v0)
+      w=1/(1/v0+1/v1)
       m[0,0]+=w
       m[0,1]+=w*x
       m[1,0]+=w*x
       m[1,1]+=w*x*x
       r[0]+=w*y
       r[1]+=w*x*y
-  if m[0,0]<10: return (0,1000),(0,10)#alter
+      s0+=1
+      syy+=w*y*y
+      tv0+=v0;tv1+=v1
+  if m[0,0]<10: return (0,1000),(0,10),(tv0,tv1)#alter
   mi=np.linalg.pinv(m)
   c=np.linalg.solve(m,r)
   cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
-  return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1]))
+  
+  # Want sum( w*(c0+c1*x-y)^2 )
+  vr = (c[0]**2*m[0,0] + 2*c[0]*c[1]*m[0,1] - 2*c[0]*r[0] + c[1]**2*m[1,1] - 2*c[1]*r[1] + syy)/s0
+  #print(vr)
+  # Investigate simple correction for overdispersion. Not sure it's right yet.
+  # Try crossing number stats
+
+  return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1])),(tv0,tv1)
   # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
   # return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
 print("GH0",time.clock()-tim0)
+#daycounts,mutdaycounts,lincounts=getmutday(linelist)
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,given={name2num['S:Y145H']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-01'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-01'),given={name2num['S:G142D']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-15'),given={name2num['S:T95I']},lineage='AY.4')
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-15'),lineage='AY.4')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-15'),given={name2num['S:T95I']})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-09-01'),maxday1=datetoday('2021-10-07'),given={name2num['S:Y145H']})
 print("GH1",time.clock()-tim0)
 
 if 1:
-  growth={}
+  growth={};tv={}
   for mut in range(nmut):
-    growth[mut]=getgrowth(daycounts,mutdaycounts[mut])[1]
+    gr=getgrowth(daycounts,mutdaycounts[mut])
+    growth[mut]=gr[1]
+    tv[mut]=gr[2]
   
-  sd=8
+  sd=4
   l=[mut for mut in growth if growth[mut][0]>0]
   #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
   l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
@@ -117,7 +135,7 @@ if 1:
     gr=growth[mut]
     (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
     if gl<0: break
-    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %8d"%(num2name[mut],g*100,gl*100,gh*100,gr[0]/gr[1],sum(mutdaycounts[mut].values())))
+    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %7d %7d"%(num2name[mut],g*100,gl*100,gh*100,gr[0]/gr[1],tv[mut][0],tv[mut][1]))
     nm+=1
   
   nmd=min(nm,10)
