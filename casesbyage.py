@@ -31,6 +31,7 @@ displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
 #displayages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 #displayages=[(a,a+10) for a in range(0,80,10)]+[(80,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,50),(50,65),(65,150)]
+#displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,80),(80,150)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -68,10 +69,14 @@ def prod(l):
 
 def get_data(req):
   url='https://api.coronavirus.data.gov.uk/v2/data?'
-  for t in range(3):
-    response = requests.get(url+req, timeout=30)
-    if response.ok: break
-  else: raise RuntimeError('Request failed: '+response.text)
+  for t in range(10):
+    try:
+      response = requests.get(url+req, timeout=5)
+      if response.ok: break
+      error=response.text
+    except BaseException as err:
+      error=str(err)
+  else: raise RuntimeError('Request failed: '+error)
   return response.json()['body'][::-1]
 
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
