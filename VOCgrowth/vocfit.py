@@ -25,6 +25,14 @@ ltla2country=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['CTRY19NM']))
 ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN19NM'])))
 ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 
+#variant="B.1.617.2"
+variant="AY.4.2"
+
+# Set bounds for relative daily growth rate
+(hmin,hmax)=(0.0,0.2)
+if variant=="B.1.617.2": (hmin,hmax)=(0.03,0.15)
+if variant=="AY.4.2": (hmin,hmax)=(0.0,0.1)
+
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
 def coglab2coglab(x): return x
@@ -94,7 +102,9 @@ source="Sanger"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
+#locationsize="LTLA"
 locationsize="region"
+#locationsize="country"
 
 ltlaexclude=set()
 #ltlaexclude=set(['E08000001','E12000002'])# Bolton, Manchester
@@ -105,16 +115,16 @@ ltlaset="All"
 #ltlaset="Hartlepool"
 
 # Will plot graph of these locations even if only encountered during subdivision of global growth mode
-specialinterest=set(['E08000001'])
+specialinterest=set()#['E08000001'])
 
 mgt=5# Mean generation time in days
 
 # Earliest day to use case data
-minday=datetoday('2021-04-01')# Inclusive
+minday=datetoday('2021-07-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-05-01')
+firstweek=datetoday('2021-07-24')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
@@ -147,7 +157,7 @@ discardcogdays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":10000,"eps":1e-4}
+minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-14}
 
 #mode="local growth rates"
 mode="global growth rate"
@@ -281,7 +291,7 @@ if source=="Sanger":
     if week>=0 and week<nweeks:
       place=reduceltla[ltla]
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var=="B.1.617.2": vocnum[place][week][1]+=n
+      if var==variant: vocnum[place][week][1]+=n
       else: vocnum[place][week][0]+=n
 elif source=="COG-UK":
   fullsource="COG-UK"
@@ -309,7 +319,7 @@ elif source=="COG-UK":
       coglab=seqname[:r.end()-1]
       place=reducecog(coglab)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var=="B.1.617.2": vocnum[place][week][1]+=1
+      if var==variant: vocnum[place][week][1]+=1
       else: vocnum[place][week][0]+=1
 elif source=="SGTF":
   fullsource="SGTF data from PHE Technical briefing 13"
@@ -424,6 +434,13 @@ if bundleremainder:
 places=list(okplaces)
 places.sort()# Alphabetical order
 
+if 0:
+  vdir='tempd'
+  for place in places:
+    with open(os.path.join(vdir,place.replace(' ','_')),'w') as fp:
+      for w in range(nweeks):
+        print(daytodate(firstweek+voclen*w),"%6d %6d"%tuple(vocnum[place][w]),file=fp)
+
 # Work out pre-Delta case counts, amalgamated to at least region level
 precases={}
 for place in precases0:
@@ -443,6 +460,9 @@ def Rdesc(h0,dh):
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
 
+def Gdesc(h0,dh):
+  return "%.2f%% (%.2f%% - %.2f%%)"%(h0*100,(h0-zconf*dh)*100,(h0+zconf*dh)*100)
+
 print("Estimating competitive advantage using variant counts only (not case counts)")
 print("============================================================================")
 print()
@@ -453,7 +473,6 @@ from scipy import inf
 def crossratiosubdivide(matgen,duration=voclen):
   tot=np.zeros([2,2],dtype=int)
   ndiv=20
-  hmin=0;hmax=0.3# Range of possible daily growth advantages
   logp=np.zeros(ndiv)
   L0=L1=0
   for M in matgen:
@@ -472,16 +491,20 @@ def crossratiosubdivide(matgen,duration=voclen):
         A=Y+Z-X
         B=Y/e+Z-X*(1+1/e)
         C=-X/e
-        z=(-B+sqrt(B**2-4*A*C))/(2*A)
-        l1=(b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z)
-        res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
-        logp[i]+=log(res[0])+l0+l1
+        z0=(-B+sqrt(B**2-4*A*C))/(2*A)
+        l1=(b+d-1)*log(z0) - (a+b)*log(1+z0) - (c+d)*log(1+e*z0)
+        sc=sqrt((b+d-1)/z0**2-(a+b)/(1+z0)**2-(c+d)*e**2/(1+e*z0)**2)# Set inverse length scale
+        #res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
+        res=quad(lambda x: exp( (b+d-1)*log(x/sc) - (a+b)*log(1+x/sc) - (c+d)*log(1+e*x/sc) - l1 ), 0, inf)
+        logp[i]+=log(res[0]/sc)+l0+l1
   if (tot==0).any():
     print("Can't estimate best transmission factor because VOC count matrix has 1 or more zero entries");return
   g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/duration
   dg=sqrt((1/tot.flatten()).sum())/duration
-  print("Overall cross ratio:",Rdesc(g,dg),tot.flatten())
-  print("Inverse variance weighting method using log(CR):",Rdesc(L0/L1/duration,1/sqrt(L1)/duration))
+  print("Overall cross ratio:",Gdesc(g,dg),Rdesc(g,dg),tot.flatten())
+  g=L0/L1/duration
+  dg=1/sqrt(L1)/duration
+  print("Inverse variance weighting method using log(CR):",Gdesc(g,dg),Rdesc(g,dg))
   i=np.argmax(logp)
   if i==0 or i==ndiv-1:
     print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
@@ -494,18 +517,71 @@ def crossratiosubdivide(matgen,duration=voclen):
   irange=1/sqrt(c)
   g0=(hmin+(hmax-hmin)*(imax+.5)/ndiv)
   dg=(hmax-hmin)*irange/ndiv
-  print("Likelihood method using log(CR):",Rdesc(g0,dg))
+  print("Likelihood method using log(CR):",Gdesc(g0,dg),Rdesc(g0,dg))
   print()
+
+# Simple regression with 1/(1/v0+1/v1) weighting
+def simpleregress(NV):
+  DT=np.array(range(firstweek,firstweek+voclen*nweeks,voclen))
+  W=NV[:,0]*NV[:,1]/(NV.sum(axis=1)+1e-20)
+  day0=DT.sum()/nweeks
+  if (W>0).sum()<=1: return (day0,0,1)
+  X=DT-day0
+  Y=np.log((NV[:,1]+1e-20)/(NV[:,0]+1e-20))
+  m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
+  r=np.array([sum(W*Y),sum(W*X*Y)])
+  c=np.linalg.solve(m,r)
+  mi=np.linalg.pinv(m)
+  R=c[0]+c[1]*X-Y
+  overdis=(R*R*W).sum()/len(R)
+  dg=sqrt(mi[1,1]*overdis)
+  return (day0-c[0]/c[1],c[1],dg)
+
+n=1+len(places)
+def NLL_vonly(xx):
+  g=xx[0]
+  LL=0
+  for (i,place) in enumerate(places):
+    nn=vocnum[place]
+    t0=xx[1+i]
+    for w in range(nweeks):
+      G=(w*voclen-t0)*g
+      LL+=-(nn[w][0]+nn[w][1])*log(1+exp(G))+nn[w][1]*G
+  return -LL/1000
+
+print("--- Quasi-Poisson regression ---")
+sr=simpleregress(sum(vocnum.values()))
+xx=[sr[1]]# Overall growth
+print("%s:"%areacovered,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+s0=s1=0
+for place in places:
+  sr=simpleregress(vocnum[place])
+  xx.append(sr[0]-firstweek)# Intercept of [place]
+  print("%25s:"%place,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+  iv=1/sr[2]**2
+  s0+=iv
+  s1+=iv*sr[1]
+g=s1/s0;dg=sqrt(1/s0)
+print("Inverse variance-weighted overall:",Gdesc(g,dg),Rdesc(g,dg))
+print()
+
+bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
+res=minimize(NLL_vonly,xx,bounds=bounds,method="SLSQP",options=minopts)
+print("--- Quasi-Poisson regression controlling for %s ---"%locationsize)
+print("Growth: %.2f%%    crossover on"%(res.x[0]*100),daytodate(firstweek+res.x[1]))
+print()
 
 if voclen>=7:
   for w in range(nweeks-1):
     day0=lastweek-(nweeks-w)*voclen+1
     print(daytodate(day0),"-",daytodate(day0+2*voclen-1))
     crossratiosubdivide(vocnum[place][w:w+2] for place in places)
+
 print("All week pairs:")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
 print("First week to last week:")
 crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
+
 print()
 
 print("Estimating competitive advantage using variant counts together with case counts")
@@ -946,7 +1022,7 @@ if (type(mode)==tuple or type(mode)==list) and mode[0]=="fixed growth rate":
   printsummary(summary)
   
 if mode=="global growth rate":
-  ndiv=11;hmin=0.03;hmax=0.15
+  ndiv=11
   logp=np.zeros(ndiv)
   for place in places:
     printplaceinfo(place)
@@ -1004,8 +1080,8 @@ if mode=="global growth rate":
     TSS0[areacovered][0,:]+=AA0;TSS0[areacovered][1,:]+=BB0
     if makeregions: reg=ltla2region[place];TSS0[0,reg]+=AA0;TSS0[1,reg]+=BB0
     SSS=getcondsamples(place,xx0,dhsamp)
-    assert SSS[:,1,-2:].max()<1e20
     if not SSS is None:
+      assert SSS[:,1,-2:].max()<1e20
       TSSS[areacovered]+=SSS
       if makeregions: TSSS[reg]+=SSS
     print("Globally optimised growth advantage")

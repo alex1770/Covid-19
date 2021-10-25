@@ -45,6 +45,11 @@ def csvrows_it(it,reqheadings,sep=","):
     if row==None: return
     yield [row[i] for i in cols]
   
+def csvrows(fn,reqheadings,sep=','):
+  with open(fn,'r') as fp:
+    for x in csvrows_it(fp,reqheadings,sep):
+      yield x
+
 def datetoday(x):
   format=None
   if '/' in x:
