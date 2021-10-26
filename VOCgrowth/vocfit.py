@@ -27,11 +27,12 @@ ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 
 #variant="B.1.617.2"
 variant="AY.4.2"
+nonvariant="non-AY.4.2"
 
 # Set bounds for relative daily growth rate
 (hmin,hmax)=(0.0,0.2)
 if variant=="B.1.617.2": (hmin,hmax)=(0.03,0.15)
-if variant=="AY.4.2": (hmin,hmax)=(0.0,0.1)
+if variant=="AY.4.2": (hmin,hmax)=(0.0,0.06)
 
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
@@ -120,11 +121,11 @@ specialinterest=set()#['E08000001'])
 mgt=5# Mean generation time in days
 
 # Earliest day to use case data
-minday=datetoday('2021-07-01')# Inclusive
+minday=datetoday('2021-08-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-07-24')
+firstweek=datetoday('2021-08-14')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
@@ -148,7 +149,7 @@ bmscale=0.01
 asc=0.4
 
 # Discard this many cases at the end of the list of cases by specimen day (may be increased later if Wales is in the mix)
-discardcasedays=0
+discardcasedays=2
 
 # Discard this many days of the latest COG data
 discardcogdays=2
@@ -157,7 +158,7 @@ discardcogdays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-14}
+minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-12}
 
 #mode="local growth rates"
 mode="global growth rate"
@@ -908,8 +909,8 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint(" %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f"%(sr[nmin,0,i],sr[nmed,0,i],sr[nmax,0,i],sr[nmin,1,i],sr[nmed,1,i],sr[nmax,1,i]))
     else:
       mprint("       -       -       -       -       -       -")
-  EQ="Estimated R_t(Alpha) = %.2f (%.2f - %.2f)"%(QQ[nmed],QQ[nmin],QQ[nmax])
-  ER="Estimated R_t(Delta) = %.2f (%.2f - %.2f)"%(RR[nmed],RR[nmin],RR[nmax])
+  EQ="Estimated R_t(%s) = %.2f (%.2f - %.2f)"%(nonvariant,QQ[nmed],QQ[nmin],QQ[nmax])
+  ER="Estimated R_t(%s) = %.2f (%.2f - %.2f)"%(variant,RR[nmed],RR[nmin],RR[nmax])
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
   ETA="Estimated competitive advantage = "
@@ -943,10 +944,10 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     write('set style fill transparent solid 0.25')
     write('set style fill noborder')
     write('set y2tics')
-    write('set title "Estimated reproduction numbers of Alpha and Delta variants in %s\\n'%(area+using)+
+    write('set title "Estimated reproduction numbers of %s and %s variants in %s\\n'%(nonvariant,variant,area+using)+
           'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
           'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-    write('plot "%s" u 1:19 w lines lc "green" lw 3 title "Estimated R_t(Alpha)", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated R_t(Delta)", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%((graphdata,)*4))
+    write('plot "%s" u 1:19 w lines lc "green" lw 3 title "Estimated R_t(%s)", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated R_t(%s)", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%(graphdata,nonvariant,graphdata,graphdata,variant,graphdata))
     print("Written graph to %s"%graphfnR)
     
     for yaxis in ["lin","log"]:
@@ -955,10 +956,10 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       write('set key top left')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
-      write('set title "Estimated new cases per day of Alpha and Delta in %s\\n'%(area+using)+
+      write('set title "Estimated new cases per day of %s and %s in %s\\n'%(nonvariant,variant,area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
             'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-      write('plot "%s" u 1:2 with lines lw 3 title "Modelled Alpha", "%s" u 1:3 with lines lw 3 title "Modelled Delta", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of Alpha scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of Delta scaled up to modelled total"'%((graphdata,)*6))
+      write('plot "%s" u 1:2 with lines lw 3 title "Modelled %s", "%s" u 1:3 with lines lw 3 title "Modelled %s", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of %s scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of %s scaled up to modelled total"'%(graphdata,nonvariant,graphdata,variant,graphdata,graphdata,graphdata,nonvariant,graphdata,variant))
       print("Written graph to %s"%graphfn)
     
     p.close();po.wait()
@@ -972,8 +973,8 @@ def printsummary(summary):
     if Tmin!=None: print(" ( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
     else: print()
   print()
-  print("Q = point estimate of reproduction rate of Alpha on",daytodate(maxday-1))
-  print("R = point estimate of reproduction rate of Delta on",daytodate(maxday-1))
+  print("Q = point estimate of reproduction rate of %s on"%nonvariant,daytodate(maxday-1))
+  print("R = point estimate of reproduction rate of %s on"%variant,daytodate(maxday-1))
   print("T = estimated competitive advantage = R/Q as a percentage increase")
   print()
 
