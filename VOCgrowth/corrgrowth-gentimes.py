@@ -27,8 +27,8 @@ if 1:
     y=x.strip().split()
     if y[0]>=mindate and y[0]<=maxdate:
       d=datetoday(y[0])
-      v0=int(y[1])
-      v1=int(y[2])
+      v0=float(y[1])
+      v1=float(y[2])
       if v0>=mincount and v1>=mincount: V0.append(v0);V1.append(v1);DT.append(d)
 ndays=len(V0)
 
