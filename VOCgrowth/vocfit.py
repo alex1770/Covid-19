@@ -25,14 +25,18 @@ ltla2country=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['CTRY19NM']))
 ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN19NM'])))
 ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 
-#variant="B.1.617.2"
-variant="AY.4.2"
-nonvariant="non-AY.4.2"
+#variantset=["B.1.617.2", "AY."];nonvariantset=["B.1.1.7"];variant="Delta";nonvariant="Alpha"
+variantset=["AY.4.2"];nonvariantset=[""];variant="AY.4.2";nonvariant="non-AY.4.2"
 
 # Set bounds for relative daily growth rate
 (hmin,hmax)=(0.0,0.2)
 if variant=="B.1.617.2": (hmin,hmax)=(0.03,0.15)
 if variant=="AY.4.2": (hmin,hmax)=(0.0,0.06)
+
+def varmatch(var,pattern):
+  if pattern=="": return True
+  if pattern[-1:]!='.': return var==pattern
+  return var[:len(pattern)]==pattern
 
 def coglab2uk(x): return "UK"
 def coglab2country(x): return x.split('/')[0].replace('_',' ')
@@ -121,11 +125,11 @@ specialinterest=set()#['E08000001'])
 mgt=5# Mean generation time in days
 
 # Earliest day to use case data
-minday=datetoday('2021-08-01')# Inclusive
+minday=datetoday('2021-07-01')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-08-14')
+firstweek=datetoday('2021-07-01')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
@@ -292,8 +296,8 @@ if source=="Sanger":
     if week>=0 and week<nweeks:
       place=reduceltla[ltla]
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var==variant: vocnum[place][week][1]+=n
-      else: vocnum[place][week][0]+=n
+      if any(varmatch(var,pat) for pat in variantset): vocnum[place][week][1]+=n
+      elif any(varmatch(var,pat) for pat in nonvariantset): vocnum[place][week][0]+=n
 elif source=="COG-UK":
   fullsource="COG-UK"
   cog=loadcsv("cog_metadata.csv")
@@ -320,8 +324,8 @@ elif source=="COG-UK":
       coglab=seqname[:r.end()-1]
       place=reducecog(coglab)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      if var==variant: vocnum[place][week][1]+=1
-      else: vocnum[place][week][0]+=1
+      if any(varmatch(var,pat) for pat in variantset): vocnum[place][week][1]+=1
+      elif any(varmatch(var,pat) for pat in nonvariantset): vocnum[place][week][0]+=n
 elif source=="SGTF":
   fullsource="SGTF data from PHE Technical briefing 13"
   assert voclen==7
@@ -526,7 +530,7 @@ def simpleregress(NV):
   DT=np.array(range(firstweek,firstweek+voclen*nweeks,voclen))
   W=NV[:,0]*NV[:,1]/(NV.sum(axis=1)+1e-20)
   day0=DT.sum()/nweeks
-  if (W>0).sum()<=1: return (day0,0,1)
+  if (W>0).sum()<=2: return (day0,0,1)
   X=DT-day0
   Y=np.log((NV[:,1]+1e-20)/(NV[:,0]+1e-20))
   m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
@@ -573,15 +577,21 @@ if 0:
     print("%30s  %7.3f     %8d   %8d   %8d   %8d"%(place,g,vn[-2][0],vn[-2][1],vn[-1][0],vn[-1][1]))
   print()
 
-l=[]
 eps=1e-20
+mincount=1
+l=[]
 for w in range(nweeks-1):
+  if len(places)<30: print(daytodate(firstweek+w*7),end='   ')
   for place in places:
     vn=vocnum[place]
-    g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
-    l.append(g)
-    if len(places)<30:
-      print(" %6.1f%%"%(log(g)/voclen*100),end='')
+    if (vn[w:w+2,:]>=mincount).all():
+      g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
+      l.append(g)
+      if len(places)<30:
+        print(" %6.1f%%"%(log(g)/voclen*100),end='')
+    else:
+      if len(places)<30:
+        print("  ------",end='')
   if len(places)<30: print()
 l.sort()
 n=len(l)
