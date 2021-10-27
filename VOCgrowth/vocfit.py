@@ -1,7 +1,7 @@
 from stuff import *
 import sys,re,argparse,pickle
 from scipy.optimize import minimize
-from scipy.stats import norm
+from scipy.stats import norm,binom
 from scipy.special import gammaln
 from math import log,exp,sqrt,sin,pi
 import numpy as np
@@ -160,8 +160,8 @@ bundleremainder=True
 
 minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-12}
 
-#mode="local growth rates"
-mode="global growth rate"
+mode="local growth rates"
+#mode="global growth rate"
 #mode="fixed growth rate",0.1
 
 voclen=(1 if source=="COG-UK" else 7)
@@ -564,6 +564,32 @@ for place in places:
   s1+=iv*sr[1]
 g=s1/s0;dg=sqrt(1/s0)
 print("Inverse variance-weighted overall:",Gdesc(g,dg),Rdesc(g,dg))
+print()
+
+if 0:
+  for place in places:
+    vn=vocnum[place]
+    g=(vn[-1][1]/vn[-1][0])/(vn[-2][1]/vn[-2][0])
+    print("%30s  %7.3f     %8d   %8d   %8d   %8d"%(place,g,vn[-2][0],vn[-2][1],vn[-1][0],vn[-1][1]))
+  print()
+
+l=[]
+eps=1e-20
+for w in range(nweeks-1):
+  for place in places:
+    vn=vocnum[place]
+    g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
+    l.append(g)
+    if len(places)<30:
+      print(" %6.1f%%"%(log(g)/voclen*100),end='')
+  if len(places)<30: print()
+l.sort()
+n=len(l)
+k=int(binom.ppf((1-conf)/2,n,0.5))
+med=log((l[n//2]+l[(n-1)//2])/2)/voclen
+low=log(l[k-1])/voclen
+high=log(l[n-k])/voclen
+print("Separate location & weeks, high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
 print()
 
 bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
