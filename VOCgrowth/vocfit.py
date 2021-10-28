@@ -107,8 +107,8 @@ source="Sanger"
 # Sanger works with LTLA, region, country
 # COG-UK works with country, UK
 # SGTF works with region, country
-locationsize="LTLA"
-#locationsize="region"
+#locationsize="LTLA"
+locationsize="region"
 #locationsize="country"
 
 ltlaexclude=set()
@@ -472,6 +472,87 @@ print("Estimating competitive advantage using variant counts only (not case coun
 print("============================================================================")
 print()
 
+mincount=1
+l=[]
+eps=1e-20
+for w in range(nweeks-1):
+  if len(places)<30: print(daytodate(firstweek+w*7),end='   ')
+  for place in places:
+    vn=vocnum[place]
+    if (vn[w:w+2,:]>=mincount).all():
+      g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
+      l.append(g)
+      if len(places)<30:
+        print(" %6.1f%%"%(log(g)/voclen*100),end='')
+    else:
+      if len(places)<30:
+        print("  ------",end='')
+  if len(places)<30: print()
+l.sort()
+n=len(l)
+k=int(binom.ppf((1-conf)/2,n,0.5))
+med=log((l[n//2]+l[(n-1)//2])/2)/voclen
+low=log(l[k-1])/voclen
+high=log(l[n-k])/voclen
+print("Separate location & weeks, high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
+print()
+
+l=[]
+for w in range(nweeks-1):
+  for place in places:
+    vn=vocnum[place]
+    if (vn[w:w+2,:]>0).all():
+      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
+      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
+      l.append((g,wt))
+l.sort()
+wts=np.array([wt for (g,wt) in l])
+n=len(l)
+nsamp=int(1e6/len(places))
+rand=bernoulli.rvs(0.5,size=[nsamp,n])
+samp=rand@wts
+samp.sort()
+wtlow=samp[int(nsamp*(1-conf)/2)]
+wtmed=samp[int(nsamp/2)]
+wthigh=samp[int(nsamp*(1+conf)/2)]
+wt=0
+low=med=high=None
+for i in range(n):
+  wt+=l[i][1]
+  if low==None and wt>wtlow: low=log(l[i][0])/voclen
+  if med==None and wt>wtmed: med=log(l[i][0])/voclen
+  if high==None and wt>wthigh: high=log(l[i][0])/voclen
+print("Separate location & weeks, weighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
+print()
+
+for w in range(nweeks-1):
+  l=[]
+  for place in places:
+    vn=vocnum[place]
+    if (vn[w:w+2,:]>0).all():
+      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
+      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
+      l.append((g,wt))
+  l.sort()
+  wts=np.array([wt for (g,wt) in l])
+  n=len(l)
+  nsamp=int(1e6/len(places))
+  rand=bernoulli.rvs(0.5,size=[nsamp,n])
+  samp=rand@wts
+  samp.sort()
+  wtlow=samp[int(nsamp*(1-conf)/2)]
+  wtmed=samp[int(nsamp/2)]
+  wthigh=samp[int(nsamp*(1+conf)/2)]
+  wt=0
+  low=med=high=None
+  for i in range(n):
+    wt+=l[i][1]
+    if low==None and wt>wtlow: low=log(l[i][0])/voclen
+    if med==None and wt>wtmed: med=log(l[i][0])/voclen
+    if high==None and wt>wthigh: high=log(l[i][0])/voclen
+  print(daytodate(firstweek+7*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
+print()
+
 from scipy.special import betaln
 from scipy.integrate import quad
 from scipy import inf
@@ -554,116 +635,6 @@ def NLL_vonly(xx):
       LL+=-(nn[w][0]+nn[w][1])*log(1+exp(G))+nn[w][1]*G
   return -LL/1000
 
-print("--- Quasi-Poisson regression ---")
-sr=simpleregress(sum(vocnum.values()))
-xx=[sr[1]]# Overall growth
-print("%s:"%areacovered,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
-s0=s1=0
-for place in places:
-  sr=simpleregress(vocnum[place])
-  xx.append(sr[0]-firstweek)# Intercept of [place]
-  print("%25s:"%place,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
-  iv=1/sr[2]**2
-  s0+=iv
-  s1+=iv*sr[1]
-g=s1/s0;dg=sqrt(1/s0)
-print("Inverse variance-weighted overall:",Gdesc(g,dg),Rdesc(g,dg))
-print()
-
-if 0:
-  for place in places:
-    vn=vocnum[place]
-    g=(vn[-1][1]/vn[-1][0])/(vn[-2][1]/vn[-2][0])
-    print("%30s  %7.3f     %8d   %8d   %8d   %8d"%(place,g,vn[-2][0],vn[-2][1],vn[-1][0],vn[-1][1]))
-  print()
-
-mincount=1
-l=[]
-eps=1e-20
-for w in range(nweeks-1):
-  if len(places)<30: print(daytodate(firstweek+w*7),end='   ')
-  for place in places:
-    vn=vocnum[place]
-    if (vn[w:w+2,:]>=mincount).all():
-      g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
-      l.append(g)
-      if len(places)<30:
-        print(" %6.1f%%"%(log(g)/voclen*100),end='')
-    else:
-      if len(places)<30:
-        print("  ------",end='')
-  if len(places)<30: print()
-l.sort()
-n=len(l)
-k=int(binom.ppf((1-conf)/2,n,0.5))
-med=log((l[n//2]+l[(n-1)//2])/2)/voclen
-low=log(l[k-1])/voclen
-high=log(l[n-k])/voclen
-print("Separate location & weeks, high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
-print()
-
-l=[]
-for w in range(nweeks-1):
-  for place in places:
-    vn=vocnum[place]
-    if (vn[w:w+2,:]>0).all():
-      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
-      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
-      l.append((g,wt))
-l.sort()
-wts=np.array([wt for (g,wt) in l])
-n=len(l)
-nsamp=int(1e6/len(places))
-rand=bernoulli.rvs(0.5,size=[nsamp,n])
-samp=rand@wts
-samp.sort()
-wtlow=samp[int(nsamp*(1-conf)/2)]
-wtmed=samp[int(nsamp/2)]
-wthigh=samp[int(nsamp*(1+conf)/2)]
-wt=0
-low=med=high=None
-for i in range(n):
-  wt+=l[i][1]
-  if low==None and wt>wtlow: low=log(l[i][0])/voclen
-  if med==None and wt>wtmed: med=log(l[i][0])/voclen
-  if high==None and wt>wthigh: high=log(l[i][0])/voclen
-print("Separate location & weeks, weighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
-print()
-
-for w in range(nweeks-1):
-  l=[]
-  for place in places:
-    vn=vocnum[place]
-    if (vn[w:w+2,:]>0).all():
-      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
-      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
-      l.append((g,wt))
-  l.sort()
-  wts=np.array([wt for (g,wt) in l])
-  n=len(l)
-  nsamp=int(1e6/len(places))
-  rand=bernoulli.rvs(0.5,size=[nsamp,n])
-  samp=rand@wts
-  samp.sort()
-  wtlow=samp[int(nsamp*(1-conf)/2)]
-  wtmed=samp[int(nsamp/2)]
-  wthigh=samp[int(nsamp*(1+conf)/2)]
-  wt=0
-  low=med=high=None
-  for i in range(n):
-    wt+=l[i][1]
-    if low==None and wt>wtlow: low=log(l[i][0])/voclen
-    if med==None and wt>wtmed: med=log(l[i][0])/voclen
-    if high==None and wt>wthigh: high=log(l[i][0])/voclen
-  print(daytodate(firstweek+7*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
-print()
-
-bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
-res=minimize(NLL_vonly,xx,bounds=bounds,method="SLSQP",options=minopts)
-print("--- Quasi-Poisson regression controlling for %s ---"%locationsize)
-print("Growth: %.2f%%    crossover on"%(res.x[0]*100),daytodate(firstweek+res.x[1]))
-print()
-
 if voclen>=7:
   for w in range(nweeks-1):
     day0=lastweek-(nweeks-w)*voclen+1
@@ -674,6 +645,29 @@ print("All week pairs:")
 crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
 print("First week to last week:")
 crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
+
+if len(places)<50:
+  print("--- Quasi-Poisson regression ---")
+  sr=simpleregress(sum(vocnum.values()))
+  xx=[sr[1]]# Overall growth
+  print("%s:"%areacovered,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+  s0=s1=0
+  for place in places:
+    sr=simpleregress(vocnum[place])
+    xx.append(sr[0]-firstweek)# Intercept of [place]
+    print("%25s:"%place,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+    iv=1/sr[2]**2
+    s0+=iv
+    s1+=iv*sr[1]
+  g=s1/s0;dg=sqrt(1/s0)
+  print("Inverse variance-weighted overall:",Gdesc(g,dg),Rdesc(g,dg))
+  print()
+  
+  bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
+  res=minimize(NLL_vonly,xx,bounds=bounds,method="SLSQP",options=minopts)
+  print("--- Quasi-Poisson regression controlling for %s ---"%locationsize)
+  print("Growth: %.2f%%    crossover on"%(res.x[0]*100),daytodate(firstweek+res.x[1]))
+  print()
 
 print()
 
