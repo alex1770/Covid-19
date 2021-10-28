@@ -607,7 +607,7 @@ for w in range(nweeks-1):
   for place in places:
     vn=vocnum[place]
     if (vn[w:w+2,:]>0).all():
-      wt=1/(1/vn[w:w+2,:]).sum()
+      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
       g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
       l.append((g,wt))
 l.sort()
@@ -628,6 +628,34 @@ for i in range(n):
   if med==None and wt>wtmed: med=log(l[i][0])/voclen
   if high==None and wt>wthigh: high=log(l[i][0])/voclen
 print("Separate location & weeks, weighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
+print()
+
+for w in range(nweeks-1):
+  l=[]
+  for place in places:
+    vn=vocnum[place]
+    if (vn[w:w+2,:]>0).all():
+      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
+      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
+      l.append((g,wt))
+  l.sort()
+  wts=np.array([wt for (g,wt) in l])
+  n=len(l)
+  nsamp=int(1e6/len(places))
+  rand=bernoulli.rvs(0.5,size=[nsamp,n])
+  samp=rand@wts
+  samp.sort()
+  wtlow=samp[int(nsamp*(1-conf)/2)]
+  wtmed=samp[int(nsamp/2)]
+  wthigh=samp[int(nsamp*(1+conf)/2)]
+  wt=0
+  low=med=high=None
+  for i in range(n):
+    wt+=l[i][1]
+    if low==None and wt>wtlow: low=log(l[i][0])/voclen
+    if med==None and wt>wtmed: med=log(l[i][0])/voclen
+    if high==None and wt>wthigh: high=log(l[i][0])/voclen
+  print(daytodate(firstweek+7*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
 print()
 
 bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
