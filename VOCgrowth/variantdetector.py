@@ -108,7 +108,7 @@ def getgrowth(daycounts,mutdaycount):
 
 print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'))
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,given={name2num['S:Y145H']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-01'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-01'),given={name2num['S:G142D']})
@@ -117,6 +117,7 @@ daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-0
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-15'),given={name2num['S:T95I']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-09-01'),maxday1=datetoday('2021-10-07'),given={name2num['S:Y145H']})
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
 print("GH1",time.clock()-tim0)
 
 if 1:
@@ -127,15 +128,16 @@ if 1:
     tv[mut]=gr[2]
   
   sd=4
+  gr0=0.005
   l=[mut for mut in growth if growth[mut][0]>0]
   #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
-  l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
+  l.sort(key=lambda x:-((growth[x][0]-gr0)/growth[x][1]))
   nm=0
   for mut in l:
     gr=growth[mut]
     (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
-    if gl<0: break
-    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %7d %7d"%(num2name[mut],g*100,gl*100,gh*100,gr[0]/gr[1],tv[mut][0],tv[mut][1]))
+    if gl<gr0: break
+    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %7d %7d"%(num2name[mut],g*100,gl*100,gh*100,(gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]))
     nm+=1
   
   nmd=min(nm,10)
