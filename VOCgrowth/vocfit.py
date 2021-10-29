@@ -105,8 +105,9 @@ source="Sanger"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
-# COG-UK works with country, UK
+# COG-UK works with country, UK, and partially with coglab (coglab doesn't match up with case-count areas, so can only do VOC-only growth rates)
 # SGTF works with region, country
+#locationsize="coglab"
 #locationsize="LTLA"
 locationsize="region"
 #locationsize="country"
@@ -301,11 +302,15 @@ if source=="Sanger":
 elif source=="COG-UK":
   fullsource="COG-UK"
   cog=loadcsv("cog_metadata.csv")
-  lastweek=datetoday(max(cog['sample_date']))-discardcogdays;assert maxday>=lastweek
+  lastweek=datetoday(max(cog['sample_date']))-discardcogdays
+  if maxday<lastweek: raise RuntimeError('ltla.csv needs refreshing')
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
   
-  if  locationsize=="country":
+  if locationsize=="coglab":
+    reduceltla=None;bundleremainder=False
+    reducecog=coglab2coglab
+  elif locationsize=="country":
     reduceltla=ltla2country
     reducecog=coglab2country
   elif locationsize=="UK":
@@ -325,7 +330,7 @@ elif source=="COG-UK":
       place=reducecog(coglab)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
       if any(varmatch(var,pat) for pat in variantset): vocnum[place][week][1]+=1
-      elif any(varmatch(var,pat) for pat in nonvariantset): vocnum[place][week][0]+=n
+      elif any(varmatch(var,pat) for pat in nonvariantset): vocnum[place][week][0]+=1
 elif source=="SGTF":
   fullsource="SGTF data from PHE Technical briefing 13"
   assert voclen==7
@@ -406,24 +411,27 @@ for (date,n) in zip(apicases['date'],apicases['newCasesBySpecimenDate']):
   if day>=weekadjdates[0] and day<=weekadjdates[1]: weekadj[day%7]+=n
 weekadjp=weekadj*7/sum(weekadj)
 
-# Get case data into a suitable form
-preweek=minday+9# Gather pre-variant counts in two one-week periods up to this date
-precases0={}
-cases={}
-for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
-  if ltla not in reduceltla or ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
-  day=datetoday(date)
-  d=day-minday
-  place=reduceltla[ltla]
-  if place not in vocnum: continue
-  if place not in precases0: precases0[place]=np.zeros(2,dtype=int)
-  if place not in cases: cases[place]=np.zeros(ndays)
-  for i in range(2):
-    if day>preweek-7*(2-i) and day<=preweek-7*(1-i):
-      precases0[place][i]+=n
-  if d>=0 and d<ndays:
-    cases[place][d]+=n/specadj[d]/weekadjp[day%7]
-places=sorted(list(cases))
+if reduceltla!=None:
+  # Get case data into a suitable form
+  preweek=minday+9# Gather pre-variant counts in two one-week periods up to this date
+  precases0={}
+  cases={}
+  for (ltla,date,n) in zip(apicases['areaCode'],apicases['date'],apicases['newCasesBySpecimenDate']):
+    if ltla not in reduceltla or ltla in ltlaexclude or not includeltla(ltla,ltlaset): continue
+    day=datetoday(date)
+    d=day-minday
+    place=reduceltla[ltla]
+    if place not in vocnum: continue
+    if place not in precases0: precases0[place]=np.zeros(2,dtype=int)
+    if place not in cases: cases[place]=np.zeros(ndays)
+    for i in range(2):
+      if day>preweek-7*(2-i) and day<=preweek-7*(1-i):
+        precases0[place][i]+=n
+    if d>=0 and d<ndays:
+      cases[place][d]+=n/specadj[d]/weekadjp[day%7]
+  places=sorted(list(cases))
+else:
+  places=sorted(list(vocnum))
 
 # Restrict to places for which there is at least some of each variant, and bundle the remaining locations together as "Other"
 okplaces=set([place for place in places if vocnum[place][:,0].sum()>0 and vocnum[place][:,1].sum()>0])
@@ -447,17 +455,18 @@ if 0:
         print(daytodate(firstweek+voclen*w),"%6d %6d"%tuple(vocnum[place][w]),file=fp)
 
 # Work out pre-Delta case counts, amalgamated to at least region level
-precases={}
-for place in precases0:
-  if bundleremainder and place in otherplaces:
-    dest="Other"
-  elif locationsize=="LTLA": dest=ltla2region[place]
-  else: dest=place
-  if dest not in precases: precases[dest]=np.zeros(2,dtype=int)
-  precases[dest]+=precases0[place]
-def prereduce(place):
-  if place!="Other" and locationsize=="LTLA": return ltla2region[place]
-  else: return place
+if reduceltla!=None:
+  precases={}
+  for place in precases0:
+    if bundleremainder and place in otherplaces:
+      dest="Other"
+    elif locationsize=="LTLA": dest=ltla2region[place]
+    else: dest=place
+    if dest not in precases: precases[dest]=np.zeros(2,dtype=int)
+    precases[dest]+=precases0[place]
+  def prereduce(place):
+    if place!="Other" and locationsize=="LTLA": return ltla2region[place]
+    else: return place
 
 # Convert daily growth rate & uncertainty into R-number-based description
 # dh = 1 standard deviation
@@ -476,7 +485,7 @@ mincount=1
 l=[]
 eps=1e-20
 for w in range(nweeks-1):
-  if len(places)<30: print(daytodate(firstweek+w*7),end='   ')
+  if len(places)<30: print(daytodate(firstweek+w*voclen),end='   ')
   for place in places:
     vn=vocnum[place]
     if (vn[w:w+2,:]>=mincount).all():
@@ -494,7 +503,7 @@ k=int(binom.ppf((1-conf)/2,n,0.5))
 med=log((l[n//2]+l[(n-1)//2])/2)/voclen
 low=log(l[k-1])/voclen
 high=log(l[n-k])/voclen
-print("Separate location & weeks, high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
+print("Separate location & weeks, unweighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
 print()
 
 l=[]
@@ -547,10 +556,10 @@ for w in range(nweeks-1):
   low=med=high=None
   for i in range(n):
     wt+=l[i][1]
-    if low==None and wt>wtlow: low=log(l[i][0])/voclen
-    if med==None and wt>wtmed: med=log(l[i][0])/voclen
-    if high==None and wt>wthigh: high=log(l[i][0])/voclen
-  print(daytodate(firstweek+7*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
+    if low==None and wt>wtlow-1e-6: low=log(l[i][0])/voclen
+    if med==None and wt>wtmed-1e-6: med=log(l[i][0])/voclen
+    if high==None and wt>wthigh-1e-6: high=log(l[i][0])/voclen
+  print(daytodate(firstweek+voclen*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
 print()
 
 from scipy.special import betaln
@@ -647,10 +656,12 @@ print("First week to last week:")
 crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
 
 if len(places)<50:
-  print("--- Quasi-Poisson regression ---")
+  print("--- Inverse variance weighted regression using combined counts for %s ---"%areacovered)
   sr=simpleregress(sum(vocnum.values()))
   xx=[sr[1]]# Overall growth
   print("%s:"%areacovered,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+  print()
+  print("--- Inverse variance weighted regression using counts for each %s ---"%locationsize)
   s0=s1=0
   for place in places:
     sr=simpleregress(vocnum[place])
@@ -659,8 +670,9 @@ if len(places)<50:
     iv=1/sr[2]**2
     s0+=iv
     s1+=iv*sr[1]
+  print()
   g=s1/s0;dg=sqrt(1/s0)
-  print("Inverse variance-weighted overall:",Gdesc(g,dg),Rdesc(g,dg))
+  print("Inverse variance weighted count for %s controlling for %s:"%(areacovered,locationsize),Gdesc(g,dg),Rdesc(g,dg))
   print()
   
   bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
@@ -670,6 +682,7 @@ if len(places)<50:
   print()
 
 print()
+if reduceltla==None: sys.exit(0)
 
 print("Estimating competitive advantage using variant counts together with case counts")
 print("===============================================================================")
