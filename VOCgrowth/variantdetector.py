@@ -69,7 +69,7 @@ def getmutday(linelist,minday1=0,maxday1=1000000,given=set(),lineage=None,notlin
         mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
   return daycounts,mutdaycounts,lincounts
 
-def getgrowth(daycounts,mutdaycount):
+def getgrowth(daycounts,mutdaycount,invert=False):
   # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
   m=np.zeros([2,2])
   r=np.zeros(2)
@@ -79,6 +79,7 @@ def getgrowth(daycounts,mutdaycount):
     x=day-minday
     v1=mutdaycount[day]
     v0=daycounts.get(day,0)-v1
+    if invert: (v0,v1)=(v1,v0)
     if v0>0 and v1>0:
       y=log(v1/v0)
       w=1/(1/v0+1/v1)
@@ -118,15 +119,15 @@ print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-15'),given={name2num['S:T95I']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-09-01'),maxday1=datetoday('2021-10-07'),given={name2num['S:Y145H']})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',maxday1=datetoday('2021-10-12'))
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',maxday1=datetoday('2021-10-12'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',given={name2num['N:Q9L']})
 print("GH1",time.clock()-tim0)
 
 if 1:
   growth={};tv={}
   for mut in range(nmut):
-    gr=getgrowth(daycounts,mutdaycounts[mut])
+    gr=getgrowth(daycounts,mutdaycounts[mut])#,invert=True)
     growth[mut]=gr[1]
     tv[mut]=gr[2]
   
