@@ -119,7 +119,7 @@ print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-09-01'),maxday1=datetoday('2021-10-07'),given={name2num['S:Y145H']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2')
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',maxday1=datetoday('2021-10-12'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',given={name2num['N:Q9L']})
 print("GH1",time.clock()-tim0)
 
@@ -130,18 +130,6 @@ if 1:
     growth[mut]=gr[1]
     tv[mut]=gr[2]
   
-  sd=6
-  gr0=0.0
-  l=[mut for mut in growth if growth[mut][0]>0]
-  #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
-  l.sort(key=lambda x:-((growth[x][0]-gr0)/growth[x][1]))
-  nm=0
-  for mut in l:
-    gr=growth[mut]
-    (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
-    if gl<gr0: break
-    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %7d %7d"%(num2name[mut],g*100,gl*100,gh*100,(gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]))
-    nm+=1
   with open('tempvargr','w') as fp:
     sg=[growth[x][0]/growth[x][1] for x in growth]
     n=len(sg)
@@ -160,7 +148,21 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# Low %d"%low,file=fp)
     print("# High %d"%high,file=fp)
-  poi
+  
+  sd=6
+  gr0=0.0
+  #l=[mut for mut in growth if growth[mut][0]>0]
+  l=list(growth)
+  #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
+  l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
+  nm=0
+  for mut in l:
+    gr=growth[mut]
+    (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
+    #if gl<gr0: break
+    if abs(gr[0])<sd*gr[1]: break
+    print("%-20s  %6.3f (%6.3f - %6.3f) %6.2f   %7d %7d"%(num2name[mut],g*100,gl*100,gh*100,(gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]))
+    nm+=1
   
   nmd=min(nm,10)
   print()
