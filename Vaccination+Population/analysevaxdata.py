@@ -31,22 +31,21 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
-pmd=loadcsv("vaccine-surveillance-reports/vaccine surveillance.csv")
-ukhsaages=sorted(parseage(a) for a in set(pmd['Age']))
 
 rawvax=get_data('areaType=nation&areaName=England&metric=vaccinationsAgeDemographics')
 
-
-ag=(40,50)
-ty='Cases'
-for (a,d,t,ul,d0,dhalf,d1,d2) in zip(pmd['Age'],pmd['Date'],pmd['Type'],pmd['Unlinked'],
-                                     pmd['Not vaccinated'],
-                                     pmd['Received one dose 1-20 days before specimen date'],
-                                     pmd['Received one dose, 21 days or more before specimen date'],
-                                     pmd['Second dose 14 days or more before specimen date']):
-  if t!=ty: continue
-  if parseage(a)!=ag: continue
-  #print(a,d,t,ul,d0,dhalf,d1,d2)
+#pmd=loadcsv("vaccine-surveillance-reports/vaccine surveillance.csv")
+#ukhsaages=sorted(parseage(a) for a in set(pmd['Age']))
+#ag=(40,50)
+#ty='Cases'
+#for (a,d,t,ul,d0,dhalf,d1,d2) in zip(pmd['Age'],pmd['Date'],pmd['Type'],pmd['Unlinked'],
+#                                     pmd['Not vaccinated'],
+#                                     pmd['Received one dose 1-20 days before specimen date'],
+#                                     pmd['Received one dose, 21 days or more before specimen date'],
+#                                     pmd['Second dose 14 days or more before specimen date']):
+#  if t!=ty: continue
+#  if parseage(a)!=ag: continue
+#  #print(a,d,t,ul,d0,dhalf,d1,d2)
 
 
 # Table 1g is from ONS infection survey data at https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/coronaviruscovid19antibodydatafortheuk
@@ -146,8 +145,9 @@ for a in range(nsurveyages):
     for doseind in range(2):
       su=survey[a][doseind]
       vv=vax[a][doseind]
-#      if su[d][0] is not None: print("   %7.2fm"%(vv[d]/su[d][0]/1e6),end='')
-      if su[d][0] is not None: print("   %7.2fm"%(vv[d]/(su[d][1]/su[d][2])/1e6),end='')
+      if su[d][0] is not None: print("   %7.2fm"%(vv[d]/su[d][0]/1e6),end='')
+      else: print("          -",end='')
+      if su[d][1] is not None: print("   %7.2fm"%(vv[d]/(su[d][1]/su[d][2])/1e6),end='')
       else: print("          -",end='')
     print("   %7.2fm"%(ONSpop_surveyages[a]/1e6),end='')
     print("   %7.2fm"%(NIMSpop_surveyages[a]/1e6),end='')
