@@ -21,6 +21,7 @@ specmode="TTPadjrunningweekly"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
 
+#weekdayfix="NoWeekdayAdj"
 #weekdayfix="SimpleAverage"
 weekdayfix="MinSquareLogRatios"
 #weekdayfix="MagicDeconv"
@@ -32,6 +33,7 @@ displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
 #displayages=[(a,a+10) for a in range(0,80,10)]+[(80,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,50),(50,65),(65,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,80),(80,150)]
+#displayages=[(0,150)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -266,7 +268,10 @@ if 0:
     print("%2d %10s %5.3f"%(a,displayages[a],dws[a,0]/dws[a,2]),dws[a])
   poi
 
-if weekdayfix=="SimpleAverage":
+if weekdayfix=="NoWeekdayAdj":
+  sm=sp
+elif weekdayfix=="SimpleAverage":
+  sps=sp.sum(axis=1)
   dowweight=np.zeros(7)
   dowcount=np.zeros(7,dtype=int)
   for i in range(nsamp):
@@ -360,11 +365,24 @@ def smoothpoisson(seq,lam):
 title='Estimated log_2 new confirmed cases per 100k per day in England by age range.\\nDescription: http://sonorouschocolate.com/covid19/index.php?title=CasesByAge\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
 data=[]
 n=sm.shape[0]
+tot0=0
+tot1=np.zeros(n)
 for (a,ar) in enumerate(displayages):
-  sa=smoothpoisson(sm[:,a],0.03)/ONSpop_reduced[a]*1e5
+  sa0=ONSpop_reduced[a]
+  sa1=smoothpoisson(sm[:,a],0.03)
+  sa=sa1/sa0*1e5
+  tot0+=sa0
+  tot1+=sa1
   data.append({
     'title': ("%d - %d years"%(ar[0],ar[1]-1) if ar[1]<150 else "%d+ years"%ar[0]),
     'values': [(daytodate(minday+i),log(sa[i])/log(2)) for i in range(n)]
+  })
+if len(displayages)>1:
+  tot=tot1/tot0*1e5
+  data.append({
+    'title': "Total",
+    'values': [(daytodate(minday+i),log(tot[i])/log(2)) for i in range(n)],
+    'extra': 'dashtype (20,7)'
   })
 makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 new cases per 100k per day', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
 
