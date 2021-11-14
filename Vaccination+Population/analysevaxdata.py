@@ -1,6 +1,7 @@
 from stuff import *
 import json,requests,csv
 import numpy as np
+from math import sqrt
 
 np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=10000)
@@ -51,7 +52,7 @@ rawvax=get_data('areaType=nation&areaName=England&metric=vaccinationsAgeDemograp
 # Table 1g is from ONS infection survey data at https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/coronaviruscovid19antibodydatafortheuk
 # It's a csv page saved from a spreadsheet with messy formatting, so have to parse manually here.
 # Make survey[][][][]:
-# survey[ageindex][doses-1][dateindex]=[ONS modelled prob, number reported receiving >=doses, number in sample]
+# survey[ageindex][doses-1][dateindex]=[ONS modelled prob, ONS prob low, ONS prob high, number reported receiving >=doses, number in sample]
 days=[]# Week commencing
 with open('ONSinfectionsurvey.table1g.csv','r') as fp:
   reader=csv.reader(fp)
@@ -70,11 +71,13 @@ with open('ONSinfectionsurvey.table1g.csv','r') as fp:
   for (i,c) in enumerate(agecols):
     for j in range(c,c+agecols[1]-agecols[0]):
       h=headings[j]
-      if 'adults in sample' in h: parseheadings[(i,d,2)]=j
       if '1 or more' in h: d=0
       elif '2 or more' in h: d=1
-      if 'Modelled' in h: parseheadings[(i,d,0)]=j;continue
-      if 'Number' in h and 'receiv' in h: parseheadings[(i,d,1)]=j;continue
+      if 'Modelled' in h: parseheadings[(i,d,0)]=j
+      elif 'Lower' in h: parseheadings[(i,d,1)]=j
+      elif 'Upper' in h: parseheadings[(i,d,2)]=j
+      elif 'Number' in h and 'receiv' in h: parseheadings[(i,d,3)]=j
+      elif 'adults in sample' in h: parseheadings[(i,d,4)]=j
   while 1:
     row=next(reader)
     if not(row[0][:1].isdigit() and ' to ' in row[0]): break
@@ -83,12 +86,8 @@ with open('ONSinfectionsurvey.table1g.csv','r') as fp:
     assert dd[1]-dd[0]==6# If this changes then would need to change averaging below
     for (a,d,i) in parseheadings:
       c=parseheadings[a,d,i]
-      if i==0:
-        if row[c]=='-': survey[a][d].append([None,0,0])
-        else: survey[a][d].append([float(row[c])/100,0,0])
-      else:
-        if row[c]=='-': survey[a][d][-1][i]=None
-        else: survey[a][d][-1][i]=int(row[c].replace(',',''))
+      if i==0: survey[a][d].append([None]*5)
+      if row[c]!='-': survey[a][d][-1][i]=float(row[c].replace(',',''))/(100 if i<3 else 1)
 
 ndates=len(days)
         
@@ -139,18 +138,31 @@ for vv in rawvax:
 vax/=7
 
 for a in range(nsurveyages):
-  print("Age range:",surveyages[a])
+  (x,y)=surveyages[a]
+  print("Age range:",(x,y))
+  print("All populations are in millions")
+  print("Week/comm      ONS est, dose >=1            Simple est, dose >=1       ONS est, dose >=2            Simple est, dose >=2        ONS pop  NIMS pop")
+  print("=========      ======================       ======================     ======================       ======================      =======  ========")
   for d in range(ndates):
     print(daytodate(days[d]),end='')
     for doseind in range(2):
       su=survey[a][doseind]
       vv=vax[a][doseind]
-      if su[d][0] is not None: print("   %7.2fm"%(vv[d]/su[d][0]/1e6),end='')
-      else: print("          -",end='')
-      if su[d][1] is not None: print("   %7.2fm"%(vv[d]/(su[d][1]/su[d][2])/1e6),end='')
-      else: print("          -",end='')
-    print("   %7.2fm"%(ONSpop_surveyages[a]/1e6),end='')
-    print("   %7.2fm"%(NIMSpop_surveyages[a]/1e6),end='')
+      if su[d][0] is not None:
+        print("    %5.2f ( %5.2f - %5.2f )"%(vv[d]/su[d][0]/1e6,vv[d]/su[d][2]/1e6,vv[d]/su[d][1]/1e6),end='')
+      else:
+        print("        - (     - -     - )",end='')
+      if su[d][3] is not None:
+        p=su[d][3]/su[d][4]
+        err=1.96*sqrt(p*(1-p)/su[d][4])
+        if err<0.5*p:
+          print("      %5.2f ( %5.2f - %5.2f )"%(vv[d]/p/1e6,vv[d]/(p+err)/1e6,vv[d]/(p-err)/1e6),end='')
+        else:
+          print("          - (     - -     - )",end='')
+      else:
+        print("          - (     - -     - )",end='')
+    print("      %7.2f"%(ONSpop_surveyages[a]/1e6),end='')
+    print("   %7.2f"%(NIMSpop_surveyages[a]/1e6),end='')
     print()
   print()
   
