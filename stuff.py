@@ -15,10 +15,10 @@ def loadcsv_it(it,sep=","):
       if h!=None: out[h].append(x)
   for h in out:
     try:
-      out[h]=[int(x) for x in out[h]]
+      out[h]=[int(x.replace(',','')) for x in out[h]]
     except ValueError:
       try:
-        out[h]=[float(x) for x in out[h]]
+        out[h]=[float(x.replace(',','')) for x in out[h]]
       except ValueError:
         pass
   return out
