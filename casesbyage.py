@@ -88,12 +88,12 @@ def parseage(x):
 
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
-if d.hour+d.minute/60<16+15/60: today-=1# Dashboard/api updates at 4pm UK time
+if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
 
 #minday=datetoday('2021-06-01')
 minday=today-120
 
-skipdays=0
+skipdays=1
 if specmode=="ByPublish": skipdays=0
 
 origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
@@ -357,7 +357,7 @@ def smoothpoisson(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-title='Log_2 new confirmed cases per 100k per day in England by age range.\\nDescription: http://sonorouschocolate.com/covid19/index.php?title=CasesByAge\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
+title='Estimated log_2 new confirmed cases per 100k per day in England by age range.\\nDescription: http://sonorouschocolate.com/covid19/index.php?title=CasesByAge\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
 data=[]
 n=sm.shape[0]
 for (a,ar) in enumerate(displayages):
