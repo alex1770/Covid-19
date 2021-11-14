@@ -1,5 +1,5 @@
 from stuff import *
-import json,requests,csv
+import json,requests,csv,os
 import numpy as np
 from math import sqrt
 
@@ -32,6 +32,11 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
+# Output in muggle format
+def unparseage(ages):
+  (x,y)=ages
+  if y<150: return "%d-%d"%(x,y-1)
+  return "%d+"%x
 
 rawvax=get_data('areaType=nation&areaName=England&metric=vaccinationsAgeDemographics')
 
@@ -90,14 +95,16 @@ with open('ONSinfectionsurvey.table1g.csv','r') as fp:
       if row[c]!='-': survey[a][d][-1][i]=float(row[c].replace(',',''))/(100 if i<3 else 1)
 
 ndates=len(days)
-        
+
+offset=0
+
 # Now parse rawvax to make:
 # vax[ageindex][doses-1][dateindex] = number vaccinated
 #
 datetoindex={}
 for (i,day) in enumerate(days):
   for d in range(day,day+7):
-    datetoindex[daytodate(d)]=i
+    datetoindex[daytodate(d+offset)]=i
 
 numvaxages=sorted([parseage(v['age']) for v in rawvax[0][rawvax[0]['metric']]])
 numvaxages2surveyages={}
@@ -137,32 +144,77 @@ for vv in rawvax:
     vax[a][1][d]+=v['cumPeopleVaccinatedSecondDoseByVaccinationDate']
 vax/=7
 
+minprop=0.0
+graphdir='graphs'
+os.makedirs(graphdir,exist_ok=True)
 for a in range(nsurveyages):
-  (x,y)=surveyages[a]
-  print("Age range:",(x,y))
+  print("Age range:",unparseage(surveyages[a]))
   print("All populations are in millions")
   print("Week/comm      ONS est, dose >=1            Simple est, dose >=1       ONS est, dose >=2            Simple est, dose >=2        ONS pop  NIMS pop")
   print("=========      ======================       ======================     ======================       ======================      =======  ========")
+  ONSests=[[],[]]
+  Simpleests=[[],[]]
   for d in range(ndates):
     print(daytodate(days[d]),end='')
     for doseind in range(2):
       su=survey[a][doseind]
       vv=vax[a][doseind]
+      ONSest=Simpleest=(None,None,None)
       if su[d][0] is not None:
-        print("    %5.2f ( %5.2f - %5.2f )"%(vv[d]/su[d][0]/1e6,vv[d]/su[d][2]/1e6,vv[d]/su[d][1]/1e6),end='')
-      else:
-        print("        - (     - -     - )",end='')
+        if su[d][0]>=minprop:
+          ONSest=(vv[d]/su[d][0]/1e6,vv[d]/su[d][2]/1e6,vv[d]/su[d][1]/1e6)
+      ONSests[doseind].append(ONSest)
       if su[d][3] is not None:
         p=su[d][3]/su[d][4]
         err=1.96*sqrt(p*(1-p)/su[d][4])
         if err<0.5*p:
-          print("      %5.2f ( %5.2f - %5.2f )"%(vv[d]/p/1e6,vv[d]/(p+err)/1e6,vv[d]/(p-err)/1e6),end='')
-        else:
-          print("          - (     - -     - )",end='')
-      else:
-        print("          - (     - -     - )",end='')
+          Simpleest=(vv[d]/p/1e6,vv[d]/(p+err)/1e6,vv[d]/(p-err)/1e6)
+      Simpleests[doseind].append(Simpleest)
+      if ONSest[0]!=None: print("    %5.2f ( %5.2f - %5.2f )"%ONSest,end='')
+      else: print("        - (     - -     - )",end='')
+      if Simpleest[0]!=None: print("      %5.2f ( %5.2f - %5.2f )"%Simpleest,end='')
+      else: print("          - (     - -     - )",end='')
     print("      %7.2f"%(ONSpop_surveyages[a]/1e6),end='')
     print("   %7.2f"%(NIMSpop_surveyages[a]/1e6),end='')
     print()
   print()
-  
+  data=[]
+  for doseind in range(2):
+    col=['"green"','"blue"'][doseind]
+    data.append({
+      'with': ('filledcurves',2),
+      'title': '',
+      'values': [(daytodate(day+3),e[1],e[2]) for (day,e) in zip(days,ONSests[doseind])],
+      'extra': 'lc '+col
+    })
+    data.append({
+      'title': '(Number vaccinated with ≥%d dose%s) ÷ (Survey estimate of proportion so-vaccinated)'%(doseind+1,doseind*'s'),
+      'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,ONSests[doseind])],
+      'extra': 'lc '+col
+    })
+    if 0:
+      data.append({
+        'with': ('filledcurves',2),
+        'title': '',
+        'values': [(daytodate(day+3),e[1],e[2]) for (day,e) in zip(days,Simpleests[doseind])],
+        'extra': 'lc %d'%(3+doseind)
+      })
+      data.append({
+        'title': 'Simple est, >=%d dose%s'%(doseind+1,doseind*'s'),
+        'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,Simpleests[doseind])],
+        'extra': 'lc %d'%(3+doseind)
+      })
+  op=ONSpop_surveyages[a]/1e6
+  data.append({
+    'title': 'ONS 2020 population',
+    'values': [(daytodate(days[0]+3),op),(daytodate(days[-1]+3),op)],
+    'extra': 'lc 4'
+  })
+  np=NIMSpop_surveyages[a]/1e6
+  data.append({
+    'title': 'NIMS population',
+    'values': [(daytodate(days[0]+3),np),(daytodate(days[-1]+3),np)],
+    'extra': 'lc 1'
+  })
+  ar=unparseage(surveyages[a])
+  makegraph(title='Ages %s'%ar, data=data, ylabel='Estimated population (millions)', outfn=os.path.join(graphdir,'PopEst%s.png'%ar), extra=["set key top left",'set style fill transparent solid 0.25'],interval=86400*14)
