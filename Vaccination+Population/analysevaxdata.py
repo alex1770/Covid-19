@@ -162,7 +162,8 @@ for a in range(nsurveyages):
       ONSest=Simpleest=[None]*7
       if su[d][0] is not None:
         if su[d][0]>=minprop:
-          ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d]/vv[-1], su[d][0]/su[-1][0], su[d][1]/su[-1][0], su[d][2]/su[-1][0])
+          #ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d]/vv[-1], su[d][0]/su[-1][0], su[d][1]/su[-1][0], su[d][2]/su[-1][0])
+          ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d], su[d][0], su[d][1], su[d][2])
       ONSests[doseind].append(ONSest)
       if su[d][3] is not None:
         p=su[d][3]/su[d][4]
@@ -248,4 +249,20 @@ for a in range(nsurveyages):
   ar=unparseage(surveyages[a])
   title='Comparison of growth of vaccinated %s year olds: actual numbers vs vaccine survey\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
   makegraph(title=title, data=data, ylabel='Proportion of latest value', outfn=os.path.join(graphdir,'GrowthComparison%s.png'%ar),
+            extra=["set key top left",'set style fill transparent solid 0.25'],ranges='[:] [0:1.2]', interval=86400*14)
+
+  data=[]
+  data.append({
+    'title': '(Survey estimate of proportion vaccinated with ≥2 doses) ÷ (Survey estimate with ≥1 dose)',
+    'values': [(daytodate(day+3),f[4]/e[4]) for (day,e,f) in zip(days,ONSests[0],ONSests[1]) if f[4]!=None],
+    'extra': 'lc "blue"'
+  })
+  data.append({
+    'title': '(Number vaccinated with ≥2 doses) ÷ (Number with ≥1 dose)',
+    'values': [(daytodate(day+3),f[3]/e[3]) for (day,e,f) in zip(days,ONSests[0],ONSests[1]) if f[3]!=None],
+    'extra': 'lc "green"'
+  })
+  ar=unparseage(surveyages[a])
+  title='Proportion of vaccinated %s year olds who have had ≥2 doses, comparing survey estimate with actual numbers\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
+  makegraph(title=title, data=data, ylabel='Ratio of ≥2 doses to ≥1 dose', outfn=os.path.join(graphdir,'2ndDoseComparison%s.png'%ar),
             extra=["set key top left",'set style fill transparent solid 0.25'],ranges='[:] [0:1.2]', interval=86400*14)
