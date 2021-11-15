@@ -150,31 +150,22 @@ os.makedirs(graphdir,exist_ok=True)
 for a in range(nsurveyages):
   print("Age range:",unparseage(surveyages[a]))
   print("All populations are in millions")
-  print("Week/comm      ONS est, dose >=1            Simple est, dose >=1       ONS est, dose >=2            Simple est, dose >=2        ONS pop  NIMS pop")
-  print("=========      ======================       ======================     ======================       ======================      =======  ========")
+  print("Week/comm      ONS est, dose >=1          ONS est, dose >=2           ONS pop  NIMS pop")
+  print("=========      ======================     ======================      =======  ========")
   ONSests=[[],[]]
-  Simpleests=[[],[]]
   for d in range(ndates):
     print(daytodate(days[d]),end='')
     for doseind in range(2):
       su=survey[a][doseind]
       vv=vax[a][doseind]
-      ONSest=Simpleest=[None]*7
+      ONSest=[None]*7
       if su[d][0] is not None:
         if su[d][0]>=minprop:
           #ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d]/vv[-1], su[d][0]/su[-1][0], su[d][1]/su[-1][0], su[d][2]/su[-1][0])
           ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d], su[d][0], su[d][1], su[d][2])
       ONSests[doseind].append(ONSest)
-      if su[d][3] is not None:
-        p=su[d][3]/su[d][4]
-        err=1.96*sqrt(p*(1-p)/su[d][4])
-        if err<0.5*p:
-          Simpleest=(vv[d]/p/1e6,vv[d]/(p+err)/1e6,vv[d]/(p-err)/1e6)
-      Simpleests[doseind].append(Simpleest)
       if ONSest[0]!=None: print("    %5.2f ( %5.2f - %5.2f )"%ONSest[:3],end='')
       else: print("        - (     - -     - )",end='')
-      if Simpleest[0]!=None: print("      %5.2f ( %5.2f - %5.2f )"%Simpleest,end='')
-      else: print("          - (     - -     - )",end='')
     print("      %7.2f"%(ONSpop_surveyages[a]/1e6),end='')
     print("   %7.2f"%(NIMSpop_surveyages[a]/1e6),end='')
     print()
@@ -197,18 +188,6 @@ for a in range(nsurveyages):
       'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,ONSests[doseind])],
       'extra': 'lc '+col
     })
-    if 0:
-      data.append({
-        'with': ('filledcurves',2),
-        'title': '',
-        'values': [(daytodate(day+3),e[1],e[2]) for (day,e) in zip(days,Simpleests[doseind])],
-        'extra': 'lc %d'%(3+doseind)
-      })
-      data.append({
-        'title': 'Simple est, >=%d dose%s'%(doseind+1,doseind*'s'),
-        'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,Simpleests[doseind])],
-        'extra': 'lc %d'%(3+doseind)
-      })
   op=ONSpop_surveyages[a]/1e6
   data.append({
     'title': 'ONS 2020 population (%.2fm)'%op,
