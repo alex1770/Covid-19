@@ -38,7 +38,13 @@ if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 #selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia","Singapore","Serbia","Malaysia"]
 #selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Malaysia","Botswana"]
 #selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Malaysia","Romania"]
-selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria","Latvia"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Jamaica"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Australia","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands","Slovenia"]
+#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Austria","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands","Slovenia"]
+selectcountries=["UK","USA","Germany","France","Israel","Georgia","Austria","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands","Slovenia","Hungary"]
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
@@ -166,8 +172,9 @@ zoomdays=60
 # Censor last 7 days of Sweden's case counts and last 12 days of their death counts because they are updated
 # retrospectively for about this long. For deaths this is mostly due to them being allocated to their date of
 # occurrence rather than their date of reporting. (https://ourworldindata.org/covid-sweden-death-reporting)
-cases['Sweden']=(cases['Sweden'][0],cases['Sweden'][1][:-7])
-deaths['Sweden']=(deaths['Sweden'][0],deaths['Sweden'][1][:-12])
+if 'Sweden' in selectcountries:
+  cases['Sweden']=(cases['Sweden'][0],cases['Sweden'][1][:-7])
+  deaths['Sweden']=(deaths['Sweden'][0],deaths['Sweden'][1][:-12])
 
 for zoomstate in [0,1]:
   for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
