@@ -130,7 +130,7 @@ for vv in rawvax:
     vax[a][1][d]+=v['cumPeopleVaccinatedSecondDoseByVaccinationDate']
 vax/=7
 
-graphdir='graphs'
+graphdir='vax_pop_graphs'
 os.makedirs(graphdir,exist_ok=True)
 for a in range(nsurveyages):
   print()
