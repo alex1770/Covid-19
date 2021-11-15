@@ -168,18 +168,20 @@ for a in range(nsurveyages):
 
   
   data=[]
+  maxpop=0
   for doseind in range(2):
     col=['"green"','"blue"'][doseind]
     ep=vax[a][doseind][:,None]/survey[a][doseind]/1e6# Estimated population
+    title='(Number vaccinated with ≥%d dose%s) ÷ (Survey estimate of proportion so-vaccinated).'%(doseind+1,doseind*'s')
+    e=ep[-1]
+    title+='   Last datapoint: %.2fm (%.2fm - %.2fm)'%(e[0],e[1],e[2])
     data.append({
       'with': ('filledcurves',2),
       'title': '',
       'values': [(daytodate(day+3),e[2],e[1]) for (day,e) in zip(days,ep) if e[0]>0],
       'extra': 'lc '+col
     })
-    title='(Number vaccinated with ≥%d dose%s) ÷ (Survey estimate of proportion so-vaccinated).'%(doseind+1,doseind*'s')
-    e=ep[-1]
-    title+='   Last datapoint: %.2fm (%.2fm - %.2fm)'%(e[0],e[1],e[2])
+    maxpop=max(maxpop,max(e[1] for e in ep))
     data.append({
       'title': title,
       'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,ep) if e[0]>0],
@@ -197,10 +199,11 @@ for a in range(nsurveyages):
     'values': [(daytodate(days[0]+3),nims),(daytodate(days[-1]+3),nims)],
     'extra': 'lc 1'
   })
+  maxpop=max(maxpop,ons,nims)
   ar=unparseage(surveyages[a])
   title='Estimated population of age band %s using vaccination survey\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
   makegraph(title=title, data=data, ylabel='Estimated population (millions)', outfn=os.path.join(graphdir,'PopEst%s.png'%ar),
-            extra=['set key top left','set style fill transparent solid 0.25'],interval=86400*14)
+            extra=['set key top left','set style fill transparent solid 0.25'],ranges='[:] [:%f]'%(maxpop*1.15),interval=86400*14)
 
 
   
@@ -249,5 +252,5 @@ for a in range(nsurveyages):
   ar=unparseage(surveyages[a])
   title='Proportion of vaccinated %s year olds who have had ≥2 doses, comparing survey estimate with actual numbers\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
   makegraph(title=title, data=data, ylabel='Ratio of ≥2 doses to ≥1 dose', outfn=os.path.join(graphdir,'2ndDoseComparison%s.png'%ar),
-            extra=["set key top left",'set style fill transparent solid 0.25'],ranges='[:] [0:1.2]', interval=86400*14)
+            extra=["set key top left",'set style fill transparent solid 0.25'],ranges='[:] [0:1.1]', interval=86400*14)
   
