@@ -81,7 +81,7 @@ def apiday():
   now=datetime.datetime.now(tz=pytz.timezone('Europe/London'))
   return datetoday(now.strftime('%Y-%m-%d'))-(now.hour<16)
 
-def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[]):
+def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[], interval=604800, ranges=''):
   po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE);p=po.stdin
   
   # Use this to cater for earlier versions of Python whose Popen()s don't have the 'encoding' keyword
@@ -98,21 +98,26 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
   write('set format x "%Y-%m-%d"')
   write('set timefmt "%Y-%m-%d"')
   write('set tics scale 2,0.5')
-  write('set xtics "2020-01-06", 604800')#%startdate)# Date labels on Mondays
+  write('set xtics "2020-01-06", %d'%interval)# Date labels on Mondays
   write('set xtics rotate by 45 right offset 0.5,0')
   write('set grid xtics ytics lc rgb "#dddddd" lt 1')
   write('set xtics nomirror')
   for x in extra: write(x)
-  s='plot '
+  s='plot '+ranges+' '
   first=True
   for dat in data:
     if not first: s+=', '
     first=False
-    s+='"-" using 1:2 with lines '+dat.get('extra','')+' lw 3 title "%s"'%(dat['title'])
+    (plotwith,n)=dat.get('with',('lines',1))
+    s+='"-" using 1'
+    for i in range(2,n+2): s+=':%d'%i
+    s+=' with '+plotwith
+    s+=' '+dat.get('extra','')
+    s+=' lw 3 title "%s"'%(dat['title'])
   write(s)
   for dat in data:
-    for (date,val) in dat['values']:
-      if date>=mindate: write(date,val)
+    for dv in dat['values']:
+      if dv[0]>=mindate and dv[1]!=None: write(*dv)
     write("e")
   p.close();po.wait()
   print("Written graph to %s"%outfn)
