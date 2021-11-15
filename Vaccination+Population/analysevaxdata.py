@@ -91,8 +91,9 @@ with open('ONSinfectionsurvey.table1g.csv','r') as fp:
     assert dd[1]-dd[0]==6# If this changes then would need to change averaging below
     for (a,d,i) in parseheadings:
       c=parseheadings[a,d,i]
-      if i==0: survey[a][d].append([None]*5)
+      if i==0: survey[a][d].append([-1]*5)
       if row[c]!='-': survey[a][d][-1][i]=float(row[c].replace(',',''))/(100 if i<3 else 1)
+survey=np.array(survey)
 
 ndates=len(days)
 
@@ -131,7 +132,7 @@ for v in vv:
       assert a>=c and b<=d
       NIMSpop_surveyages[i]+=int(v['VaccineRegisterPopulationByVaccinationDate'])
 
-      
+
 vax=np.zeros([nsurveyages,2,ndates])
 for vv in rawvax:
   if vv['date'] not in datetoindex: continue
@@ -144,104 +145,109 @@ for vv in rawvax:
     vax[a][1][d]+=v['cumPeopleVaccinatedSecondDoseByVaccinationDate']
 vax/=7
 
-minprop=0.0
 graphdir='graphs'
 os.makedirs(graphdir,exist_ok=True)
 for a in range(nsurveyages):
+  print()
   print("Age range:",unparseage(surveyages[a]))
   print("All populations are in millions")
   print("Week/comm      ONS est, dose >=1          ONS est, dose >=2           ONS pop  NIMS pop")
   print("=========      ======================     ======================      =======  ========")
-  ONSests=[[],[]]
   for d in range(ndates):
     print(daytodate(days[d]),end='')
     for doseind in range(2):
       su=survey[a][doseind]
       vv=vax[a][doseind]
-      ONSest=[None]*7
-      if su[d][0] is not None:
-        if su[d][0]>=minprop:
-          #ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d]/vv[-1], su[d][0]/su[-1][0], su[d][1]/su[-1][0], su[d][2]/su[-1][0])
-          ONSest=(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6,     vv[d], su[d][0], su[d][1], su[d][2])
-      ONSests[doseind].append(ONSest)
-      if ONSest[0]!=None: print("    %5.2f ( %5.2f - %5.2f )"%ONSest[:3],end='')
+      if su[d][0]>0: print("    %5.2f ( %5.2f - %5.2f )"%(vv[d]/su[d][0]/1e6, vv[d]/su[d][2]/1e6, vv[d]/su[d][1]/1e6),end='')
       else: print("        - (     - -     - )",end='')
     print("      %7.2f"%(ONSpop_surveyages[a]/1e6),end='')
     print("   %7.2f"%(NIMSpop_surveyages[a]/1e6),end='')
     print()
   print()
+
+
   
   data=[]
   for doseind in range(2):
     col=['"green"','"blue"'][doseind]
+    ep=vax[a][doseind][:,None]/survey[a][doseind]/1e6# Estimated population
     data.append({
       'with': ('filledcurves',2),
       'title': '',
-      'values': [(daytodate(day+3),e[1],e[2]) for (day,e) in zip(days,ONSests[doseind])],
+      'values': [(daytodate(day+3),e[2],e[1]) for (day,e) in zip(days,ep) if e[0]>0],
       'extra': 'lc '+col
     })
     title='(Number vaccinated with ≥%d dose%s) ÷ (Survey estimate of proportion so-vaccinated).'%(doseind+1,doseind*'s')
-    e=ONSests[doseind][-1]
+    e=ep[-1]
     title+='   Last datapoint: %.2fm (%.2fm - %.2fm)'%(e[0],e[1],e[2])
     data.append({
       'title': title,
-      'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,ONSests[doseind])],
+      'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,ep) if e[0]>0],
       'extra': 'lc '+col
     })
-  op=ONSpop_surveyages[a]/1e6
+  ons=ONSpop_surveyages[a]/1e6
   data.append({
-    'title': 'ONS 2020 population (%.2fm)'%op,
-    'values': [(daytodate(days[0]+3),op),(daytodate(days[-1]+3),op)],
+    'title': 'ONS 2020 population (%.2fm)'%ons,
+    'values': [(daytodate(days[0]+3),ons),(daytodate(days[-1]+3),ons)],
     'extra': 'lc 4'
   })
-  np=NIMSpop_surveyages[a]/1e6
+  nims=NIMSpop_surveyages[a]/1e6
   data.append({
-    'title': 'NIMS population (%.2fm)'%np,
-    'values': [(daytodate(days[0]+3),np),(daytodate(days[-1]+3),np)],
+    'title': 'NIMS population (%.2fm)'%nims,
+    'values': [(daytodate(days[0]+3),nims),(daytodate(days[-1]+3),nims)],
     'extra': 'lc 1'
   })
   ar=unparseage(surveyages[a])
   title='Estimated population of age band %s using vaccination survey\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
   makegraph(title=title, data=data, ylabel='Estimated population (millions)', outfn=os.path.join(graphdir,'PopEst%s.png'%ar),
             extra=['set key top left','set style fill transparent solid 0.25'],interval=86400*14)
+
+
   
   data=[]
   for doseind in range(2):
     col=['"green"','"blue"'][doseind]
+    vv=vax[a][doseind]/vax[a][doseind][-1]
+    su=survey[a][doseind]/survey[a][doseind][-1][0]
     data.append({
       'with': ('filledcurves',2),
       'title': '',
-      'values': [(daytodate(day+3),e[5],e[6]) for (day,e) in zip(days,ONSests[doseind])],
+      'values': [(daytodate(day+3),e[1],e[2]) for (day,e) in zip(days,su) if e[0]>0],
       'extra': 'lc '+col
     })
     data.append({
       'title': '(Survey estimate of proportion vaccinated with ≥%d dose%s) ÷ (Latest estimate of same)'%(doseind+1,doseind*'s'),
-      'values': [(daytodate(day+3),e[4]) for (day,e) in zip(days,ONSests[doseind])],
+      'values': [(daytodate(day+3),e[0]) for (day,e) in zip(days,su) if e[0]>0],
       'extra': 'lc '+col
     })
     col=['"dark-olivegreen"','"black"'][doseind]
     data.append({
       'title': '(Number vaccinated with ≥%d dose%s) ÷ (Latest number of same)'%(doseind+1,doseind*'s'),
-      'values': [(daytodate(day+3),e[3]) for (day,e) in zip(days,ONSests[doseind])],
+      'values': [(daytodate(day+3),v) for (day,v) in zip(days,vv)],
       'extra': 'lc '+col
     })
   ar=unparseage(surveyages[a])
-  title='Comparison of growth of vaccinated %s year olds: actual numbers vs vaccine survey\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
+  title='Comparison of growth of vaccinated %s year olds: actual numbers vs vaccine survey (artificially normalised to end at 1)\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
   makegraph(title=title, data=data, ylabel='Proportion of latest value', outfn=os.path.join(graphdir,'GrowthComparison%s.png'%ar),
-            extra=["set key top left",'set style fill transparent solid 0.25'],ranges='[:] [0:1.2]', interval=86400*14)
+            extra=["set key top left",'set style fill transparent solid 0.25'], interval=86400*14)
 
+
+  
   data=[]
+  vv=vax[a][1]/vax[a][0]
+  su=survey[a][1][:,0]/survey[a][0][:,0]
   data.append({
     'title': '(Survey estimate of proportion vaccinated with ≥2 doses) ÷ (Survey estimate with ≥1 dose)',
-    'values': [(daytodate(day+3),f[4]/e[4]) for (day,e,f) in zip(days,ONSests[0],ONSests[1]) if f[4]!=None],
+    'values': [(daytodate(day+3),e) for (day,e) in zip(days,su) if e>0],
     'extra': 'lc "blue"'
   })
   data.append({
     'title': '(Number vaccinated with ≥2 doses) ÷ (Number with ≥1 dose)',
-    'values': [(daytodate(day+3),f[3]/e[3]) for (day,e,f) in zip(days,ONSests[0],ONSests[1]) if f[3]!=None],
+    'values': [(daytodate(day+3),v) for (day,v) in zip(days,vv)],
     'extra': 'lc "green"'
   })
   ar=unparseage(surveyages[a])
   title='Proportion of vaccinated %s year olds who have had ≥2 doses, comparing survey estimate with actual numbers\\nData sources: ONS antibody and vaccination survey, UKHSA dashboard'%ar
   makegraph(title=title, data=data, ylabel='Ratio of ≥2 doses to ≥1 dose', outfn=os.path.join(graphdir,'2ndDoseComparison%s.png'%ar),
             extra=["set key top left",'set style fill transparent solid 0.25'],ranges='[:] [0:1.2]', interval=86400*14)
+  
