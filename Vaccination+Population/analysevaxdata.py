@@ -1,7 +1,6 @@
 from stuff import *
 import json,requests,csv,os
 import numpy as np
-from math import sqrt
 
 np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=10000)
@@ -39,20 +38,6 @@ def unparseage(ages):
   return "%d+"%x
 
 rawvax=get_data('areaType=nation&areaName=England&metric=vaccinationsAgeDemographics')
-
-#pmd=loadcsv("vaccine-surveillance-reports/vaccine surveillance.csv")
-#ukhsaages=sorted(parseage(a) for a in set(pmd['Age']))
-#ag=(40,50)
-#ty='Cases'
-#for (a,d,t,ul,d0,dhalf,d1,d2) in zip(pmd['Age'],pmd['Date'],pmd['Type'],pmd['Unlinked'],
-#                                     pmd['Not vaccinated'],
-#                                     pmd['Received one dose 1-20 days before specimen date'],
-#                                     pmd['Received one dose, 21 days or more before specimen date'],
-#                                     pmd['Second dose 14 days or more before specimen date']):
-#  if t!=ty: continue
-#  if parseage(a)!=ag: continue
-#  #print(a,d,t,ul,d0,dhalf,d1,d2)
-
 
 # Table 1g is from ONS infection survey data at https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/coronaviruscovid19antibodydatafortheuk
 # It's a csv page saved from a spreadsheet with messy formatting, so have to parse manually here.
