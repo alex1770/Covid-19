@@ -117,7 +117,6 @@ for v in vv:
       assert a>=c and b<=d
       NIMSpop_surveyages[i]+=int(v['VaccineRegisterPopulationByVaccinationDate'])
 
-
 vax=np.zeros([nsurveyages,2,ndates])
 for vv in rawvax:
   if vv['date'] not in datetoindex: continue
@@ -129,6 +128,20 @@ for vv in rawvax:
     vax[a][0][d]+=v['cumPeopleVaccinatedFirstDoseByVaccinationDate']
     vax[a][1][d]+=v['cumPeopleVaccinatedSecondDoseByVaccinationDate']
 vax/=7
+
+print()
+print("Population estimates (millions). Vax survey estimate uses most recent ≥1 dose uptake estimate:\n")
+print("    Ages        ONS       NIMS                   Vax Survey")
+print("   =====      =====      =====      =======================")
+for a in range(nsurveyages):
+  print("%8s"%(unparseage(surveyages[a])),end='')
+  d=ndates-1
+  doseind=0
+  ep=vax[a][doseind][ndates-1]/survey[a][doseind][ndates-1]/1e6
+  print("      %5.2f"%(ONSpop_surveyages[a]/1e6),end='')
+  print("      %5.2f"%(NIMSpop_surveyages[a]/1e6),end='')
+  print("      %5.2f ( %5.2f - %5.2f )"%(ep[0],ep[2],ep[1]),end='')
+  print()
 
 graphdir='vax_pop_graphs'
 os.makedirs(graphdir,exist_ok=True)
