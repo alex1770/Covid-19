@@ -5,7 +5,7 @@ import numpy as np
 np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=10000)
 
-# ONS 2020 pop ages originally given as 0-18, 18-25, 25-30, ..., 75-80, 80+. Interpolate children age bands
+# ONS 2020 pop ages originally given as 0-18, 18-25, 25-30, ..., 75-80, 80+. Interpolate under 18 age bands
 # Get NIMSpop from dashboard (vaccinationsAgeDemographics metric)
 ONSages=[(0,12),         (12,16),       (16,18),       (18,25), (25,30), (30,35), (35,40), (40,45), (45,50), (50,55), (55,60), (60,65), (65,70), (70,75), (75,80), (80,150)]
 ONSpop= [12093288*12/18, 12093288*4/18, 12093288*2/18, 4709589, 3771493, 3824652, 3738209, 3476303, 3638639, 3875351, 3761782, 3196813, 2784300, 2814128, 2009992, 2855599]
@@ -131,17 +131,21 @@ vax/=7
 
 print()
 print("Population estimates (millions). Vax survey estimate uses most recent ≥1 dose uptake estimate:\n")
-print("    Ages        ONS       NIMS                   Vax Survey")
-print("   =====      =====      =====      =======================")
+print("    Ages   NIMS Pop    ONS Pop               Vax Survey Pop   Vaccinated   NIMS %unvax  ONS %unvax         Vax survey %unvax")
+print("   =====   ========    =======      =======================   ==========   ===========  ==========      ====================")
 for a in range(nsurveyages):
   print("%8s"%(unparseage(surveyages[a])),end='')
   d=ndates-1
   doseind=0
   ep=vax[a][doseind][ndates-1]/survey[a][doseind][ndates-1]/1e6
-  print("      %5.2f"%(ONSpop_surveyages[a]/1e6),end='')
   print("      %5.2f"%(NIMSpop_surveyages[a]/1e6),end='')
+  print("      %5.2f"%(ONSpop_surveyages[a]/1e6),end='')
   print("      %5.2f ( %5.2f - %5.2f )"%(ep[0],ep[2],ep[1]),end='')
-  print()
+  print("        %5.2f"%(vax[a][doseind][-1]/1e6),end='')
+  print("         %5.1f"%((1-vax[a][doseind][-1]/NIMSpop_surveyages[a])*100),end='')
+  print("       %5.1f"%((1-vax[a][doseind][-1]/ONSpop_surveyages[a])*100),end='')
+  su=survey[a][doseind][ndates-1]
+  print("     %5.1f (%5.1f - %5.1f)"%tuple((1-x)*100 for x in [su[0],su[2],su[1]]))
 
 graphdir='vax_pop_graphs'
 os.makedirs(graphdir,exist_ok=True)
