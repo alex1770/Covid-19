@@ -34,4 +34,4 @@ for age in ages:
       if sum(lbs)>minub: print("Impossible",end='')
       elif minub>0: print("%10.3f"%(1-sum(lbs)/minub),end='')
       else: print("%10.3f"%0,end='')
-      print("  %10s  %15s  "%(age,ty),outcome,series)
+      print("  %10s  %15s  "%(age,ty),outcome,'  ',series)
