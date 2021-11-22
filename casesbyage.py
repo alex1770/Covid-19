@@ -1,3 +1,4 @@
+# This is shorter/simpler than it looks. Most of the code is unused - just kept in for experimental purposes
 import os,json,sys,datetime,pytz
 from requests import get
 from subprocess import Popen,PIPE
@@ -18,6 +19,7 @@ monday=datetoday('2021-09-20')# Any Monday
 
 #specmode="TimeToPublishAdjustment"
 specmode="TTPadjrunningweekly"
+#specmode="Learning"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
 
@@ -34,6 +36,8 @@ displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,50),(50,65),(65,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,80),(80,150)]
 #displayages=[(0,150)]
+#displayages=[(0,20),(20,30),(30,50),(50,70),(70,150)]
+#displayages=[(0,20),(20,30),(30,50),(50,55),(55,60),(60,65),(65,70),(70,150)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -96,6 +100,7 @@ if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
 minday=today-120
 
 skipdays=1
+if len(sys.argv)>1: skipdays=int(sys.argv[1])
 if specmode=="ByPublish": skipdays=0
 
 origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
@@ -190,6 +195,59 @@ def dow(i):
   if d in holidays: return 6
   return (d-monday)%7
 
+hh2=hh[:,:].sum(axis=2)
+
+if 0:
+  # Print day 3 adjustments
+  for i in range(nspec-2):
+    print(daytodate(minday+i),i%7,hh2[i+3,i]/(hh2[i+1,i]+hh2[i+2,i]))
+  print()
+
+# Predict from the total of last 'fr' specimen days ==> total of last 'infinity' specimen days
+# - Not the best way to do it because requires 'infinity' days tail. Maybe better to predict individual day 3 from day 1, 2 etc.
+fr=skipdays+1
+data=[]
+targ=[]
+deb=0
+# hhq[publishday - minday][specimenday - minday] = new cases on specimen day that were first reported on publish day
+def getpredictors(hhq,i):  
+  # Predicting (for spec day i) sum of next fr publish days divided by sum of next infinity publish days
+  # If i<npub-infinity+7 then we can make predictors
+  # If i<npub-infinity then we have groundtruth, i.e. log(hhq[i+1:i+fr+1,i].sum()/hhq[i+1:i+infinity+1,i].sum())
+  x1=log(hhq[i+1-7:i+fr+1-7,i-7].sum()/hhq[i+1-7:i+infinity+1-7,i-7].sum())
+  A=B=0
+  for j in range(i-7,0,-7):
+    A+=hhq[j+1:j+fr+1,j].sum()
+    B+=hhq[j+1:j+infinity+1,j].sum()
+  x2=log(A/B)
+  for j in range(i-7,0,-1):
+    A+=hhq[j+1:j+fr+1,j].sum()
+    B+=hhq[j+1:j+infinity+1,j].sum()
+  x3=log(A/B)
+  x4=0
+  for j in range(infinity-fr):
+    x4+=log(hhq[i-j:i+fr,i-1-j].sum()/hhq[i-j:i+fr+1,i-1-j].sum())
+  return [1,x1,x2,x3,x4]
+for i in range(20,npub-infinity):
+  y=log(hh2[i+1:i+fr+1,i].sum()/hh2[i+1:i+infinity+1,i].sum())# Partial sum divided by whole
+  data.append(getpredictors(hh2,i))
+  targ.append(y)
+if deb:
+  with open('temp','w') as fp:
+    for ((dum,x1,x2,x3,x4),y) in zip(data,targ):
+      print("%9.6f %9.6f %9.6f %9.6f   %9.6f"%(x1,x2,x3,x4,y),file=fp)
+n=len(data[0])
+data=np.array(data)
+targ=np.array(targ)
+rr=[]
+for s in range(1,1<<n):
+  l=[i for i in range(n) if (s&1<<i)]
+  res=np.linalg.lstsq(data[:,l],targ)
+  rr.append((l,res))
+rr.sort(key=lambda x:len(x[0])+1e-4*x[1][1][0])
+for (l,res) in rr:
+  if deb: print("%15s  %9.6f"%(l,sqrt(res[1][0]/data.shape[0])),res[0])
+
 # Try to undo the effect of delay from specimen to published test result
 if specmode=="TimeToPublishAdjustment":
   # Use time-to-publish, based on day of week, to re-estimate full no. of cases by spec date.
@@ -220,7 +278,7 @@ elif specmode=="SimpleRestrict":
 elif specmode=="ByPublish":
   sp=hh[infinity:,:,:].sum(axis=1)
   minday+=infinity-2# 2 = est phase lag from using publish day
-else: 
+else:
   raise RuntimeError('Unrecognised specmode '+specmode)
 
 nsamp=sp.shape[0]
