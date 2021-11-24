@@ -1,50 +1,10 @@
 import csv,sys,getdata,time
 from subprocess import Popen,PIPE
+from math import log
 if sys.version_info[0]<3: raise SystemExit("Error: requires Python 3")
 
-# Selection of countries to use for the trend graph
-#selectcountries=["US","UK","Italy","Spain","France","Germany","Brazil","Austria","S. Korea","Norway","Sweden","Japan","Australia"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","Canada","S. Korea","Belgium","Japan","France","Brazil"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia","Panama"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Mexico","Peru","Chile","Armenia","Panama","Kyrgyzstan","South Africa","Israel"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Peru","Armenia","Panama","South Africa","Israel","Colombia"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Peru","Argentina","Panama","South Africa","Israel","Colombia"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Brazil","Argentina","Panama","South Africa","Israel","Costa Rica"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Argentina","Israel","Costa Rica","Switzerland","Netherlands","Czech Republic"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Argentina","Israel","Switzerland","Netherlands","Czech Republic","Armenia"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","Belgium","France","Israel","Switzerland","Netherlands","Czech Republic","Armenia","Slovenia"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Switzerland","Czech Republic","Slovenia","Austria","Georgia","Bosnia and Herzegovina"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Switzerland","Czech Republic","Slovenia","Austria","Lithuania","Bosnia and Herzegovina"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Switzerland","Czech Republic","Slovenia","Austria","Lithuania","Netherlands"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Israel","Czech Republic","Slovenia","Ireland","Lithuania","Netherlands","South Africa"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Belgium","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","South Africa","Slovakia","Portugal"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","South Africa","Slovakia","Portugal"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Portugal"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Spain","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Brazil"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Hungary","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Slovakia","Brazil"]
-#selectcountries=["UK","USA","Italy","Sweden","Germany","Hungary","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Uruguay","Brazil"]
-#selectcountries=["UK","USA","Sweden","Germany","Hungary","S. Korea","France","Israel","Czech Republic","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile"]
-#selectcountries=["UK","USA","Sweden","Germany","Hungary","S. Korea","France","Israel","Turkey","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Ireland","Netherlands","Estonia","Uruguay","Brazil","India","Chile","Paraguay"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Uruguay","Brazil","India","Chile","Paraguay","Namibia","Trinidad and Tobago","Mongolia"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Brazil","India","Chile","Namibia","Netherlands","Myanmar","Greece","Spain","Vietnam"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","India","Namibia","Netherlands","Greece","Spain","Vietnam","Cyprus","Botswana","Cuba"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Namibia","Netherlands","Greece","Vietnam","Cyprus","Botswana","Cuba","Tunisia","Japan"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Namibia","Greece","Vietnam","Cyprus","Botswana","Cuba","Tunisia","Japan","Georgia"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Vietnam","Botswana","Cuba","Tunisia","Japan","Georgia","North Macedonia","Palestine","Australia"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Botswana","Cuba","Tunisia","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia"]
-#selectcountries=["UK","USA","Sweden","Germany","S. Korea","France","Israel","Cuba","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia","Singapore","Serbia"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Palestine","Australia","Mongolia","Singapore","Serbia","Malaysia"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Malaysia","Botswana"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Malaysia","Romania"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","North Macedonia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Cuba","Japan","Georgia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria","Latvia"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Jamaica"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Australia","Mongolia","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Australia","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands","Slovenia"]
-#selectcountries=["UK","USA","Sweden","Germany","France","Israel","Georgia","Austria","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands","Slovenia"]
-selectcountries=["UK","USA","Germany","France","Israel","Georgia","Austria","Singapore","Serbia","Romania","Bulgaria","Latvia","Lithuania","Netherlands","Slovenia","Hungary"]
+# Selection of countries to use for the trend graphs, chosen because I'm interested in them for particular reasons. Later augmented by countries with large number/growth in cases/deaths.
+selectcountries=set(["UK","USA","Germany","France","Israel"])
 
 # If perhead is True then count deaths per million population instead of absolute deaths
 perhead=True
@@ -79,8 +39,6 @@ with open("countrynames") as fp:
   for x in r:
     if len(x)==0 or x[0][:1]=='#': continue
     for y in x[1:]: equivnames[y]=x[0]
-
-selectcountries=[equivnames.get(x,x) for x in selectcountries]
 
 if perhead:
   pop={}
@@ -165,6 +123,64 @@ else:
 
 data=getdata.getallsimpledata(source=source)
 
+# Fetch data for all countries with more than 'minpop' inhabitants.
+allcountries=getdata.getcountrylist(source=source)
+countries=[x for x in allcountries if x in pop and pop[x]>=minpop]
+cases,deaths,maxdate=processdata(countries,data,period=period,perhead=perhead)
+# See above for why Sweden data is truncated early
+cases['Sweden']=(cases['Sweden'][0],cases['Sweden'][1][:-7])
+deaths['Sweden']=(deaths['Sweden'][0],deaths['Sweden'][1][:-12])
+interest={x:0 for x in countries}# How interesting a country is from the point of view of a large number of cases or deaths or growth in these
+
+for growth in [0,1]:
+  for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
+    if growth==0:
+      countries=[x for x in stats if stats[x][1][-1]!='-']
+      val={x:stats[x][1][-1] for x in countries}
+    else:
+      countries=[x for x in stats if stats[x][1][-1]!='-' and stats[x][1][-8]!='-' and stats[x][1][-8]*pop[x]/1e6>=(100 if desc=='cases' else 5)]
+      val={x:stats[x][1][-1]/stats[x][1][-8] for x in countries}
+    countries.sort(key=lambda x:-val[x])
+    for (rank,x) in enumerate(countries):
+      if growth==0: interest[x]+=1/(rank+1)
+      else: interest[x]+=log(stats[x][1][-1]/stats[x][1][-8])
+    countries=countries[:numbar]
+    barfn=barfn0+'_'+desc+'_growth'*growth+'.png'
+    
+    po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
+    write('set terminal pngcairo font "sans,12" size 1920,1280')
+    write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
+    write('set output "%s"'%barfn)
+    write('set key off')
+    #write('set label rotate')
+    write('set xtics nomirror')
+    write('set y2tics mirror')
+    if growth==0: title="Average number of "+desc+perstring
+    else: title="Growth in "+desc
+    title+=" per day over the last %d day%s"%(period,"" if period==1 else "s")
+    title+="\\nTop %d amongst countries with population >=1m. Source: %s, %s"%(numbar,source,maxdate)
+    write('set title "%s"'%title)
+    write('set grid ytics lc rgb "#dddddd" lt 1')
+    write('set boxwidth 0.8')
+    write('set style fill solid')
+    write('set xtics rotate by 20 right offset 1.5,0')
+    write('set yrange [0:]')
+    write('plot "-" using 2:xtic(1) with boxes')
+    for country in countries:
+      write('"'+country+'"',val[country])
+    write('quit')
+    p.close()
+    po.wait()
+    print("Written bar chart to %s"%barfn)
+
+selectcountries=set([equivnames.get(x,x) for x in selectcountries])
+l=list(interest)
+l.sort(key=lambda x: -interest[x])
+for x in l:
+  if len(selectcountries)==16: break# 16 = max number of distinguishable lines on graph
+  selectcountries.add(x)
+selectcountries=sorted(list(selectcountries))
+    
 cases,deaths,maxdate=processdata(selectcountries,data,period=period,perhead=perhead)
 now=datetoday(time.strftime('%Y-%m-%d',time.localtime()))
 zoomdays=60
@@ -243,49 +259,3 @@ for zoomstate in [0,1]:
     p.close()
     print("Written trend graph to %s"%trendfn)
 
-# Previously used selected countries. Now fetch data for all countries with more than 'minpop' inhabitants.
-allcountries=getdata.getcountrylist(source=source)
-countries=[x for x in allcountries if x in pop and pop[x]>=minpop]
-cases,deaths,maxdate=processdata(countries,data,period=period,perhead=perhead)
-# See above for why Sweden data is truncated early
-cases['Sweden']=(cases['Sweden'][0],cases['Sweden'][1][:-7])
-deaths['Sweden']=(deaths['Sweden'][0],deaths['Sweden'][1][:-12])
-
-for growth in [0,1]:
-  for (stats,desc) in [(cases,'cases'), (deaths,'deaths')]:
-    if growth==0:
-      countries=[x for x in stats if stats[x][1][-1]!='-']
-      val={x:stats[x][1][-1] for x in countries}
-    else:
-      countries=[x for x in stats if stats[x][1][-1]!='-' and stats[x][1][-8]!='-' and stats[x][1][-8]*pop[x]/1e6>=(100 if desc=='cases' else 5)]
-      val={x:stats[x][1][-1]/stats[x][1][-8] for x in countries}
-    countries.sort(key=lambda x:-val[x])
-    countries=countries[:numbar]
-    barfn=barfn0+'_'+desc+'_growth'*growth+'.png'
-    
-    po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
-    write('set terminal pngcairo font "sans,12" size 1920,1280')
-    write('set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5')
-    write('set output "%s"'%barfn)
-    write('set key off')
-    #write('set label rotate')
-    write('set xtics nomirror')
-    write('set y2tics mirror')
-    if growth==0: title="Average number of "+desc+perstring
-    else: title="Growth in "+desc
-    title+=" per day over the last %d day%s"%(period,"" if period==1 else "s")
-    title+="\\nTop %d amongst countries with population >=1m. Source: %s, %s"%(numbar,source,maxdate)
-    write('set title "%s"'%title)
-    write('set grid ytics lc rgb "#dddddd" lt 1')
-    write('set boxwidth 0.8')
-    write('set style fill solid')
-    write('set xtics rotate by 20 right offset 1.5,0')
-    write('set yrange [0:]')
-    write('plot "-" using 2:xtic(1) with boxes')
-    for country in countries:
-      write('"'+country+'"',val[country])
-    write('quit')
-    p.close()
-    po.wait()
-    print("Written bar chart to %s"%barfn)
-  
