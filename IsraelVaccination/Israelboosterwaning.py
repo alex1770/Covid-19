@@ -58,7 +58,7 @@ def tau(perm):
       tau+=(perm[i]<perm[j])-(perm[i]>perm[j])
   return tau
 
-def pvalue(perms,N=20000):
+def pvalue(perms,N=10000):
   t0=sum(tau(perm) for perm in perms)
   nn=[len(perm) for perm in perms]
   m=0
@@ -69,27 +69,39 @@ def pvalue(perms,N=20000):
   return m/N
 
 offset=20
-for weekdayoffset in [0,3,6]:
-  RRLL=[]
-  for age in ages[1:-1]:
-    print('Age band',age)
-    print('Weekdayoffset',weekdayoffset)
-    print("Week of cases               VC      VP      NVC     NVP       RR    1-RR    VC/NVC")
-    RRL=[]
-    for (week,a,vaxcases,nonvaxcases) in zip(cases['Week'], cases['Age_group'], cases['positive_above_20_days_after_3rd_dose'], cases['Sum_positive_without_vaccination']):
-      if a!=age or week not in weeks: continue
-      vaxcases=getint(vaxcases)
-      nonvaxcases=getint(nonvaxcases)
-      prev=daytodate(datetoday(week[:10])+weekdayoffset-offset)
-      vaxpop1=totvax[age,prev,1]
-      vaxpop3=totvax[age,prev,3]
-      nonvaxpop=totpop[age]-vaxpop1
-      RR=vaxcases/max(vaxpop3,1e-10)/(nonvaxcases/nonvaxpop)
-      RRL.append(RR)
-      if vaxpop3>0:
-        print(week," %5d %7d    %5d %7d   %5.1f%%  %5.1f%%    %6.4f"%(vaxcases,vaxpop3,nonvaxcases,nonvaxpop,RR*100,(1-RR)*100,vaxcases/nonvaxcases))
-    print("Tau test p-value %.3g"%(pvalue([RRL])))
+infinity=datetoday('2021-11-23')
+for popmult in [0.95, 1, 1.05]:
+  for weekdayoffset in [0,3,6,'average','infinity']:
+    RRLL=[]
+    for age in ages[1:-1]:
+      print('Age band:',age)
+      print('Weekdayoffset:',weekdayoffset)
+      print('Population multiplier: %g'%popmult)
+      print('VC=vaccinated cases, VP=vaccinated population, NVC=non-vaccinated cases, NVP=non-vaccinated population, RR=(VC/VP)/(NVC/NVP)')
+      print("Week of cases               VC      VP      NVC     NVP       RR    1-RR    VC/NVC")
+      RRL=[]
+      for (week,a,vaxcases,nonvaxcases) in zip(cases['Week'], cases['Age_group'], cases['positive_above_20_days_after_3rd_dose'], cases['Sum_positive_without_vaccination']):
+        if a!=age or week not in weeks: continue
+        vaxcases=getint(vaxcases)
+        nonvaxcases=getint(nonvaxcases)
+        if weekdayoffset=='infinity':
+          days=[infinity]
+        elif weekdayoffset=='average':
+          d=datetoday(week[:10])
+          days=range(d,d+7)
+        else:
+          d=datetoday(week[:10])
+          days=[d+weekdayoffset]
+        vaxpop1=sum(totvax[age,daytodate(d),1] for d in days)/len(days)
+        vaxpop3=sum(totvax[age,daytodate(d-offset),3] for d in days)/len(days)
+        nonvaxpop=totpop[age]*popmult-vaxpop1
+        RR=vaxcases/max(vaxpop3,1e-10)/(nonvaxcases/nonvaxpop)
+        RRL.append(RR)
+        if vaxpop3>0:
+          print(week," %5d %7d    %5d %7d   %5.1f%%  %5.1f%%    %6.4f"%(vaxcases,vaxpop3,nonvaxcases,nonvaxpop,RR*100,(1-RR)*100,vaxcases/nonvaxcases))
+      print("Age=%s, weekdayoffset=%s, popmult=%g, Tau test p-value %.3g"%(age,str(weekdayoffset),popmult,pvalue([RRL],20000)))
+      print()
+      RRLL.append(RRL)
+    print("Overall tau test p-value %.5f at popmult=%g, weekdayoffset"%(pvalue(RRLL,100000),popmult),weekdayoffset)
     print()
-    RRLL.append(RRL)
-  print("Overall tau test p-value %.3g at weekdayoffset %d"%(pvalue(RRLL,100000),weekdayoffset))
-  print()
+  
