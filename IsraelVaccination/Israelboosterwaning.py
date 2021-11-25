@@ -1,6 +1,9 @@
 from stuff import *
 from random import sample
 
+# Whether to do sensitivity analysis
+sensitivity=False
+
 # From https://datadashboard.health.gov.il/COVID-19/general
 # https://data.gov.il/dataset/covid-19/resource/57410611-936c-49a6-ac3c-838171055b1f
 # https://data.gov.il/dataset/covid-19/resource/9b623a64-f7df-4d0c-9f57-09bd99a88880
@@ -70,8 +73,14 @@ def pvalue(perms,N=10000):
 
 offset=20
 infinity=datetoday('2021-11-23')
-for popmult in [0.95, 1, 1.05]:
-  for weekdayoffset in [0,3,6,'average','infinity']:
+if sensitivity:
+  popmults=[0.95, 1, 1.05]
+  weekdayoffsets=[0,3,6,'average','infinity']
+else:
+  popmults=[1]
+  weekdayoffsets=['average']
+for popmult in popmults:
+  for weekdayoffset in weekdayoffsets:
     RRLL=[]
     for age in ages[1:-1]:
       print('Age band:',age)
