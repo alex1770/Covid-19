@@ -26,7 +26,7 @@ if 0:
     else:
       a,b=map(int,age.split('-'))
       v=sum(WPPpop[a//5:(b+1)//5])
-    totpop[age]=v*1000*1.02
+    totpop[age]=v*1000
 
 if 1:
   # Sarah's population estimate = max_{d=1,2,3} (d-dose vaccinated)/(d-dose proportion vaccinated)   (+tiny adjustment to make percentages add to 100%)
