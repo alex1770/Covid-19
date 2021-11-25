@@ -1,6 +1,9 @@
 from stuff import *
+from random import sample
 
 # From https://datadashboard.health.gov.il/COVID-19/general
+# https://data.gov.il/dataset/covid-19/resource/57410611-936c-49a6-ac3c-838171055b1f
+# https://data.gov.il/dataset/covid-19/resource/9b623a64-f7df-4d0c-9f57-09bd99a88880
 vax=loadcsv('vaccinated-per-day-2021-11-23.csv')
 cases=loadcsv('Israel-cases-among-vaccinated-164.csv')
 ages=sorted(list(set(vax['age_group'])))
@@ -46,9 +49,28 @@ for (date,age,d1,d2,d3) in zip(vax['VaccinationDate'], vax['age_group'], vax['fi
 
 weeks=sorted(week for week in set(cases['Week']) if week>='2021-09-19')
 
+def tau(perm):
+  n=len(perm)
+  tau=0
+  for i in range(n-1):
+    for j in range(i+1,n):
+      tau+=(perm[i]<perm[j])-(perm[i]>perm[j])
+  return tau
+
+def pvalue(perm,N=1000):
+  t=tau(perm)
+  n=len(perm)
+  m=nit=0
+  while m<N or nit-m<N:
+    qerm=sample(range(n),n)
+    m+=(tau(qerm)>=t)
+    nit+=1
+  return m/nit
+
 for age in ages[1:-2]:
   print('Age band',age)
   print("Week of cases               VC      VP     NVC     NVP       RR    1-RR    VC/NVC")
+  RRL=[]
   for (week,a,vaxcases,nonvaxcases) in zip(cases['Week'], cases['Age_group'], cases['positive_above_20_days_after_3rd_dose'], cases['Sum_positive_without_vaccination']):
     if a!=age or week not in weeks: continue
     vaxcases=getint(vaxcases)
@@ -57,5 +79,7 @@ for age in ages[1:-2]:
     vaxpop=totvax[age,prev,3]
     nonvaxpop=totpop[age]-totvax[age,prev,1]
     RR=vaxcases/vaxpop/(nonvaxcases/nonvaxpop)
+    RRL.append(RR)
     print(week,"  %4d %7d    %4d %7d   %5.1f%%  %5.1f%%    %6.4f"%(vaxcases,vaxpop,nonvaxcases,nonvaxpop,RR*100,(1-RR)*100,vaxcases/nonvaxcases))
+  print("p-value %.3g"%(pvalue(RRL)))
   print()
