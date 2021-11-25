@@ -25,9 +25,11 @@ if 0:
       v=sum(WPPpop[a//5:(b+1)//5])
     totpop[age]=v*1000*1.02
 
-# Sarah's estimate = max_{d=1,2,3} (d-dose vaccinated)/(d-dose proportion vaccinated)   (+tiny adjustment to make percentages add to 100%)
-totpop={'20-29':1321161, '30-39':1214249, '40-49':1114305, '50-59':870068, '60-69':747070, '70-79':512664, '80-89':233857, '90+':55928}
-print("Using populations:")
+if 1:
+  # Sarah's population estimate = max_{d=1,2,3} (d-dose vaccinated)/(d-dose proportion vaccinated)   (+tiny adjustment to make percentages add to 100%)
+  totpop={'20-29':1321161, '30-39':1214249, '40-49':1114305, '50-59':870068, '60-69':747070, '70-79':512664, '80-89':233857, '90+':55928}
+  print("Using populations:")
+
 for age in totpop:
   print("%5s  %7d"%(age,totpop[age]))
 print()
@@ -42,7 +44,6 @@ def getint(s):
 totvax={}
 totvaxr={(age,d):0 for age in ages for d in [1,2,3]}
 for (date,age,d1,d2,d3) in zip(vax['VaccinationDate'], vax['age_group'], vax['first_dose'], vax['second_dose'], vax['third_dose']):
-  prev=daytodate(datetoday(date)-1)
   totvaxr[age,1]+=getint(d1);totvax[age,date,1]=totvaxr[age,1]
   totvaxr[age,2]+=getint(d2);totvax[age,date,2]=totvaxr[age,2]
   totvaxr[age,3]+=getint(d3);totvax[age,date,3]=totvaxr[age,3]
@@ -57,29 +58,38 @@ def tau(perm):
       tau+=(perm[i]<perm[j])-(perm[i]>perm[j])
   return tau
 
-def pvalue(perm,N=1000):
-  t=tau(perm)
-  n=len(perm)
-  m=nit=0
-  while m<N or nit-m<N:
-    qerm=sample(range(n),n)
-    m+=(tau(qerm)>=t)
-    nit+=1
-  return m/nit
+def pvalue(perms,N=20000):
+  t0=sum(tau(perm) for perm in perms)
+  nn=[len(perm) for perm in perms]
+  m=0
+  for i in range(N):
+    qerms=[sample(range(n),n) for n in nn]
+    t=sum(tau(sample(range(n),n)) for n in nn)
+    m+=(t>=t0)
+  return m/N
 
-for age in ages[1:-2]:
-  print('Age band',age)
-  print("Week of cases               VC      VP     NVC     NVP       RR    1-RR    VC/NVC")
-  RRL=[]
-  for (week,a,vaxcases,nonvaxcases) in zip(cases['Week'], cases['Age_group'], cases['positive_above_20_days_after_3rd_dose'], cases['Sum_positive_without_vaccination']):
-    if a!=age or week not in weeks: continue
-    vaxcases=getint(vaxcases)
-    nonvaxcases=getint(nonvaxcases)
-    prev=daytodate(datetoday(week[:10])-17)
-    vaxpop=totvax[age,prev,3]
-    nonvaxpop=totpop[age]-totvax[age,prev,1]
-    RR=vaxcases/vaxpop/(nonvaxcases/nonvaxpop)
-    RRL.append(RR)
-    print(week,"  %4d %7d    %4d %7d   %5.1f%%  %5.1f%%    %6.4f"%(vaxcases,vaxpop,nonvaxcases,nonvaxpop,RR*100,(1-RR)*100,vaxcases/nonvaxcases))
-  print("p-value %.3g"%(pvalue(RRL)))
+offset=20
+for weekdayoffset in [0,3,6]:
+  RRLL=[]
+  for age in ages[1:-1]:
+    print('Age band',age)
+    print('Weekdayoffset',weekdayoffset)
+    print("Week of cases               VC      VP      NVC     NVP       RR    1-RR    VC/NVC")
+    RRL=[]
+    for (week,a,vaxcases,nonvaxcases) in zip(cases['Week'], cases['Age_group'], cases['positive_above_20_days_after_3rd_dose'], cases['Sum_positive_without_vaccination']):
+      if a!=age or week not in weeks: continue
+      vaxcases=getint(vaxcases)
+      nonvaxcases=getint(nonvaxcases)
+      prev=daytodate(datetoday(week[:10])+weekdayoffset-offset)
+      vaxpop1=totvax[age,prev,1]
+      vaxpop3=totvax[age,prev,3]
+      nonvaxpop=totpop[age]-vaxpop1
+      RR=vaxcases/max(vaxpop3,1e-10)/(nonvaxcases/nonvaxpop)
+      RRL.append(RR)
+      if vaxpop3>0:
+        print(week," %5d %7d    %5d %7d   %5.1f%%  %5.1f%%    %6.4f"%(vaxcases,vaxpop3,nonvaxcases,nonvaxpop,RR*100,(1-RR)*100,vaxcases/nonvaxcases))
+    print("Tau test p-value %.3g"%(pvalue([RRL])))
+    print()
+    RRLL.append(RRL)
+  print("Overall tau test p-value %.3g at weekdayoffset %d"%(pvalue(RRLL,100000),weekdayoffset))
   print()
