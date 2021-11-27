@@ -29,21 +29,31 @@ for d in range(minday+3,maxday-3):
 # Tue  0.766
 # Wed  1.158
 
-dateorigin=datetoday('2021-10-01')-564
-y0=(0,358)
-y1=(50,43)
+if 0:
+  infile='OmicronSGTF.png'
+  dateorigin=datetoday('2021-10-01')-564
+  row0,row1=23,359
+  col0,col1=81,614
+  y0=(0,358);y1=(50,43)
+  z0=(0,357);z1=(1600,126)
+
+if 1:
+  infile='OmicronSGTF_frompdf.png'
+  dateorigin=datetoday('2021-10-01')-564
+  row0,row1=11,345
+  col0,col1=81,614
+  y0=(0,344.5);y1=(50,32)
+  z0=(0,344.5);z1=(2000,57.5)
 
 # SGTF image from slide 12 of https://sacoronavirus.co.za/2021/11/25/sars-cov-2-sequencing-new-variant-update-25-november-2021/
 # resized down by a factor of 2/3 in order to get 1 horizontal pixel = 1 day.
 from PIL import Image
 import numpy as np
-im_frame = Image.open('OmicronSGTF.png')
+im_frame = Image.open(infile)
 cc = np.array(im_frame,dtype=int)
 im_frame.close()
 # Top-leftian, row before column
 
-row0,row1=23,359
-col0,col1=81,614
 r=cc.shape[0]
 c=cc.shape[1]
 
@@ -106,13 +116,13 @@ for x in range(col0,col1):
   oo[mm[x],x]=[255,0,0]
 
 im=Image.fromarray(oo)
-im.save('temp1.png')
+im.save('sgtf+counts.png')
 
-z0=(0,357)
-z1=(1600,126)
 with open('SA_sgtf','w') as fp:
+  print("#     Date  %SGTF   Tests  num(S-)  num(S+)",file=fp)
   for x in range(col0,col1):
     if nn[x]>0:
       date=daytodate(dateorigin+x)
       n=max((nn[x]-z1[1])/(z0[1]-z1[1])*(z0[0]-z1[0])+z1[0],0)
-      print(date,"%6.2f  %6.0f"%(sgtf[date],n),file=fp)
+      s=sgtf[date]
+      print(date,"%6.2f  %6.1f   %6.1f   %6.1f"%(s,n,s/100*n,(1-s/100)*n),file=fp)
