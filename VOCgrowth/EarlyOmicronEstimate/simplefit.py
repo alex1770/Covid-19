@@ -31,4 +31,6 @@ m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
 r=np.array([sum(W*Y),sum(W*X*Y)])
 c=np.linalg.solve(m,r)
 print("Continuous growth rate = %.4f/day"%(c[1]))
-print("Crossover on",daytodate(datetoday(dt[0])+int(-c[0]/c[1]+.5)))
+d=-c[0]/c[1]
+d1=int(round(-c[0]/c[1]))
+print("Crossover on",daytodate(datetoday(dt[0])+d1)," %+.0f hours"%((d-d1)*24))

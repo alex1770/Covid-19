@@ -1,13 +1,16 @@
-# Make hybrid_sgtf using extractsgtf.py
+# Make SA_sgtf using extractsgtf.py
+# grep -v ^# SA_sgtf | awk '{x=($2-2)/98; print $1,$3*(1-x),$3*x;}' > counts
+# for d in `seq -w 7 18`; do dt=2021-11-$d; echo $dt; py simplefit.py $dt < counts; echo; done
 
 set terminal pngcairo font "sans,13" size 1920,1280
-set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5
+set bmargin 6;set lmargin 15;set rmargin 15;set tmargin 7
 set xdata time
 fmt="%Y-%m-%d"
 set timefmt fmt
 set format x fmt
 set xtics nomirror rotate by 45 right offset 0.5,0
-set title "Relative progression of Omicron in South Africa, *assuming* approximate SGTF proportions (offset by 2%) as read from graph\nin slide 12 of presentation https://sacoronavirus.co.za/2021/11/25/sars-cov-2-sequencing-new-variant-update-25-november-2021/\nMethods/data at https://github.com/alex1770/Covid-19/tree/master/VOCgrowth/EarlyOmicronEstimate"
+set title "Relative progression of Omicron in South Africa, *assuming* approximate SGTF proportions (offset by 2%) as read from graph in\n slide 12 of presentation https://sacoronavirus.co.za/2021/11/25/sars-cov-2-sequencing-new-variant-update-25-november-2021/ are representative.\n(Fit mechanism takes into account the reliability of each point, which is why it isn't trying so hard to go through the early points.)\nMethods/data at https://github.com/alex1770/Covid-19/tree/master/VOCgrowth/EarlyOmicronEstimate"
 
 set output "SA_Omicron.png"
-plot ["2021-11-07":] "hybrid_sgtf" u 1:(log((($2-2)/98)/(1-(($2-2)/98)))) lw 1 pt 5 lc 1 title "log ( adjusted SGTF proportion / (1 - adjusted SGTF proportion) on given day )", (x-strptime(fmt,"2021-11-20")+10*3600)/86400*0.38 lw 2 w lines title "Fitting last 4 days: exp(0.38)/day growth (roughly R_t(Omicron)/R_t(Others)=6 or 7), crossover at 2021-11-20", (x-strptime(fmt,"2021-11-19")-3600*8)/86400*0.48 lw 2 w lines title "Fitting last 8 days: exp(0.48)/day growth (roughly R_t(Omicron)/R_t(Others)=11) crossover at 2021-11-19", (x-strptime(fmt,"2021-11-20"))/86400*0.36 lw 2 w lines title "Fitting last 13 days: exp(0.36)/day growth (roughly R_t(Omicron)/R_t(Others)=6), crossover at 2021-11-20"
+plot ["2021-11-07":] [-6:] "counts" u 1:(log($3/$2)) lw 1 pt 5 lc 1 title "log ( adjusted SGTF proportion / (1 - adjusted SGTF proportion) on given day )", (x-strptime(fmt,"2021-11-20")+8*3600)/86400*0.4141 lw 2 w lines title "Fitting last 4 days: exp(0.414)/day growth (roughly R_t(Omicron)/R_t(Others)=7), crossover on 2021-11-20", (x-strptime(fmt,"2021-11-19")-3600*9)/86400*0.5183 lw 2 w lines title "Fitting last 7 days: exp(0.518)/day growth (roughly R_t(Omicron)/R_t(Others)=11) crossover on 2021-11-19", (x-strptime(fmt,"2021-11-20")+3600*7)/86400*0.4214 lw 2 w lines title "Fitting last 7 days: exp(0.421)/day growth (roughly R_t(Omicron)/R_t(Others)=7) crossover on 2021-11-20"
+
