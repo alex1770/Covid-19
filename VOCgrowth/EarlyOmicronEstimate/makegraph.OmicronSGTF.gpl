@@ -1,0 +1,13 @@
+# Make hybrid_sgtf using extractsgtf.py
+
+set terminal pngcairo font "sans,13" size 1920,1280
+set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5
+set xdata time
+fmt="%Y-%m-%d"
+set timefmt fmt
+set format x fmt
+set xtics nomirror rotate by 45 right offset 0.5,0
+set title "Relative progression of Omicron in South Africa, *assuming* approximate SGTF proportions (offset by 2%) as read from graph\nin slide 12 of presentation https://sacoronavirus.co.za/2021/11/25/sars-cov-2-sequencing-new-variant-update-25-november-2021/\nMethods/data at https://github.com/alex1770/Covid-19/tree/master/VOCgrowth/EarlyOmicronEstimate"
+
+set output "SA_Omicron.png"
+plot ["2021-11-07":] "hybrid_sgtf" u 1:(log((($2-2)/98)/(1-(($2-2)/98)))) lw 1 pt 5 lc 1 title "log ( adjusted SGTF proportion / (1 - adjusted SGTF proportion) on given day )", (x-strptime(fmt,"2021-11-20")+10*3600)/86400*0.38 lw 2 w lines title "Fitting last 4 days: exp(0.38)/day growth (roughly R_t(Omicron)/R_t(Others)=6 or 7), crossover at 2021-11-20", (x-strptime(fmt,"2021-11-19")-3600*8)/86400*0.48 lw 2 w lines title "Fitting last 8 days: exp(0.48)/day growth (roughly R_t(Omicron)/R_t(Others)=11) crossover at 2021-11-19", (x-strptime(fmt,"2021-11-20"))/86400*0.36 lw 2 w lines title "Fitting last 13 days: exp(0.36)/day growth (roughly R_t(Omicron)/R_t(Others)=6), crossover at 2021-11-20"
