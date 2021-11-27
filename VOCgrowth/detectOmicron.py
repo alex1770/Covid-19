@@ -3,7 +3,7 @@ from stuff import *
 import numpy as np
 from math import log,sqrt,floor
 
-mindate='2021-01-01'
+mindate='2020-01-01'
 maxdate='9999-12-31'
 
 datafile='cog_metadata_sorted.csv'
