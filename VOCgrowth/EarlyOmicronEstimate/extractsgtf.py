@@ -42,7 +42,8 @@ cc = np.array(im_frame,dtype=int)
 im_frame.close()
 # Top-leftian, row before column
 
-row0=23;row1=359
+row0,row1=23,359
+col0,col1=81,614
 r=cc.shape[0]
 c=cc.shape[1]
 
@@ -56,18 +57,18 @@ def process(bb,name):
   im.save(name+'_filtered.png')
 
   oo=cc.astype(np.dtype('uint8'))
-  for x in range(81,614): oo[mm[x],x]=[255,0,0]
+  for x in range(col0,col1): oo[mm[x],x]=[255,0,0]
   im=Image.fromarray(oo)
   im.save(name+'_sgtf.png')
 
   sgtf={}
-  for x in range(81,614):
+  for x in range(col0,col1):
     sgtf[daytodate(dateorigin+x)]=(mm[x]-y1[1])/(y0[1]-y1[1])*(y0[0]-y1[0])+y1[0]
   with open(name+'_sgtf','w') as fp:
     for date in sorted(list(sgtf)):
       print(date,"%6.2f"%sgtf[date],file=fp)
 
-  return sgtf
+  return mm,sgtf
 
 process(bb,'simple')
 
@@ -77,4 +78,41 @@ process(lrantialias,'LRantialias')
 # Hybrid because deantialiasing method is likely to work well for the vertical spike, but not when derivative is low.
 spike=605
 hybrid=np.concatenate([bb[:,:spike],lrantialias[:,spike:]],axis=1)
-process(hybrid,'hybrid')
+mm,sgtf=process(hybrid,'hybrid')
+
+dd=cc[:,:,0]-np.maximum(cc[:,:,1],cc[:,:,2])
+oo=(dd>3).astype(np.dtype('uint8'))*255
+im=Image.fromarray(oo)
+im.save('temp.png')
+
+ee=(dd>3)*1000+np.tile(np.arange(r-1,-1,-1)[:,None],(1,c))
+process(ee,'simplered')
+
+oo=cc.astype(np.dtype('uint8'))
+nn=np.zeros(c)
+for x in range(col0,col1):
+  s0=1
+  s1=10
+  f=0.5
+  mx=0
+  for y in range(row1-1,row0-1,-1):
+    if abs(y-mm[x])>1:
+      s0=(1-f)*s0+f*1
+      s1=(1-f)*s1+f*dd[y,x]
+      #print(y,dd[y,x],s1/s0)
+      if s1/s0>5: mx=y
+  nn[x]=mx
+  oo[mx,x]=[0,255,0]
+  oo[mm[x],x]=[255,0,0]
+
+im=Image.fromarray(oo)
+im.save('temp1.png')
+
+z0=(0,357)
+z1=(1600,126)
+with open('SA_sgtf','w') as fp:
+  for x in range(col0,col1):
+    if nn[x]>0:
+      date=daytodate(dateorigin+x)
+      n=max((nn[x]-z1[1])/(z0[1]-z1[1])*(z0[0]-z1[0])+z1[0],0)
+      print(date,"%6.2f  %6.0f"%(sgtf[date],n),file=fp)
