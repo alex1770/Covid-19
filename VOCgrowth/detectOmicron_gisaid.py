@@ -47,7 +47,7 @@ with open(datafile,'r') as fp:
     sc0=sc1=0
     for mut in muts:
       if mut in numut: sc0+=1;sc1+=numut[mut]
-    if sc1>thr: l.append((sc1,sc0,dt,name,lin,mut,row))
+    if sc1>thr: l.append((sc1,sc0,dt,name,lin,row))
 
 with open(datafile,'r') as fp:
   reader=csv.reader(fp,delimiter='\t')
@@ -57,6 +57,6 @@ l.sort()
 with open(outfile,'w') as fp:
   writer=csv.writer(fp,delimiter='\t')
   writer.writerow(headings)
-  for (sc1,sc0,dt,name,lin,mut,row) in l:
-    print("%4d %9.3f %12s %20s"%(sc0,sc1,dt,name),lin,mut)
+  for (sc1,sc0,dt,name,lin,row) in l:
+    print("%4d %9.3f %12s %20s"%(sc0,sc1,dt,name),lin)
     writer.writerow(row)
