@@ -1,4 +1,4 @@
-import csv,time,calendar,os,json,sys,datetime,requests,pytz,subprocess
+import csv,time,calendar,os,json,sys,datetime,subprocess
 
 # Input: 'it' is an iterable (such as a file pointer)
 # Returns map: {headings} -> [list of entries]
@@ -29,10 +29,11 @@ def loadcsv(fn,sep=","):
 
 # Generator for rows of csv with specified headings
 # (No type conversion - all items will be returned as strings)
+# If the heading is None then the entire line will be returned
 def csvrows_it(it,reqheadings,sep=","):
   reader=csv.reader(it,delimiter=sep)
   headings=next(reader)
-  dec={}
+  dec={None:None}
   for (i,h) in enumerate(headings): dec[h]=i
   cols=[]
   for h in reqheadings:
@@ -43,7 +44,7 @@ def csvrows_it(it,reqheadings,sep=","):
   while 1:
     row=next(reader,None)
     if row==None: return
-    yield [row[i] for i in cols]
+    yield [(row if i==None else row[i]) for i in cols]
   
 def csvrows(fn,reqheadings,sep=','):
   with open(fn,'r') as fp:
@@ -71,6 +72,7 @@ def daytodate(r):
   return time.strftime('%Y-%m-%d',t)
 
 def api_v2(req):
+  import requests
   url='https://api.coronavirus.data.gov.uk/v2/data?'
   response=requests.get(url+req,timeout=10)
   if not response.ok:
@@ -78,6 +80,7 @@ def api_v2(req):
   return response
 
 def apiday():
+  import pytz
   now=datetime.datetime.now(tz=pytz.timezone('Europe/London'))
   return datetoday(now.strftime('%Y-%m-%d'))-(now.hour<16)
 
