@@ -1,6 +1,5 @@
 # This is shorter/simpler than it looks. Most of the code is unused - just kept in for experimental purposes
-import os,json,sys,datetime,pytz
-from requests import get
+import os,json,sys,datetime,pytz,requests
 from subprocess import Popen,PIPE
 from math import sqrt,log,exp
 from scipy.optimize import minimize
@@ -19,6 +18,7 @@ monday=datetoday('2021-09-20')# Any Monday
 
 #specmode="TimeToPublishAdjustment"
 specmode="TTPadjrunningweekly"
+#specmode="TTPadjdailycompound"
 #specmode="Learning"
 #specmode="SimpleRestrict"
 #specmode="ByPublish"
@@ -38,6 +38,7 @@ displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
 #displayages=[(0,150)]
 #displayages=[(0,20),(20,30),(30,50),(50,70),(70,150)]
 #displayages=[(0,20),(20,30),(30,50),(50,55),(55,60),(60,65),(65,70),(70,150)]
+#displayages=[(5,15)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
 ONSpop={
@@ -95,6 +96,7 @@ def parseage(x):
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
 if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
+if len(sys.argv)>2: today-=int(sys.argv[2])
 
 #minday=datetoday('2021-06-01')
 minday=today-120
@@ -272,6 +274,14 @@ elif specmode=="TTPadjrunningweekly":
     n=min(npub-(i+1),infinity)
     if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
     else: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0)*hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0)
+elif specmode=="TTPadjdailycompound":
+  for i in range(nspec):
+    n=min(npub-(i+1),infinity)
+    if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
+    else:
+      sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
+      for j in range(1,infinity-n+1):
+        sp[i]=sp[i]*hh[i-j+1:i+n+1,i-j,:].sum(axis=0)/hh[i-j+1:i+n,i-j,:].sum(axis=0)
 elif specmode=="SimpleRestrict":
   for i in range(nspec):
     sp[i]=hh[i+1:i+2+skipdays,i,:].sum(axis=0)
