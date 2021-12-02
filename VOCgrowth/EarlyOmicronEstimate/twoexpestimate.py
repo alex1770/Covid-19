@@ -5,21 +5,21 @@ import numpy as np
 from random import random, seed
 
 cases=loadcsv('SAcasecounts.csv')
+cases['South Africa']=cases['Total']
+del cases['Total']
 
 N=len(cases['Date'])
 day0=datetoday(cases['Date'][0])
 day1=datetoday('2021-11-01')
 monday=datetoday('2021-11-01')
 np.set_printoptions(precision=4,linewidth=1000)
-prov='Gauteng'
+locname='South Africa'
 outputdir='output'
 conf=0.95
 ntrials=1000
 seed(42)
-if len(sys.argv)>1: prov=sys.argv[1]
+if len(sys.argv)>1: locname=sys.argv[1].replace('_',' ')
 if len(sys.argv)>2: ntrials=int(sys.argv[2])
-locname=(prov if prov!='Total' else 'South Africa')
-locnameclean=locname.replace(' ','_')
 
 # Model
 #         Delta                 Omicron
@@ -52,7 +52,7 @@ bounds=[(xx[0]-5,xx[0]+5), (-0.5,0.1), (xx[2]-5,xx[2]+5), (0.05, 0.4), (-1,1), (
 
 # Optimise after perturbing target data (cases)
 def opt(pert=0):
-  targ=[log(x)+pert*(random()*2-1) for x in cases[prov]]
+  targ=[log(x)+pert*(random()*2-1) for x in cases[locname]]
   res=minimize(NLL,xx,args=(targ,),bounds=bounds,method="SLSQP",options={'maxiter':10000})#, 'eps':1e-4, 'ftol':1e-12})
   if not res.success: raise RuntimeError(res.message)
   return res.x,res.fun
@@ -60,7 +60,7 @@ def opt(pert=0):
 # Central estimate
 params0,f0=opt(0)
 l=expand(params0)
-targ=[log(x) for x in cases[prov]]
+targ=[log(x) for x in cases[locname]]
 #for d in range(N):
 #  print(daytodate(day0+d),"%8.1f  %8.1f  %6.3f  %6.3f   %6.3f"%(l[d][0],l[d][1],l[d][3],targ[d],l[d][3]-targ[d]))
 #print()
@@ -119,7 +119,7 @@ for adj in [0,1]:
   data=[]
   data.append({
     'title': 'Reported case count',
-    'values': [(daytodate(day0+d),cases[prov][d]/weekadj[(d+day0-monday)%7]) for d in range(N)],
+    'values': [(daytodate(day0+d),cases[locname][d]/weekadj[(d+day0-monday)%7]) for d in range(N)],
     'with': ('points',1),
     'extra': 'pt 5'
   })
@@ -128,7 +128,7 @@ for adj in [0,1]:
     'values': [(daytodate(day0+d),exp(l[d][3])/weekadj[(d+day0-monday)%7]) for d in range(N)]
   })
   label='set label at graph 0.25,0.98 "'+'\\n'.join(text)+'"'
-  outfn=os.path.join(outputdir,locnameclean+'_cases'+'_adj'*adj+'.png')
+  outfn=os.path.join(outputdir,locname.replace(' ','_')+'_cases'+'_adj'*adj+'.png')
   makegraph(title=title, data=data, ylabel='New cases per day', outfn=outfn, extra=[label,'set key left','set logscale y 2'])
   print()
   
