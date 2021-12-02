@@ -12,12 +12,14 @@ day1=datetoday('2021-11-01')
 monday=datetoday('2021-11-01')
 np.set_printoptions(precision=4,linewidth=1000)
 prov='Gauteng'
+outputdir='output'
 conf=0.95
 ntrials=1000
 seed(42)
 if len(sys.argv)>1: prov=sys.argv[1]
 if len(sys.argv)>2: ntrials=int(sys.argv[2])
 locname=(prov if prov!='Total' else 'South Africa')
+locnameclean=locname.replace(' ','_')
 
 # Model
 #         Delta                 Omicron
@@ -98,7 +100,6 @@ def pr(x):
   print(x)
   text.append(x)
 
-#pr("Confidence intervals generated using a perturbation of exp(-%.3f ... %.3f) to case counts"%(perturbation,perturbation))
 pr("Growth advantage of Omicron over Delta: %.0f%% (%.0f%% - %.0f%%) per day"%((exp(params0[3]-params0[1])-1)*100,(exp(growthadv[0])-1)*100,(exp(growthadv[1])-1)*100))
 pr("Approximate R_t(Omicron)/R_t(Delta): %.2f (%.2f - %.2f), assuming a generation time of %.1f days"%(exp((params0[3]-params0[1])*gentime),exp(growthadv[0]*gentime),exp(growthadv[1]*gentime),gentime))
 pr("Growth of Omicron: %.0f%% (%.0f%% - %.0f%%) per day"%((exp(params0[3])-1)*100,(exp(growth[0])-1)*100,(exp(growth[1])-1)*100))
@@ -107,18 +108,27 @@ pr("Doubling time of Omicron: %.1f (%.1f - %.1f) days"%(log(2)/params0[3],log(2)
 pr("Program used: https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/EarlyOmicronEstimate/twoexpestimate.py")
 pr("Data source: https://www.nicd.ac.za/")
 
-title='Case count in '+locname+' decomposed as sum of falling exponential for Delta + rising exponential for Omicron'
-data=[]
-data.append({
-  'title': 'Actual case count',
-  'values': [(daytodate(day0+d),cases[prov][d]) for d in range(N)],
-  'with': ('points',1),
-  'extra': 'pt 5'
-})
+# Make graphs
+os.makedirs(outputdir,exist_ok=True)
 l=expand(params0,N)
-data.append({
-  'title': 'Model',
-  'values': [(daytodate(day0+d),exp(l[d][3])) for d in range(N)]
-})
-label='set label at graph 0.25,0.98 "'+'\\n'.join(text)+'"'
-makegraph(title=title, data=data, ylabel='New cases per day', outfn='SAcases.png', extra=[label,'set key left','set logscale y 2'])
+for adj in [0,1]:
+  if adj: weekadj=np.exp(params0[4:]-sum(params0[4:])/7)
+  else: weekadj=[1]*7
+  
+  title='Covid-19 case count in '+locname+' (with weekday adjustment)'*adj+' decomposed as sum of falling exponential for Delta + rising exponential for Omicron'
+  data=[]
+  data.append({
+    'title': 'Reported case count',
+    'values': [(daytodate(day0+d),cases[prov][d]/weekadj[(d+day0-monday)%7]) for d in range(N)],
+    'with': ('points',1),
+    'extra': 'pt 5'
+  })
+  data.append({
+    'title': 'Model',
+    'values': [(daytodate(day0+d),exp(l[d][3])/weekadj[(d+day0-monday)%7]) for d in range(N)]
+  })
+  label='set label at graph 0.25,0.98 "'+'\\n'.join(text)+'"'
+  outfn=os.path.join(outputdir,locnameclean+'_cases'+'_adj'*adj+'.png')
+  makegraph(title=title, data=data, ylabel='New cases per day', outfn=outfn, extra=[label,'set key left','set logscale y 2'])
+  print()
+  
