@@ -17,6 +17,7 @@ locname='South Africa'
 outputdir='output'
 conf=0.95
 ntrials=1000
+eps=0.1# Add this virtual case to case count to prevent singularity
 seed(42)
 if len(sys.argv)>1: locname=sys.argv[1].replace('_',' ')
 if len(sys.argv)>2: ntrials=int(sys.argv[2])
@@ -47,12 +48,12 @@ def NLL(xx,targ):
   return s
 
 # First guess
-xx=[5, -0.026, 2, 0.22, 0,0,0,0,0,0,0]
-bounds=[(xx[0]-5,xx[0]+5), (-0.5,0.1), (xx[2]-5,xx[2]+5), (0.05, 0.4), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (0,0)]
+xx=[5, -0.026, 0, 0.22, 0,0,0,0,0,0,0]
+bounds=[(xx[0]-10,xx[0]+10), (-0.5,0.1), (xx[2]-10,xx[2]+10), (0.05, 0.8), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (0,0)]
 
 # Optimise after perturbing target data (cases)
 def opt(pert=0):
-  targ=[log(x)+pert*(random()*2-1) for x in cases[locname]]
+  targ=[log(x+eps)+sqrt(pert/(x+eps))*(random()*2-1) for x in cases[locname]]
   res=minimize(NLL,xx,args=(targ,),bounds=bounds,method="SLSQP",options={'maxiter':10000})#, 'eps':1e-4, 'ftol':1e-12})
   if not res.success: raise RuntimeError(res.message)
   return res.x,res.fun
@@ -60,18 +61,19 @@ def opt(pert=0):
 # Central estimate
 params0,f0=opt(0)
 l=expand(params0)
-targ=[log(x) for x in cases[locname]]
+targ=[log(x+eps) for x in cases[locname]]
 #for d in range(N):
 #  print(daytodate(day0+d),"%8.1f  %8.1f  %6.3f  %6.3f   %6.3f"%(l[d][0],l[d][1],l[d][3],targ[d],l[d][3]-targ[d]))
 #print()
 
-# Work out residuals to see how 'accurate' the input data is
-resid=sqrt(sum((l[d][3]-targ[d])**2 for d in range(N))/N)
-perturbation=resid*sqrt(3)# Scale up so that the perturbuation distribution U[-perturbation,perturbation] has standard deviation equal to resid
+# Work out residuals to see how 'accurate' the input data is.
+# resid measures how 'pseudo' the pseudo-Poisson residuals are.
+resid=sum((l[d][3]-targ[d])**2*exp(targ[d]) for d in range(N))/N
+perturbation=resid*3# Scale up so that the perturbuation distribution U[-sqrt(perturbation),sqrt(perturbation)] has variance equal to resid
 
 # Reset first guess to central estimate
 xx=params0
-bounds=[(xx[0]-5,xx[0]+5), (-0.5,0.1), (xx[2]-5,xx[2]+5), (0.05, 0.4), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (0,0)]
+bounds=[(xx[0]-5,xx[0]+5), (xx[1]-0.3,xx[1]+0.3), (xx[2]-5,xx[2]+5), (xx[3]-0.3,xx[3]+0.3), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (-1,1), (0,0)]
 
 # Confidence analysis
 params=[]
@@ -130,5 +132,3 @@ for adj in [0,1]:
   label='set label at graph 0.25,0.98 "'+'\\n'.join(text)+'"'
   outfn=os.path.join(outputdir,locname.replace(' ','_')+'_cases'+'_adj'*adj+'.png')
   makegraph(title=title, data=data, ylabel='New cases per day', outfn=outfn, extra=[label,'set key left','set logscale y 2'])
-  print()
-  
