@@ -111,14 +111,14 @@ title='Case count in '+locname+' decomposed as sum of falling exponential for De
 data=[]
 data.append({
   'title': 'Actual case count',
-  'values': [(daytodate(day0+d),log(cases[prov][d])/log(2)) for d in range(N)],
+  'values': [(daytodate(day0+d),cases[prov][d]) for d in range(N)],
   'with': ('points',1),
   'extra': 'pt 5'
 })
 l=expand(params0,N)
 data.append({
   'title': 'Model',
-  'values': [(daytodate(day0+d),l[d][3]/log(2)) for d in range(N)]
+  'values': [(daytodate(day0+d),exp(l[d][3])) for d in range(N)]
 })
 label='set label at graph 0.25,0.98 "'+'\\n'.join(text)+'"'
-makegraph(title=title, data=data, ylabel='log_2 new cases per day', outfn='SAcases.png', extra=[label,'set key left'])
+makegraph(title=title, data=data, ylabel='New cases per day', outfn='SAcases.png', extra=[label,'set key left','set logscale y 2'])
