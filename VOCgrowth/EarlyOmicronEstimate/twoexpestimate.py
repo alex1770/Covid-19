@@ -104,11 +104,12 @@ def pr(x):
 
 pr("Growth advantage of Omicron over Delta: %.0f%% (%.0f%% - %.0f%%) per day"%((exp(params0[3]-params0[1])-1)*100,(exp(growthadv[0])-1)*100,(exp(growthadv[1])-1)*100))
 pr("Approximate R_t(Omicron)/R_t(Delta): %.2f (%.2f - %.2f), assuming a generation time of %.1f days"%(exp((params0[3]-params0[1])*gentime),exp(growthadv[0]*gentime),exp(growthadv[1]*gentime),gentime))
+print('"'+locname+'"',exp((params0[3]-params0[1])*gentime),exp(growthadv[0]*gentime),exp(growthadv[1]*gentime),file=sys.stderr)
 pr("Growth of Omicron: %.0f%% (%.0f%% - %.0f%%) per day"%((exp(params0[3])-1)*100,(exp(growth[0])-1)*100,(exp(growth[1])-1)*100))
 pr("Approximate R_t(Omicron): %.2f (%.2f - %.2f), assuming a generation time of %.1f days"%(exp(params0[3]*gentime),exp(growth[0]*gentime),exp(growth[1]*gentime),gentime))
 pr("Doubling time of Omicron: %.1f (%.1f - %.1f) days"%(log(2)/params0[3],log(2)/growth[1],log(2)/growth[0]))
-pr("Program used: https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/EarlyOmicronEstimate/twoexpestimate.py")
-pr("Data source: https://www.nicd.ac.za/")
+pr("Description: http://sonorouschocolate.com/covid19/index.php?title=Early\\\_Omicron\\\_Growth\\\_Estimate")
+pr("Data source: https://www.nicd.ac.za/ at "+cases['Date'][-1])
 
 # Make graphs
 os.makedirs(outputdir,exist_ok=True)
