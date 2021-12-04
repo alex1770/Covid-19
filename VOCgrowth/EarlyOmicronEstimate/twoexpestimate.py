@@ -102,12 +102,15 @@ def pr(x):
   print(x)
   text.append(x)
 
-pr("Growth advantage of Omicron over Delta: %.0f%% (%.0f%% - %.0f%%) per day"%((exp(params0[3]-params0[1])-1)*100,(exp(growthadv[0])-1)*100,(exp(growthadv[1])-1)*100))
+pr("Growth advantage of Omicron over Delta: %.0f%% (%.0f%% - %.0f%%) each day = continuous growth of %.2f (%.2f - %.2f) per day"%((exp(params0[3]-params0[1])-1)*100,(exp(growthadv[0])-1)*100,(exp(growthadv[1])-1)*100,params0[3],growthadv[0],growthadv[1]))
 pr("Approximate R_t(Omicron)/R_t(Delta): %.2f (%.2f - %.2f), assuming a generation time of %.1f days"%(exp((params0[3]-params0[1])*gentime),exp(growthadv[0]*gentime),exp(growthadv[1]*gentime),gentime))
-print('"'+locname+'"',exp((params0[3]-params0[1])*gentime),exp(growthadv[0]*gentime),exp(growthadv[1]*gentime),file=sys.stderr)
-pr("Growth of Omicron: %.0f%% (%.0f%% - %.0f%%) per day"%((exp(params0[3])-1)*100,(exp(growth[0])-1)*100,(exp(growth[1])-1)*100))
+#print('"'+locname+'"',exp((params0[3]-params0[1])*gentime),exp(growthadv[0]*gentime),exp(growthadv[1]*gentime),file=sys.stderr)
+pr("Doubling time of Omicron/Delta: %.1f (%.1f - %.1f) days"%(log(2)/(params0[3]-params0[1]),log(2)/growthadv[1],log(2)/growthadv[0]))
+pr("")
+pr("Growth of Omicron: %.0f%% (%.0f%% - %.0f%%) each day = continuous growth of %.2f (%.2f - %.2f) per day"%((exp(params0[3])-1)*100,(exp(growth[0])-1)*100,(exp(growth[1])-1)*100,params0[3],growth[0],growth[1]))
 pr("Approximate R_t(Omicron): %.2f (%.2f - %.2f), assuming a generation time of %.1f days"%(exp(params0[3]*gentime),exp(growth[0]*gentime),exp(growth[1]*gentime),gentime))
 pr("Doubling time of Omicron: %.1f (%.1f - %.1f) days"%(log(2)/params0[3],log(2)/growth[1],log(2)/growth[0]))
+pr("")
 pr("Description: http://sonorouschocolate.com/covid19/index.php?title=Early\\\_Omicron\\\_Growth\\\_Estimate")
 pr("Data source: https://www.nicd.ac.za/ at "+cases['Date'][-1])
 
