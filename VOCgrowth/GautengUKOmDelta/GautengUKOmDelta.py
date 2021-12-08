@@ -135,5 +135,5 @@ for i in range(nit):
   histRR0.append(RR0)
 histdoub.sort()
 histRR0.sort()
-print("Doubling period: %.2f (%.2f - %.2f) days"%confint(histdoub,0.95))
-print("R0 ratio: %.2f (%.2f - %.2f)"%confint(histRR0,0.95))
+print("Estimated UK doubling period:    %.2f (%.2f - %.2f) days"%confint(histdoub,0.95))
+print("Estimated R0(Omicron)/R0(Delta): %.2f (%.2f - %.2f)"%confint(histRR0,0.95))
