@@ -1,5 +1,8 @@
 import os,bs4,datetime,subprocess,json
 
+# Decompile hospital surveillance reports from NICD, South Africa and put into json format
+# From https://www.nicd.ac.za/diseases-a-z-index/disease-index-covid-19/surveillance-reports/daily-hospital-surveillance-datcov-report/
+
 datafile='SouthAfricaHospData.json'
 
 # pdf filenames don't always contain their date, so get these from the index page
@@ -27,8 +30,12 @@ for x in os.walk('www.nicd.ac.za/wp-content/uploads'):
       pdfs.append((date,path))
 pdfs.sort(reverse=True)
 
-
+#if os.path.isfile(datafile):
+#  with open(datafile) as fp: data=json.load(fp)
+#else:
+#  data={}
 data={}
+
 provinces=['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape']
 headings=['Facilities Reporting','Admissions to Date','Died to Date','Discharged to Date','Currently Admitted','Currently in ICU','Currently Ventilated','Currently Oxygenated','Admissions in Previous Day']
 keyd={x.split()[0]:(len(x.split()),x) for x in provinces}
