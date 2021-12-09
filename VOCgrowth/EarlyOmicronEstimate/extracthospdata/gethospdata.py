@@ -1,4 +1,6 @@
-import os,bs4,datetime,subprocess
+import os,bs4,datetime,subprocess,json
+
+datafile='SouthAfricaHospData.json'
 
 # pdf filenames don't always contain their date, so get these from the index page
 path2date={}
@@ -27,7 +29,10 @@ pdfs.sort(reverse=True)
 
 
 data={}
-
+provinces=['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape']
+headings=['Facilities Reporting','Admissions to Date','Died to Date','Discharged to Date','Currently Admitted','Currently in ICU','Currently Ventilated','Currently Oxygenated','Admissions in Previous Day']
+keyd={x.split()[0]:(len(x.split()),x) for x in provinces}
+keyd['Total']=(1,'South Africa')
 for (date,path) in pdfs:
   # pdftotext -layout <file> -
   po=subprocess.Popen(['/usr/bin/pdftotext','-layout',path,'-'],stdout=subprocess.PIPE,encoding='utf-8')
@@ -36,13 +41,23 @@ for (date,path) in pdfs:
   p.close()
   po.wait()
   
-  #for x in text.split('\n'):
-  #  print(x)
   text2=text.split('\n')
   i0=1000000
   print(date)
+  intable=False
+  tabletitle='Summary of reported COVID-19 admissions by province'
+  data[date]={}
   for (i,l) in enumerate(text2):
-    t='Summary of reported COVID-19 admissions by province'
-    if l.strip()[:len(t)]==t and 'sector' in l: i0=i
-    if i>i0 and i<i0+3: print(l)
-  print()
+    l=l.strip()
+    if intable:
+      ll=l.split()
+      if len(ll)==0: continue
+      if ll[0] in keyd:
+        (n,location)=keyd[ll[0]]
+        data[date][location]={}
+        for desc,num in zip(headings,ll[n:]):data[date][location][desc]=int(num)
+      if ll[0]=='Total': break
+    else:
+      if l[:len(tabletitle)]==tabletitle and 'sector' in l: intable=True
+
+with open(datafile,'w') as fp: json.dump(data,fp,indent=2)
