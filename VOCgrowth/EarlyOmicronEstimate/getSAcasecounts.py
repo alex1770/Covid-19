@@ -5,21 +5,21 @@ mindate='2021-05-01'
 if len(sys.argv)>1: mindate=sys.argv[1]
 datafile='SAcasecounts.csv'
 
-provinces=['Total','Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal', 'Limpopo', 'Mpumalanga', 'North West', 'Northern Cape', 'Western Cape']
+provinces=['Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal', 'Limpopo', 'Mpumalanga', 'North West', 'Northern Cape', 'Western Cape']
 
 d=datetime.datetime.now(pytz.timezone("Africa/Johannesburg"))
 today=datetoday(d.strftime('%Y-%m-%d'))
 if d.hour+d.minute/60<12: today-=1# Don't look for new cases before noon local time
 
 newdict={}    
-headings=['Date']+provinces
+headings=['Date','Total']+provinces
 if os.path.isfile(datafile):
   with open(datafile,'r') as fp:
     r=csv.reader(fp)
     h=next(r)
     if h==headings:
       for crow in r:
-        newdict[datetoday(crow[0])]=[int(x) for x in crow[1:]]
+        newdict[datetoday(crow[0])]=[int(x) for x in crow[2:]]
 
 def getint(t):
   if '\xa0\xa0' in t: t=t[:t.find('\xa0\xa0')]# Sometimes the next column is concatenated in the same cell, separated by non-breaking spaces
@@ -72,8 +72,8 @@ for day in range(minday,today+1):
     if not ok: break
     if rownum>0 and col0==None:
       # Some tables, e.g., 2021-06-02, don't have a province column, so assume default order
-      if rownum<len(provinces): prov=provinces[rownum]
-      else: prov='Total'# It's possible this will pick up the 'Unknown' row, but it will later be overwritten by the correct 'Total' row
+      if rownum-1<len(provinces): prov=provinces[rownum-1]
+      else: break
     colnum=0
     for col in row.find_all('td'):
       if 'width' in col.attrs and int(col.attrs['width'])<20: continue
@@ -100,4 +100,4 @@ with open(datafile,'w') as fp:
   w=csv.writer(fp)
   w.writerow(headings)
   for day in sorted(list(newdict)):
-    w.writerow([daytodate(day)]+newdict[day])
+    w.writerow([daytodate(day),sum(newdict[day])]+newdict[day])
