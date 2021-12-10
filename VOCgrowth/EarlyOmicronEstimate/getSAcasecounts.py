@@ -21,7 +21,7 @@ if os.path.isfile(datafile):
       for crow in r:
         newdict[datetoday(crow[0])]=[int(x) for x in crow[1:]]
 
-totdict={}# Not currently used
+totdict={}
 minday=datetoday(mindate)
 for day in range(minday,today+1):
   date=daytodate(day)
@@ -44,6 +44,9 @@ for day in range(minday,today+1):
   elif (date>='2021-07-01' and date<='2021-07-06') or date=='2021-07-09' or (date>='2021-09-06' and date<='2021-09-09'):
     # It uses different day convention for these days
     suffix=d.strftime('%d-%B-%Y').strip().lower()
+    url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
+  elif date<'2021-04-01' or (date>='2021-04-10' and date<'2021-05-01'):
+    suffix=d.strftime('%e-%b-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
   else:
     suffix=d.strftime('%e-%B-%Y').strip().lower()
@@ -75,7 +78,7 @@ for day in range(minday,today+1):
       if rownum==0:
         if t=='Province': col0=colnum
         if 'new cases on' in t.lower(): col1=colnum
-        if 'total cases for' in t.lower(): col2=colnum
+        if 'total cases for' in t.lower() or (date<'2021-05-01' and t[:6]=='Cases '): col2=colnum
       else:
         if colnum==col0: prov=t.strip('*')
         if colnum==col1: newcases[prov]=int(t.replace(',','').replace(' ','').replace('\xa0',''))
