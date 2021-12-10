@@ -32,13 +32,14 @@ pdfs.sort(reverse=True)
 
 os.makedirs(textdir,exist_ok=True)
 for (date,path) in pdfs:
-  print(date)
-  # pdftotext -layout <file> -
-  po=subprocess.Popen(['/usr/bin/pdftotext','-layout',path,'-'],stdout=subprocess.PIPE,encoding='utf-8')
-  p=po.stdout
-  text=p.read()
-  p.close()
-  po.wait()
-
-  with open(os.path.join(textdir,date),'w') as fp:
-    fp.write(text)
+  dest=os.path.join(textdir,date)
+  if not os.path.isfile(dest):
+    print(date)
+    # pdftotext -layout <file> -
+    po=subprocess.Popen(['/usr/bin/pdftotext','-layout',path,'-'],stdout=subprocess.PIPE,encoding='utf-8')
+    p=po.stdout
+    text=p.read()
+    p.close()
+    po.wait()
+    with open(dest,'w') as fp:
+      fp.write(text)
