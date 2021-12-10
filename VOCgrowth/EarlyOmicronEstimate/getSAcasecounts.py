@@ -1,7 +1,7 @@
 from stuff import *
 import requests,bs4,pytz,datetime,csv,sys
 
-mindate='2021-06-17'
+mindate='2021-05-31'
 if len(sys.argv)>1: mindate=sys.argv[1]
 datafile='SAcasecounts.csv'
 
@@ -27,8 +27,17 @@ for day in range(minday,today+1):
   date=daytodate(day)
   if day in newdict: continue
   d=datetime.datetime.strptime(date,'%Y-%m-%d')
-  if date=='2021-10-30':
-    # For some reason, the normal URL doesn't exist for 30 October 2021
+  # Special case URLs
+  if date=='2021-05-25':
+    # This date is missing - can't find an alternative
+    continue
+  if date=='2021-06-08':
+    # 8 June 2021 doesn't exist in the records, but can infer from 9 June
+    totdict[day]=[1712939-8881, 199165-253, 105411-620, 484116-5111, 341871-537, 66642-229, 84510-363, 79982-650, 53433-335, 297809-783]
+    continue
+  if date=='2021-06-11':
+    url='https://www.nicd.ac.za/29584-2/'
+  elif date=='2021-10-30':
     url='https://www.nicd.ac.za/36074-2/'
   elif (date>='2021-07-01' and date<='2021-07-06') or date=='2021-07-09' or (date>='2021-09-06' and date<='2021-09-09'):
     # It uses different day convention for these days
@@ -40,8 +49,6 @@ for day in range(minday,today+1):
   print('Loading',date)
   resp=requests.get(url)
   if not resp.ok:
-    #if day<today: raise RuntimeError('Could not load '+url)
-    #break
     if day<today: print('Could not load '+url,file=sys.stderr)
     continue
   f=max(resp.text.find('PROVINCIAL BREAKDOWN'),0)
@@ -62,7 +69,7 @@ for day in range(minday,today+1):
     for col in row.find_all('td'):
       if 'width' in col.attrs and int(col.attrs['width'])<20: continue
       t=col.text.strip()
-      if t=='': ok=0;break
+      if t=='': break#ok=0;break# Can't do ok=0 for 2021-06-16. Can't remember why needed ok=0
       if rownum==0:
         if t=='Province': col0=colnum
         if 'new cases on' in t.lower(): col1=colnum
@@ -76,6 +83,10 @@ for day in range(minday,today+1):
   if col1!=None: newdict[day]=[newcases[prov] for prov in provinces]
   totdict[day]=[totcases[prov] for prov in provinces]
 
+for day in range(minday+1,today+1):
+  if day not in newdict and day in totdict and day-1 in totdict:
+    newdict[day]=[d1-d0 for (d0,d1) in zip(totdict[day-1],totdict[day])]
+  
 with open(datafile,'w') as fp:
   w=csv.writer(fp)
   w.writerow(headings)
