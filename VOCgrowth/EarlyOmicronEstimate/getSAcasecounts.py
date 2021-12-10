@@ -1,7 +1,7 @@
 from stuff import *
 import requests,bs4,pytz,datetime,csv,sys
 
-mindate='2021-05-31'
+mindate='2021-05-01'
 if len(sys.argv)>1: mindate=sys.argv[1]
 datafile='SAcasecounts.csv'
 
@@ -25,7 +25,7 @@ totdict={}# Not currently used
 minday=datetoday(mindate)
 for day in range(minday,today+1):
   date=daytodate(day)
-  if day in newdict: continue
+  if day in newdict and day+1 in newdict: continue
   d=datetime.datetime.strptime(date,'%Y-%m-%d')
   # Special case URLs
   if date=='2021-05-25':
@@ -35,7 +35,9 @@ for day in range(minday,today+1):
     # 8 June 2021 doesn't exist in the records, but can infer from 9 June
     totdict[day]=[1712939-8881, 199165-253, 105411-620, 484116-5111, 341871-537, 66642-229, 84510-363, 79982-650, 53433-335, 297809-783]
     continue
-  if date=='2021-06-11':
+  if date=='2021-05-08':
+    url='https://www.nicd.ac.za/28717-2/'
+  elif date=='2021-06-11':
     url='https://www.nicd.ac.za/29584-2/'
   elif date=='2021-10-30':
     url='https://www.nicd.ac.za/36074-2/'
@@ -76,8 +78,8 @@ for day in range(minday,today+1):
         if 'total cases for' in t.lower(): col2=colnum
       else:
         if colnum==col0: prov=t.strip('*')
-        if colnum==col1: newcases[prov]=int(t.replace(',','').replace(' ',''))
-        if colnum==col2: totcases[prov]=int(t.replace(',','').replace(' ',''))
+        if colnum==col1: newcases[prov]=int(t.replace(',','').replace(' ','').replace('\xa0',''))
+        if colnum==col2: totcases[prov]=int(t.replace(',','').replace(' ','').replace('\xa0',''))
       colnum+=1
     rownum+=1
   if col1!=None: newdict[day]=[newcases[prov] for prov in provinces]
