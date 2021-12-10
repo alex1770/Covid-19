@@ -1,7 +1,7 @@
 from stuff import *
 import requests,bs4,pytz,datetime,csv,sys
 
-mindate='2021-05-01'
+mindate='2020-12-12'
 if len(sys.argv)>1: mindate=sys.argv[1]
 datafile='SAcasecounts.csv'
 
@@ -24,7 +24,7 @@ if os.path.isfile(datafile):
 def getint(t):
   if '\xa0\xa0' in t: t=t[:t.find('\xa0\xa0')]# Sometimes the next column is concatenated in the same cell, separated by non-breaking spaces
   return int(t.replace(',','').replace(' ','').replace('\xa0',''))
-        
+      
 totdict={}
 minday=datetoday(mindate)
 for day in range(minday,today+1):
@@ -32,21 +32,31 @@ for day in range(minday,today+1):
   if day in newdict and day+1 in newdict: continue
   d=datetime.datetime.strptime(date,'%Y-%m-%d')
   # Special case URLs
-  if date=='2021-05-25':
+  if date=='2020-12-31':
+    #url='https://sacoronavirus.co.za/2020/12/31/update-on-covid-19-31st-december-2020/'
+    totdict[day]=[170687, 62670, 287018, 199983, 25076, 36707, 40185, 25314, 209521]
+    continue
+  elif date=='2021-01-06':
+    url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-06-january-20210/'
+  elif date=='2021-01-20':
+    url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-19-jan-2021-2/'
+  elif date=='2021-05-25':
     # This date is missing - can't find an alternative
     continue
-  if date=='2021-06-08':
+  elif date=='2021-06-08':
     # 8 June 2021 doesn't exist in the records, but can infer from 9 June
     totdict[day]=[1712939-8881, 199165-253, 105411-620, 484116-5111, 341871-537, 66642-229, 84510-363, 79982-650, 53433-335, 297809-783]
     continue
-  if date=='2021-05-08':
+  elif date=='2021-05-08':
     url='https://www.nicd.ac.za/28717-2/'
   elif date=='2021-06-11':
     url='https://www.nicd.ac.za/29584-2/'
   elif date=='2021-10-30':
     url='https://www.nicd.ac.za/36074-2/'
+  elif date<'2021-01-10':
+    suffix=d.strftime('%d-%b-%Y').strip().lower()
+    url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
   elif (date>='2021-07-01' and date<='2021-07-06') or date=='2021-07-09' or (date>='2021-09-06' and date<='2021-09-09'):
-    # It uses different day convention for these days
     suffix=d.strftime('%d-%B-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
   elif date<'2021-04-01' or (date>='2021-04-10' and date<'2021-05-01'):
@@ -55,7 +65,7 @@ for day in range(minday,today+1):
   else:
     suffix=d.strftime('%e-%B-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
-  print('Loading',date)
+  print('Loading',date,'from',url)
   resp=requests.get(url)
   if not resp.ok:
     if day<today: print('Could not load '+url,file=sys.stderr)
@@ -92,6 +102,15 @@ for day in range(minday,today+1):
   if col1!=None: newdict[day]=[newcases[prov] for prov in provinces]
   totdict[day]=[totcases[prov] for prov in provinces]
 
+# Interpolate missing 2021-05-25 data
+# https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-25-may-2021/ only gives 24 May data + overall total
+if 18771 in totdict and 18773 in totdict and 18772 not in totdict:
+  tot18771=sum(totdict[18771])
+  tot18772=1640932# Total reported on 25 May
+  tot18773=sum(totdict[18773])
+  al=(tot18772-tot18771)/(tot18773-tot18771)
+  totdict[18772]=[int(x+al*(y-x)+.45) for (x,y) in zip(totdict[18771],totdict[18773])]
+    
 for day in range(minday+1,today+1):
   if day not in newdict and day in totdict and day-1 in totdict:
     newdict[day]=[d1-d0 for (d0,d1) in zip(totdict[day-1],totdict[day])]
