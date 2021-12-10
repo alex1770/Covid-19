@@ -21,6 +21,10 @@ if os.path.isfile(datafile):
       for crow in r:
         newdict[datetoday(crow[0])]=[int(x) for x in crow[1:]]
 
+def getint(t):
+  if '\xa0\xa0' in t: t=t[:t.find('\xa0\xa0')]# Sometimes the next column is concatenated in the same cell, separated by non-breaking spaces
+  return int(t.replace(',','').replace(' ','').replace('\xa0',''))
+        
 totdict={}
 minday=datetoday(mindate)
 for day in range(minday,today+1):
@@ -81,8 +85,8 @@ for day in range(minday,today+1):
         if 'total cases for' in t.lower() or (date<'2021-05-01' and t[:6]=='Cases '): col2=colnum
       else:
         if colnum==col0: prov=t.strip('*')
-        if colnum==col1: newcases[prov]=int(t.replace(',','').replace(' ','').replace('\xa0',''))
-        if colnum==col2: totcases[prov]=int(t.replace(',','').replace(' ','').replace('\xa0',''))
+        if colnum==col1: newcases[prov]=getint(t)
+        if colnum==col2: totcases[prov]=getint(t)
       colnum+=1
     rownum+=1
   if col1!=None: newdict[day]=[newcases[prov] for prov in provinces]
@@ -91,7 +95,7 @@ for day in range(minday,today+1):
 for day in range(minday+1,today+1):
   if day not in newdict and day in totdict and day-1 in totdict:
     newdict[day]=[d1-d0 for (d0,d1) in zip(totdict[day-1],totdict[day])]
-  
+
 with open(datafile,'w') as fp:
   w=csv.writer(fp)
   w.writerow(headings)
