@@ -29,10 +29,11 @@ weekdayfix="MinSquareLogRatios"
 #weekdayfix="MagicDeconv"
 
 # These need to be disjoint at the moment
-displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
+#displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,40),(40,50),(50,150)]
 #displayages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 #displayages=[(a,a+10) for a in range(0,80,10)]+[(80,150)]
+displayages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,35),(35,50),(50,65),(65,150)]
 #displayages=[(0,5),(5,10),(10,15),(15,20),(20,25),(25,65),(65,80),(80,150)]
 #displayages=[(0,150)]
@@ -244,7 +245,7 @@ targ=np.array(targ)
 rr=[]
 for s in range(1,1<<n):
   l=[i for i in range(n) if (s&1<<i)]
-  res=np.linalg.lstsq(data[:,l],targ)
+  res=np.linalg.lstsq(data[:,l],targ,rcond=None)
   rr.append((l,res))
 rr.sort(key=lambda x:len(x[0])+1e-4*x[1][1][0])
 for (l,res) in rr:
