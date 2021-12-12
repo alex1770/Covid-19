@@ -128,25 +128,29 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
 # Simple weekday adjustment
 def weekdayadj(nn,eps=0.5):
   # y_{day} = log(nn(day)+eps) + w_{day%7}
-  # error = sum_{day} (y_{day}-y_{day+1})^2
+  # error = sum_{day} (y_{day+1}-y_{day})^2
   # Choose w0, ..., w5 (w6 = 0, gauge fix) to minimise error
-  # Alter to use lstsq
-  from scipy.optimize import minimize
   from math import log,exp
+  import numpy as np
 
   n=len(nn)
   targ=[log(x+eps) for x in nn]
-  def NLL(ww):
-    l=[targ[d]+ww[d%7] for d in range(n)]
-    s=0
-    for d in range(n-1): s+=(l[d+1]-l[d])**2
-    return s
-  
-  ww=[0]*7
-  bounds=[(-2,2)]*6+[(0,0)]
-  res=minimize(NLL,ww,bounds=bounds,method="SLSQP",options={'maxiter':10000})
-  if not res.success: raise RuntimeError(res.message)
-  weekadj=[exp(x) for x in res.x]
+  A=np.zeros([6,6])
+  b=np.zeros(6)
+  c=0
+  for i in range(n-1):
+    d=targ[i+1]-targ[i]
+    i0=i%7
+    i1=(i+1)%7
+    if i1<6: A[i1,i1]+=1
+    if i0<6: A[i0,i0]+=1
+    if i0<6 and i1<6: A[i0,i1]-=1;A[i1,i0]-=1
+    if i1<6: b[i1]-=d
+    if i0<6: b[i0]+=d
+    c+=d*d
+  ww=np.linalg.lstsq(A,b,rcond=None)[0]
+  ww7=list(ww)+[0]
+  weekadj=[exp(x) for x in ww7]
   adjusted=[nn[d]*weekadj[d%7] for d in range(n)]
   s=sum(nn)/sum(adjusted)
   return [s*x for x in adjusted]
@@ -177,4 +181,3 @@ def weekdayadj_slow(nn,alpha=0.1):
   if not res.success: raise RuntimeError(res.message)
   adjusted=np.exp(res.x)
   return adjusted*nn.sum()/adjusted.sum()
-  
