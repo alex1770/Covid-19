@@ -124,3 +124,57 @@ def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='
     write("e")
   p.close();po.wait()
   print("Written graph to %s"%outfn)
+
+# Simple weekday adjustment
+def weekdayadj(nn,eps=0.5):
+  # y_{day} = log(nn(day)+eps) + w_{day%7}
+  # error = sum_{day} (y_{day}-y_{day+1})^2
+  # Choose w0, ..., w5 (w6 = 0, gauge fix) to minimise error
+  # Alter to use lstsq
+  from scipy.optimize import minimize
+  from math import log,exp
+
+  n=len(nn)
+  targ=[log(x+eps) for x in nn]
+  def NLL(ww):
+    l=[targ[d]+ww[d%7] for d in range(n)]
+    s=0
+    for d in range(n-1): s+=(l[d+1]-l[d])**2
+    return s
+  
+  ww=[0]*7
+  bounds=[(-2,2)]*6+[(0,0)]
+  res=minimize(NLL,ww,bounds=bounds,method="SLSQP",options={'maxiter':10000})
+  if not res.success: raise RuntimeError(res.message)
+  weekadj=[exp(x) for x in res.x]
+  adjusted=[nn[d]*weekadj[d%7] for d in range(n)]
+  s=sum(nn)/sum(adjusted)
+  return [s*x for x in adjusted]
+    
+# Slower weekday adjustment (n parameters)
+def weekdayadj_slow(nn,alpha=0.1):
+  # Find w0,...,w6 and Poisson parameters lambda_i to maximise
+  # Sum_i log(P(Poisson(w_{i%7}*lambda_i)=nn_i)) - alpha*sum_i (log(lambda_{i+1})-log(lambda_i))^2
+  from scipy.optimize import minimize
+  from math import log
+  import numpy as np
+  n=len(nn)
+  nn=np.array(nn)
+  def LL(xx):
+    ll=(nn*xx).sum()
+    ee=np.exp(xx)
+    for d in range(7):
+      ll-=nn[d::7].sum()*log(ee[d::7].sum())
+    dd=xx[1:]-xx[:-1]
+    ll-=alpha*(dd*dd).sum()
+    return ll
+  xx=np.log(np.array(nn)+.5)
+  LL0=LL(xx)# Baseline so that NLL returns small values
+  def NLL(xx): return LL0-LL(xx)
+  bounds=[(x-2,x+2) for x in xx]
+  bounds[-1]=(xx[-1],xx[-1])# Gauge fix because NLL is invariant under xx -> xx+const
+  res=minimize(NLL,xx,bounds=bounds,method="SLSQP",options={'maxiter':10000})#, 'eps':1e-4, 'ftol':1e-12})
+  if not res.success: raise RuntimeError(res.message)
+  adjusted=np.exp(res.x)
+  return adjusted*nn.sum()/adjusted.sum()
+  
