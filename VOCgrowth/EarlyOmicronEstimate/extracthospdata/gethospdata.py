@@ -23,22 +23,23 @@ for date in pdfs:
   text2=text.split('\n')
 
   # Main table (National version)
-  i0=1000000
-  intable=False
-  tabletitle='Summary of reported COVID-19 admissions by province'
-  if date not in data: data[date]={}
-  for (i,l) in enumerate(text2):
-    l=l.strip()
-    if intable:
-      ll=l.split()
-      if len(ll)==0: continue
-      if ll[0] in keyd:
-        (n,location)=keyd[ll[0]]
-        data[date][location]={}
-        for desc,num in zip(headings,ll[n:]):data[date][location][desc]=int(num)
-      if ll[0]=='Total': break
-    else:
-      if l[:len(tabletitle)]==tabletitle and 'sector' in l: intable=True
+  if date>='2020-05-26':
+    i0=1000000
+    intable=False
+    tabletitle='Summary of reported COVID-19 admissions by province'
+    if date not in data: data[date]={}
+    for (i,l) in enumerate(text2):
+      l=l.strip()
+      if intable:
+        ll=l.split()
+        if len(ll)==0: continue
+        if ll[0] in keyd:
+          (n,location)=keyd[ll[0]]
+          data[date][location]={}
+          for desc,num in zip(headings,ll[n:]):data[date][location][desc]=int(num)
+        if ll[0]=='Total': break
+      else:
+        if l[:len(tabletitle)]==tabletitle and 'sector' in l: intable=True
 
   # Admissions & deaths by age group
   # Before 2021-10-27 there was a different format with missing elements that I'm not going to try to parse
