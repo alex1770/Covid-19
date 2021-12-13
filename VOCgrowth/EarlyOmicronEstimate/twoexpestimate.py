@@ -8,11 +8,12 @@ cases=loadcsv('SAcasecounts.csv')
 cases['South Africa']=cases['Total']
 del cases['Total']
 
-mindate='2021-10-01'
+mindate='2021-09-01'
+maxdate='2021-12-04'
 minday=datetoday(mindate)
+maxday=datetoday(maxdate)
 day0=datetoday(cases['Date'][0])
-if minday>day0:
-  for x in cases: cases[x]=cases[x][minday-day0:]
+for x in cases: cases[x]=cases[x][max(minday-day0,0):maxday+1-day0]
 N=len(cases['Date'])
 day0=datetoday(cases['Date'][0])
 day1=datetoday('2021-11-01')
