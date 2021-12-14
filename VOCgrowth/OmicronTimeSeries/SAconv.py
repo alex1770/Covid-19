@@ -75,20 +75,27 @@ weekdayadj7=[exp(xx[4+r]+adj) for r in range(7)]
 day2=Date('2021-10-18')
 day3=Date('2021-01-01')
 day4=Date(max(data['date']))
+dataday0=data['date'][0]
+key='admissions'
+while data[key][day4-dataday0]=='': day4=day4-1
+
+target=data[key][day3-dataday0:day4-dataday0+1]
+
 est_delta=[]
 est_omicron=[]
 weekdayadj=[]
 for day in Daterange(day3,day4+1):
   weekdayadj.append(weekdayadj7[(day-monday)%7])
   if day<day2:
-    est_delta.append(data['cases'][day-data['date'][0]])
+    est_delta.append(data['cases'][day-dataday0])
     est_omicron.append(0)
   else:
-    ncases=data['cases'][day-data['date'][0]]
+    ncases=data['cases'][day-dataday0]
     modelleddelta=exp(xx[0]+xx[1]*(day-day1))*weekdayadj[-1]
     est_delta.append(min(ncases,modelleddelta))
     est_omicron.append(ncases-est_delta[-1])
 
+n=day4-day3+1
 est_delta=np.array(est_delta)
 est_omicron=np.array(est_omicron)
 weekdayadj=np.array(weekdayadj)
@@ -111,6 +118,10 @@ for adj in [0,1]:
   grdata.append({
     'title': 'Model',
     'values': [(str(day0+d),(est_delta[offset+d]+0*est_omicron[offset+d])/weekadj[d]) for d in range(N)]
+  })
+  grdata.append({
+    'title': 'Target',
+    'values': [(str(day0+d),target[offset+d]) for d in range(N)]
   })
   label='set label at graph 0.25,0.98 "Stuff"'
   outfn=os.path.join(outputdir,locname.replace(' ','_')+'_cases'+'_adj'*adj+'.png')
