@@ -120,49 +120,64 @@ makegraph(title=title, data=grdata, ylabel='New cases per day', outfn=outfn, ext
 
 
 from scipy.stats import gamma
-def getkernel(shape, scale, cutoff=1e-3):
+def getkernel(shape, scale, length):
   tt=[]
-  for i in range(1000000):
+  for i in range(length+1):
     x=gamma.sf(i,shape,scale=scale)
     tt.append(x)
-    if x<cutoff: break
+    #if x<cutoff: break
   tt=np.array(tt)
   kernel=tt[:-1]-tt[1:]
   return kernel/kernel.sum()
 
-k=getkernel(1,2)
-r=len(k)-1
-aa=np.convolve(delta,k,'valid')
-aa*=sum(target[r:])/sum(aa)
+def getprobs(cdelta,comicron,target,alpha):
+  m=len(cdelta)
+  assert len(comicron)==m and len(target)==m
+  # Coding of 0,1,...,2m-1 is 0,...,m-1 <-> pdelta[], and m,...,2m-1 <-> pomicron
+  A=np.zeros([2*m,2*m])
+  b=np.zeros(2*m)
+  for i in range(m):
+    A[i,i]+=cdelta[i]**2
+    A[m+i,m+i]+=comicron[i]**2
+    A[i,m+i]+=cdelta[i]*comicron[i]
+    A[m+i,i]+=cdelta[i]*comicron[i]
+    b[i]+=cdelta[i]*target[i]
+    b[m+i]+=comicron[i]*target[i]
+  for i in range(m-1):
+    A[i,i]+=alpha
+    A[i+1,i+1]+=alpha
+    A[i,i+1]-=alpha
+    A[i+1,i]-=alpha
+    A[m+i,m+i]+=alpha
+    A[m+i+1,m+i+1]+=alpha
+    A[m+i,m+i+1]-=alpha
+    A[m+i+1,m+i]-=alpha
+  pp=np.linalg.lstsq(A,b)[0]
+  pdelta=pp[:m]
+  pomicron=pp[m:]
+  resid=((pdelta*cdelta+pomicron*comicron-target)**2).sum()
+  return pdelta,pomicron,resid
 
-pdelta=np.zeros(n-r)
-pomicron=np.zeros(n-r)
-radius=3
-eps=1e-9
-for i in range(radius,n-r-radius):
-  A=np.zeros([2,2])
-  b=np.zeros(2)
-  A[0,0]=eps
-  A[1,1]=eps
-  for j in range(i-radius,i+radius+1):
-    A[0,0]+=delta[j]**2
-    A[0,1]+=omicron[j]*delta[j]
-    A[1,0]+=omicron[j]*delta[j]
-    A[1,1]+=omicron[j]**2
-    b[0]+=delta[j]*target[j]
-    b[1]+=omicron[j]*target[j]
-  res=np.linalg.lstsq(A,b)[0]
-  pdelta[i]=res[0]
-  pomicron[i]=res[1]
+alpha=1e9# Controls timescale on which probs can change
+r=50# Max size of kernel
+
+for shape in np.arange(0.5,2,0.25):
+  for scale in np.arange(3,8,0.25):
+    k=getkernel(shape,scale,r+1)
+    assert r==len(k)-1
+    cdelta=np.convolve(delta,k,'valid')
+    comicron=np.convolve(omicron,k,'valid')
+    pdelta,pomicron,resid=getprobs(cdelta,comicron,target[r:],alpha)
+    print("%6.3f %6.3f  %12g"%(shape,scale,resid))
 
 title='Probs'
 grdata=[]
 grdata.append({
-  'title': 'pdelta',
+  'title': 'P(hosp|non-omicron case)',
   'values': [(str(day3+d+r),pdelta[d]) for d in range(n-r)]
 })
 grdata.append({
-  'title': 'pomicron',
+  'title': 'P(hosp|omicron case)',
   'values': [(str(day3+d+r),pomicron[d]) for d in range(n-r)]
 })
 #label='set label at graph 0.25,0.98 "Stuff"'
@@ -192,7 +207,7 @@ if 1:
   })
   grdata.append({
     'title': 'Prediction',
-    'values': [(str(day3+r+d),aa[d]) for d in range(n-r)]
+    'values': [(str(day3+r+d),cdelta[d]) for d in range(n-r)]
   })
   label='set label at graph 0.25,0.98 "Stuff"'
   outfn=os.path.join(outputdir,locname1+'_predictor.png')
