@@ -24,8 +24,10 @@ conf=0.95
 ntrials=1000
 eps=0.1# Add this virtual case to case count to prevent singularity
 seed(42)
-if len(sys.argv)>1: locname=sys.argv[1].replace('_',' ')
+if len(sys.argv)>1: locname=sys.argv[1]
 if len(sys.argv)>2: ntrials=int(sys.argv[2])
+locname=locname.replace('_',' ')
+locname1=locname.replace(' ','_')
 
 # Model
 #         Delta                 Omicron
@@ -77,52 +79,121 @@ day3=Date('2021-01-01')
 day4=Date(max(data['date']))
 dataday0=data['date'][0]
 key='admissions'
-while data[key][day4-dataday0]=='': day4=day4-1
+while data[key][day4-dataday0]=='': day4-=1
 
-target=data[key][day3-dataday0:day4-dataday0+1]
+target=[float(x) for x in data[key][day3-dataday0:day4-dataday0+1]]
+# We're not going to predict some initial segment of target because of convolution width
 
-est_delta=[]
-est_omicron=[]
+delta=[]
+omicron=[]
 weekdayadj=[]
 for day in Daterange(day3,day4+1):
   weekdayadj.append(weekdayadj7[(day-monday)%7])
   if day<day2:
-    est_delta.append(data['cases'][day-dataday0])
-    est_omicron.append(0)
+    delta.append(data['cases'][day-dataday0])
+    omicron.append(0)
   else:
     ncases=data['cases'][day-dataday0]
     modelleddelta=exp(xx[0]+xx[1]*(day-day1))*weekdayadj[-1]
-    est_delta.append(min(ncases,modelleddelta))
-    est_omicron.append(ncases-est_delta[-1])
+    delta.append(min(ncases,modelleddelta))
+    omicron.append(ncases-delta[-1])
 
 n=day4-day3+1
-est_delta=np.array(est_delta)
-est_omicron=np.array(est_omicron)
+delta=np.array(delta)
+omicron=np.array(omicron)
 weekdayadj=np.array(weekdayadj)
+
+title='Estimated new cases per day of non-Omicron and Omicron in '+locname
+minc=10
+grdata=[]
+grdata.append({
+  'title': 'Estimated non-Omicron',
+  'values': [(str(day3+d),delta[d]) for d in range(n) if delta[d]>=minc]
+})
+grdata.append({
+  'title': 'Estimated Omicron',
+  'values': [(str(day3+d),omicron[d]) for d in range(n) if omicron[d]>=minc]
+})
+#label='set label at graph 0.25,0.98 "Stuff"'
+outfn=os.path.join(outputdir,locname1+'_estimatedvariants.png')
+makegraph(title=title, data=grdata, ylabel='New cases per day', outfn=outfn, extra=['set key left', 'set logscale y 2'])
+
+
+from scipy.stats import gamma
+def getkernel(shape, scale, cutoff=1e-3):
+  tt=[]
+  for i in range(1000000):
+    x=gamma.sf(i,shape,scale=scale)
+    tt.append(x)
+    if x<cutoff: break
+  tt=np.array(tt)
+  kernel=tt[:-1]-tt[1:]
+  return kernel/kernel.sum()
+
+k=getkernel(1,2)
+r=len(k)-1
+aa=np.convolve(delta,k,'valid')
+aa*=sum(target[r:])/sum(aa)
+
+pdelta=np.zeros(n-r)
+pomicron=np.zeros(n-r)
+radius=3
+eps=1e-9
+for i in range(radius,n-r-radius):
+  A=np.zeros([2,2])
+  b=np.zeros(2)
+  A[0,0]=eps
+  A[1,1]=eps
+  for j in range(i-radius,i+radius+1):
+    A[0,0]+=delta[j]**2
+    A[0,1]+=omicron[j]*delta[j]
+    A[1,0]+=omicron[j]*delta[j]
+    A[1,1]+=omicron[j]**2
+    b[0]+=delta[j]*target[j]
+    b[1]+=omicron[j]*target[j]
+  res=np.linalg.lstsq(A,b)[0]
+  pdelta[i]=res[0]
+  pomicron[i]=res[1]
+
+title='Probs'
+grdata=[]
+grdata.append({
+  'title': 'pdelta',
+  'values': [(str(day3+d+r),pdelta[d]) for d in range(n-r)]
+})
+grdata.append({
+  'title': 'pomicron',
+  'values': [(str(day3+d+r),pomicron[d]) for d in range(n-r)]
+})
+#label='set label at graph 0.25,0.98 "Stuff"'
+outfn=os.path.join(outputdir,locname1+'_probs.png')
+makegraph(title=title, data=grdata, ylabel='P(hosp|case)', outfn=outfn, extra=['set key left'])
 
 # Make graphs
 os.makedirs(outputdir,exist_ok=True)
 offset=day0-day3
-for adj in [0,1]:
-  if adj: weekadj=weekdayadj[offset:]
-  else: weekadj=[1]*N
-  
-  title='Covid-19 case count in '+locname+' (with weekday adjustment)'*adj+' decomposed as sum of falling exponential for Delta + rising exponential for Omicron'
+
+if 1:
+  title='Thing'
   grdata=[]
   grdata.append({
-    'title': 'Reported case count',
-    'values': [(str(day0+d),expdat[d]/weekadj[d]) for d in range(N)],
-    'with': ('points',1),
-    'extra': 'pt 5'
+    'title': 'Delta',
+    'values': [(str(day3+d),delta[d]) for d in range(n)]
   })
   grdata.append({
-    'title': 'Model',
-    'values': [(str(day0+d),(est_delta[offset+d]+0*est_omicron[offset+d])/weekadj[d]) for d in range(N)]
+    'title': 'Omicron',
+    'values': [(str(day3+d),omicron[d]) for d in range(n)]
   })
   grdata.append({
     'title': 'Target',
-    'values': [(str(day0+d),target[offset+d]) for d in range(N)]
+    'values': [(str(day3+r+d),target[r+d]) for d in range(n-r)],
+    #'with': ('points',1),
+    #'extra': 'pt 5'
+  })
+  grdata.append({
+    'title': 'Prediction',
+    'values': [(str(day3+r+d),aa[d]) for d in range(n-r)]
   })
   label='set label at graph 0.25,0.98 "Stuff"'
-  outfn=os.path.join(outputdir,locname.replace(' ','_')+'_cases'+'_adj'*adj+'.png')
+  outfn=os.path.join(outputdir,locname1+'_predictor.png')
   makegraph(title=title, data=grdata, ylabel='New cases per day', outfn=outfn, extra=[label,'set key left','set logscale y 2'])
