@@ -4,7 +4,7 @@ from scipy.optimize import minimize
 import numpy as np
 from random import random, seed
 
-data=loadcsv('Gauteng.Samizdat.csv')
+data=loadcsv('Gauteng.csv')
 
 twoexpdates=[Date('2021-09-01'), Date('2021-12-04')]
 monday=Date('2021-11-01')
@@ -79,8 +79,8 @@ day2=Date('2021-10-18')
 day3=Date('2020-11-01')
 day4=Date(max(data['date']))
 dataday0=data['date'][0]
-key='admissions'
-#key='deaths'
+#key='admissions'
+key='deaths'
 while data[key][day4-dataday0]=='': day4-=1
 
 target=[float(x) for x in data[key][day3-dataday0:day4-dataday0+1]]
@@ -162,13 +162,6 @@ def getprobs(cdelta,comicron,target,alpha):
   pomicron=pp[m:]
   resid=((pdelta*cdelta+pomicron*comicron-target)**2).sum()
   return pdelta,pomicron,resid
-
-def getprobsfromparams(shape,scale):
-  k=getkernel(shape,scale,r+1)
-  assert r==len(k)-1
-  cdelta=np.convolve(delta,k,'valid')
-  comicron=np.convolve(omicron,k,'valid')
-  return getprobs(cdelta,comicron,target[r:],alpha)
 
 alpha=1e6# Controls timescale on which probs can change
 r=50# Max size of kernel
