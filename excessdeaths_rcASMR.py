@@ -41,9 +41,9 @@ countrycode='UK';countryname='United Kingdom'
 #countrycode='IT';countryname='Italy'
 #countrycode='SE';countryname='Sweden'
 #countrycode='HU';countryname='Hungary'
-meanyears=range(2015,2020)
+meanyears=range(2018,2020)
 agerange=(0,150)
-targetyear=2020
+targetyear=2021
 # popsource = (Description, yearoffset, population [, projected population])
 popsource=("WPP", 0.5, "WPP2019_POP_F15_1_ANNUAL_POPULATION_BY_AGE_BOTH_SEXES.csv")
 #popsource=("Eurostat", 0.0, "urt_pjangrp3.tsv", "proj_19np.tsv")

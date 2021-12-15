@@ -47,13 +47,13 @@ with open(datafile,'r') as fp:
     sc0=sc1=0
     for mut in muts:
       if mut in numut: sc0+=1;sc1+=numut[mut]
-    if sc1>thr: l.append((sc1,sc0,dt,name,lin,row))
+    if sc1>=thr: l.append((sc1,sc0,dt,name,lin,row))
+l.sort()
 
 with open(datafile,'r') as fp:
   reader=csv.reader(fp,delimiter='\t')
   headings=next(reader)
-  
-l.sort()
+
 with open(outfile,'w') as fp:
   writer=csv.writer(fp,delimiter='\t')
   writer.writerow(headings)

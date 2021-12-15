@@ -15,18 +15,52 @@ monotonic={'Admissions to Date', 'Died to Date', 'Discharged to Date'}
 
 if 0:
   loc='Gauteng'
-  #key='Admissions to Date'
-  key='Died to Date'
   for day in Daterange(day0+1,now+1):
+    if str(day) not in data: continue
+    dd=data[str(day)][loc]
+    print(day,end='')
+    for key in 'Admissions to Date','Admissions in Previous Day':
+      if key in dd:
+        print(' %6d'%dd[key],end='')
+      else:
+        print('      -',end='')
+    print()
+  poi
+
+if 1:
+  loc='Gauteng'
+  for day in Daterange(day0+1,now+1):
+    if str(day) not in data: continue
+    dd=data[str(day)][loc]
+    print(day,end='')
+    for key in 'Admissions to Date','Admissions in Previous Day':
+      if key in dd:
+        print(' %6d'%dd[key],end='')
+      else:
+        print('      -',end='')
+    print()
+  poi
+
+if 1:
+  loc='Gauteng'
+  key='Admissions to Date'
+  #key='Died to Date'
+  for day in Daterange(day0+1,now+1):
+    print(day,end=' ')
     try:
-      print(day,data[str(day)][loc][key]-data[str(day-1)][loc][key],data[str(day)][loc][headings[-1]])
+      print((data[str(day)][loc][key]-data[str(day-7)][loc][key])/7,end=' ')
     except:
-      pass
+      print('-',end=' ')
+    try:
+      print(sum(data[str(d)][loc]['Admissions in Previous Day'] for d in Daterange(day-6,day+1))/7)
+    except:
+      print('-')
+  poi
 
 if 0:
   loc='Gauteng'
-  #head='Admissions in Previous Day'
-  head='Died to Date'
+  head='Admissions in Previous Day'
+  #head='Died to Date'
   for day in Daterange(now,day0,-1):
     if not (str(day) in data and head in data[str(day)][loc]): break
   l=[data[str(d)][loc][head]-data[str(d-1)][loc][head] for d in Daterange(day+2,now+1)]
@@ -34,6 +68,7 @@ if 0:
   for (x,y,z) in zip(Daterange(day+1,now+1),l,m):print(x,y,z)
   #for d in range(7):
   #  print(sum(l[d::7]),sum(m[d::7]))
+  poi
 
 n=now-day0+1
 for loc in locations:
@@ -93,7 +128,7 @@ for day in range(minday-1,maxday):
     if d<0: print('*',end='')
     else: print(' ',end='')
   print()
-  
+
 aa=[];bb=[]
 loc='South Africa'
 for day in Daterange(minday-1,maxday+1):
@@ -107,7 +142,7 @@ for i in range(n):
   if aa[i+1]<aa[i]: print(str(minday-1+i),"aa anomaly",aa[i+1]-aa[i],aa[i]-aa[i-1])
   if bb[i+1]<bb[i]: print(str(minday-1+i),"bb anomaly",bb[i+1]-bb[i],aa[i]-aa[i-1])
 
-for d in Daterange(Date('2021-11-15'),Date('2021-11-26')):
+for d in Daterange('2021-11-15','2021-11-26'):
   date=str(d)
   print(date,end='')
   for key in 'Admissions to Date', 'Died to Date':
@@ -117,7 +152,7 @@ for d in Daterange(Date('2021-11-15'),Date('2021-11-26')):
   print()
 print()
 
-for d in Daterange(Date('2021-11-15'),Date('2021-11-26')):
+for d in Daterange('2021-11-15','2021-11-26'):
   date=str(d)
   date0=str(d-1)
   date1=str(d+1)

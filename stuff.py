@@ -148,7 +148,10 @@ def weekdayadj(nn,eps=0.5):
     if i1<6: b[i1]-=d
     if i0<6: b[i0]+=d
     c+=d*d
-  ww=np.linalg.lstsq(A,b,rcond=None)[0]
+  if np.__version__<'1.14':
+    ww=np.linalg.lstsq(A,b)[0]
+  else:
+    ww=np.linalg.lstsq(A,b,rcond=None)[0]
   ww7=list(ww)+[0]
   weekadj=[exp(x) for x in ww7]
   adjusted=[nn[d]*weekadj[d%7] for d in range(n)]
@@ -181,3 +184,31 @@ def weekdayadj_slow(nn,alpha=0.1):
   if not res.success: raise RuntimeError(res.message)
   adjusted=np.exp(res.x)
   return adjusted*nn.sum()/adjusted.sum()
+
+class Date(int):
+  def __new__(cls, daydate):
+    if type(daydate)==str: return super(cls,cls).__new__(cls,datetoday(daydate))
+    elif type(daydate)==int: return super(cls,cls).__new__(cls,daydate)
+    elif type(daydate)==Date: return daydate
+    else: raise RuntimeError("Can't initialise Date with type: "+str(type(daydate)))
+    #else: return super(cls,cls).__new__(cls,daydate)
+  def __ge__(self,other): return int(self)>=int(Date(other))
+  def __le__(self,other): return int(self)<=int(Date(other))
+  def __gt__(self,other): return int(self)>int(Date(other))
+  def __lt__(self,other): return int(self)<int(Date(other))
+  def __add__(self, other):
+    res = super(Date, self).__add__(other)
+    return self.__class__(res)
+  def __sub__(self, other):
+    if type(other)==Date: return int(self)-int(other)
+    else: return Date(int(self)-int(Date(other)))
+    #res = super(Date, self).__sub__(other)
+    #return self.__class__(res)
+  def __str__(self): return daytodate(int(self))
+  def __repr__(self): return 'Date('+daytodate(int(self))+')'
+
+def Daterange(a,b,step=1):
+  a1=Date(a)
+  b1=Date(b)
+  for x in range(a1,b1,step):
+    yield Date(x)

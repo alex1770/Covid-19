@@ -318,6 +318,7 @@ vaxslice=np.mean(vax[:,maxcaseday-14-vaxeffecttime-vaxday0,:,:],0)# Average 1st+
 #vaxslice=vax[1,maxcaseday-14-vaxeffecttime-vaxday0,:,:]
 cumcasesslice=cumcases[-14,:,:]#-cumcases[-100,:,:]
 back=-0
+week0=cases[-190-14:-190-7,:,:].sum(axis=0)
 week1=cases[back-14:ncasedays+back-7,:,:].sum(axis=0)
 week2=cases[back-7:ncasedays+back-0,:,:].sum(axis=0)
 
@@ -354,7 +355,7 @@ if 0:
       print(cumcasesslice[i,a]/car/ltlapop[i,a],vaxslice[i,a]/ltlapop[i,a],rat[i,a],file=fp)
   print("Written graph file 'tempg' for age group",num2age[a])
 
-if 1:
+if 0:
   #yy=np.log(week2.sum(axis=1)/week1.sum(axis=1))
   yy=np.log(week2.sum(axis=1))
   with open('tempg','w') as fp:
@@ -368,4 +369,21 @@ if 0:
     for i in range(nltlas):
       for a in range(nages):
         print(cumcasesslice[i,a]/car/ltlapop[i,a],vaxslice[i,a]/ltlapop[i,a],yy[i,a],file=fp)
+  print("Written graph file 'tempg'")
+
+if 0:
+  yy0=np.log(week0.sum(axis=1))
+  yy1=np.log(week2.sum(axis=1))
+  with open('tempg','w') as fp:
+    for i in range(nltlas):
+      print(sum(vaxslice[i,:])/sum(ltlapop[i,:]),yy0[i],yy1[i],file=fp)
+  print("Written graph file 'tempg'")
+
+if 1:
+  a=8
+  yy0=np.log(week0[:,a])
+  yy1=np.log(week1[:,a])
+  with open('tempg','w') as fp:
+    for i in range(nltlas):
+      print(sum(vaxslice[i,:])/sum(ltlapop[i,:]),yy0[i],yy1[i],file=fp)
   print("Written graph file 'tempg'")
