@@ -1,5 +1,5 @@
 # This is shorter/simpler than it looks. Most of the code is unused - just kept in for experimental purposes
-import os,json,sys,datetime,pytz,requests
+import os,json,sys,datetime,pytz,requests,argparse
 from subprocess import Popen,PIPE
 from math import sqrt,log,exp
 from scipy.optimize import minimize
@@ -9,12 +9,23 @@ from stuff import *
 np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=10000)
 
-cachedir='apidata_allcaseages'
 infinity=7# Assume cases stabilise after this many days have elapsed
+
+parser=argparse.ArgumentParser()
+parser.add_argument('-l', '--location', default='England', type=str, help='Set location: currently only England and London supported')
+parser.add_argument('-s', '--skipdays', default=1, type=int, help='Discard this many days of specimen data')
+parser.add_argument('-b', '--backdays', default=0, type=int, help='Do it from the point of view of this many days in the past')
+args=parser.parse_args()
 
 # Need to know public holidays (England), because they will be treated like Sundays
 holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]]
 monday=datetoday('2021-09-20')# Any Monday
+location=args.location
+if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation'
+else: areatype='region'
+
+cachedir='apidata_allcaseages'
+if location!='England': cachedir+='_'+location
 
 #specmode="TimeToPublishAdjustment"
 specmode="TTPadjrunningweekly"
@@ -42,22 +53,41 @@ displayages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
 #displayages=[(5,15)]
 
 # ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
-ONSpop={
-  (0,18): 12093288,
-  (18,25): 4709589,
-  (25,30): 3771493,
-  (30,35): 3824652,
-  (35,40): 3738209,
-  (40,45): 3476303,
-  (45,50): 3638639,
-  (50,55): 3875351,
-  (55,60): 3761782,
-  (60,65): 3196813,
-  (65,70): 2784300,
-  (70,75): 2814128,
-  (75,80): 2009992,
-  (80,150): 2855599,
-}
+if location=='England':
+  ONSpop={
+    (0,18): 12093288,
+    (18,25): 4709589,
+    (25,30): 3771493,
+    (30,35): 3824652,
+    (35,40): 3738209,
+    (40,45): 3476303,
+    (45,50): 3638639,
+    (50,55): 3875351,
+    (55,60): 3761782,
+    (60,65): 3196813,
+    (65,70): 2784300,
+    (70,75): 2814128,
+    (75,80): 2009992,
+    (80,150): 2855599,
+  }
+elif location=='London':
+  ONSpop={
+    (0,18): 2047595,
+    (18,25): 736340,
+    (25,30): 757848,
+    (30,35): 822084,
+    (35,40): 779934,
+    (40,45): 677463,
+    (45,50): 598535,
+    (50,55): 569938,
+    (55,60): 508722,
+    (60,65): 405576,
+    (65,70): 318142,
+    (70,75): 280432,
+    (75,80): 196419,
+    (80,150): 303460,
+  }
+else: raise RuntimeError('Location '+location+' not supported')
 
 # Simple interpolation of lower ages (which are fairly uniform per year)
 ONSpop[(0,5)]=ONSpop[(0,18)]*5/18
@@ -97,13 +127,12 @@ def parseage(x):
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
 if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
-if len(sys.argv)>2: today-=int(sys.argv[2])
+today-=int(args.backdays)
 
 #minday=datetoday('2021-06-01')
 minday=today-120
 
-skipdays=1
-if len(sys.argv)>1: skipdays=int(sys.argv[1])
+skipdays=int(args.skipdays)
 if specmode=="ByPublish": skipdays=0
 
 origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
@@ -122,9 +151,8 @@ for day in range(minday-1,today+1):
   if os.path.isfile(fn):
     with open(fn,'r') as fp: td=json.load(fp)
   else:
-    # As of 2021-10-06, areaName=England stopped working, so specified England using areaCode instead
-    male=get_data('areaType=nation&areaCode=E92000001&metric=maleCases&release='+date)
-    female=get_data('areaType=nation&areaCode=E92000001&metric=femaleCases&release='+date)
+    male=get_data('areaType='+areatype+'&areaName='+location+'&metric=maleCases&release='+date)
+    female=get_data('areaType='+areatype+'&areaName='+location+'&metric=femaleCases&release='+date)
     td={}
     for sex in [male,female]:
       sexname=sex[0]['metric'][:-5]
@@ -245,7 +273,7 @@ targ=np.array(targ)
 rr=[]
 for s in range(1,1<<n):
   l=[i for i in range(n) if (s&1<<i)]
-  res=np.linalg.lstsq(data[:,l],targ,rcond=None)
+  res=np.linalg.lstsq(data[:,l],targ)
   rr.append((l,res))
 rr.sort(key=lambda x:len(x[0])+1e-4*x[1][1][0])
 for (l,res) in rr:
@@ -431,7 +459,7 @@ def smoothpoisson(seq,lam):
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
-title='Estimated log_2 new confirmed cases per 100k per day in England by age range.\\nDescription: http://sonorouschocolate.com/covid19/index.php?title=CasesByAge\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
+title='Estimated log_2 new confirmed cases per 100k per day in '+location+' by age range.\\nDescription: http://sonorouschocolate.com/covid19/index.php?title=CasesByAge\\nData source: https://coronavirus.data.gov.uk/ at '+daytodate(today)+'; last specimen day: '+daytodate(today-1-skipdays)
 data=[]
 n=sm.shape[0]
 tot0=0
