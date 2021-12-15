@@ -50,7 +50,7 @@ ukhsaages=sorted(parseage(a) for a in set(pmd['Age']))
 graphdir='tempd'
 os.makedirs(graphdir,exist_ok=True)
 
-for ag in [(40,50)]:#ukhsaages:
+for ag in ukhsaages:
 
   ty='Cases'
   #ty='Death 28 days'

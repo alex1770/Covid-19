@@ -122,7 +122,7 @@ precases=[{} for i in range(len(deaths))]
 ave=7
 minlag=15
 maxlag=21
-back=270
+back=180
 for n in range(-back-ave,0):
   for a in ages:
     t=0

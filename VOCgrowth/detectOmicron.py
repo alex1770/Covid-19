@@ -3,13 +3,10 @@ from stuff import *
 import numpy as np
 from math import log,sqrt,floor
 
-mindate='2021-07-01'
+mindate='2020-01-01'
 maxdate='9999-12-31'
 
-if len(sys.argv)>1: mindate=sys.argv[1]
 datafile='cog_metadata_sorted.csv'
-print("Dates",mindate,"-",maxdate,file=sys.stderr)
-
 
 # Δ69-70 = del_21765_6 in COG notation
 numut0=['S:'+x for x in 'A67V, T95I, G142D, L212I, ins214EPE, G339D, S371L, S373P, S375F, K417N, N440K, G446S, S477N, T478K, E484A, Q493K, G496S, Q498R, N501Y, Y505H, T547K, D614G, H655Y, N679K, P681H, N764K, D796Y, N856K, Q954H, N969K, L981F'.replace(',','').split()]

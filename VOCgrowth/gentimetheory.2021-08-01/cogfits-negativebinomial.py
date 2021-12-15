@@ -101,7 +101,7 @@ Y=np.log((D+1e-20)/(A+1e-20))
 m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
 r=np.array([sum(W*Y),sum(W*X*Y)])
 c=np.linalg.solve(m,r)
-#mi=np.linalg.pinv(m)
+mi=np.linalg.pinv(m)
 dayoffset=day0-c[0]/c[1]
 # Could estimate overdispersion parameter, but it's not likely to be that close to what NB finds because NB
 # is quite insensitive to its exact value. Which actually suggests there is not much point in using NB instead
@@ -109,7 +109,7 @@ dayoffset=day0-c[0]/c[1]
 # R=c[0]+c[1]*X-Y
 # q0=(R*R*W).sum()/len(R)-1
 
-res=minimize(NLL,[0,c[1],1],bounds=[(-20,20), (-0.2,0.2), (1e-2,100)], method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+res=minimize(NLL,[0,c[1],1],bounds=[(-20,20), (-0.2,0.2), (1e-4,100)], method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
 if not res.success: raise RuntimeError(res.message)
 t0,lam,q=res.x
 dt0,dlam,dq=Fisher(res.x)

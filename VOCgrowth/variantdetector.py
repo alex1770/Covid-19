@@ -119,9 +119,7 @@ print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-15'),given={name2num['S:T95I']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-09-01'),maxday1=datetoday('2021-10-07'),given={name2num['S:Y145H']})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-10-14'),lineage='AY.4.2')
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-10-14'),notlineage='AY.4.2')
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),maxday1=datetoday('2021-10-10'),lineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-10-14'),notlineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),maxday1=datetoday('2021-10-10'),notlineage='AY.4.2')
@@ -157,7 +155,7 @@ if 1:
     print("# Low %d"%low,file=fp)
     print("# High %d"%high,file=fp)
   
-  sd=8
+  sd=12
   gr0=0.0
   def gval(mut):
     if tv[mut][0]+tv[mut][1]==0: return -1e9
@@ -172,7 +170,7 @@ if 1:
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-gval(x))
 
-  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif NumNonVar  NumVar")
+  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif Numnonvar  Numvar")
   nm=0
   for mut in l:
     gr=growth[mut]
@@ -187,7 +185,7 @@ if 1:
     print("   %7.2f"%((ga-.5*(gha-gla))*100),end='')
     print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]))
     nm+=1
-    if nm==30: break
+    if nm==100: break
   
   nmd=min(nm,10)
   print()

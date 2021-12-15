@@ -8,16 +8,12 @@ import numpy as np
 import sys
 from math import sqrt
 
-# Whether to interpret the first number as the total number of cases, or just the number of old variant cases
-totalmode=(len(sys.argv)>1)
-
 A=[];D=[];dt=[]
 for x in sys.stdin:
   y=x.split()
   a,d=float(y[1]),float(y[2])
   if a>0 or d>0:
     dt.append(y[0])
-    if totalmode: a-=d
     A.append(a)
     D.append(d)
 

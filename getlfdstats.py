@@ -14,7 +14,7 @@ def get_data(req):
 
 dirname='apidata_lfd'
 
-req='areaType=nation&areaCode=E92000001&metric=newCasesBySpecimenDate&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&format=json'
+req='areaType=nation&areaName=England&metric=newCasesBySpecimenDate&metric=newCasesLFDConfirmedPCRBySpecimenDate&metric=newCasesLFDOnlyBySpecimenDate&metric=newLFDTests&format=json'
 
 data=get_data(req)
 
