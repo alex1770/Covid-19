@@ -20,6 +20,7 @@ N=len(expdat)
 np.set_printoptions(precision=4,linewidth=1000)
 locname='South Africa'
 outputdir='output'
+os.makedirs(outputdir,exist_ok=True)
 conf=0.95
 ntrials=1000
 eps=0.1# Add this virtual case to case count to prevent singularity
@@ -75,10 +76,11 @@ weekdayadj7=[exp(xx[4+r]+adj) for r in range(7)]
 # After that, we're going to use extrapolate the exponential fall +weekday adjustment for non-Omicron (assumed Delta)
 # and then whatever remains is assumed to be Omicron
 day2=Date('2021-10-18')
-day3=Date('2021-01-01')
+day3=Date('2020-11-01')
 day4=Date(max(data['date']))
 dataday0=data['date'][0]
 key='admissions'
+#key='deaths'
 while data[key][day4-dataday0]=='': day4-=1
 
 target=[float(x) for x in data[key][day3-dataday0:day4-dataday0+1]]
@@ -104,7 +106,7 @@ omicron=np.array(omicron)
 weekdayadj=np.array(weekdayadj)
 
 title='Estimated new cases per day of non-Omicron and Omicron in '+locname
-minc=10
+minc=20
 grdata=[]
 grdata.append({
   'title': 'Estimated non-Omicron',
@@ -136,13 +138,16 @@ def getprobs(cdelta,comicron,target,alpha):
   # Coding of 0,1,...,2m-1 is 0,...,m-1 <-> pdelta[], and m,...,2m-1 <-> pomicron
   A=np.zeros([2*m,2*m])
   b=np.zeros(2*m)
+  # Make solution give predictions near to target
   for i in range(m):
-    A[i,i]+=cdelta[i]**2
-    A[m+i,m+i]+=comicron[i]**2
-    A[i,m+i]+=cdelta[i]*comicron[i]
-    A[m+i,i]+=cdelta[i]*comicron[i]
-    b[i]+=cdelta[i]*target[i]
-    b[m+i]+=comicron[i]*target[i]
+    f=1/(target[i]+1)
+    A[i,i]+=cdelta[i]**2*f
+    A[m+i,m+i]+=comicron[i]**2*f
+    A[i,m+i]+=cdelta[i]*comicron[i]*f
+    A[m+i,i]+=cdelta[i]*comicron[i]*f
+    b[i]+=cdelta[i]*target[i]*f
+    b[m+i]+=comicron[i]*target[i]*f
+  # Make solution not vary too much over time
   for i in range(m-1):
     A[i,i]+=alpha
     A[i+1,i+1]+=alpha
@@ -158,17 +163,43 @@ def getprobs(cdelta,comicron,target,alpha):
   resid=((pdelta*cdelta+pomicron*comicron-target)**2).sum()
   return pdelta,pomicron,resid
 
-alpha=1e9# Controls timescale on which probs can change
+def getprobsfromparams(shape,scale):
+  k=getkernel(shape,scale,r+1)
+  assert r==len(k)-1
+  cdelta=np.convolve(delta,k,'valid')
+  comicron=np.convolve(omicron,k,'valid')
+  return getprobs(cdelta,comicron,target[r:],alpha)
+
+alpha=1e6# Controls timescale on which probs can change
 r=50# Max size of kernel
 
-for shape in np.arange(0.5,2,0.25):
-  for scale in np.arange(3,8,0.25):
-    k=getkernel(shape,scale,r+1)
-    assert r==len(k)-1
-    cdelta=np.convolve(delta,k,'valid')
-    comicron=np.convolve(omicron,k,'valid')
-    pdelta,pomicron,resid=getprobs(cdelta,comicron,target[r:],alpha)
-    print("%6.3f %6.3f  %12g"%(shape,scale,resid))
+def residual(xx):
+  k=getkernel(xx[0],xx[1],r+1)
+  assert r==len(k)-1
+  cdelta=np.convolve(delta,k,'valid')
+  comicron=np.convolve(omicron,k,'valid')
+  pdelta,pomicron,resid=getprobs(cdelta,comicron,target[r:],alpha)
+  return resid/1e5#alter
+
+#for shape in np.arange(0.5,2,0.25):
+#  for scale in np.arange(3,8,0.25):
+#    resid=residual([shape,scale])
+#    print("%6.3f %6.3f  %12g"%(shape,scale,resid))
+
+xx=[1,7]
+bounds=[(0.1,10),(0.1,50)]
+res=minimize(residual,xx,bounds=bounds,method="SLSQP",options={'maxiter':10000})#, 'eps':1e-4, 'ftol':1e-12})
+shape,scale=res.x
+print("Alpha =",alpha)
+print("Residual =",res.fun)
+print("Shape =",shape)
+print("Scale =",scale)
+print()
+k=getkernel(shape,scale,r+1)
+assert r==len(k)-1
+cdelta=np.convolve(delta,k,'valid')
+comicron=np.convolve(omicron,k,'valid')
+pdelta,pomicron,resid=getprobs(cdelta,comicron,target[r:],alpha)
 
 title='Probs'
 grdata=[]
@@ -184,31 +215,40 @@ grdata.append({
 outfn=os.path.join(outputdir,locname1+'_probs.png')
 makegraph(title=title, data=grdata, ylabel='P(hosp|case)', outfn=outfn, extra=['set key left'])
 
-# Make graphs
-os.makedirs(outputdir,exist_ok=True)
-offset=day0-day3
+pred=pdelta*cdelta+pomicron*comicron
+title='Preds'
+grdata=[]
+grdata.append({
+  'title': 'Predicted '+key,
+  'values': [(str(day3+d+r),pred[d]) for d in range(n-r)]
+})
+grdata.append({
+  'title': 'Actual '+key,
+  'values': [(str(day3+d),target[d]) for d in range(n)]
+})
+outfn=os.path.join(outputdir,locname1+'_pred.png')
+makegraph(title=title, data=grdata, ylabel='New hosps / day', outfn=outfn, extra=['set key left','set logscale y 2'])
 
-if 1:
-  title='Thing'
-  grdata=[]
-  grdata.append({
-    'title': 'Delta',
-    'values': [(str(day3+d),delta[d]) for d in range(n)]
-  })
-  grdata.append({
-    'title': 'Omicron',
-    'values': [(str(day3+d),omicron[d]) for d in range(n)]
-  })
-  grdata.append({
-    'title': 'Target',
-    'values': [(str(day3+r+d),target[r+d]) for d in range(n-r)],
-    #'with': ('points',1),
-    #'extra': 'pt 5'
-  })
-  grdata.append({
-    'title': 'Prediction',
-    'values': [(str(day3+r+d),cdelta[d]) for d in range(n-r)]
-  })
-  label='set label at graph 0.25,0.98 "Stuff"'
-  outfn=os.path.join(outputdir,locname1+'_predictor.png')
-  makegraph(title=title, data=grdata, ylabel='New cases per day', outfn=outfn, extra=[label,'set key left','set logscale y 2'])
+
+title='Thing'
+minc=20
+grdata=[]
+grdata.append({
+  'title': 'Predicted '+key,
+  'values': [(str(day3+d+r),pred[d]) for d in range(n-r)]
+})
+grdata.append({
+  'title': 'Actual '+key,
+  'values': [(str(day3+d),target[d]) for d in range(n)]
+})
+grdata.append({
+  'title': 'Delta',
+  'values': [(str(day3+d),delta[d]) for d in range(n) if delta[d]>=minc]
+})
+grdata.append({
+  'title': 'Omicron',
+  'values': [(str(day3+d),omicron[d]) for d in range(n) if omicron[d]>=minc]
+})
+label='set label at graph 0.25,0.98 "Stuff"'
+outfn=os.path.join(outputdir,locname1+'_predictor.png')
+makegraph(title=title, data=grdata, ylabel='New cases per day', outfn=outfn, extra=[label,'set key left','set logscale y 2'])
