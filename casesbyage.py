@@ -472,16 +472,16 @@ for (a,ar) in enumerate(displayages):
   tot1+=sa1
   data.append({
     'title': ("%d - %d years"%(ar[0],ar[1]-1) if ar[1]<150 else "%d+ years"%ar[0]),
-    'values': [(daytodate(minday+i),log(sa[i])/log(2)) for i in range(n)]
+    'values': [(daytodate(minday+i),sa[i]) for i in range(n)]
   })
 if len(displayages)>1:
   tot=tot1/tot0*1e5
   data.append({
     'title': "Total",
-    'values': [(daytodate(minday+i),log(tot[i])/log(2)) for i in range(n)],
+    'values': [(daytodate(minday+i),tot[i]) for i in range(n)],
     'extra': 'dashtype (20,7)'
   })
-makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='log_2 new cases per 100k per day', outfn='logcasesbyage.png', extra=["set ytics 1","set key top left"])
+makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='New cases per 100k per day (log scale)', outfn='logcasesbyage.png', extra=["set key top left","set logscale y 2"])
 
 # Todo:
 # Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
