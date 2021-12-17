@@ -137,11 +137,10 @@ gg=ff[:,1:,:]-ff[:,:-1,:]
 for i in range(nspec): gg[i+1,i,:]=0
 
 # Try to undo the effect of delay from specimen to published test result by assuming the pattern is the same as last week's
-# sp[specimenday-minday][age index] = Est no. of samples. (In "ByPublish" mode, it's a bit of a fudged specimen day.)
+# sp[specimenday-minday][age index] = Est no. of samples
 sp=np.zeros([nspec,nages],dtype=float)
 for i in range(nspec):
-  n=min(npub-(i+1),infinity)
-  if n==infinity: sp[i]=gg[npub-1,i,:]
+  if npub-(i+1)>=infinity: sp[i]=gg[npub-1,i,:]
   else: sp[i]=gg[npub,i,:]/gg[npub-7,i-7,:]*gg[i-7+infinity+1,i-7,:]
 
 for i in range(indprev,nspec+1):
