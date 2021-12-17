@@ -349,7 +349,9 @@ elif source=="COG-UK":
 elif source=="SGTF":
   fullsource="SGTF data from Omicron daily overview: 16 December 2021"
   assert voclen==1
-  sgtf=loadcsv("sgtf_regionepicurve_2021-12-15.csv")
+  l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
+  if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current directory")
+  sgtf=loadcsv(max(l))
   lastweek=max(datetoday(x) for x in sgtf['specimen_date'])
   assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
@@ -477,6 +479,10 @@ if reduceltla!=None:
 def Rdesc(h0,dh):
   (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
   return "%.0f%% (%.0f%% - %.0f%%)"%(T,Tmin,Tmax)
+
+def Ddesc(h0,dh):
+  (Dmin,D,Dmax)=[log(2)/h for h in [h0+zconf*dh,h0,h0-zconf*dh]]
+  return "%.2f (%.2f - %.2f)"%(D,Dmin,Dmax)
 
 def Gdesc(h0,dh):
   return "%.2f%% (%.2f%% - %.2f%%)"%(h0*100,(h0-zconf*dh)*100,(h0+zconf*dh)*100)
