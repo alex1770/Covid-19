@@ -347,11 +347,11 @@ elif source=="COG-UK":
       if any(varmatch(var,pat) for pat in variantset): vocnum[place][week][1]+=1
       elif any(varmatch(var,pat) for pat in nonvariantset): vocnum[place][week][0]+=1
 elif source=="SGTF":
-  fullsource="SGTF data from Omicron daily overview: 16 December 2021"
   assert voclen==1
   l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
   if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current directory")
   sgtf=loadcsv(max(l))
+  fullsource="SGTF data from Omicron daily overview, last specimen date "+max(sgtf['specimen_date'])
   lastweek=max(datetoday(x) for x in sgtf['specimen_date'])
   assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
