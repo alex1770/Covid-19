@@ -153,10 +153,11 @@ hospadm=get_data('areaType='+healthareatype+'&areaName='+location+'&metric=newAd
 ha={}
 for h in hospadm: ha[Date(h['date'])]=h['newAdmissions']
 
-print("#     Date             Location       Adm     EstOf   EstWith     Est%Of")
+print("Case ascertainment rate (CAR) =",car)
+print("#     Date             Location       Adm     EstOf   EstWith     Est%Of     Est%With")
 for i in range(indprev,nspec+1):
   day=Date(minday+i-1)
   samp=sp[i-indprev:i,:].sum(axis=0)/car
   withcov=(samp*hosprates1).sum()
   ofcov=ha[day]-withcov
-  print(day,"%20s     %5d     %5.0f     %5.0f     %5.1f%%"%(location,ha[day],ofcov,withcov,ofcov/ha[day]*100))
+  print(day,"%20s     %5d     %5.0f     %5.0f     %5.1f%%   %5.1f%%/CAR"%(location,ha[day],ofcov,withcov,ofcov/ha[day]*100,withcov/ha[day]*car*100))
