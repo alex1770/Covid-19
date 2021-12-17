@@ -26,12 +26,14 @@ ltla2region=dict(ltla2country,**dict(zip(ltlaengdata['LAD19CD'],ltlaengdata['RGN
 ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 
 #variantset=["B.1.617.2", "AY."];nonvariantset=["B.1.1.7"];variant="Delta";nonvariant="Alpha"
-variantset=["AY.4.2"];nonvariantset=[""];variant="AY.4.2";nonvariant="non-AY.4.2"
+#variantset=["AY.4.2"];nonvariantset=[""];variant="AY.4.2";nonvariant="non-AY.4.2"
+variantset=["BA.1", "BA.2"];nonvariantset=[""];variant="Omicron";nonvariant="non-Omicron"
 
 # Set bounds for relative daily growth rate
 (hmin,hmax)=(0.0,0.2)
 if variant=="B.1.617.2": (hmin,hmax)=(0.03,0.15)
-if variant=="AY.4.2": (hmin,hmax)=(0.0,0.06)
+if variant=="AY.4.2": (hmin,hmax)=(0.01,0.04)
+if variant=="Omicron": (hmin,hmax)=(0.3,0.5)
 
 def varmatch(var,pattern):
   if pattern=="": return True
@@ -99,9 +101,9 @@ args=parser.parse_args()
 
 ### Options ###
 
-source="Sanger"
+#source="Sanger"
 #source="COG-UK"
-#source="SGTF"
+source="SGTF"
 
 # Can choose location size from "LTLA", "region", "country", "UK"
 # Sanger works with LTLA, region, country
@@ -111,6 +113,7 @@ source="Sanger"
 #locationsize="LTLA"
 locationsize="region"
 #locationsize="country"
+#locationsize="UK"
 
 ltlaexclude=set()
 #ltlaexclude=set(['E08000001','E12000002'])# Bolton, Manchester
@@ -126,11 +129,11 @@ specialinterest=set()#['E08000001'])
 mgt=5# Mean generation time in days
 
 # Earliest day to use case data
-minday=datetoday('2021-07-01')# Inclusive
+minday=datetoday('2021-11-10')# Inclusive
 
 # Earliest day to use VOC count data, given as end-of-week. Will be rounded up to match same day of week as lastweek.
 #firstweek=minday+6
-firstweek=datetoday('2021-07-01')
+firstweek=datetoday('2021-11-10')
 
 nif1=0.048 # Non-independence factor (1/overdispersion) for cases (less than 1 means information is downweighted)
 nif2=0.255 # Non-independence factor (1/overdispersion) for VOC counts (ditto)
@@ -165,11 +168,11 @@ bundleremainder=True
 
 minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-12}
 
-mode="local growth rates"
-#mode="global growth rate"
+#mode="local growth rates"
+mode="global growth rate"
 #mode="fixed growth rate",0.1
 
-voclen=(1 if source=="COG-UK" else 7)
+voclen=(1 if source=="COG-UK" or source=="SGTF" else 7)
 
 conf=0.95
 nsamp=2000
@@ -332,10 +335,10 @@ elif source=="COG-UK":
       if any(varmatch(var,pat) for pat in variantset): vocnum[place][week][1]+=1
       elif any(varmatch(var,pat) for pat in nonvariantset): vocnum[place][week][0]+=1
 elif source=="SGTF":
-  fullsource="SGTF data from PHE Technical briefing 13"
-  assert voclen==7
-  sgtf=loadcsv("TechBriefing13Fig19.csv")
-  lastweek=max(datetoday(x) for x in sgtf['week'])+6# Convert w/c to w/e convention
+  fullsource="SGTF data from Omicron daily overview: 16 December 2021"
+  assert voclen==1
+  sgtf=loadcsv("sgtf_regionepicurve_2021-12-15.csv")
+  lastweek=max(datetoday(x) for x in sgtf['specimen_date'])
   assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
@@ -351,33 +354,22 @@ elif source=="SGTF":
   
   # Get SGTF data into a suitable form
   vocnum={}
-  for (date,region,var,n) in zip(sgtf['week'],sgtf['Region'],sgtf['sgtf'],sgtf['n']):
-    day=datetoday(date)+6# Convert from w/c to w/e convention
+  background=[0,0]
+  for (date,region,var,n) in zip(sgtf['specimen_date'],sgtf['PHEC_name'],sgtf['sgtf'],sgtf['n']):
+    day=datetoday(date)
     week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
       place=reducesgtf(region)
       if place not in vocnum: vocnum[place]=np.zeros([nweeks,2],dtype=int)
-      vocnum[place][week][int("SGTF" not in var)]+=n
-  # Adjust for non-Delta S gene positives, based on the assumption that these are in a non-location-dependent proportion to the number of B.1.1.7
-  # This is likely to be dodgy
-  # From COG-UK: B117  Others (not Delta)
-  # 2021-03-11  18295     341   1.86%
-  # 2021-03-18  16900     308   1.82%
-  # 2021-03-25  14920     231   1.55%
-  # 2021-04-01  10041     243   2.42%
-  # 2021-04-08   7514     240   3.19%
-  # 2021-04-15   7150     348   4.87%
-  # 2021-04-22   6623     367   5.54%
-  # 2021-04-29   5029     205   4.08%
-  # 2021-05-06   4383     217   4.95%
-  date0,date1=datetoday('2021-03-11'),datetoday('2021-04-15')
+      vocnum[place][week][int("SGTF" in var)]+=n
+    if date>=Date('2021-10-01') and date<Date('2021-11-10'):
+      background[int("SGTF" in var)]+=n
+  # Adjust for non-Omicron SGTFs, based on the assumption that these are in a non-location-dependent proportion to the number of non-Omicron cases
+  f=background[1]/background[0]
   for place in vocnum:
     for week in range(nweeks):
-      day=lastweek-voclen*(nweeks-1-week)
-      assert day>=date0
-      if day<date1: f=(day-date0)/(date1-date0)*0.03+0.02
-      else: f=0.05
-      vocnum[place][week][1]=max(vocnum[place][week][1]-int(f*vocnum[place][week][0]),0)
+      vocnum[place][week][1]=max(vocnum[place][week][1]-int(f*vocnum[place][week][0]+.5),0)
+  print()
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
@@ -502,7 +494,7 @@ n=len(l)
 k=int(binom.ppf((1-conf)/2,n,0.5))
 med=log((l[n//2]+l[(n-1)//2])/2)/voclen
 low=log(l[k-1])/voclen
-high=log(l[n-k])/voclen
+high=log(l[n-1-k])/voclen
 print("Separate location & weeks, unweighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
 print()
 
@@ -528,9 +520,9 @@ wt=0
 low=med=high=None
 for i in range(n):
   wt+=l[i][1]
-  if low==None and wt>wtlow: low=log(l[i][0])/voclen
-  if med==None and wt>wtmed: med=log(l[i][0])/voclen
-  if high==None and wt>wthigh: high=log(l[i][0])/voclen
+  if low==None and wt>wtlow-1e-6: low=log(l[i][0])/voclen
+  if med==None and wt>wtmed-1e-6: med=log(l[i][0])/voclen
+  if high==None and wt>wthigh-1e-6: high=log(l[i][0])/voclen
 print("Separate location & weeks, weighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
 print()
 
@@ -542,6 +534,7 @@ for w in range(nweeks-1):
       wt=sqrt(1/(1/vn[w:w+2,:]).sum())
       g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
       l.append((g,wt))
+  if l==[]: continue
   l.sort()
   wts=np.array([wt for (g,wt) in l])
   n=len(l)
@@ -841,13 +834,14 @@ def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
   res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig0,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
   if not res.success:
     print(res)
+    print(fixedh)
     print(place)
     print("xx =",xx)
+    print("bounds =",bounds)
     print("lcases =",list(cases[place]))
     print("lprecases =",precases[prereduce(place)])
     print("lvocnum =",vocnum[place])
     for x in sorted(list(opts)): print("%s:"%x,opts[x])
-    print("bounds =",bounds)
     print("nweeks, ndays, minday, lastweek =",nweeks,",",ndays,",",minday,",",lastweek)
     raise RuntimeError(res.message)
   xx=res.x/condition
