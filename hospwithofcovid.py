@@ -70,6 +70,11 @@ skipdays=int(args.skipdays)
 
 origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 astrings=["%d_%d"%a for a in origages]
+reduceages={}
+for (a,astr) in enumerate(astrings):
+  for (da,dat) in enumerate(displayages):
+    if origages[a][0]>=dat[0] and origages[a][1]<=dat[1]: reduceages[astr]=da;break
+nages=len(displayages)
 
 # Target save format is
 # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
@@ -78,7 +83,7 @@ astrings=["%d_%d"%a for a in origages]
 # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
 dd={}
 os.makedirs(cachedir,exist_ok=True)
-for day in range(minday-1,today+1):
+for day in range(today-7,today+1):
   date=daytodate(day)
   fn=os.path.join(cachedir,date)
   if os.path.isfile(fn):
@@ -104,13 +109,6 @@ for day in range(minday-1,today+1):
 
 # Convert to numpy array
 # ee[publishday - minday][sex 0=m, 1=f][specimenday - (minday-1)][index into displayages] = publishday's version of cumulative cases up to specimen day
-
-reduceages={}
-for (a,astr) in enumerate(astrings):
-  for (da,dat) in enumerate(displayages):
-    if origages[a][0]>=dat[0] and origages[a][1]<=dat[1]: reduceages[astr]=da;break
-nages=len(displayages)
-
 npub=today-minday+1
 nspec=today-minday-skipdays
 ee=np.zeros([npub+1,2,nspec+1,nages],dtype=int)
@@ -138,24 +136,15 @@ ff=ee.sum(axis=1)
 gg=ff[:,1:,:]-ff[:,:-1,:]
 for i in range(nspec): gg[i+1,i,:]=0
 
-# Convert from total up to publish day, to newly published this day
-# hh[publishday - minday][specimenday - minday][index into displayages] = new cases on specimen day that were first reported on publish day
-hh=gg[1:,:,:]-gg[:-1,:,:]
-
 # Try to undo the effect of delay from specimen to published test result by assuming the pattern is the same as last week's
 # sp[specimenday-minday][age index] = Est no. of samples. (In "ByPublish" mode, it's a bit of a fudged specimen day.)
 sp=np.zeros([nspec,nages],dtype=float)
 for i in range(nspec):
   n=min(npub-(i+1),infinity)
-  if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
-  else: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0)*hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0)
+  if n==infinity: sp[i]=gg[npub-1,i,:]
+  else: sp[i]=gg[npub,i,:]/gg[npub-7,i-7,:]*gg[i-7+infinity+1,i-7,:]
 
 for i in range(indprev,nspec+1):
   samp=sp[i-indprev:i,:].sum(axis=0)/car
   withcov=(samp*hosprates1).sum()
   print(Date(minday+i-1)," ",location,"%5.0f"%withcov)
-  
-#for i in range(nspec):
-#  print((ff[npub-1,i+1,:]-ff[npub-1,i,:]).sum()/sp[i].sum())
-  
-  
