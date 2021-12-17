@@ -17,8 +17,10 @@ parser=argparse.ArgumentParser()
 parser.add_argument('-l', '--location', default='England', type=str, help='Set location: England or region of England')
 parser.add_argument('-s', '--skipdays', default=1, type=int, help='Discard this many days of specimen data')
 parser.add_argument('-b', '--backdays', default=0, type=int, help='Do it from the point of view of this many days in the past')
+parser.add_argument('-c', '--CAR',      default=car, type=float, help='Case ascertainment rate')
 args=parser.parse_args()
 
+car=args.CAR
 location=args.location
 if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation';healthareatype='nation'
 else: areatype='region';healthareatype='nhsregion'
