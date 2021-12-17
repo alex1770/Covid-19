@@ -154,7 +154,7 @@ ha={}
 for h in hospadm: ha[Date(h['date'])]=h['newAdmissions']
 
 print("Case ascertainment rate (CAR) =",car)
-print("#     Date             Location       Adm     EstOf   EstWith     Est%Of     Est%With")
+print("#     Date             Location       Adm    EstFor   EstWith    Est%For     Est%With")
 for i in range(indprev,nspec+1):
   day=Date(minday+i-1)
   samp=sp[i-indprev:i,:].sum(axis=0)/car
