@@ -16,8 +16,8 @@ parser.add_argument('-b', '--backdays', default=0, type=int, help='Do it from th
 args=parser.parse_args()
 
 location=args.location
-if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation'
-else: areatype='region'
+if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation';healthareatype='nation'
+else: areatype='region';healthareatype='nhsregion'
 
 cachedir='apidata_allcaseages'
 if location!='England': cachedir+='_'+location
@@ -143,7 +143,14 @@ for i in range(nspec):
   if npub-(i+1)>=infinity: sp[i]=gg[npub-1,i,:]
   else: sp[i]=gg[npub,i,:]/gg[npub-7,i-7,:]*gg[i-7+infinity+1,i-7,:]
 
+hospadm=get_data('areaType='+healthareatype+'&areaName='+location+'&metric=newAdmissions')
+ha={}
+for h in hospadm: ha[Date(h['date'])]=h['newAdmissions']
+
+print("#     Date             Location       Adm     EstOf   EstWith     Est%Of")
 for i in range(indprev,nspec+1):
+  day=Date(minday+i-1)
   samp=sp[i-indprev:i,:].sum(axis=0)/car
   withcov=(samp*hosprates1).sum()
-  print(Date(minday+i-1)," ",location,"%5.0f"%withcov)
+  ofcov=ha[day]-withcov
+  print(day,"%20s     %5d     %5.0f     %5.0f     %5.1f%%"%(location,ha[day],ofcov,withcov,ofcov/ha[day]*100))
