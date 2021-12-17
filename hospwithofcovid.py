@@ -6,8 +6,12 @@ np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=10000)
 
 infinity=7# Assume cases stabilise after this many days have elapsed
+
 indprev=14# Assume prevalence = the sum of the last <this many> days of incidence
-car=0.4#    Case ascertainment rate: assume we find this proportion of infections
+
+# Case ascertainment rate: assume we find this proportion of infections
+# Based on ONS infection survey 17 Dec, comparing incidence of 15.32/10000/day over UK during week 21-27 Nov with 293182 confirmed cases
+car=0.408
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-l', '--location', default='England', type=str, help='Set location: England or region of England')
