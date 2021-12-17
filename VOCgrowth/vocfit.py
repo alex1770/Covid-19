@@ -1,5 +1,5 @@
 from stuff import *
-import sys,re,argparse,pickle
+import sys,re,argparse,pickle,pytz
 from scipy.optimize import minimize
 from scipy.stats import norm,binom,bernoulli
 from scipy.special import gammaln
@@ -16,7 +16,6 @@ from datetime import datetime
 
 def sanitise(fn): return fn.replace(' ','_').replace("'","")
 
-apicases=loadcsv("ltla.csv")
 ltlaengdata=loadcsv("Local_Authority_District_to_Region__December_2019__Lookup_in_England.csv")
 ltlaukdata=loadcsv("Local_Authority_District_to_Country_(April_2019)_Lookup_in_the_United_Kingdom.csv")
 ltla2ltla=dict(zip(ltlaukdata['LAD19CD'],ltlaukdata['LAD19CD']))
@@ -28,6 +27,7 @@ ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 #variantset=["B.1.617.2", "AY."];nonvariantset=["B.1.1.7"];variant="Delta";nonvariant="Alpha"
 #variantset=["AY.4.2"];nonvariantset=[""];variant="AY.4.2";nonvariant="non-AY.4.2"
 variantset=["BA.1", "BA.2"];nonvariantset=[""];variant="Omicron";nonvariant="non-Omicron"
+relative=variant+'/'+nonvariant
 
 # Set bounds for relative daily growth rate
 (hmin,hmax)=(0.0,0.2)
@@ -269,6 +269,18 @@ if ltlaset=="All":
 else:
   areacovered=ltlaset
 
+apicases=loadcsv("ltla.csv")
+d=datetime.now(pytz.timezone("Europe/London"))
+today=Date(d.strftime('%Y-%m-%d'))
+if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
+if max(apicases['date'])<today-1:
+  import requests
+  url='https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv'
+  response=requests.get(url, timeout=10)
+  if not response.ok: raise RuntimeError(response.text)
+  with open('ltla.csv','w') as fp: fp.write(response.text)
+  apicases=loadcsv('ltla.csv')
+
 maxday=datetoday(max(apicases['date']))-discardcasedays# Inclusive
 ndays=maxday-minday+1
 firstweek=max(firstweek,minday+voclen-1)
@@ -306,7 +318,7 @@ elif source=="COG-UK":
   fullsource="COG-UK"
   cog=loadcsv("cog_metadata.csv")
   lastweek=datetoday(max(cog['sample_date']))-discardcogdays
-  if maxday<lastweek: raise RuntimeError('ltla.csv needs refreshing')
+  assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
   
