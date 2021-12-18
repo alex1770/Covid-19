@@ -383,7 +383,6 @@ elif source=="SGTF":
   for place in vocnum:
     for week in range(nweeks):
       vocnum[place][week][1]=max(vocnum[place][week][1]-int(f*vocnum[place][week][0]+.5),0)
-  print()
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
@@ -486,6 +485,14 @@ def Ddesc(h0,dh):
 
 def Gdesc(h0,dh):
   return "%.2f%% (%.2f%% - %.2f%%)"%(h0*100,(h0-zconf*dh)*100,(h0+zconf*dh)*100)
+
+def GDdesc(h0,hlow,hhigh):
+  hh=(h0,hlow,hhigh)
+  s="%.2f (%.2f - %.2f) per day"%hh
+  if abs(h0)>=0.01:
+    if h0>0: s+=" [doubling time: %.2f (%.2f - %.2f) days]"%tuple(log(2)/h for h in [h0,hhigh,hlow])
+    elif h0<0: s+=" [halving time: %.2f (%.2f - %.2f) days]"%tuple(-log(2)/h for h in hh)
+  return s
 
 print("Estimating competitive advantage using variant counts only (not case counts)")
 print("============================================================================")
@@ -984,9 +991,9 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   nmed=nsamp//2
   nmax=int((1+conf)/2*nsamp)
   sa=np.sort(samples,axis=0)# For each variant, day, put samples in order of cases
-  sr0=(samples[:,:,ave:]/samples[:,:,:-ave])**(mgt/ave)# sr, sr0 = R-numbers: R(V1), R(V2)
+  sr0=np.log(samples[:,:,ave:]/samples[:,:,:-ave])/ave# sr, sr0 = growths g(V1), g(V2)
   sr=np.sort(sr0,axis=0)# For each variant, day, put samples in order of scaled change from one day to next (R-number)
-  tr=np.sort(sr0[:,1,:]/sr0[:,0,:],axis=0)# For each day, d, put samples in order of R(Delta,d)/R(Alpha,d)
+  tr=np.sort(sr0[:,1,:]-sr0[:,0,:],axis=0)# For each day, d, put samples in order of g(newvar,d)-g(oldvar,d)
   QQ=sr[:,0,-1]
   RR=sr[:,1,-1]
   TT=list(tr[:,-1])
@@ -1011,7 +1018,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint("           -         -         -         - ",end='')
     #mprint(" %12g %12g"%(asc*(sa[nmed][0][i]-AA[i]),asc*(sa[nmed][1][i]-BB[i])),end='')
     if i<ndays-ave:
-      Q,R=((AA[i+ave]/AA[i])**(mgt/ave),(BB[i+ave]/BB[i])**(mgt/ave))
+      Q,R=(log(AA[i+ave]/AA[i])/ave,log(BB[i+ave]/BB[i])/ave)
       mprint("   %7.4f %7.4f"%(Q,R),end='')
     else:
       mprint("         -       -",end='')
@@ -1020,13 +1027,13 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint(" %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f"%(sr[nmin,0,i],sr[nmed,0,i],sr[nmax,0,i],sr[nmin,1,i],sr[nmed,1,i],sr[nmax,1,i]))
     else:
       mprint("       -       -       -       -       -       -")
-  EQ="Estimated R_t(%s) = %.2f (%.2f - %.2f)"%(nonvariant,QQ[nmed],QQ[nmin],QQ[nmax])
-  ER="Estimated R_t(%s) = %.2f (%.2f - %.2f)"%(variant,RR[nmed],RR[nmin],RR[nmax])
+  EQ="Estd growth in %s: "%nonvariant+GDdesc(QQ[nmed],QQ[nmin],QQ[nmax])
+  ER="Estd growth in %s: "%variant+GDdesc(RR[nmed],RR[nmin],RR[nmax])
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
-  ETA="Estimated competitive advantage = "
-  if T!=None: ETA+="%.0f%% (%.0f%% - %.0f%%); unadjusted: "%(T,Tmin,Tmax)
-  ETA+="%.0f%% (%.0f%% - %.0f%%)"%((TT[nmed]-1)*100,(TT[nmin]-1)*100,(TT[nmax]-1)*100)
+  ETA="Estd growth advantage = "
+  if T!=None: ETA+=GDdesc(T,Tmin,Tmax)
+  else: ETA+=GDdesc(TT[nmed],TT[nmin],TT[nmax])
   if area!=None: print("Summary");print(area+using)
   print(EQ)
   print(ER)
@@ -1046,31 +1053,44 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     write('set timefmt "%Y-%m-%d"')
     write('set format x "%Y-%m-%d"')
     write('set xtics nomirror rotate by 45 right offset 0.5,0')
-    write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.48,0.9'%(area+using,daytodate(minday+ndays-ave-1),EQ,ER,ETA))
+    write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.45,0.9'%(area+using,daytodate(minday+ndays-ave-1),EQ,ER,ETA))
+
+    mi=[1e9]*50;mx=[-1e9]*50
+    with open(graphdata,'r') as fp:
+      for x in fp:
+        if x[0]!='#':
+          y=x.split()
+          for (i,z) in enumerate(y):
+            try: f=float(z);mi[i]=min(mi[i],f);mx[i]=max(mx[i],f)
+            except: pass
     
     graphfnR=sanitise(args.graph_filename+'_'+area+'_R.png')
+    mi0=min(mi[17],mi[18],mi[20],mi[21])
+    mx0=max(mx[17],mx[18],mx[20],mx[21])
+    yscale='[:] [:%f]'%(mi0+(mx0-mi0)/.8)
     write('set output "%s"'%graphfnR)
-    write('set key right')
-    write('set ylabel "Estimated reproduction number"')
+    write('set key left')
+    write('set ylabel "Estimated growth rate')
     write('set style fill transparent solid 0.25')
     write('set style fill noborder')
-    write('set y2tics')
-    write('set title "Estimated reproduction numbers of %s and %s variants in %s\\n'%(nonvariant,variant,area+using)+
+    #write('set y2tics')
+    write('set title "Estimated continuous growth rates of %s and %s variants in %s\\n'%(nonvariant,variant,area+using)+
           'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-          'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-    write('plot "%s" u 1:19 w lines lc "green" lw 3 title "Estimated R_t(%s)", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated R_t(%s)", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%(graphdata,nonvariant,graphdata,graphdata,variant,graphdata))
+          'Data sources: %s; https://coronavirus.data.gov.uk/"'%fullsource)
+    write('plot %s "%s" u 1:19 w lines lc "green" lw 3 title "Estimated growth in %s", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated growth in %s", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%(yscale,graphdata,nonvariant,graphdata,graphdata,variant,graphdata))
     print("Written graph to %s"%graphfnR)
     
     for yaxis in ["lin","log"]:
       graphfn=sanitise(args.graph_filename+'_'+area+'_'+yaxis+'.png')
-      if yaxis=="log": write('set logscale y');write('unset y2tics')
+      if yaxis=="log": write('set logscale y');write('unset y2tics');yscale='[:] [0.99:%f]'%(max(mx[1:7])**(1/.8))
+      else: yscale='[:] [0:%f]'%(max(mx[1:7])/.8)
       write('set key top left')
       write('set output "%s"'%graphfn)
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       write('set title "Estimated new cases per day of %s and %s in %s\\n'%(nonvariant,variant,area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-            'Data sources: %s, Government coronavirus api/dashboard"'%fullsource)
-      write('plot "%s" u 1:2 with lines lw 3 title "Modelled %s", "%s" u 1:3 with lines lw 3 title "Modelled %s", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of %s scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of %s scaled up to modelled total"'%(graphdata,nonvariant,graphdata,variant,graphdata,graphdata,graphdata,nonvariant,graphdata,variant))
+            'Data sources: %s; https://coronavirus.data.gov.uk/"'%fullsource)
+      write('plot %s "%s" u 1:2 with lines lw 3 title "Modelled %s", "%s" u 1:3 with lines lw 3 title "Modelled %s", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of %s scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of %s scaled up to modelled total"'%(yscale,graphdata,nonvariant,graphdata,variant,graphdata,graphdata,graphdata,nonvariant,graphdata,variant))
       print("Written graph to %s"%graphfn)
     
     p.close();po.wait()
@@ -1108,9 +1128,9 @@ if mode=="local growth rates":
     fi=(-ff[0]+2*ff[1]-ff[2])/eps**2
     if fi>0:
       dh=1/sqrt(fi)
-      (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
+      (Tmin,T,Tmax)=[h0-zconf*dh,h0,h0+zconf*dh]
     else:
-      (Tmin,T,Tmax)=[None,(exp(h0*mgt)-1)*100,None]
+      (Tmin,T,Tmax)=[None,h0,None]
     SSS=getsamples(place,xx0)
     print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
@@ -1125,7 +1145,7 @@ if (type(mode)==tuple or type(mode)==list) and mode[0]=="fixed growth rate":
     h0=mode[1]
     xx0,L0=optimiseplace(place,fixedh=h0)
     AA,BB,GG=expand(xx0)
-    T=(exp(h0*mgt)-1)*100
+    T=h0
     print("Predetermined growth advantage")
     SSS=getcondsamples(place,xx0,[0]*10000)
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
@@ -1160,9 +1180,9 @@ if mode=="global growth rate":
   irange=1/sqrt(c)
   h0=(hmin+(hmax-hmin)*imax/(ndiv-1))
   dh=(hmax-hmin)*irange/(ndiv-1)
-  (Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
-  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
-  print("Combined competitive advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+  #(Tmin,T,Tmax)=[(exp(h*mgt)-1)*100 for h in [h0-zconf*dh,h0,h0+zconf*dh]]
+  (Tmin,T,Tmax)=[h0-zconf*dh,h0,h0+zconf*dh]
+  print("Combined growth advantage per day: "+GDdesc(T,Tmin,Tmax))
   print()
   
   print("Re-running using global optimum growth advantage",h0)
@@ -1212,5 +1232,4 @@ if mode=="global growth rate":
     print("Combined results for %s using globally optimised growth advantage"%loc)
     Q,R=fullprint(TSS0[loc][0,:],TSS0[loc][1,:],sum(vocnum.values()),[sum(cases[place][i] for place in places) for i in range(ndays)],T,Tmin,Tmax,area=ltla2name.get(loc,loc),samples=TSSS[loc])
   
-  print("Combined growth advantage per day: %.3f (%.3f - %.3f)"%(h0,h0-zconf*dh,h0+zconf*dh))
-  print("Combined competitive advantage: %.0f%% (%.0f%% - %.0f%%) (assuming fixed generation time of %g days)"%(T,Tmin,Tmax,mgt))
+  print("Combined growth advantage per day: "+GDdesc(h0,h0-zconf*dh,h0+zconf*dh))
