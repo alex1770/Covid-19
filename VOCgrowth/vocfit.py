@@ -168,8 +168,8 @@ bundleremainder=True
 
 minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-12}
 
-#mode="local growth rates"
-mode="global growth rate"
+mode="local growth rates"
+#mode="global growth rate"
 #mode="fixed growth rate",0.1
 
 voclen=(1 if source=="COG-UK" or source=="SGTF" else 7)
@@ -351,8 +351,8 @@ elif source=="SGTF":
   l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
   if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current directory")
   sgtf=loadcsv(max(l))
-  fullsource="SGTF data from Omicron daily overview, last specimen date "+max(sgtf['specimen_date'])
   lastweek=max(datetoday(x) for x in sgtf['specimen_date'])
+  fullsource="SGTF data from Omicron daily overview, last specimen date "+daytodate(lastweek)
   assert maxday>=lastweek
   nweeks=(lastweek-firstweek)//voclen+1
   # Week number is nweeks-1-(lastweek-day)//voclen
@@ -369,7 +369,7 @@ elif source=="SGTF":
   # Get SGTF data into a suitable form
   vocnum={}
   background=[0,0]
-  for (date,region,var,n) in zip(sgtf['specimen_date'],sgtf['PHEC_name'],sgtf['sgtf'],sgtf['n']):
+  for (date,region,var,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sgtf['sgtf'],sgtf['n']):
     day=datetoday(date)
     week=nweeks-1-(lastweek-day)//voclen
     if week>=0 and week<nweeks:
