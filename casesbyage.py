@@ -15,12 +15,13 @@ parser=argparse.ArgumentParser()
 parser.add_argument('-l', '--location', default='England', type=str, help='Set location: currently only England and London supported')
 parser.add_argument('-s', '--skipdays', default=1, type=int, help='Discard this many days of specimen data')
 parser.add_argument('-b', '--backdays', default=0, type=int, help='Do it from the point of view of this many days in the past')
+parser.add_argument('-o', '--outfile', default='logcasesbyage.png', type=str, help='Output png filename')
 args=parser.parse_args()
 
 # Need to know public holidays (England), because they will be treated like Sundays
 holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]]
 monday=datetoday('2021-09-20')# Any Monday
-location=args.location
+location=args.location.replace('_',' ')
 if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation'
 else: areatype='region'
 
@@ -74,7 +75,7 @@ def parseage(x):
 
 ONSpop={}
 for (desc,acode,sex,age,n) in csvrows('ONS-population_2021-08-05.csv',['category','areaCode','gender','age','population']):
-  if desc=='AGE_SEX_5YEAR' and sex=='ALL' and acode in loclookup and location==loclookup[acode]:
+  if desc=='AGE_SEX_5YEAR' and sex=='ALL' and acode in loclookup and location.lower()==loclookup[acode].lower():
     ONSpop[parseage(age)]=int(n)
 
 def prod(l):
@@ -452,7 +453,7 @@ if len(displayages)>1:
     'values': [(daytodate(minday+i),tot[i]) for i in range(n)],
     'extra': 'dashtype (20,7)'
   })
-makegraph(title=title, data=data, mindate=daytodate(displayminday), ylabel='New cases per 100k per day (log scale)', outfn='logcasesbyage.png', extra=["set key top left","set logscale y 2"])
+makegraph(title=title, data=data, mindate=daytodate(displayminday), ylabel='New cases per 100k per day (log scale)', outfn=args.outfile, extra=["set key top left","set logscale y 2"])
 
 # Todo:
 # Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
