@@ -52,53 +52,30 @@ displayages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
 #displayages=[(0,20),(20,30),(30,50),(50,55),(55,60),(60,65),(65,70),(70,150)]
 #displayages=[(5,15)]
 
-# ONS 2020 population estimates from https://www.england.nhs.uk/statistics/wp-content/uploads/sites/2/2021/09/COVID-19-weekly-announced-vaccinations-16-September-2021.xlsx
-if location=='England':
-  ONSpop={
-    (0,18): 12093288,
-    (18,25): 4709589,
-    (25,30): 3771493,
-    (30,35): 3824652,
-    (35,40): 3738209,
-    (40,45): 3476303,
-    (45,50): 3638639,
-    (50,55): 3875351,
-    (55,60): 3761782,
-    (60,65): 3196813,
-    (65,70): 2784300,
-    (70,75): 2814128,
-    (75,80): 2009992,
-    (80,150): 2855599,
-  }
-elif location=='London':
-  ONSpop={
-    (0,18): 2047595,
-    (18,25): 736340,
-    (25,30): 757848,
-    (30,35): 822084,
-    (35,40): 779934,
-    (40,45): 677463,
-    (45,50): 598535,
-    (50,55): 569938,
-    (55,60): 508722,
-    (60,65): 405576,
-    (65,70): 318142,
-    (70,75): 280432,
-    (75,80): 196419,
-    (80,150): 303460,
-  }
-else: raise RuntimeError('Location '+location+' not supported')
+loclookup={
+  "E92000001":"England",
+  "E12000001":"North East",
+  "E12000002":"North West",
+  "E12000003":"Yorkshire and The Humber",
+  "E12000004":"East Midlands",
+  "E12000005":"West Midlands",
+  "E12000006":"East of England",
+  "E12000007":"London",
+  "E12000008":"South East",
+  "E12000009":"South West"
+}
 
-# Simple interpolation of lower ages (which are fairly uniform per year)
-ONSpop[(0,5)]=ONSpop[(0,18)]*5/18
-ONSpop[(5,10)]=ONSpop[(0,18)]*5/18
-ONSpop[(10,15)]=ONSpop[(0,18)]*5/18
-ONSpop[(15,20)]=ONSpop[(0,18)]*3/18+ONSpop[(18,25)]*2/7
-ONSpop[(20,25)]=ONSpop[(18,25)]*5/7
-# Estimate older ages from typical relative proportions in 80-85, 85-90, 90+
-ONSpop[(80,85)]=ONSpop[(80,150)]*254/(254+158+95)
-ONSpop[(85,90)]=ONSpop[(80,150)]*158/(254+158+95)
-ONSpop[(90,150)]=ONSpop[(80,150)]*95/(254+158+95)
+# Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
+def parseage(x):
+  if x[-1]=='+': return (int(x[:-1]),150)
+  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
+  aa=[int(y) for y in x.split("_")]
+  return (aa[0],aa[1]+1)
+
+ONSpop={}
+for (desc,acode,sex,age,n) in csvrows('ONS-population_2021-08-05.csv',['category','areaCode','gender','age','population']):
+  if desc=='AGE_SEX_5YEAR' and sex=='ALL' and acode in loclookup and location==loclookup[acode]:
+    ONSpop[parseage(age)]=int(n)
 
 def prod(l):
   p=1.
@@ -117,13 +94,6 @@ def get_data(req):
   else: raise RuntimeError('Request failed: '+error)
   return response.json()['body'][::-1]
 
-# Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
-def parseage(x):
-  if x[-1]=='+': return (int(x[:-1]),150)
-  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
-  aa=[int(y) for y in x.split("_")]
-  return (aa[0],aa[1]+1)
-
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
 if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
@@ -131,6 +101,7 @@ today-=int(args.backdays)
 
 #minday=datetoday('2021-06-01')
 minday=today-120
+displayminday=today-90
 
 skipdays=int(args.skipdays)
 if specmode=="ByPublish": skipdays=0
@@ -481,7 +452,7 @@ if len(displayages)>1:
     'values': [(daytodate(minday+i),tot[i]) for i in range(n)],
     'extra': 'dashtype (20,7)'
   })
-makegraph(title=title, data=data, mindate=daytodate(minday), ylabel='New cases per 100k per day (log scale)', outfn='logcasesbyage.png', extra=["set key top left","set logscale y 2"])
+makegraph(title=title, data=data, mindate=daytodate(displayminday), ylabel='New cases per 100k per day (log scale)', outfn='logcasesbyage.png', extra=["set key top left","set logscale y 2"])
 
 # Todo:
 # Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
