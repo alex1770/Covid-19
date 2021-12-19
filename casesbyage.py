@@ -21,12 +21,6 @@ args=parser.parse_args()
 # Need to know public holidays (England), because they will be treated like Sundays
 holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]]
 monday=datetoday('2021-09-20')# Any Monday
-location=args.location.replace('_',' ')
-if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation'
-else: areatype='region'
-
-cachedir='apidata_allcaseages'
-if location!='England': cachedir+='_'+location
 
 #specmode="TimeToPublishAdjustment"
 specmode="TTPadjrunningweekly"
@@ -66,6 +60,14 @@ loclookup={
   "E12000009":"South West"
 }
 
+location=args.location.replace('_',' ')
+location=loclookup.get(location,location)
+if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation'
+else: areatype='region'
+
+cachedir='apidata_allcaseages'
+if location!='England': cachedir+='_'+location
+
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
@@ -75,7 +77,7 @@ def parseage(x):
 
 ONSpop={}
 for (desc,acode,sex,age,n) in csvrows('ONS-population_2021-08-05.csv',['category','areaCode','gender','age','population']):
-  if desc=='AGE_SEX_5YEAR' and sex=='ALL' and acode in loclookup and location.lower()==loclookup[acode].lower():
+  if desc=='AGE_SEX_5YEAR' and sex=='ALL' and acode in loclookup and loclookup.get(location,location).lower()==loclookup[acode].lower():
     ONSpop[parseage(age)]=int(n)
 
 def prod(l):
