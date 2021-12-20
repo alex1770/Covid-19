@@ -1053,7 +1053,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   print(EQ)
   print(ER)
   print(ETA)
-  ETA+="\\n(CIs show within-model statistical uncertainty; model assumptions lead to other uncertainties)"
+  ETA+="\\nNB: CIs only show within-model statistical uncertainty but there are also external sources of uncertainty"
   print()
   if graphfp!=None:
     graphfp.close()
@@ -1069,7 +1069,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     write('set format x "%Y-%m-%d"')
     write('set xtics nomirror rotate by 45 right offset 0.5,0')
     s='set label "Location: %s\\n'%(area+using)
-    if gtr!=None: s+='Estd generation time ratio %s/%s = %.2f (%.2f - %.2f).  '%(variant,nonvariant,gtr[0],gtr[1],gtr[2])
+    #if gtr!=None: s+='Estd generation time ratio %s/%s = %.2f (%.2f - %.2f).  '%(variant,nonvariant,gtr[0],gtr[1],gtr[2])
     s+='As of %s:\\n%s\\n%s\\n%s" at screen 0.45,0.9'%(daytodate(minday+ndays-ave-1),EQ,ER,ETA)
     write(s)
 
