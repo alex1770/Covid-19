@@ -97,6 +97,7 @@ args=parser.parse_args()
 #
 ### End Model ###
 
+nfp=4# Number of fixed (non BM) parameters
 
 ### Options ###
 
@@ -720,14 +721,15 @@ bmsin2=[np.array([bmweight[n]*bmsin[(i*n)%(2*bmL)] for n in range(bmN)]) for i i
 # Need to scale the variables being optimised over to keep SLSQP happy
 #condition=np.array([50,50,1000,1000]+[1.]*bmN)
 t=40000*np.array(bmweight[1:])*bmscale/np.arange(1,bmN)+1
-condition=np.array([70,80,5000,5000,t[0]]+list(t))
+condition=np.array([70,80,5000,5000]+[1,]*(nfp-4)+[t[0]]+list(t))
 
-# bmN+4 parameters to be optimised:
+# bmN+nfp parameters to be optimised:
 # 0: a0
 # 1: b0
 # 2: h
 # 3: g0
-# 4 ... 4+bmN-1 : X_0, ..., X_{bmN-1}
+# [4...nfp-1: things]
+# nfp ... nfp+bmN-1 : X_0, ..., X_{bmN-1}
 
 def expand(xx):
   (a0,b0)=xx[:2]
@@ -739,14 +741,15 @@ def expand(xx):
   H=exp(h)
   for i in range(ndays-1):
     t=i/bmL
-    gu=t*xx[4]+np.dot(bmsin2[i],xx[4:])
+    gu=t*xx[nfp]+np.dot(bmsin2[i],xx[nfp:])
     #for n in range(1,bmN):
-    #  gu+=bmweight[n]*bmsin[(i*n)%(2*bmL)]*xx[4+n]
+    #  gu+=bmweight[n]*bmsin[(i*n)%(2*bmL)]*xx[nfp+n]
     g=g0+w*gu
     GG.append(g)
     G=exp(g)
+    G2=G#exp(g*1.5)
     AA.append(AA[-1]*G)
-    BB.append(BB[-1]*G*H)
+    BB.append(BB[-1]*G2*H)
   return AA,BB,GG
 
 
@@ -821,7 +824,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   return -tot
 
 def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
-  N=bmN+4
+  N=bmN+nfp
   eps=1e-3
   H=np.zeros([N,N])
   for i in range(N-1):
@@ -849,11 +852,11 @@ def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
   return H
       
 # Returns log likelihood
-def optimiseplace(place,hint=np.zeros(bmN+4),fixedh=None,statphase=False):
+def optimiseplace(place,hint=np.zeros(bmN+nfp),fixedh=None,statphase=False):
   xx=np.copy(hint)
-  # bounds[2][0]=0 prejudges Delta as being at least as transmissible as B.1.1.7. This helps SLSQP not get stuck in some cases
+  # bounds[2][0]=0 prejudges new variant as being at least as transmissible as old variant. This helps SLSQP not get stuck in some cases
   # though would need to relax this constraint if dealing with other variants where it might not be true.
-  bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(-10,10)]*bmN
+  bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(0.5,2)]*(nfp-4)+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
   res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig0,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
   if not res.success:
@@ -891,7 +894,7 @@ def getsamples(place,xx0):
   # np.diag(np.matmul(np.matmul(np.transpose(eig[1]),Hcond),eig[1])) ~= eig[0]
   if not (eig[0]>0).all(): print("Hessian not +ve definite so can't do full confidence calculation");return None
   nsamp=10000
-  N=bmN+4
+  N=bmN+nfp
   t=norm.rvs(size=[nsamp,N])# nsamp x N
   sd=eig[0]**(-.5)# N
   u=t*sd# nsamp x N
@@ -921,7 +924,7 @@ def getsamples(place,xx0):
 # eig[1], t, s1              0      0
 # sd, u, s0                  1      1
 def getcondsamples(place,xx0,dhsamp):
-  N=bmN+4
+  N=bmN+nfp
   H=Hessian(xx0,cases[place],vocnum[place],sig0,asc,precases[prereduce(place)])
   Hcond=H/condition/condition[:,None]
   Hcond__=np.delete(np.delete(Hcond,2,0),2,1)# N-1 x N-1
