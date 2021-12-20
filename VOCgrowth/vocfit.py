@@ -97,7 +97,7 @@ args=parser.parse_args()
 #
 ### End Model ###
 
-nfp=4# Number of fixed (non BM) parameters
+nfp=5# Number of fixed (non BM) parameters
 
 ### Options ###
 
@@ -181,7 +181,7 @@ model="scaledpoisson"
 #model="NBBB"
 #model="NBBB+magicprior"
 
-plainvarcountest=True
+plainvarcountest=False
 
 ### End options ###
 
@@ -750,7 +750,7 @@ def expand(xx):
     g=g0+w*gu
     GG.append(g)
     G=exp(g)
-    G2=G#exp(g*1.5)
+    G2=exp(g/exp(xx[4]))
     AA.append(AA[-1]*G)
     BB.append(BB[-1]*G2*H)
   return AA,BB,GG
@@ -782,8 +782,8 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   if const: tot-=log(2*pi*v0)/2
   
   # Prior on GTR
-  sd4=1
-  tot+=-((xx[4]-1)/sd4)**2/2
+  sd4=.125
+  tot+=-(xx[4]/sd4)**2/2
   if const: tot-=log(2*pi*sd4**2)/2
   
   AA,BB,GG=expand(xx)
@@ -860,12 +860,13 @@ def Hessian(xx,lcases,lvocnum,sig0,asc,lprecases):
   return H
       
 # Returns log likelihood
-def optimiseplace(place,hint=np.zeros(bmN+nfp),fixedh=None,statphase=False):
+def optimiseplace(place,hint=np.zeros(bmN+nfp),fixedh=None,fixedgtr=None,statphase=False):
   xx=np.copy(hint)
   # bounds[2][0]=0 prejudges new variant as being at least as transmissible as old variant. This helps SLSQP not get stuck in some cases
   # though would need to relax this constraint if dealing with other variants where it might not be true.
-  bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(0.5,2)]*(nfp-4)+[(-10,10)]*bmN
+  bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(-1.5,1.5)]*(nfp-4)+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
+  if fixedgtr!=None: xx[4]=fixedgtr;bounds[4]=(fixedgtr,fixedgtr)
   res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig0,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
   if not res.success:
     print(res)
@@ -1173,8 +1174,8 @@ if mode=="local growth rates":
     if len(places)<10:
       xx1,L1=optimiseplace(place,statphase=True)
       print("Corrected log likelihood",L1)
-      print("GTR",xx1[4])
     AA,BB,GG=expand(xx0)
+    
     h0=xx0[2]
     ff=[0,L0,0]
     eps=0.01
@@ -1188,6 +1189,21 @@ if mode=="local growth rates":
       (Tmin,T,Tmax)=[h0-zconf*dh,h0,h0+zconf*dh]
     else:
       (Tmin,T,Tmax)=[None,h0,None]
+
+    gtr=xx0[4]
+    ff=[0,L0,0]
+    eps=0.01
+    for i in [-1,1]:
+      xx,L=optimiseplace(place,hint=xx0,fixedgtr=gtr+i*eps)
+      ff[i+1]=L
+    # Use observed Fisher information to make confidence interval
+    fi=(-ff[0]+2*ff[1]-ff[2])/eps**2
+    if fi>0:
+      dgtr=1/sqrt(fi)
+      print("GTR = %.3f (%.3f - %.3f)"%(exp(gtr),exp(gtr-zconf*dgtr),exp(gtr+zconf*dgtr)))
+    else:      
+      print("GTR = %.3f (? - ?)"%(exp(gtr)))
+      
     SSS=getsamples(place,xx0)
     print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
