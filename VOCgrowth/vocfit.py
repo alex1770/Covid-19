@@ -1,5 +1,5 @@
 from stuff import *
-import sys,re,argparse,pickle,pytz
+import sys,re,argparse,pickle,pytz,pdb
 from scipy.optimize import minimize
 from scipy.stats import norm,binom,bernoulli
 from scipy.special import gammaln
@@ -181,6 +181,8 @@ model="scaledpoisson"
 #model="NBBB"
 #model="NBBB+magicprior"
 
+plainvarcountest=True
+
 ### End options ###
 
 opts={
@@ -261,7 +263,7 @@ for x in sorted(list(opts)): print("%s:"%x,opts[x])
 print()
 sys.stdout.flush()
 
-np.set_printoptions(precision=3,linewidth=150)
+np.set_printoptions(precision=3,linewidth=250)
 
 if ltlaset=="All":
   if source=="COG-UK": areacovered="UK"
@@ -494,72 +496,44 @@ def GDdesc(h0,hlow,hhigh):
     elif h0<0: s+=" [halving time: %.2f (%.2f - %.2f) days]"%tuple(-log(2)/h for h in hh)
   return s
 
-print("Estimating competitive advantage using variant counts only (not case counts)")
-print("============================================================================")
-print()
-
-mincount=1
-l=[]
-eps=1e-20
-for w in range(nweeks-1):
-  if len(places)<30: print(daytodate(firstweek+w*voclen),end='   ')
-  for place in places:
-    vn=vocnum[place]
-    if (vn[w:w+2,:]>=mincount).all():
-      g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
-      l.append(g)
-      if len(places)<30:
-        print(" %6.1f%%"%(log(g)/voclen*100),end='')
-    else:
-      if len(places)<30:
-        print("  ------",end='')
-  if len(places)<30: print()
-l.sort()
-n=len(l)
-k=int(binom.ppf((1-conf)/2,n,0.5))
-med=log((l[n//2]+l[(n-1)//2])/2)/voclen
-low=log(l[k-1])/voclen
-high=log(l[n-1-k])/voclen
-print("Separate location & weeks, unweighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
-print()
-
-l=[]
-for w in range(nweeks-1):
-  for place in places:
-    vn=vocnum[place]
-    if (vn[w:w+2,:]>0).all():
-      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
-      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
-      l.append((g,wt))
-l.sort()
-wts=np.array([wt for (g,wt) in l])
-n=len(l)
-nsamp=int(1e6/len(places))
-rand=bernoulli.rvs(0.5,size=[nsamp,n])
-samp=rand@wts
-samp.sort()
-wtlow=samp[int(nsamp*(1-conf)/2)]
-wtmed=samp[int(nsamp/2)]
-wthigh=samp[int(nsamp*(1+conf)/2)]
-wt=0
-low=med=high=None
-for i in range(n):
-  wt+=l[i][1]
-  if low==None and wt>wtlow-1e-6: low=log(l[i][0])/voclen
-  if med==None and wt>wtmed-1e-6: med=log(l[i][0])/voclen
-  if high==None and wt>wthigh-1e-6: high=log(l[i][0])/voclen
-print("Separate location & weeks, weighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
-print()
-
-for w in range(nweeks-1):
+if plainvarcountest:
+  print("Estimating competitive advantage using variant counts only (not case counts)")
+  print("============================================================================")
+  print()
+  
+  mincount=1
   l=[]
-  for place in places:
-    vn=vocnum[place]
-    if (vn[w:w+2,:]>0).all():
-      wt=sqrt(1/(1/vn[w:w+2,:]).sum())
-      g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
-      l.append((g,wt))
-  if l==[]: continue
+  eps=1e-20
+  for w in range(nweeks-1):
+    if len(places)<30: print(daytodate(firstweek+w*voclen),end='   ')
+    for place in places:
+      vn=vocnum[place]
+      if (vn[w:w+2,:]>=mincount).all():
+        g=((vn[w+1][1]+eps)/(vn[w+1][0]+eps))/((vn[w][1]+eps)/(vn[w][0]+eps))
+        l.append(g)
+        if len(places)<30:
+          print(" %6.1f%%"%(log(g)/voclen*100),end='')
+      else:
+        if len(places)<30:
+          print("  ------",end='')
+    if len(places)<30: print()
+  l.sort()
+  n=len(l)
+  k=int(binom.ppf((1-conf)/2,n,0.5))
+  med=log((l[n//2]+l[(n-1)//2])/2)/voclen
+  low=log(l[k-1])/voclen
+  high=log(l[n-1-k])/voclen
+  print("Separate location & weeks, unweighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
+  print()
+  
+  l=[]
+  for w in range(nweeks-1):
+    for place in places:
+      vn=vocnum[place]
+      if (vn[w:w+2,:]>0).all():
+        wt=sqrt(1/(1/vn[w:w+2,:]).sum())
+        g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
+        l.append((g,wt))
   l.sort()
   wts=np.array([wt for (g,wt) in l])
   n=len(l)
@@ -577,128 +551,157 @@ for w in range(nweeks-1):
     if low==None and wt>wtlow-1e-6: low=log(l[i][0])/voclen
     if med==None and wt>wtmed-1e-6: med=log(l[i][0])/voclen
     if high==None and wt>wthigh-1e-6: high=log(l[i][0])/voclen
-  print(daytodate(firstweek+voclen*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
-print()
-
-from scipy.special import betaln
-from scipy.integrate import quad
-from scipy import inf
-def crossratiosubdivide(matgen,duration=voclen):
-  tot=np.zeros([2,2],dtype=int)
-  ndiv=20
-  logp=np.zeros(ndiv)
-  L0=L1=0
-  for M in matgen:
-    tot+=M
-    if (M>0).all():
-      c=1/((1/M.flatten()).sum())
-      T=M[0,0]*M[1,1]/(M[0,1]*M[1,0])
-      L0+=c*log(T);L1+=c
-      for i in range(ndiv):
-        x=(hmin+(i+.5)/ndiv*(hmax-hmin))*duration# Convert to weekly growth rate
-        a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
-        l0=d*x-(betaln(a,b)+betaln(c,d))
-        # Faff around finding maximum to avoid underflow in integral
-        e=exp(x)
-        X=b+d-1;Y=a+b;Z=c+d
-        A=Y+Z-X
-        B=Y/e+Z-X*(1+1/e)
-        C=-X/e
-        z0=(-B+sqrt(B**2-4*A*C))/(2*A)
-        l1=(b+d-1)*log(z0) - (a+b)*log(1+z0) - (c+d)*log(1+e*z0)
-        sc=sqrt((b+d-1)/z0**2-(a+b)/(1+z0)**2-(c+d)*e**2/(1+e*z0)**2)# Set inverse length scale
-        #res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
-        res=quad(lambda x: exp( (b+d-1)*log(x/sc) - (a+b)*log(1+x/sc) - (c+d)*log(1+e*x/sc) - l1 ), 0, inf)
-        logp[i]+=log(res[0]/sc)+l0+l1
-  if (tot==0).any():
-    print("Can't estimate best transmission factor because VOC count matrix has 1 or more zero entries");return
-  g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/duration
-  dg=sqrt((1/tot.flatten()).sum())/duration
-  print("Overall cross ratio:",Gdesc(g,dg),Rdesc(g,dg),tot.flatten())
-  g=L0/L1/duration
-  dg=1/sqrt(L1)/duration
-  print("Inverse variance weighting method using log(CR):",Gdesc(g,dg),Rdesc(g,dg))
-  i=np.argmax(logp)
-  if i==0 or i==ndiv-1:
-    print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
-    imax=i
-    c=0.1
-  else:
-    b=(logp[i+1]-logp[i-1])/2
-    c=2*logp[i]-(logp[i+1]+logp[i-1])
-    imax=i+b/c
-  irange=1/sqrt(c)
-  g0=(hmin+(hmax-hmin)*(imax+.5)/ndiv)
-  dg=(hmax-hmin)*irange/ndiv
-  print("Likelihood method using log(CR):",Gdesc(g0,dg),Rdesc(g0,dg))
-  print()
-
-# Simple regression with 1/(1/v0+1/v1) weighting
-def simpleregress(NV):
-  DT=np.array(range(firstweek,firstweek+voclen*nweeks,voclen))
-  W=NV[:,0]*NV[:,1]/(NV.sum(axis=1)+1e-20)
-  day0=DT.sum()/nweeks
-  if (W>0).sum()<=2: return (day0,0,1)
-  X=DT-day0
-  Y=np.log((NV[:,1]+1e-20)/(NV[:,0]+1e-20))
-  m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
-  r=np.array([sum(W*Y),sum(W*X*Y)])
-  c=np.linalg.solve(m,r)
-  mi=np.linalg.pinv(m)
-  R=c[0]+c[1]*X-Y
-  overdis=(R*R*W).sum()/len(R)
-  dg=sqrt(mi[1,1]*overdis)
-  return (day0-c[0]/c[1],c[1],dg)
-
-n=1+len(places)
-def NLL_vonly(xx):
-  g=xx[0]
-  LL=0
-  for (i,place) in enumerate(places):
-    nn=vocnum[place]
-    t0=xx[1+i]
-    for w in range(nweeks):
-      G=(w*voclen-t0)*g
-      LL+=-(nn[w][0]+nn[w][1])*log(1+exp(G))+nn[w][1]*G
-  return -LL/1000
-
-if voclen>=7:
-  for w in range(nweeks-1):
-    day0=lastweek-(nweeks-w)*voclen+1
-    print(daytodate(day0),"-",daytodate(day0+2*voclen-1))
-    crossratiosubdivide(vocnum[place][w:w+2] for place in places)
-
-print("All week pairs:")
-crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
-print("First week to last week:")
-crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
-
-if len(places)<50:
-  print("--- Inverse variance weighted regression using combined counts for %s ---"%areacovered)
-  sr=simpleregress(sum(vocnum.values()))
-  xx=[sr[1]]# Overall growth
-  print("%s:"%areacovered,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
-  print()
-  print("--- Inverse variance weighted regression using counts for each %s ---"%locationsize)
-  s0=s1=0
-  for place in places:
-    sr=simpleregress(vocnum[place])
-    xx.append(sr[0]-firstweek)# Intercept of [place]
-    print("%25s:"%place,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
-    iv=1/sr[2]**2
-    s0+=iv
-    s1+=iv*sr[1]
-  print()
-  g=s1/s0;dg=sqrt(1/s0)
-  print("Inverse variance weighted count for %s controlling for %s:"%(areacovered,locationsize),Gdesc(g,dg),Rdesc(g,dg))
+  print("Separate location & weeks, weighted high-low non-parametric test: %.2f%% (%.2f%% - %.2f%%)"%(med*100,low*100,high*100))
   print()
   
-  bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
-  res=minimize(NLL_vonly,xx,bounds=bounds,method="SLSQP",options=minopts)
-  print("--- Quasi-Poisson regression controlling for %s ---"%locationsize)
-  print("Growth: %.2f%%    crossover on"%(res.x[0]*100),daytodate(firstweek+res.x[1]))
+  for w in range(nweeks-1):
+    l=[]
+    for place in places:
+      vn=vocnum[place]
+      if (vn[w:w+2,:]>0).all():
+        wt=sqrt(1/(1/vn[w:w+2,:]).sum())
+        g=(vn[w+1][1]/vn[w+1][0])/(vn[w][1]/vn[w][0])
+        l.append((g,wt))
+    if l==[]: continue
+    l.sort()
+    wts=np.array([wt for (g,wt) in l])
+    n=len(l)
+    nsamp=int(1e6/len(places))
+    rand=bernoulli.rvs(0.5,size=[nsamp,n])
+    samp=rand@wts
+    samp.sort()
+    wtlow=samp[int(nsamp*(1-conf)/2)]
+    wtmed=samp[int(nsamp/2)]
+    wthigh=samp[int(nsamp*(1+conf)/2)]
+    wt=0
+    low=med=high=None
+    for i in range(n):
+      wt+=l[i][1]
+      if low==None and wt>wtlow-1e-6: low=log(l[i][0])/voclen
+      if med==None and wt>wtmed-1e-6: med=log(l[i][0])/voclen
+      if high==None and wt>wthigh-1e-6: high=log(l[i][0])/voclen
+    print(daytodate(firstweek+voclen*w),"Separate locations, weighted high-low non-parametric test: %6.2f%% (%6.2f%% - %6.2f%%)"%(med*100,low*100,high*100))
   print()
-
+  
+  from scipy.special import betaln
+  from scipy.integrate import quad
+  from scipy import inf
+  def crossratiosubdivide(matgen,duration=voclen):
+    tot=np.zeros([2,2],dtype=int)
+    ndiv=20
+    logp=np.zeros(ndiv)
+    L0=L1=0
+    for M in matgen:
+      tot+=M
+      if (M>0).all():
+        c=1/((1/M.flatten()).sum())
+        T=M[0,0]*M[1,1]/(M[0,1]*M[1,0])
+        L0+=c*log(T);L1+=c
+        for i in range(ndiv):
+          x=(hmin+(i+.5)/ndiv*(hmax-hmin))*duration# Convert to weekly growth rate
+          a,b,c,d=M[0,0],M[0,1],M[1,0],M[1,1]
+          l0=d*x-(betaln(a,b)+betaln(c,d))
+          # Faff around finding maximum to avoid underflow in integral
+          e=exp(x)
+          X=b+d-1;Y=a+b;Z=c+d
+          A=Y+Z-X
+          B=Y/e+Z-X*(1+1/e)
+          C=-X/e
+          z0=(-B+sqrt(B**2-4*A*C))/(2*A)
+          l1=(b+d-1)*log(z0) - (a+b)*log(1+z0) - (c+d)*log(1+e*z0)
+          sc=sqrt((b+d-1)/z0**2-(a+b)/(1+z0)**2-(c+d)*e**2/(1+e*z0)**2)# Set inverse length scale
+          #res=quad(lambda z: exp( (b+d-1)*log(z) - (a+b)*log(1+z) - (c+d)*log(1+e*z) - l1 ), 0, inf)
+          res=quad(lambda x: exp( (b+d-1)*log(x/sc) - (a+b)*log(1+x/sc) - (c+d)*log(1+e*x/sc) - l1 ), 0, inf)
+          logp[i]+=log(res[0]/sc)+l0+l1
+    if (tot==0).any():
+      print("Can't estimate best transmission factor because VOC count matrix has 1 or more zero entries");return
+    g=log(tot[0,0]*tot[1,1]/(tot[0,1]*tot[1,0]))/duration
+    dg=sqrt((1/tot.flatten()).sum())/duration
+    print("Overall cross ratio:",Gdesc(g,dg),Rdesc(g,dg),tot.flatten())
+    g=L0/L1/duration
+    dg=1/sqrt(L1)/duration
+    print("Inverse variance weighting method using log(CR):",Gdesc(g,dg),Rdesc(g,dg))
+    i=np.argmax(logp)
+    if i==0 or i==ndiv-1:
+      print("Can't properly estimate best transmission factor or confidence interval because the maximum is at the end")
+      imax=i
+      c=0.1
+    else:
+      b=(logp[i+1]-logp[i-1])/2
+      c=2*logp[i]-(logp[i+1]+logp[i-1])
+      imax=i+b/c
+    irange=1/sqrt(c)
+    g0=(hmin+(hmax-hmin)*(imax+.5)/ndiv)
+    dg=(hmax-hmin)*irange/ndiv
+    print("Likelihood method using log(CR):",Gdesc(g0,dg),Rdesc(g0,dg))
+    print()
+  
+  # Simple regression with 1/(1/v0+1/v1) weighting
+  def simpleregress(NV):
+    DT=np.array(range(firstweek,firstweek+voclen*nweeks,voclen))
+    W=NV[:,0]*NV[:,1]/(NV.sum(axis=1)+1e-20)
+    day0=DT.sum()/nweeks
+    if (W>0).sum()<=2: return (day0,0,1)
+    X=DT-day0
+    Y=np.log((NV[:,1]+1e-20)/(NV[:,0]+1e-20))
+    m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
+    r=np.array([sum(W*Y),sum(W*X*Y)])
+    c=np.linalg.solve(m,r)
+    mi=np.linalg.pinv(m)
+    R=c[0]+c[1]*X-Y
+    overdis=(R*R*W).sum()/len(R)
+    dg=sqrt(mi[1,1]*overdis)
+    return (day0-c[0]/c[1],c[1],dg)
+  
+  n=1+len(places)
+  def NLL_vonly(xx):
+    g=xx[0]
+    LL=0
+    for (i,place) in enumerate(places):
+      nn=vocnum[place]
+      t0=xx[1+i]
+      for w in range(nweeks):
+        G=(w*voclen-t0)*g
+        LL+=-(nn[w][0]+nn[w][1])*log(1+exp(G))+nn[w][1]*G
+    return -LL/1000
+  
+  if voclen>=7:
+    for w in range(nweeks-1):
+      day0=lastweek-(nweeks-w)*voclen+1
+      print(daytodate(day0),"-",daytodate(day0+2*voclen-1))
+      crossratiosubdivide(vocnum[place][w:w+2] for place in places)
+  
+  print("All week pairs:")
+  crossratiosubdivide(vocnum[place][w:w+2] for place in places for w in range(nweeks-1))
+  print("First week to last week:")
+  crossratiosubdivide((vocnum[place][0:nweeks:nweeks-1] for place in places), duration=voclen*(nweeks-1))
+  
+  if len(places)<50:
+    print("--- Inverse variance weighted regression using combined counts for %s ---"%areacovered)
+    sr=simpleregress(sum(vocnum.values()))
+    xx=[sr[1]]# Overall growth
+    print("%s:"%areacovered,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+    print()
+    print("--- Inverse variance weighted regression using counts for each %s ---"%locationsize)
+    s0=s1=0
+    for place in places:
+      sr=simpleregress(vocnum[place])
+      xx.append(sr[0]-firstweek)# Intercept of [place]
+      print("%25s:"%place,Gdesc(sr[1],sr[2]),Rdesc(sr[1],sr[2]),"   crossover on",daytodate(sr[0]))
+      iv=1/sr[2]**2
+      s0+=iv
+      s1+=iv*sr[1]
+    print()
+    g=s1/s0;dg=sqrt(1/s0)
+    print("Inverse variance weighted count for %s controlling for %s:"%(areacovered,locationsize),Gdesc(g,dg),Rdesc(g,dg))
+    print()
+    
+    bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
+    res=minimize(NLL_vonly,xx,bounds=bounds,method="SLSQP",options=minopts)
+    print("--- Quasi-Poisson regression controlling for %s ---"%locationsize)
+    print("Growth: %.2f%%    crossover on"%(res.x[0]*100),daytodate(firstweek+res.x[1]))
+    print()
+  
 print()
 if reduceltla==None: sys.exit(0)
 
@@ -778,6 +781,11 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   tot+=-(xx[3]-g0)**2/(2*v0)
   if const: tot-=log(2*pi*v0)/2
   
+  # Prior on GTR
+  sd4=1
+  tot+=-((xx[4]-1)/sd4)**2/2
+  if const: tot-=log(2*pi*sd4**2)/2
+  
   AA,BB,GG=expand(xx)
   # Component of likelihood due to number of confirmed cases seen
   for i in range(ndays):
@@ -799,7 +807,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   
   # Term to regulate change in growth rate
   for i in range(bmN):
-    tot+=-xx[4+i]**2/2
+    tot+=-xx[nfp+i]**2/2
   if const: tot-=bmN*log(2*pi)/2
   
   # Term to align the variant numbers with VOC count data
@@ -883,7 +891,8 @@ def optimiseplace(place,hint=np.zeros(bmN+nfp),fixedh=None,statphase=False):
     N=H.shape[0]
     if det<=0: print("Warning: Hessian not positive for %s. Can't make corrected log likelihood."%place);det=1
     LL+=N*log(2*pi)/2-log(det)/2
-
+    #pdb.set_trace()
+    
   # Return optimum xx log likelihood
   return res.x/condition,LL
 
@@ -1164,6 +1173,7 @@ if mode=="local growth rates":
     if len(places)<10:
       xx1,L1=optimiseplace(place,statphase=True)
       print("Corrected log likelihood",L1)
+      print("GTR",xx1[4])
     AA,BB,GG=expand(xx0)
     h0=xx0[2]
     ff=[0,L0,0]
