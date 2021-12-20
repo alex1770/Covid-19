@@ -782,7 +782,7 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   if const: tot-=log(2*pi*v0)/2
   
   # Prior on GTR
-  sd4=.125
+  sd4=.2
   tot+=-(xx[4]/sd4)**2/2
   if const: tot-=log(2*pi*sd4**2)/2
   
@@ -972,7 +972,7 @@ def printplaceinfo(place,using=''):
     print(daytodate(day0),"-",daytodate(day1),"%6d %6d %6.0f"%(vocnum[place][w][0],vocnum[place][w][1],sum(cases[place][day0-minday:day1-minday+1])))
   print()
 
-def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using='',samples=None):
+def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using='',samples=None, gtr=None):
   print("ModV1    = modelled number of new cases of Alpha on this day multiplied by the ascertainment rate")
   print("ModV2    = modelled number of new cases of Delta on this day multiplied by the ascertainment rate")
   print("Pred     = predicted number of cases seen this day = ModV1+ModV2")
@@ -1068,7 +1068,10 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     write('set timefmt "%Y-%m-%d"')
     write('set format x "%Y-%m-%d"')
     write('set xtics nomirror rotate by 45 right offset 0.5,0')
-    write('set label "Location: %s\\nAs of %s:\\n%s\\n%s\\n%s" at screen 0.45,0.9'%(area+using,daytodate(minday+ndays-ave-1),EQ,ER,ETA))
+    s='set label "Location: %s\\n'%(area+using)
+    if gtr!=None: s+='Estd generation time ratio %s/%s = %.2f (%.2f - %.2f).  '%(variant,nonvariant,gtr[0],gtr[1],gtr[2])
+    s+='As of %s:\\n%s\\n%s\\n%s" at screen 0.45,0.9'%(daytodate(minday+ndays-ave-1),EQ,ER,ETA)
+    write(s)
 
     mi=[1e9]*50;mx=[-1e9]*50
     with open(graphdata,'r') as fp:
@@ -1134,7 +1137,8 @@ def makecombinedgrowthgraph(places):
   write('set key right')
   write('set grid lw 1 lc "black" dashtype (20,7)')
   write('set lt 9 lc "grey"')
-  write('set y2tics')
+  #write('set y2tics mirror')
+  write('unset y2tics')
   write('set offset graph 0.01, graph 0.01, graph 0.1, graph 0')
   write('set title "Estimated continuous growth rates of the %s variant in %s\\n'%(variant,areacovered)+
         'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
@@ -1190,23 +1194,25 @@ if mode=="local growth rates":
     else:
       (Tmin,T,Tmax)=[None,h0,None]
 
-    gtr=xx0[4]
+    gtr0=xx0[4]
     ff=[0,L0,0]
     eps=0.01
     for i in [-1,1]:
-      xx,L=optimiseplace(place,hint=xx0,fixedgtr=gtr+i*eps)
+      xx,L=optimiseplace(place,hint=xx0,fixedgtr=gtr0+i*eps)
       ff[i+1]=L
     # Use observed Fisher information to make confidence interval
     fi=(-ff[0]+2*ff[1]-ff[2])/eps**2
     if fi>0:
       dgtr=1/sqrt(fi)
-      print("GTR = %.3f (%.3f - %.3f)"%(exp(gtr),exp(gtr-zconf*dgtr),exp(gtr+zconf*dgtr)))
+      gtr=(exp(gtr0),exp(gtr0-zconf*dgtr),exp(gtr0+zconf*dgtr))
+      print("GTR = %.3f (%.3f - %.3f)"%gtr)
     else:      
-      print("GTR = %.3f (? - ?)"%(exp(gtr)))
+      print("GTR = %.3f (? - ?)"%(exp(gtr0)))
+      gtr=None
       
     SSS=getsamples(place,xx0)
     print("Locally optimised growth advantage")
-    Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
+    Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS,gtr=gtr)
     summary[place]=(Q,R,T,Tmin,Tmax)
   makecombinedgrowthgraph(places)
   print()
