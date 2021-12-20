@@ -386,6 +386,8 @@ elif source=="SGTF":
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
+fullsource+='; https://coronavirus.data.gov.uk/, last specimen date '+daytodate(maxday)
+
 publishedday=datetoday(max(apicases['date']))+1# Day when api published results
 
 # specadj[d] = chance that a specimen from minday+d has been reported by now
@@ -1076,7 +1078,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
     #write('set y2tics')
     write('set title "Estimated continuous growth rates of %s and %s variants in %s\\n'%(nonvariant,variant,area+using)+
           'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-          'Data sources: %s; https://coronavirus.data.gov.uk/"'%fullsource)
+          'Data sources: %s"'%fullsource)
     write('plot %s "%s" u 1:19 w lines lc "green" lw 3 title "Estimated growth in %s", "%s" u 1:18:20 with filledcurves lc "green" title "", "%s" u 1:22 w lines lc "blue" lw 3 title "Estimated growth in %s", "%s" u 1:21:23 with filledcurves lc "blue" title ""'%(yscale,graphdata,nonvariant,graphdata,graphdata,variant,graphdata))
     print("Written graph to %s"%graphfnR)
     
@@ -1089,12 +1091,54 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       write('set ylabel "New cases per day (scaled down to match ascertainment rate of %0.f%%)"'%(100*asc))
       write('set title "Estimated new cases per day of %s and %s in %s\\n'%(nonvariant,variant,area+using)+
             'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-            'Data sources: %s; https://coronavirus.data.gov.uk/"'%fullsource)
+            'Data sources: %s"'%fullsource)
       write('plot %s "%s" u 1:2 with lines lw 3 title "Modelled %s", "%s" u 1:3 with lines lw 3 title "Modelled %s", "%s" u 1:4 with lines lw 3 title "Modelled total", "%s" u 1:5 with lines lt 6 lw 3 title "Confirmed cases (all variants, weekday adjustment)", "%s" u 1:6 lt 1 pt 6 lw 3 title "Proportion of %s scaled up to modelled total", "%s" u 1:7 lt 2 pt 6 lw 3 title "Proportion of %s scaled up to modelled total"'%(yscale,graphdata,nonvariant,graphdata,variant,graphdata,graphdata,graphdata,nonvariant,graphdata,variant))
       print("Written graph to %s"%graphfn)
     
     p.close();po.wait()
   return Q,R
+
+def makecombinedgrowthgraph(places):
+  if args.graph_filename==None: return
+  
+  now=datetime.utcnow().strftime('%Y-%m-%d')
+  po=Popen("gnuplot",shell=True,stdin=PIPE);p=po.stdin
+  def write(*s): p.write((' '.join(map(str,s))+'\n').encode('utf-8'))
+  
+  write('set terminal pngcairo font "sans,13" size 1920,1280')
+  write('set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5')
+  write('set xdata time')
+  write('set timefmt "%Y-%m-%d"')
+  write('set format x "%Y-%m-%d"')
+  write('set xtics nomirror rotate by 45 right offset 0.5,0')
+  
+  graphfn=sanitise(args.graph_filename+'_combinedgrowths.png')
+  write('set output "'+graphfn+'"')
+  write('set key left')
+  write('set ylabel "Estimated growth rate of %s'%variant)
+  write('set style fill transparent solid 0.25')
+  write('set style fill noborder')
+  write('set key right')
+  write('set grid lw 1 lc "black" dashtype (20,7)')
+  write('set lt 9 lc "grey"')
+  write('set y2tics')
+  write('set offset graph 0.01, graph 0.01, graph 0.1, graph 0')
+  write('set title "Estimated continuous growth rates of the %s variant in %s\\n'%(variant,areacovered)+
+        'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
+        'Data sources: %s"'%fullsource)
+  
+  pl=[]
+  for place in places:
+    area=ltla2name.get(place,place)
+    graphdata=sanitise(args.graph_filename+'_'+area+'.dat')
+    pl.append('"%s" u 1:22 w lines lw 3 title "%s"'%(graphdata,area))
+    #pl.append('"%s" u 1:22 w lines lw 3 title "Estimated growth of %s in %s"'%(graphdata,variant,area))
+    #pl.append('"%s" u 1:22 w lines lw 3 title "Estimated growth in %s", "" u 1:21:23 with filledcurves title ""'%(graphdata,area))
+  
+  write('plot ' + ','.join(pl))
+  p.close();po.wait()
+  print("Written graph to %s"%graphfn)
+    
 
 def printsummary(summary):
   print("Location                       Q     R      T")
@@ -1135,6 +1179,7 @@ if mode=="local growth rates":
     print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS)
     summary[place]=(Q,R,T,Tmin,Tmax)
+  makecombinedgrowthgraph(places)
   print()
   printsummary(summary)
 
