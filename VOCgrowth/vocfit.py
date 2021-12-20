@@ -1053,7 +1053,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
   print(EQ)
   print(ER)
   print(ETA)
-  ETA+="\\nNB: CIs only show within-model statistical uncertainty but there are also external sources of uncertainty"
+  ETA+="\\nNB: CIs only show within-model statistical uncertainty - the model or its input may be off"
   print()
   if graphfp!=None:
     graphfp.close()
