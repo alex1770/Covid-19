@@ -27,7 +27,6 @@ ltla2name=dict(zip(ltlaukdata['LAD19CD'],map(sanitise,ltlaukdata['LAD19NM'])))
 #variantset=["B.1.617.2", "AY."];nonvariantset=["B.1.1.7"];variant="Delta";nonvariant="Alpha"
 #variantset=["AY.4.2"];nonvariantset=[""];variant="AY.4.2";nonvariant="non-AY.4.2"
 variantset=["BA.1", "BA.2"];nonvariantset=[""];variant="Omicron";nonvariant="non-Omicron"
-relative=variant+'/'+nonvariant
 
 # Set bounds for relative daily growth rate
 (hmin,hmax)=(0.0,0.2)
@@ -154,10 +153,10 @@ bmsig=25
 bmscale=0.01
 
 # Case ascertainment rate
-asc=0.4
+asc=0.408
 
 # Discard this many cases at the end of the list of cases by specimen day (may be increased later if Wales is in the mix)
-discardcasedays=2
+discardcasedays=1
 
 # Discard this many days of the latest COG data
 discardcogdays=2
@@ -271,9 +270,9 @@ else:
 
 apicases=loadcsv("ltla.csv")
 d=datetime.now(pytz.timezone("Europe/London"))
-today=Date(d.strftime('%Y-%m-%d'))
-if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
-if max(apicases['date'])<today-1:
+publishedday=Date(d.strftime('%Y-%m-%d'))
+if d.hour+d.minute/60<16+10/60: publishedday-=1# Dashboard/api updates at 4pm UK time
+if max(apicases['date'])<publishedday-1:
   import requests
   url='https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv'
   response=requests.get(url, timeout=10)
@@ -281,6 +280,7 @@ if max(apicases['date'])<today-1:
   with open('ltla.csv','w') as fp: fp.write(response.text)
   apicases=loadcsv('ltla.csv')
 
+assert publishedday==Date(max(apicases['date']))+1
 maxday=datetoday(max(apicases['date']))-discardcasedays# Inclusive
 ndays=maxday-minday+1
 firstweek=max(firstweek,minday+voclen-1)
@@ -386,30 +386,25 @@ elif source=="SGTF":
 else:
   raise RuntimeError("Unrecognised source: "+source)
 
-# speccasesadjust[d][r] = chance that a specimen from day of the week d (Monday=0) is reported (by) r days later
-speccasesadjust=np.array([[ 0.    , 0.3954, 0.8823, 0.9664, 0.9914, 0.9975, 0.9989, 1.    ],
-                          [ 0.    , 0.3264, 0.8731, 0.9707, 0.9893, 0.9962, 1.0003, 1.    ],
-                          [ 0.    , 0.3561, 0.8745, 0.9604, 0.983 , 0.989 , 0.9936, 1.    ],
-                          [ 0.    , 0.3511, 0.8699, 0.9567, 0.9768, 0.9873, 0.9974, 1.    ],
-                          [ 0.    , 0.3132, 0.8363, 0.942 , 0.9701, 0.988 , 0.9964, 1.    ],
-                          [ 0.    , 0.2943, 0.8404, 0.9218, 0.9595, 0.984 , 0.994 , 1.    ],
-                          [ 0.    , 0.4585, 0.9093, 0.961 , 0.9859, 0.9934, 0.9987, 1.    ]])
-infinity=speccasesadjust.shape[1]# Cases are considered stable at infinity-1 days after specimen taken
 publishedday=datetoday(max(apicases['date']))+1# Day when api published results
-monday=datetoday('2021-06-07')# Example of a Monday
-specadj=np.zeros(ndays)
-for d in range(ndays):
-  day=minday+d
-  r=publishedday-day;assert r>=1 and r<1000
-  if r<infinity: specadj[d]=speccasesadjust[(day-monday)%7][r]
-  else: specadj[d]=1
+
+# specadj[d] = chance that a specimen from minday+d has been reported by now
+ex=getextrap(publishedday)
+n=len(ex)-discardcasedays
+specadj=ex[n-ndays:n]
+specadj_engregion={'England': specadj}
+for reg in {ltla2region[x] for x in ltla2region if x[0]=='E'}:
+  ex=getextrap(publishedday,location=reg)
+  n=len(ex)-discardcasedays
+  specadj_engregion[reg]=ex[n-ndays:n]
+# Pro tem using English spec adj for these nif corrections (can't believe it's going to matter much)
 nif1a=nif1*specadj
 lognif1a=np.log(nif1a)
 log1mnif1a=np.log(1-nif1a)
 
 # Simple weekday adjustment by dividing by the average count for that day of the week.
 # Use a relatively stable period (inclusive) over which to take the weekday averages.
-weekadjdates=[datetoday('2021-04-03'),datetoday('2021-05-14')]
+weekadjdates=[datetoday('2021-09-20'),datetoday('2021-11-21')]
 weekadj=np.zeros(7)
 for (date,n) in zip(apicases['date'],apicases['newCasesBySpecimenDate']):
   day=datetoday(date)
@@ -427,13 +422,15 @@ if reduceltla!=None:
     d=day-minday
     place=reduceltla[ltla]
     if place not in vocnum: continue
+    if ltla[0]=='E': reg=ltla2region[ltla]
+    else: reg='England'# Pro tem use English specimen adjustment for non-English ltlas
     if place not in precases0: precases0[place]=np.zeros(2,dtype=int)
     if place not in cases: cases[place]=np.zeros(ndays)
     for i in range(2):
       if day>preweek-7*(2-i) and day<=preweek-7*(1-i):
         precases0[place][i]+=n
     if d>=0 and d<ndays:
-      cases[place][d]+=n/specadj[d]/weekadjp[day%7]
+      cases[place][d]+=n/specadj_engregion[reg][d]/weekadjp[day%7]
   places=sorted(list(cases))
 else:
   places=sorted(list(vocnum))
@@ -757,12 +754,12 @@ def NLL(xx_conditioned,lcases,lvocnum,sig0,asc,lprecases,const=False):
   xx=xx_conditioned/condition
   tot=0
   
-  # Prior on starting number of cases of non-Delta: assume starts off similar to total number of cases
+  # Prior on starting number of cases of non-variant: assume starts off similar to total number of cases
   a0=log(lcases[0]+.5)
   tot+=-((xx[0]-a0)*isd0)**2/2
   if const: tot-=log(2*pi/isd0**2)/2
   
-  # Very weak prior on starting number of cases of Delta
+  # Very weak prior on starting number of cases of variant
   tot+=-((xx[1]-(a0-4))*isd1)**2/2
   if const: tot-=log(2*pi/isd1**2)/2
   
@@ -1029,11 +1026,14 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       mprint("       -       -       -       -       -       -")
   EQ="Estd growth in %s: "%nonvariant+GDdesc(QQ[nmed],QQ[nmin],QQ[nmax])
   ER="Estd growth in %s: "%variant+GDdesc(RR[nmed],RR[nmin],RR[nmax])
+  print("GGG %s, %.6f, %.6f, %.6f"%(area,RR[nmed],RR[nmin],RR[nmax]))
   # Note that T is not 100(R/Q-1) here because AA, BB are derived from a sum of locations each of which has extra transm T,
   # but because of Simpson's paradox, that doesn't mean the cross ratio of AAs and BBs is also T.
   ETA="Estd growth advantage = "
   if T!=None: ETA+=GDdesc(T,Tmin,Tmax)
-  else: ETA+=GDdesc(TT[nmed],TT[nmin],TT[nmax])
+  else:
+    ETA+=GDdesc(TT[nmed],TT[nmin],TT[nmax])
+    print("RRR %s, %.6f, %.6f, %.6f"%(area,TT[nmed],TT[nmin],TT[nmax]))
   if area!=None: print("Summary");print(area+using)
   print(EQ)
   print(ER)
@@ -1100,8 +1100,8 @@ def printsummary(summary):
   print("Location                       Q     R      T")
   for place in places:
     (Q,R,T,Tmin,Tmax)=summary[place]
-    print("%-25s  %5.2f %5.2f  %4.0f%%"%(place,Q,R,T),end='')
-    if Tmin!=None: print(" ( %4.0f%% - %4.0f%% )"%(Tmin,Tmax))
+    print("%-25s  %5.2f %5.2f  %5.2f"%(place,Q,R,T),end='')
+    if Tmin!=None: print(" ( %5.2f - %5.2f )"%(Tmin,Tmax))
     else: print()
   print()
   print("Q = point estimate of reproduction rate of %s on"%nonvariant,daytodate(maxday-1))
