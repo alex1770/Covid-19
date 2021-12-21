@@ -19,7 +19,7 @@ parser.add_argument('-o', '--outfile', default='logcasesbyage.png', type=str, he
 args=parser.parse_args()
 
 # Need to know public holidays (England), because they will be treated like Sundays
-holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-27","2021-12-28"]]
+holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-25","2021-12-27","2021-12-28"]]
 monday=datetoday('2021-09-20')# Any Monday
 
 #specmode="TimeToPublishAdjustment"
@@ -99,7 +99,7 @@ def get_data(req):
 
 d=datetime.datetime.now(pytz.timezone("Europe/London"))
 today=datetoday(d.strftime('%Y-%m-%d'))
-if d.hour+d.minute/60<16+10/60: today-=1# Dashboard/api updates at 4pm UK time
+if d.hour+d.minute/60<16+5/60: today-=1# Dashboard/api updates at 4pm UK time
 today-=int(args.backdays)
 
 #minday=datetoday('2021-06-01')
@@ -208,50 +208,51 @@ if 0:
     print(daytodate(minday+i),i%7,hh2[i+3,i]/(hh2[i+1,i]+hh2[i+2,i]))
   print()
 
-# Predict from the total of last 'fr' specimen days ==> total of last 'infinity' specimen days
-# - Not the best way to do it because requires 'infinity' days tail. Maybe better to predict individual day 3 from day 1, 2 etc.
-fr=skipdays+1
-data=[]
-targ=[]
-deb=0
-# hhq[publishday - minday][specimenday - minday] = new cases on specimen day that were first reported on publish day
-def getpredictors(hhq,i):  
-  # Predicting (for spec day i) sum of next fr publish days divided by sum of next infinity publish days
-  # If i<npub-infinity+7 then we can make predictors
-  # If i<npub-infinity then we have groundtruth, i.e. log(hhq[i+1:i+fr+1,i].sum()/hhq[i+1:i+infinity+1,i].sum())
-  x1=log(hhq[i+1-7:i+fr+1-7,i-7].sum()/hhq[i+1-7:i+infinity+1-7,i-7].sum())
-  A=B=0
-  for j in range(i-7,0,-7):
-    A+=hhq[j+1:j+fr+1,j].sum()
-    B+=hhq[j+1:j+infinity+1,j].sum()
-  x2=log(A/B)
-  for j in range(i-7,0,-1):
-    A+=hhq[j+1:j+fr+1,j].sum()
-    B+=hhq[j+1:j+infinity+1,j].sum()
-  x3=log(A/B)
-  x4=0
-  for j in range(infinity-fr):
-    x4+=log(hhq[i-j:i+fr,i-1-j].sum()/hhq[i-j:i+fr+1,i-1-j].sum())
-  return [1,x1,x2,x3,x4]
-for i in range(20,npub-infinity):
-  y=log(hh2[i+1:i+fr+1,i].sum()/hh2[i+1:i+infinity+1,i].sum())# Partial sum divided by whole
-  data.append(getpredictors(hh2,i))
-  targ.append(y)
-if deb:
-  with open('temp','w') as fp:
-    for ((dum,x1,x2,x3,x4),y) in zip(data,targ):
-      print("%9.6f %9.6f %9.6f %9.6f   %9.6f"%(x1,x2,x3,x4,y),file=fp)
-n=len(data[0])
-data=np.array(data)
-targ=np.array(targ)
-rr=[]
-for s in range(1,1<<n):
-  l=[i for i in range(n) if (s&1<<i)]
-  res=np.linalg.lstsq(data[:,l],targ)
-  rr.append((l,res))
-rr.sort(key=lambda x:len(x[0])+1e-4*x[1][1][0])
-for (l,res) in rr:
-  if deb: print("%15s  %9.6f"%(l,sqrt(res[1][0]/data.shape[0])),res[0])
+if 0:
+  # Predict from the total of last 'fr' specimen days ==> total of last 'infinity' specimen days
+  # - Not the best way to do it because requires 'infinity' days tail. Maybe better to predict individual day 3 from day 1, 2 etc.
+  fr=skipdays+1
+  data=[]
+  targ=[]
+  deb=0
+  # hhq[publishday - minday][specimenday - minday] = new cases on specimen day that were first reported on publish day
+  def getpredictors(hhq,i):
+    # Predicting (for spec day i) sum of next fr publish days divided by sum of next infinity publish days
+    # If i<npub-infinity+7 then we can make predictors
+    # If i<npub-infinity then we have groundtruth, i.e. log(hhq[i+1:i+fr+1,i].sum()/hhq[i+1:i+infinity+1,i].sum())
+    x1=log(hhq[i+1-7:i+fr+1-7,i-7].sum()/hhq[i+1-7:i+infinity+1-7,i-7].sum())
+    A=B=0
+    for j in range(i-7,0,-7):
+      A+=hhq[j+1:j+fr+1,j].sum()
+      B+=hhq[j+1:j+infinity+1,j].sum()
+    x2=log(A/B)
+    for j in range(i-7,0,-1):
+      A+=hhq[j+1:j+fr+1,j].sum()
+      B+=hhq[j+1:j+infinity+1,j].sum()
+    x3=log(A/B)
+    x4=0
+    for j in range(infinity-fr):
+      x4+=log(hhq[i-j:i+fr,i-1-j].sum()/hhq[i-j:i+fr+1,i-1-j].sum())
+    return [1,x1,x2,x3,x4]
+  for i in range(20,npub-infinity):
+    y=log(hh2[i+1:i+fr+1,i].sum()/hh2[i+1:i+infinity+1,i].sum())# Partial sum divided by whole
+    data.append(getpredictors(hh2,i))
+    targ.append(y)
+  if deb:
+    with open('temp','w') as fp:
+      for ((dum,x1,x2,x3,x4),y) in zip(data,targ):
+        print("%9.6f %9.6f %9.6f %9.6f   %9.6f"%(x1,x2,x3,x4,y),file=fp)
+  n=len(data[0])
+  data=np.array(data)
+  targ=np.array(targ)
+  rr=[]
+  for s in range(1,1<<n):
+    l=[i for i in range(n) if (s&1<<i)]
+    res=np.linalg.lstsq(data[:,l],targ)
+    rr.append((l,res))
+  rr.sort(key=lambda x:len(x[0])+1e-4*x[1][1][0])
+  for (l,res) in rr:
+    if deb: print("%15s  %9.6f"%(l,sqrt(res[1][0]/data.shape[0])),res[0])
 
 # Try to undo the effect of delay from specimen to published test result
 if specmode=="TimeToPublishAdjustment":
