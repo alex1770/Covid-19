@@ -223,8 +223,8 @@ def gettopdir():
   return os.path.dirname(f)
 
 # Return incomplete sample-day correction factors (between 0 and 1) in an array whose
-# sample days correspond to (reportday-n, reportday-(n-1), ..., reportday-1).
-def getextrap(reportday,location='England'):
+# sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
+def getextrap(publishday,location='England'):
   infinity=7
   import numpy as np
   import os,json,sys,datetime,requests
@@ -257,7 +257,7 @@ def getextrap(reportday,location='England'):
     areatype='region'
     cachedir+='_'+location
     
-  today=reportday
+  today=Date(publishday)
   displayages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
   origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
   astrings=["%d_%d"%a for a in origages]
@@ -274,7 +274,7 @@ def getextrap(reportday,location='England'):
   # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
   dd={}
   os.makedirs(cachedir,exist_ok=True)
-  for day in range(today-7,today+1):
+  for day in range(today-max(7,infinity-2),today+1):
     date=daytodate(day)
     fn=os.path.join(cachedir,date)
     if os.path.isfile(fn):
@@ -331,7 +331,14 @@ def getextrap(reportday,location='England'):
   # sp[specimenday-minday][age index] = Est no. of samples
   sp=np.zeros([nspec,nages],dtype=float)
   for i in range(nspec):
-    if npub-(i+1)>=infinity: sp[i]=gg[npub,i,:]
-    else: sp[i]=gg[npub,i,:]/gg[npub-7,i-7,:]*gg[i-7+infinity+1,i-7,:]
-
+    if npub-(i+1)>=infinity:
+      sp[i]=gg[npub,i,:]
+    else:
+      #sp[i]=gg[npub,i,:]/gg[npub-7,i-7,:]*gg[i-7+infinity+1,i-7,:]
+      base=np.array([gg[npub-r,i-r] for r in range(max(8,infinity-(npub-(i+1))))])
+      targ7=gg[i+infinity-7,i-7]
+      f0=1+sum((gg[npub,i-r]-gg[npub-1,i-r])/base[r] for r in range(1,infinity-(npub-(i+1))))
+      f1=targ7/base[7]
+      sp[i]=base[0]*(0.55*f0+0.45*f1)
+    
   return gg[npub,:,:].sum(axis=1)/sp.sum(axis=1)
