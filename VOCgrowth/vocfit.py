@@ -274,7 +274,7 @@ else:
 apicases=loadcsv("ltla.csv")
 d=datetime.now(pytz.timezone("Europe/London"))
 publishedday=Date(d.strftime('%Y-%m-%d'))
-if d.hour+d.minute/60<16+10/60: publishedday-=1# Dashboard/api updates at 4pm UK time
+if d.hour+d.minute/60<16+5/60: publishedday-=1# Dashboard/api updates at 4pm UK time
 if max(apicases['date'])<publishedday-1:
   import requests
   url='https://coronavirus.data.gov.uk/api/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv'
@@ -398,10 +398,12 @@ ex=getextrap(publishedday)
 n=len(ex)-discardcasedays
 specadj=ex[n-ndays:n]
 specadj_engregion={'England': specadj}
+print("Incomplete specimen cases correction factors")
 for reg in {ltla2region[x] for x in ltla2region if x[0]=='E'}:
   ex=getextrap(publishedday,location=reg)
   n=len(ex)-discardcasedays
   specadj_engregion[reg]=ex[n-ndays:n]
+  print(reg,specadj_engregion[reg][-10:])
 # Pro tem using English spec adj for these nif corrections (can't believe it's going to matter much)
 nif1a=nif1*specadj
 lognif1a=np.log(nif1a)
