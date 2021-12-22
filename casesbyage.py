@@ -284,7 +284,7 @@ elif specmode=="TTPadjdailyweekly":
     n=min(npub-(i+1),infinity)
     if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
     else:
-      base=[hh[i+1-r:i+n+1-r,i-r].sum(axis=0) for r in range(8)]
+      base=[hh[i+1-r:i+n+1-r,i-r].sum(axis=0) for r in range(max(8,infinity-n))]
       targ7=hh[i+1-7:i+infinity-7,i-7].sum(axis=0)
       f0=1+sum(hh[i+n,i-r]/base[r] for r in range(1,infinity-n))
       f1=targ7/base[7]
