@@ -23,7 +23,8 @@ holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05
 monday=datetoday('2021-09-20')# Any Monday
 
 #specmode="TimeToPublishAdjustment"
-specmode="TTPadjrunningweekly"
+#specmode="TTPadjrunningweekly"
+specmode="TTPadjdailyweekly"
 #specmode="TTPadjdailycompound"
 #specmode="Learning"
 #specmode="SimpleRestrict"
@@ -278,6 +279,16 @@ elif specmode=="TTPadjrunningweekly":
     n=min(npub-(i+1),infinity)
     if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
     else: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)/hh[i-7+1:i-7+n+1,i-7,:].sum(axis=0)*hh[i-7+1:i-7+infinity+1,i-7,:].sum(axis=0)
+elif specmode=="TTPadjdailyweekly":
+  for i in range(nspec):
+    n=min(npub-(i+1),infinity)
+    if n==infinity: sp[i]=hh[i+1:i+n+1,i,:].sum(axis=0)
+    else:
+      base=[hh[i+1-r:i+n+1-r,i-r].sum(axis=0) for r in range(8)]
+      targ7=hh[i+1-7:i+infinity-7,i-7].sum(axis=0)
+      f0=1+sum(hh[i+n,i-r]/base[r] for r in range(1,infinity-n))
+      f1=targ7/base[7]
+      sp[i]=base[0]*(0.55*f0+0.45*f1)
 elif specmode=="TTPadjdailycompound":
   for i in range(nspec):
     n=min(npub-(i+1),infinity)
@@ -457,6 +468,3 @@ if len(displayages)>1:
     'extra': 'dashtype (20,7)'
   })
 makegraph(title=title, data=data, mindate=daytodate(displayminday), ylabel='New cases per 100k per day (log scale)', outfn=args.outfile, extra=["set key top left","set logscale y 2"])
-
-# Todo:
-# Validate parameters by seeing how well they predict "groundtruth" values (after several more days)
