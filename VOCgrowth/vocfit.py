@@ -398,12 +398,12 @@ ex=getextrap(publishedday)
 n=len(ex)-discardcasedays
 specadj=ex[n-ndays:n]
 specadj_engregion={'England': specadj}
-print("Incomplete specimen cases correction factors")
+print("Incomplete specimen cases correction factors:")
 for reg in {ltla2region[x] for x in ltla2region if x[0]=='E'}:
   ex=getextrap(publishedday,location=reg)
   n=len(ex)-discardcasedays
   specadj_engregion[reg]=ex[n-ndays:n]
-  print(reg,specadj_engregion[reg][-10:])
+  print("%-27s"%reg,specadj_engregion[reg][-10:])
 # Pro tem using English spec adj for these nif corrections (can't believe it's going to matter much)
 nif1a=nif1*specadj
 lognif1a=np.log(nif1a)
@@ -975,16 +975,16 @@ def printplaceinfo(place,using=''):
   print()
 
 def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using='',samples=None, gtr=None):
-  print("ModV1    = modelled number of new cases of Alpha on this day multiplied by the ascertainment rate")
-  print("ModV2    = modelled number of new cases of Delta on this day multiplied by the ascertainment rate")
+  print("ModV1    = modelled number of new cases of "+nonvariant+" on this day multiplied by the ascertainment rate")
+  print("ModV2    = modelled number of new cases of "+variant+" on this day multiplied by the ascertainment rate")
   print("Pred     = predicted number of cases seen this day = ModV1+ModV2")
   print("Seen     = number of cases observed this day, after weekday adjustment, from api/dashboard")
-  print("PredV1   = p*Pred, where p = proportion of Alpha amongst obserbed variant counts from",source)
+  print("PredV1   = p*Pred, where p = proportion of "+nonvariant+" amongst observed variant counts from",source)
   print("PredV2   = (1-p)*Pred")
   print("SeenV1   = p*Seen")
   print("SeenV2   = (1-p)*Seen")
-  print("Q        = estimated reproduction rate of Alpha on this day")
-  print("R        = estimated reproduction rate of Delta on this day")
+  print("Q        = estimated reproduction rate of "+nonvariant+" on this day")
+  print("R        = estimated reproduction rate of "+variant+" on this day")
   print("ModV1min = ModV1 min confidence interval")
   print("ModV1med = ModV1 mode confidence interval")
   print("ModV1max = ModV1 max confidence interval")
