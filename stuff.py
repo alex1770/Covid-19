@@ -191,6 +191,7 @@ class Date(int):
     if type(daydate)==str: return super(cls,cls).__new__(cls,datetoday(daydate))
     else: return super(cls,cls).__new__(cls,daydate)
   def __eq__(self,other): return int(self)==int(Date(other))
+  def __hash__(self): return hash(int(Date(self)))
   def __ge__(self,other): return int(self)>=int(Date(other))
   def __le__(self,other): return int(self)<=int(Date(other))
   def __gt__(self,other): return int(self)>int(Date(other))
@@ -229,8 +230,9 @@ def gettopdir():
   return os.path.dirname(f)
 
 def getapidata(req):
+  import requests
   url='https://api.coronavirus.data.gov.uk/v2/data?'
-  for t in range(10):
+  for t in range(5):
     try:
       response = requests.get(url+req, timeout=5)
       if response.ok: break
@@ -247,23 +249,48 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
-# Return incomplete sample-day correction factors (between 0 and 1) in an array whose
-# sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
-def getextrap(publishday,location='England'):
-  infinity=7
-  import numpy as np
-  import os,json,sys,datetime,requests
-
-  minday=Date('2021-08-20')
-  
+def getcasesbyage(specday,location):
+  origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
   cachedir=os.path.join(gettopdir(),'apidata_allcaseages')
   if location=='England':
     areatype='nation'
   else:
     areatype='region'
     cachedir+='_'+location
-    
-  today=Date(publishday)
+  date=str(Date(specday))
+  fn=os.path.join(cachedir,date)
+  os.makedirs(cachedir,exist_ok=True)
+  if os.path.isfile(fn):
+    with open(fn,'r') as fp: td=json.load(fp)
+  else:
+    male=getapidata('areaType='+areatype+'&areaName='+location+'&metric=maleCases&release='+date)
+    female=getapidata('areaType='+areatype+'&areaName='+location+'&metric=femaleCases&release='+date)
+    td={}
+    for sex in [male,female]:
+      sexname=sex[0]['metric'][:-5]
+      td[sexname]={}
+      for d in sex:
+        specdate=d['date']
+        td[sexname][specdate]={}
+        x=d[d['metric']]
+        for y in x:
+          a=parseage(y['age'])
+          if a in origages:
+            td[sexname][specdate]["%d_%d"%a]=y['value']
+    with open(fn,'w') as fp: json.dump(td,fp,indent=2)
+    print("Retrieved api data at",date)
+  return td
+
+# Return incomplete sample-day correction factors (between 0 and 1) in an array whose
+# sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
+def getextrap(publishday,location='England'):
+  infinity=7
+  import numpy as np
+  import os,json,sys,datetime
+
+  minday=Date('2021-08-20')
+  
+  publishday=Date(publishday)
   displayages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
   origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
   astrings=["%d_%d"%a for a in origages]
@@ -279,39 +306,17 @@ def getextrap(publishday,location='England'):
   # Note that specimendate goes back to the dawn of time, whatever minday is, because we want to save everything.
   # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
   dd={}
-  os.makedirs(cachedir,exist_ok=True)
-  for day in range(today-max(7,infinity-2),today+1):
-    date=daytodate(day)
-    fn=os.path.join(cachedir,date)
-    if os.path.isfile(fn):
-      with open(fn,'r') as fp: td=json.load(fp)
-    else:
-      male=getapidata('areaType='+areatype+'&areaName='+location+'&metric=maleCases&release='+date)
-      female=getapidata('areaType='+areatype+'&areaName='+location+'&metric=femaleCases&release='+date)
-      td={}
-      for sex in [male,female]:
-        sexname=sex[0]['metric'][:-5]
-        td[sexname]={}
-        for d in sex:
-          specdate=d['date']
-          td[sexname][specdate]={}
-          x=d[d['metric']]
-          for y in x:
-            a=parseage(y['age'])
-            if a in origages:
-              td[sexname][specdate]["%d_%d"%a]=y['value']
-      with open(fn,'w') as fp: json.dump(td,fp,indent=2)
-      print("Retrieved api data at",date)
-    dd[date]=td
+  for day in Daterange(publishday-max(7,infinity-2),publishday+1):
+    dd[day]=getcasesbyage(day,location)
   
   # Convert to numpy array
   # ee[publishday - minday][sex 0=m, 1=f][specimenday - (minday-1)][index into displayages] = publishday's version of cumulative cases up to specimen day
-  npub=today-minday+1
-  nspec=today-minday
+  npub=publishday-minday+1
+  nspec=publishday-minday
   ee=np.zeros([npub+1,2,nspec+1,nages],dtype=int)
   smindate=daytodate(minday-1)# Prepare this to compare strings because datetoday is slow
   for pubdate in dd:
-    pday=datetoday(pubdate)-(minday-1)
+    pday=int(pubdate)-(minday-1)
     assert pday>=0
     for sex in dd[pubdate]:
       s=['male','female'].index(sex)
@@ -348,3 +353,7 @@ def getextrap(publishday,location='England'):
       sp[i]=base[0]*(0.55*f0+0.45*f1)
     
   return gg[npub,:,:].sum(axis=1)/sp.sum(axis=1)
+
+#def getextrap(publishday,location='England',minday=Date('2021-08-20')):
+#  sp=getcorrectedcases(minday,publishday,location=location)
+  
