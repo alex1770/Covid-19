@@ -188,22 +188,23 @@ def weekdayadj_slow(nn,alpha=0.1):
 class Date(int):
   def __new__(cls, daydate):
     if type(daydate)==str: return super(cls,cls).__new__(cls,datetoday(daydate))
-    elif type(daydate)==int: return super(cls,cls).__new__(cls,daydate)
-    elif type(daydate)==Date: return daydate
-    else: raise RuntimeError("Can't initialise Date with type: "+str(type(daydate)))
-    #else: return super(cls,cls).__new__(cls,daydate)
+    else: return super(cls,cls).__new__(cls,daydate)
+  def __eq__(self,other): return int(self)==int(Date(other))
   def __ge__(self,other): return int(self)>=int(Date(other))
   def __le__(self,other): return int(self)<=int(Date(other))
   def __gt__(self,other): return int(self)>int(Date(other))
   def __lt__(self,other): return int(self)<int(Date(other))
+  # Date + int = Date
   def __add__(self, other):
     res = super(Date, self).__add__(other)
     return self.__class__(res)
+  def __radd__(self, other): return self+other
+  # Date - int = Date
+  # Date - Date = int
   def __sub__(self, other):
-    if type(other)==Date: return int(self)-int(other)
-    else: return Date(int(self)-int(Date(other)))
-    #res = super(Date, self).__sub__(other)
-    #return self.__class__(res)
+    if type(other)==int: return Date(int(self)-other)
+    return int(self)-int(Date(other))
+  def __rsub__(self, other): return -(self-other)
   def __str__(self): return daytodate(int(self))
   def __repr__(self): return 'Date('+daytodate(int(self))+')'
 
@@ -222,6 +223,25 @@ def gettopdir():
       break
   return os.path.dirname(f)
 
+def getapidata(req):
+  url='https://api.coronavirus.data.gov.uk/v2/data?'
+  for t in range(10):
+    try:
+      response = requests.get(url+req, timeout=5)
+      if response.ok: break
+      error=response.text
+    except BaseException as err:
+      error=str(err)
+  else: raise RuntimeError('Request failed: '+error)
+  return response.json()['body'][::-1]
+
+# Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
+def parseage(x):
+  if x[-1]=='+': return (int(x[:-1]),150)
+  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
+  aa=[int(y) for y in x.split("_")]
+  return (aa[0],aa[1]+1)
+
 # Return incomplete sample-day correction factors (between 0 and 1) in an array whose
 # sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
 def getextrap(publishday,location='England'):
@@ -230,25 +250,6 @@ def getextrap(publishday,location='England'):
   import os,json,sys,datetime,requests
 
   minday=Date('2021-08-20')
-  
-  def get_data(req):
-    url='https://api.coronavirus.data.gov.uk/v2/data?'
-    for t in range(10):
-      try:
-        response = requests.get(url+req, timeout=5)
-        if response.ok: break
-        error=response.text
-      except BaseException as err:
-        error=str(err)
-    else: raise RuntimeError('Request failed: '+error)
-    return response.json()['body'][::-1]
-  
-  # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
-  def parseage(x):
-    if x[-1]=='+': return (int(x[:-1]),150)
-    x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
-    aa=[int(y) for y in x.split("_")]
-    return (aa[0],aa[1]+1)
   
   cachedir=os.path.join(gettopdir(),'apidata_allcaseages')
   if location=='England':
@@ -280,8 +281,8 @@ def getextrap(publishday,location='England'):
     if os.path.isfile(fn):
       with open(fn,'r') as fp: td=json.load(fp)
     else:
-      male=get_data('areaType='+areatype+'&areaName='+location+'&metric=maleCases&release='+date)
-      female=get_data('areaType='+areatype+'&areaName='+location+'&metric=femaleCases&release='+date)
+      male=getapidata('areaType='+areatype+'&areaName='+location+'&metric=maleCases&release='+date)
+      female=getapidata('areaType='+areatype+'&areaName='+location+'&metric=femaleCases&release='+date)
       td={}
       for sex in [male,female]:
         sexname=sex[0]['metric'][:-5]
