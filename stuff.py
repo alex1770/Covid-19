@@ -250,6 +250,11 @@ def parseage(x):
   return (aa[0],aa[1]+1)
 
 def getcasesbyage_raw(specday,location):
+  # Target save format is
+  # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
+  # (td:sex -> specdate -> agestring -> number_of_cases)
+  # having converted agerange to open-closed format and eliminated superfluous ranges, but kept as a string because json can't handle tuples
+  # Note that specimendate goes back to the dawn of time
   origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
   cachedir=os.path.join(gettopdir(),'apidata_allcaseages')
   if location=='England':
@@ -305,12 +310,6 @@ def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
       if origages[a][0]>=dat[0] and origages[a][1]<=dat[1]: reduceages[astr]=da;break
   nages=len(ages)
   
-  # Target save format is
-  # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
-  # having converted agerange to open-closed format and eliminated superfluous ranges, but kept as a string because json can't handle tuples
-  # Note that specimendate goes back to the dawn of time, whatever minday is, because we want to save everything.
-  # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
-  
   # Convert to numpy array
   # cc[pastpublishday - (minday-1)][specimenday - (minday-1)][sex 0=m, 1=f][index into ages] = pastpublishday's version of cumulative cases up to specimen day
   # for minday-1 <= pastpublishday <= maxday, minday-1 <= specimenday <= maxday-1
@@ -355,23 +354,13 @@ def getcasesbyagepubspec(minday,maxday,ages=[(0,150)],location='England'):
 
 # Return incomplete sample-day correction factors (between 0 and 1) in an array whose
 # sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
-def getextrap(publishday,location='England'):
+def getcasesbyagespeccomplete(publishday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
   infinity=7
   import numpy as np
-  import os,json,sys,datetime
 
-  minday=Date('2021-08-20')
-  
-  ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
   nages=len(ages)
   publishday=Date(publishday)
   
-  # Target save format is
-  # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
-  # having converted agerange to open-closed format and eliminated superfluous ranges, but kept as a string because json can't handle tuples
-  # Note that specimendate goes back to the dawn of time, whatever minday is, because we want to save everything.
-  # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
-
   dd={}
   for day in Daterange(publishday-max(7,infinity-2),publishday+1):
     dd[day]=getcasesbyage_raw(day,location)
@@ -391,9 +380,11 @@ def getextrap(publishday,location='England'):
       f0=1+sum((gg[npub,i-r]-gg[npub-1,i-r])/base[r] for r in range(1,infinity-(npub-(i+1))))
       f1=targ7/base[7]
       sp[i]=base[0]*(0.55*f0+0.45*f1)
-    
-  return gg[npub,:,:].sum(axis=1)/sp.sum(axis=1)
 
-#def getextrap(publishday,location='England',minday=Date('2021-08-20')):
-#  sp=getcorrectedcases(minday,publishday,location=location)
-  
+  return gg[npub,:,:],sp
+
+# Return (age-averaged) incomplete sample-day correction factors (between 0 and 1) in an array whose
+# sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
+def getextrap(publishday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
+  sp0,sp=getcasesbyagespeccomplete(publishday,ages=ages,minday=minday,location=location)
+  return sp0.sum(axis=1)/sp.sum(axis=1)
