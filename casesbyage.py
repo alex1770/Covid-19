@@ -120,32 +120,8 @@ astrings=["%d_%d"%a for a in origages]
 # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
 dd={}
 os.makedirs(cachedir,exist_ok=True)
-for day in range(minday-1,today+1):
-  date=daytodate(day)
-  fn=os.path.join(cachedir,date)
-  if os.path.isfile(fn):
-    with open(fn,'r') as fp: td=json.load(fp)
-  else:
-    male=get_data('areaType='+areatype+'&areaName='+location+'&metric=maleCases&release='+date)
-    female=get_data('areaType='+areatype+'&areaName='+location+'&metric=femaleCases&release='+date)
-    td={}
-    for sex in [male,female]:
-      sexname=sex[0]['metric'][:-5]
-      td[sexname]={}
-      for d in sex:
-        specdate=d['date']
-        td[sexname][specdate]={}
-        x=d[d['metric']]
-        for y in x:
-          a=parseage(y['age'])
-          if a in origages:
-            td[sexname][specdate]["%d_%d"%a]=y['value']
-    with open(fn,'w') as fp: json.dump(td,fp,indent=2)
-    print("Retrieved api data at",date)
-  dd[date]=td
-
-# Convert to numpy array
-# ee[publishday - minday][sex 0=m, 1=f][specimenday - (minday-1)][index into displayages] = publishday's version of cumulative cases up to specimen day
+for day in Daterange(minday-1,today+1):
+  dd[day]=getcasesbyage(day,location)
 
 reduceages={}
 for (a,astr) in enumerate(astrings):
@@ -156,36 +132,10 @@ ONSpop_reduced=np.zeros(nages)
 for (a,astr) in enumerate(astrings):
   if astr in reduceages: ONSpop_reduced[reduceages[astr]]+=ONSpop[origages[a]]
 
-npub=today-minday+1
-nspec=today-minday-skipdays
-ee=np.zeros([npub+1,2,nspec+1,nages],dtype=int)
-smindate=daytodate(minday-1)# Prepare this to compare strings because datetoday is slow
-for pubdate in dd:
-  pday=datetoday(pubdate)-(minday-1)
-  assert pday>=0
-  for sex in dd[pubdate]:
-    s=['male','female'].index(sex)
-    for specdate in dd[pubdate][sex]:
-      if specdate>=smindate:
-        sday=datetoday(specdate)-(minday-1)
-        assert sday>=0
-        if sday<nspec+1:
-          for astring in dd[pubdate][sex][specdate]:
-            if astring in reduceages:
-              ee[pday][s][sday][reduceages[astring]]+=dd[pubdate][sex][specdate][astring]
-
-# Sum over sex
-# ff[publishday - (minday-1)][specimenday - (minday-1)][index into displayages] = publishday's version of cumulative cases up to specimen day
-ff=ee.sum(axis=1)
-
-# Convert from cumulative cases to new cases
-# gg[publishday - (minday-1)][specimenday - minday][index into displayages] = publishday's version of new cases on specimen day
-gg=ff[:,1:,:]-ff[:,:-1,:]
-for i in range(nspec): gg[i+1,i,:]=0
-
-# Convert from total up to publish day, to newly published this day
-# hh[publishday - minday][specimenday - minday][index into displayages] = new cases on specimen day that were first reported on publish day
-hh=gg[1:,:,:]-gg[:-1,:,:]
+# Convert to numpy array, taking difference of cumulative values to get incremental values
+npub,nspec0,cc,cn,nn=convcasesbyagetonumpy(dd,minday,today,ages=displayages)
+nspec=nspec0-skipdays
+hh=nn[:,:,:nspec,:].sum(axis=1)# Sum over sexes
 
 # Convert into (spec day, delay) co-ords
 # jj[specimenday - minday][publishday-(specimenday+1)][index into displayages] = new cases on specimen day that were first reported on publish day
