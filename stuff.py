@@ -351,20 +351,25 @@ def getcasesbyagepubspec(minday,maxday,ages=[(0,150)],location='England'):
   # Convert to numpy array, taking difference of cumulative values to get incremental values
   return convcasesbyagetonumpy(dd,minday,maxday,ages=ages)
 
-# Return incomplete sample-day correction factors (between 0 and 1) in an array whose
-# sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
-def getcasesbyagespeccomplete(publishday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
+# Return case counts by age and specimen day, and estimated "completed" counts.
+# Return values are
+#   sp0[:,:], sp[:,:]
+# where
+#   sp0[day-minday,ageind] = number of cases for age index ageind on day 'day'
+#    sp[day-minday,ageind] = estimated final number of cases for age index ageind on day 'day'
+#   minday <= day < maxday
+def getcasesbyagespeccomplete(maxday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
   infinity=7
   import numpy as np
 
   nages=len(ages)
-  publishday=Date(publishday)
+  maxday=Date(maxday)
   
   dd={}
-  for day in Daterange(publishday-max(7,infinity-2),publishday+1):
+  for day in Daterange(maxday-max(7,infinity-2),maxday+1):
     dd[day]=getcasesbyage_raw(day,location)
 
-  npub,nspec,cc,cn,nn=convcasesbyagetonumpy(dd,minday,publishday,ages=ages)
+  npub,nspec,cc,cn,nn=convcasesbyagetonumpy(dd,minday,maxday,ages=ages)
   gg=cn.sum(axis=2)# Sum over sexes
   
   # Try to undo the effect of delay from specimen to published test result by assuming the pattern is the same as last week's
@@ -384,7 +389,7 @@ def getcasesbyagespeccomplete(publishday,ages=[(a,a+10) for a in range(0,70,10)]
   return gg[npub,:,:],sp
 
 # Return (age-averaged) incomplete sample-day correction factors (between 0 and 1) in an array whose
-# sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
-def getextrap(publishday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
-  sp0,sp=getcasesbyagespeccomplete(publishday,ages=ages,minday=minday,location=location)
+# sample days correspond to (maxday-n, maxday-(n-1), ..., maxday-1).
+def getextrap(maxday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
+  sp0,sp=getcasesbyagespeccomplete(maxday,ages=ages,minday=minday,location=location)
   return sp0.sum(axis=1)/sp.sum(axis=1)
