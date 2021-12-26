@@ -1129,11 +1129,7 @@ def makecombinedgrowthgraph(places):
   write('set timefmt "%Y-%m-%d"')
   write('set format x "%Y-%m-%d"')
   write('set xtics nomirror rotate by 45 right offset 0.5,0')
-  
-  graphfn=sanitise(args.graph_filename+'_combinedgrowths.png')
-  write('set output "'+graphfn+'"')
   write('set key left')
-  write('set ylabel "Estimated growth rate of %s'%variant)
   write('set style fill transparent solid 0.25')
   write('set style fill noborder')
   write('set key right')
@@ -1142,21 +1138,31 @@ def makecombinedgrowthgraph(places):
   #write('set y2tics mirror')
   write('unset y2tics')
   write('set offset graph 0.01, graph 0.01, graph 0.1, graph 0')
-  write('set title "Estimated continuous growth rates of the %s variant in %s\\n'%(variant,areacovered)+
-        'Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+
-        'Data sources: %s"'%fullsource)
+
+  for rel in [0,1]:
+    graphfn=sanitise(args.graph_filename+'_combinedgrowth'+'adv'*rel+'s.png')
+    write('set output "'+graphfn+'"')
+    write('set ylabel "Estimated growth rate of %s'%variant+('/%s'%nonvariant if rel else ''))
+    s='set title "Estimated continuous growth rates of '
+    if rel: s+='the ratio %s/%s'%(variant,nonvariant)
+    else: s+='the %s variant'%variant
+    s+=' in %s\\n'%areacovered
+    s+='Fit made on %s using https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/vocfit.py\\n'%now+'Data sources: %s"'%fullsource
+    write(s)
+    
+    pl=[]
+    for place in places:
+      area=ltla2name.get(place,place)
+      graphdata=sanitise(args.graph_filename+'_'+area+'.dat')
+      if rel: use='1:(($22)-($19))'
+      else: use='1:22'
+      pl.append('"%s" u %s w lines lw 3 title "%s"'%(graphdata,use,area))
+      #pl.append('"%s" u %s w lines lw 3 title "Estimated growth of %s in %s"'%(graphdata,use,variant,area))
+      #pl.append('"%s" u %s w lines lw 3 title "Estimated growth in %s", "" u 1:21:23 with filledcurves title ""'%(graphdata,use,area))
+    write('plot ' + ','.join(pl))
+    print("Written graph to %s"%graphfn)
   
-  pl=[]
-  for place in places:
-    area=ltla2name.get(place,place)
-    graphdata=sanitise(args.graph_filename+'_'+area+'.dat')
-    pl.append('"%s" u 1:22 w lines lw 3 title "%s"'%(graphdata,area))
-    #pl.append('"%s" u 1:22 w lines lw 3 title "Estimated growth of %s in %s"'%(graphdata,variant,area))
-    #pl.append('"%s" u 1:22 w lines lw 3 title "Estimated growth in %s", "" u 1:21:23 with filledcurves title ""'%(graphdata,area))
-  
-  write('plot ' + ','.join(pl))
   p.close();po.wait()
-  print("Written graph to %s"%graphfn)
     
 
 def printsummary(summary):
