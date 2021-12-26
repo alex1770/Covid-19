@@ -283,13 +283,13 @@ def getcasesbyage(specday,location):
 
 # Returns numpy arrays:
 #
-# cc[pastpublishday - (minday-1)][sex 0=m, 1=f][specimenday - (minday-1)][index into ages] = pastpublishday's version of cumulative cases up to specimen day
+# cc[pastpublishday - (minday-1)][specimenday - (minday-1)][sex 0=m, 1=f][index into ages] = pastpublishday's version of cumulative cases up to specimen day
 # for minday-1 <= pastpublishday <= maxday, minday-1 <= specimenday <= maxday-1
 #
-# cn[pastpublishday - (minday-1)][sex 0=m, 1=f][specimenday - minday][index into ages] = pastpublishday's version of new cases on specimen day
+# cn[pastpublishday - (minday-1)][specimenday - minday][sex 0=m, 1=f][index into ages] = pastpublishday's version of new cases on specimen day
 # for minday-1 <= pastpublishday <= maxday, minday <= specimenday <= maxday-1
 # 
-# nn[pastpublishday - minday][sex 0=m, 1=f][specimenday - minday][index into ages] = new cases on specimen day that were first reported on pastpublish day
+# nn[pastpublishday - minday][specimenday - minday][sex 0=m, 1=f][index into ages] = new cases on specimen day that were first reported on pastpublish day
 # for minday <= pastpublishday <= maxday, minday <= specimenday <= maxday-1
 # (Some nn[] values can be <0 due to anomalous cumulative counts)
 #
@@ -311,11 +311,11 @@ def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
   # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
   
   # Convert to numpy array
-  # cc[pastpublishday - (minday-1)][sex 0=m, 1=f][specimenday - (minday-1)][index into ages] = pastpublishday's version of cumulative cases up to specimen day
+  # cc[pastpublishday - (minday-1)][specimenday - (minday-1)][sex 0=m, 1=f][index into ages] = pastpublishday's version of cumulative cases up to specimen day
   # for minday-1 <= pastpublishday <= maxday, minday-1 <= specimenday <= maxday-1
   npub=maxday-minday+1
   nspec=maxday-minday
-  cc=np.zeros([npub+1,2,nspec+1,nages],dtype=int)
+  cc=np.zeros([npub+1,nspec+1,2,nages],dtype=int)
   smindate=daytodate(minday-1)# Prepare this to compare strings because datetoday is slow
   for pubdate in dd:
     pday=int(pubdate)-(minday-1)
@@ -329,14 +329,14 @@ def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
           if sday<nspec+1:
             for astring in dd[pubdate][sex][specdate]:
               if astring in reduceages:
-                cc[pday][s][sday][reduceages[astring]]+=dd[pubdate][sex][specdate][astring]
+                cc[pday][sday][s][reduceages[astring]]+=dd[pubdate][sex][specdate][astring]
   
-  # cn[pastpublishday - (minday-1)][sex 0=m, 1=f][specimenday - minday][index into ages] = pastpublishday's version of new cases on specimen day
+  # cn[pastpublishday - (minday-1)][specimenday - minday][sex 0=m, 1=f][index into ages] = pastpublishday's version of new cases on specimen day
   # for minday-1 <= pastpublishday <= maxday, minday <= specimenday <= maxday-1
-  cn=cc[:,:,1:,:]-cc[:,:,:-1,:]
-  for i in range(nspec): cn[i+1,:,i,:]=0
+  cn=cc[:,1:,:,:]-cc[:,:-1,:,:]
+  for i in range(nspec): cn[i+1,i,:,:]=0
 
-  # nn[pastpublishday - minday][sex 0=m, 1=f][specimenday - minday][index into ages] = new cases on specimen day that were first reported on pastpublish day
+  # nn[pastpublishday - minday][specimenday - minday][sex 0=m, 1=f][index into ages] = new cases on specimen day that were first reported on pastpublish day
   # for minday <= pastpublishday <= maxday, minday <= specimenday <= maxday-1
   nn=cn[1:,:,:,:]-cn[:-1,:,:,:]
   
@@ -365,7 +365,7 @@ def getextrap(publishday,location='England'):
     dd[day]=getcasesbyage(day,location)
 
   npub,nspec,cc,cn,nn=convcasesbyagetonumpy(dd,minday,publishday,ages=ages)
-  gg=cn.sum(axis=1)# Sum over sexes
+  gg=cn.sum(axis=2)# Sum over sexes
   
   # Try to undo the effect of delay from specimen to published test result by assuming the pattern is the same as last week's
   # sp[specimenday-minday][age index] = Est no. of samples

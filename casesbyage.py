@@ -135,7 +135,7 @@ for (a,astr) in enumerate(astrings):
 # Convert to numpy array, taking difference of cumulative values to get incremental values
 npub,nspec0,cc,cn,nn=convcasesbyagetonumpy(dd,minday,today,ages=displayages)
 nspec=nspec0-skipdays
-hh=nn[:,:,:nspec,:].sum(axis=1)# Sum over sexes
+hh=nn[:,:nspec,:,:].sum(axis=2)# Sum over sexes
 
 # Convert into (spec day, delay) co-ords
 # jj[specimenday - minday][publishday-(specimenday+1)][index into displayages] = new cases on specimen day that were first reported on publish day
