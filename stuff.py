@@ -351,7 +351,6 @@ def getcasesbyagepubspec(minday,maxday,ages=[(0,150)],location='England'):
   # Convert to numpy array, taking difference of cumulative values to get incremental values
   return convcasesbyagetonumpy(dd,minday,maxday,ages=ages)
 
-
 # Return incomplete sample-day correction factors (between 0 and 1) in an array whose
 # sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
 def getcasesbyagespeccomplete(publishday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
@@ -369,6 +368,7 @@ def getcasesbyagespeccomplete(publishday,ages=[(a,a+10) for a in range(0,70,10)]
   gg=cn.sum(axis=2)# Sum over sexes
   
   # Try to undo the effect of delay from specimen to published test result by assuming the pattern is the same as last week's
+  # and also adjusting for more recent trends in delayed reporting
   # sp[specimenday-minday][age index] = Est no. of samples
   sp=np.zeros([nspec,nages],dtype=float)
   for i in range(nspec):
