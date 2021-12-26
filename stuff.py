@@ -296,6 +296,7 @@ def getcasesbyage_raw(specday,location):
 def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
   import numpy as np
   origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
+  minday=Date(minday)
   maxday=Date(maxday)
   astrings=["%d_%d"%a for a in origages]
   reduceages={}
@@ -316,7 +317,7 @@ def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
   npub=maxday-minday+1
   nspec=maxday-minday
   cc=np.zeros([npub+1,nspec+1,2,nages],dtype=int)
-  smindate=daytodate(minday-1)# Prepare this to compare strings because datetoday is slow
+  smindate=str(minday-1)# Prepare this to compare strings because datetoday is slow
   for pubdate in dd:
     pday=int(pubdate)-(minday-1)
     assert pday>=0
@@ -324,7 +325,7 @@ def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
       s=['male','female'].index(sex)
       for specdate in dd[pubdate][sex]:
         if specdate>=smindate:
-          sday=datetoday(specdate)-(minday-1)
+          sday=specdate-(minday-1)
           assert sday>=0
           if sday<nspec+1:
             for astring in dd[pubdate][sex][specdate]:
@@ -341,6 +342,16 @@ def convcasesbyagetonumpy(dd,minday,maxday,ages=[(0,150)]):
   nn=cn[1:,:,:,:]-cn[:-1,:,:,:]
   
   return npub,nspec,cc,cn,nn
+
+def getcasesbyagepubspec(minday,maxday,ages=[(0,150)],location='England'):
+  # Get cumulative age-pubdate-specdate values from api or cache files
+  dd={}
+  for day in Daterange(minday-1,maxday+1):
+    dd[day]=getcasesbyage_raw(day,location)
+
+  # Convert to numpy array, taking difference of cumulative values to get incremental values
+  return convcasesbyagetonumpy(dd,minday,maxday,ages=ages)
+
 
 # Return incomplete sample-day correction factors (between 0 and 1) in an array whose
 # sample days correspond to (publishday-n, publishday-(n-1), ..., publishday-1).
@@ -360,6 +371,7 @@ def getextrap(publishday,location='England'):
   # having converted agerange to open-closed format and eliminated superfluous ranges, but kept as a string because json can't handle tuples
   # Note that specimendate goes back to the dawn of time, whatever minday is, because we want to save everything.
   # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
+
   dd={}
   for day in Daterange(publishday-max(7,infinity-2),publishday+1):
     dd[day]=getcasesbyage_raw(day,location)
@@ -374,7 +386,6 @@ def getextrap(publishday,location='England'):
     if npub-(i+1)>=infinity:
       sp[i]=gg[npub,i,:]
     else:
-      #sp[i]=gg[npub,i,:]/gg[npub-7,i-7,:]*gg[i-7+infinity+1,i-7,:]
       base=np.array([gg[npub-r,i-r] for r in range(max(8,infinity-(npub-(i+1))))])
       targ7=gg[i+infinity-7,i-7]
       f0=1+sum((gg[npub,i-r]-gg[npub-1,i-r])/base[r] for r in range(1,infinity-(npub-(i+1))))

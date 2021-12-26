@@ -119,12 +119,8 @@ ONSpop_reduced=np.zeros(nages)
 for (a,astr) in enumerate(astrings):
   if astr in reduceages: ONSpop_reduced[reduceages[astr]]+=ONSpop[origages[a]]
 
-dd={}
-for day in Daterange(minday-1,today+1):
-  dd[day]=getcasesbyage_raw(day,location)
+npub,nspec0,cc,cn,nn=getcasesbyagepubspec(minday,today,location=location,ages=displayages)
 
-# Convert to numpy array, taking difference of cumulative values to get incremental values
-npub,nspec0,cc,cn,nn=convcasesbyagetonumpy(dd,minday,today,ages=displayages)
 nspec=nspec0-skipdays
 hh=nn[:,:nspec,:,:].sum(axis=2)# Sum over sexes
 
