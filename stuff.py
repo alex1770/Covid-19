@@ -185,6 +185,7 @@ def weekdayadj_slow(nn,alpha=0.1):
   adjusted=np.exp(res.x)
   return adjusted*nn.sum()/adjusted.sum()
 
+# Not doing strict typechecking for all operations: e.g., -Date('2021-01-01') = -18628, Date('2021-01-01')+Date('2021-01-01') = Date('2072-01-02')
 class Date(int):
   def __new__(cls, daydate):
     if type(daydate)==str: return super(cls,cls).__new__(cls,datetoday(daydate))
@@ -195,10 +196,14 @@ class Date(int):
   def __gt__(self,other): return int(self)>int(Date(other))
   def __lt__(self,other): return int(self)<int(Date(other))
   # Date + int = Date
+  # Date + str = str
   def __add__(self, other):
+    if type(other)==str: return daytodate(int(self))+other
     res = super(Date, self).__add__(other)
     return self.__class__(res)
-  def __radd__(self, other): return self+other
+  def __radd__(self, other):
+    if type(other)==str: return other+daytodate(int(self))
+    return self+other
   # Date - int = Date
   # Date - Date = int
   def __sub__(self, other):
