@@ -249,7 +249,7 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
-def getcasesbyage(specday,location):
+def getcasesbyage_raw(specday,location):
   origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
   cachedir=os.path.join(gettopdir(),'apidata_allcaseages')
   if location=='England':
@@ -362,7 +362,7 @@ def getextrap(publishday,location='England'):
   # Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
   dd={}
   for day in Daterange(publishday-max(7,infinity-2),publishday+1):
-    dd[day]=getcasesbyage(day,location)
+    dd[day]=getcasesbyage_raw(day,location)
 
   npub,nspec,cc,cn,nn=convcasesbyagetonumpy(dd,minday,publishday,ages=ages)
   gg=cn.sum(axis=2)# Sum over sexes

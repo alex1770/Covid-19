@@ -66,9 +66,6 @@ location=loclookup.get(location,location)
 if location in ['England','Scotland','Wales','Northern Ireland']: areatype='nation'
 else: areatype='region'
 
-cachedir='apidata_allcaseages'
-if location!='England': cachedir+='_'+location
-
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
@@ -113,16 +110,6 @@ if specmode=="ByPublish": skipdays=0
 origages=[(a,a+5) for a in range(0,90,5)]+[(90,150)]
 astrings=["%d_%d"%a for a in origages]
 
-# Target save format is
-# filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
-# having converted agerange to open-closed format and eliminated superfluous ranges, but kept as a string because json can't handle tuples
-# Note that specimendate goes back to the dawn of time, whatever minday is, because we want to save everything.
-# Collect dd[publishdate]=td, td:sex -> specdate -> agestring -> number_of_cases
-dd={}
-os.makedirs(cachedir,exist_ok=True)
-for day in Daterange(minday-1,today+1):
-  dd[day]=getcasesbyage(day,location)
-
 reduceages={}
 for (a,astr) in enumerate(astrings):
   for (da,dat) in enumerate(displayages):
@@ -131,6 +118,10 @@ nages=len(displayages)
 ONSpop_reduced=np.zeros(nages)
 for (a,astr) in enumerate(astrings):
   if astr in reduceages: ONSpop_reduced[reduceages[astr]]+=ONSpop[origages[a]]
+
+dd={}
+for day in Daterange(minday-1,today+1):
+  dd[day]=getcasesbyage_raw(day,location)
 
 # Convert to numpy array, taking difference of cumulative values to get incremental values
 npub,nspec0,cc,cn,nn=convcasesbyagetonumpy(dd,minday,today,ages=displayages)
