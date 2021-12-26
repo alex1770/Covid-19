@@ -283,7 +283,9 @@ if max(apicases['date'])<publishedday-1:
   with open('ltla.csv','w') as fp: fp.write(response.text)
   apicases=loadcsv('ltla.csv')
 
-assert publishedday==Date(max(apicases['date']))+1
+# Reset the effective published date to cater for delays in publishing, also for Christmas etc
+publishedday=Date(max(apicases['date']))+1
+
 maxday=datetoday(max(apicases['date']))-discardcasedays# Inclusive
 ndays=maxday-minday+1
 firstweek=max(firstweek,minday+voclen-1)
@@ -391,15 +393,13 @@ else:
 
 fullsource+='; https://coronavirus.data.gov.uk/, last specimen date '+daytodate(maxday)
 
-publishedday=datetoday(max(apicases['date']))+1# Day when api published results
-
 # specadj[d] = chance that a specimen from minday+d has been reported by now
 ex=getextrap(publishedday)
 n=len(ex)-discardcasedays
 specadj=ex[n-ndays:n]
 specadj_engregion={'England': specadj}
 print("Incomplete specimen cases correction factors:")
-for reg in {ltla2region[x] for x in ltla2region if x[0]=='E'}:
+for reg in sorted(list({ltla2region[x] for x in ltla2region if x[0]=='E'})):
   ex=getextrap(publishedday,location=reg)
   n=len(ex)-discardcasedays
   specadj_engregion[reg]=ex[n-ndays:n]
