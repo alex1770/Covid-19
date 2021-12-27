@@ -82,7 +82,8 @@ assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
 nif1=0.3# Non-independence factor for case counts
 nif2=0.3# Non-independence factor for SGTF counts
-sf=100# Smoothness factor
+sfmin=50 # Penalty for growth decreasing
+sfmax=250# Penalty for growth increasing
 
 # Axes: (day, age, variant)   variant=0 or 1
 #    E.g., 36 x 3 x 2
@@ -130,7 +131,9 @@ def LL(xx):
   
   gr=np.log(v0[1:]/v0[:-1])
   dgr=gr[1:,:]-gr[:-1,:]
-  ll+=-sf**2/2*(dgr*dgr).sum()
+  dgrmax=np.maximum(dgr,0)
+  dgrmin=np.minimum(dgr,0)
+  ll+=-(sfmin**2/2*(dgrmin*dgrmin).sum()+sfmax**2/2*(dgrmax*dgrmax).sum())
   
   return ll
 
@@ -159,6 +162,7 @@ s0=v0.sum(axis=1)
 s1=v1.sum(axis=1)
 gr=np.log(v0[1:]/v0[:-1])
 
+print('Location:',location)
 print('Omicron/Delta growth = %.3f'%h)
 print('Age bands:',ages)
 print("Crossovers:",[Date(minday+int(x+.5)) for x in cross])
