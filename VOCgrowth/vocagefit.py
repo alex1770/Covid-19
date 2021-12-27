@@ -31,11 +31,13 @@ f=background[1]/background[0]
 for place in vocnum:
   for daynum in range(ndays):
     vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
+vocnum['England']=sum(vocnum.values())
 
 location='London'
 #ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
 #ages=[(0,40),(40,60),(60,150)]
 ages=[(0,50),(50,150)]
+#ages=[(20,40),(60,150)]
 nages=len(ages)
 sp0,sp=getcasesbyagespeccomplete(minday=minday0,maxday=pubday,ages=ages,location=location)
 
@@ -79,7 +81,7 @@ assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
 nif1=0.3# Non-independence factor for case counts
 nif2=0.3# Non-independence factor for SGTF counts
-sf=100# Smoothness factor
+sf=200# Smoothness factor
 
 # Axes: (day, age, variant)   variant=0 or 1
 #    E.g., 36 x 3 x 2
@@ -162,9 +164,7 @@ print("Crossovers:",[Date(minday+int(x+.5)) for x in cross])
 print()
 
 print("Date      ",end='')
-for a in range(nages): print('   D_A%d'%a,end='')
-print('  ',end='')
-for a in range(nages): print('   O_A%d'%a,end='')
+for a in range(nages): print('       D_A%d   O_A%d'%(a,a),end='')
 print('  ',end='')
 for a in range(nages):
   print('   gr_A%d'%a,end='')
@@ -176,9 +176,7 @@ print()
 
 for d in range(nspec):
   print(Date(minday+d),end='')
-  for a in range(nages): print('  %5.0f'%v0[d][a],end='')
-  print('  ',end='')
-  for a in range(nages): print('  %5.0f'%v1[d][a],end='')
+  for a in range(nages): print('     %6.0f %6.0f'%(v0[d][a],v1[d][a]),end='')
   print('  ',end='')
   for a in range(nages):
     if d<nspec-1:
