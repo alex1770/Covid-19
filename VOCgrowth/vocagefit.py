@@ -13,6 +13,7 @@ minday=Date('2021-11-17')
 pubday=Date('2021-12-24')
 maxday=max(Date(d) for d in sgtf['specimen_date'])+1
 ndays=maxday-minday
+skip=1
 
 # Get SGTF data into a suitable form
 vocnum={}
@@ -50,10 +51,10 @@ for day in Daterange(*weekadjdates):
   weekadj[day%7]+=sp0[day-minday0].sum()
 weekadjp=weekadj*7/sum(weekadj)
 
-cases=np.array([sp[day-minday0]/weekadjp[day%7] for day in Daterange(minday,maxday)])
+cases=np.array([sp[day-minday0]/weekadjp[day%7] for day in Daterange(minday,pubday-skip)])
 nspec=cases.shape[0]
 vn=vocnum[location]
-assert vn.shape[0]==nspec
+nsgtf=vn.shape[0]
 
 #for day in Daterange(minday,maxday): print(day,"%8.3f"%(log(vn[day-minday][1]/vn[day-minday][0]+1e-100)),cases[day-minday])
 #for day in Daterange(minday,maxday): print(day,cases[day-minday].sum()/vn[day-minday].sum())
@@ -81,7 +82,7 @@ assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
 nif1=0.3# Non-independence factor for case counts
 nif2=0.3# Non-independence factor for SGTF counts
-sf=200# Smoothness factor
+sf=100# Smoothness factor
 
 # Axes: (day, age, variant)   variant=0 or 1
 #    E.g., 36 x 3 x 2
@@ -124,7 +125,7 @@ def LL(xx):
   s1=v1.sum(axis=1)
   
   # Binomial probability of variant
-  pp=s1/(s0+s1)
+  pp=(s1/(s0+s1))[:nsgtf]
   ll+=(vn[:,0]*np.log(1-pp)+vn[:,1]*np.log(pp)).sum()*nif2
   
   gr=np.log(v0[1:]/v0[:-1])
@@ -190,6 +191,6 @@ for d in range(nspec):
   else:
     print('       -',end='')
   print('  %7.3f'%log(s1[d]/s0[d]),end='')
-  if vn[d][0]>0 and vn[d][1]>0: print('  %7.3f'%log(vn[d][1]/vn[d][0]),end='')
+  if d<nsgtf and vn[d][0]>0 and vn[d][1]>0: print('  %7.3f'%log(vn[d][1]/vn[d][0]),end='')
   else: print('        -',end='')
   print()
