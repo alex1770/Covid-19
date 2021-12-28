@@ -9,11 +9,11 @@ if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current d
 sgtf=loadcsv(max(l))
 
 minday0=Date('2021-09-20')
-minday=Date('2021-11-17')
-pubday=Date('2021-12-24')
+minday=Date('2021-10-17')
+pubday=Date('2021-12-27')
 maxday=max(Date(d) for d in sgtf['specimen_date'])+1
 ndays=maxday-minday
-skip=1
+skip=2
 
 # Get SGTF data into a suitable form
 vocnum={}
@@ -33,6 +33,14 @@ for place in vocnum:
   for daynum in range(ndays):
     vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
+
+if 0:
+  for d in range(ndays):
+    ndelta,nomicron=vocnum['England'][d]
+    date=minday+d
+    if date>='2021-11-15':
+      print(date,'%6d %6d   %8.5f'%(ndelta,nomicron,nomicron/(ndelta+nomicron)))
+  poi
 
 location='London'
 #ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
@@ -67,8 +75,8 @@ nsgtf=vn.shape[0]
 
 # Initial guess
 lcases0=np.log(cases+0.5)
-cross0=[nspec/2]*nages
-h0=0.25
+cross0=[Date('2021-12-15')-minday]*nages
+h0=0.3
 xx0=np.concatenate([lcases0.reshape([-1]),cross0,[h0]])
 
 flcases=lcases0.reshape([-1])
@@ -81,9 +89,9 @@ bounds=bounds0+bounds1+bounds2
 assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
 nif1=0.3# Non-independence factor for case counts
-nif2=0.3# Non-independence factor for SGTF counts
+nif2=1# Non-independence factor for SGTF counts
 sfmin=50 # Penalty for growth decreasing
-sfmax=250# Penalty for growth increasing
+sfmax=2000# Penalty for growth increasing
 
 # Axes: (day, age, variant)   variant=0 or 1
 #    E.g., 36 x 3 x 2
