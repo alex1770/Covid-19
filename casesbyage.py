@@ -10,6 +10,7 @@ np.set_printoptions(precision=4,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=10000)
 
 infinity=7# Assume cases stabilise after this many days have elapsed
+optmethod="L-BFGS-B"#SLSQP"
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-l', '--location', default='England', type=str, help='Set location: currently only England and London supported')
@@ -121,8 +122,25 @@ for (a,astr) in enumerate(astrings):
 
 npub,nspec0,cc,cn,nn=getcasesbyagepubspec(minday,today,location=location,ages=displayages)
 
+hh=nn.sum(axis=2).astype(np.float)# Sum over sexes
+
+# Special handling of Christmas 2021 to get vaguely sensible results: assume tests that would normally have been done on 25th and 26th got postponed up to the 27th
+nave=3# Average counts from 25th, 26th, ..., (25+nave-1)^th together
+n=minday+npub-1-Date('2021-12-25')# Days past Christmas
+nd=n+1-nave# Number of complete (nave-size) diagonals
+partial=np.zeros([nave+1,nages])
+col=Date('2021-12-25')-Date(minday)
+# col+1, col is top left of edited region (specimen=25th, published=26th)
+for i in range(nave):
+  partial[i+1,:]=partial[i,:]+hh[col+i+1:col+i+nd+1,col+i].sum(axis=0)
+for r in range(col+1,npub):# Loop down first column (spec=25th) of edited region: [r,col]
+  m=min(nave,npub-r)
+  s=sum(hh[r+j,col+j] for j in range(m))
+  s=s*partial[nave,:]/partial[m,:]/nave
+  for j in range(m): hh[r+j,col+j]=s
+
 nspec=nspec0-skipdays
-hh=nn[:,:nspec,:,:].sum(axis=2)# Sum over sexes
+hh=hh[:,:nspec,:]
 
 # Convert into (spec day, delay) co-ords
 # jj[specimenday - minday][publishday-(specimenday+1)][index into displayages] = new cases on specimen day that were first reported on publish day
@@ -261,7 +279,7 @@ def smoothSLR(seq,lam):
     for i in range(n-1):
       ll+=-((xx[i]-xx[i+1])/lam)**2/2
     return -ll
-  res=minimize(nll,logseq,method="SLSQP",bounds=[(-10,20)]*n,options={"maxiter":10000})
+  res=minimize(nll,logseq,method=optmethod,bounds=[(-10,20)]*n,options={"maxiter":10000})
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
@@ -310,7 +328,7 @@ elif weekdayfix=="MinSquareLogRatios":
     return e
   sm=np.zeros(sp.shape)
   for a in range(nages):
-    res=minimize(slr,[1]*7,args=(sp[:,a],),method="SLSQP",bounds=[(1,1)]+[(.5,1.5)]*6,options={"maxiter":10000})
+    res=minimize(slr,[1]*7,args=(sp[:,a],),method=optmethod,bounds=[(1,1)]+[(.5,1.5)]*6,options={"maxiter":10000})
     if not res.success: raise RuntimeError(res.message)
     xx=np.copy(res.x)
     xx/=prod(xx)**(1/7)
@@ -357,7 +375,7 @@ elif weekdayfix=="MagicDeconv":
     for i in range(nsamp-2):
       if infect[i]>0 and infect[i+1]>0: e+=log(infect[i+1]/infect[i])**2
     return e
-  res=minimize(err,[0.1]+[0.5]*7,method="SLSQP",bounds=[(0.01,0.9)]+[(0.01,0.99)]*7,options={"maxiter":10000})
+  res=minimize(err,[0.1]+[0.5]*7,method=optmethod,bounds=[(0.01,0.9)]+[(0.01,0.99)]*7,options={"maxiter":10000})
   if not res.success: raise RuntimeError(res.message)
   sm=np.zeros([nsamp-1,nages],dtype=float)
   for a in range(nages):
@@ -378,7 +396,7 @@ def smoothpoisson(seq,lam):
     for i in range(n-1):
       ll-=((xx[i]-xx[i+1])/lam)**2
     return -ll
-  res=minimize(nll,np.log(seq),method="SLSQP",bounds=[(-10,20)]*n,options={"maxiter":10000})
+  res=minimize(nll,np.log(seq),method=optmethod,bounds=[(-10,20)]*n,options={"maxiter":10000})
   if not res.success: raise RuntimeError(res.message)
   return np.exp(res.x)
 
