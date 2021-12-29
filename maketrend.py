@@ -142,7 +142,7 @@ for growth in [0,1]:
       val={x:stats[x][1][-1]/stats[x][1][-8] for x in countries}
     countries.sort(key=lambda x:-val[x])
     for (rank,x) in enumerate(countries):
-      if growth==0: interest[x]+=1/(rank+1)
+      if growth==0: interest[x]+=1/(rank+.25)
       else: interest[x]+=log(stats[x][1][-1]/stats[x][1][-8])
     countries=countries[:numbar]
     barfn=barfn0+'_'+desc+'_growth'*growth+'.png'
@@ -180,7 +180,7 @@ for x in l:
   if len(selectcountries)==16: break# 16 = max number of distinguishable lines on graph
   selectcountries.add(x)
 selectcountries=sorted(list(selectcountries))
-    
+
 cases,deaths,maxdate=processdata(selectcountries,data,period=period,perhead=perhead)
 now=datetoday(time.strftime('%Y-%m-%d',time.localtime()))
 zoomdays=60
