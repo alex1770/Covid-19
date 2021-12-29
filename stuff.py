@@ -53,8 +53,10 @@ def csvrows(fn,reqheadings,sep=','):
 
 def datetoday(x):
   format=None
-  if '/' in x:
-    format='%d/%m/%Y';# E.g., 05/06/2021
+  if x[-2:]=='US':
+    format='%m/%d/%YUS';# E.g., 06/25/2021US
+  elif '/' in x:
+    format='%d/%m/%Y';# E.g., 25/06/2021
   elif ' ' in x:
     format='%d %B %Y';# E.g., 05 June 2021
   elif '-' in x:
@@ -156,7 +158,7 @@ def weekdayadj(nn,eps=0.5):
   weekadj=[exp(x) for x in ww7]
   adjusted=[nn[d]*weekadj[d%7] for d in range(n)]
   s=sum(nn)/sum(adjusted)
-  return [s*x for x in adjusted]
+  return np.array([s*x for x in adjusted])
     
 # Slower weekday adjustment (n parameters)
 def weekdayadj_slow(nn,alpha=0.1):
@@ -245,11 +247,11 @@ def getapidata(req):
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
 def parseage(x):
   if x[-1]=='+': return (int(x[:-1]),150)
-  x=x.replace('_to_','_')# cater for 65_to_69 and 65_69 formats
+  x=x.replace('-','_').replace('_to_','_')# cater for 65_to_69 and 65_69 formats
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
-def getcasesbyage_raw(specday,location):
+def getcasesbyage_raw(pubday,location):
   # Target save format is
   # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
   # (td:sex -> specdate -> agestring -> number_of_cases)
@@ -262,7 +264,7 @@ def getcasesbyage_raw(specday,location):
   else:
     areatype='region'
     cachedir+='_'+location
-  date=str(Date(specday))
+  date=str(Date(pubday))
   fn=os.path.join(cachedir,date)
   os.makedirs(cachedir,exist_ok=True)
   if os.path.isfile(fn):
