@@ -11,5 +11,7 @@ skip=1
         ) &
     done
     wait
+    loc=England
+    convert $dir/$loc.png -resize 50% $dir/$loc.medium.png
     rsync -a $dir sonorous@sonorouschocolate.com:public_html/covid19/extdata/
 )
