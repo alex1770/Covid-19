@@ -126,8 +126,7 @@ hh=nn.sum(axis=2).astype(np.float)# Sum over sexes
 
 # Special handling of Christmas 2021 to get vaguely sensible results: assume tests that would normally have been done on 25th and 26th got postponed up to the 27th
 nave=3# Average counts from 25th, 26th, ..., (25+nave-1)^th together
-n=minday+npub-1-Date('2021-12-25')# Days past Christmas
-nd=n+1-nave# Number of complete (nave-size) diagonals
+nd=Date(minday+npub)-Date('2021-12-25')-nave# Number of complete (nave-size) diagonals
 partial=np.zeros([nave+1,nages])
 col=Date('2021-12-25')-Date(minday)
 # col+1, col is top left of edited region (specimen=25th, published=26th)
