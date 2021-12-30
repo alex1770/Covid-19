@@ -86,23 +86,26 @@ def unpack(xx):
   lcases[:,:,0]=xx[:nspec*nages].reshape([nspec,nages])
   lcasesop0=xx[nspec*nages:nspec*nages+nages]
   h=xx[nspec*nages+nages]
-  lcases[:,:,1]=lcasesop0[None,:]+lcases[:,:,0]-lcases[p,:,0]+np.arange(-p,nspec-p)[:,None]*h
+  rho=xx[nspec*nages+nages+1]
+  lcases[:,:,1]=lcasesop0[None,:]+(lcases[:,:,0]-lcases[p,:,0]+np.arange(-p,nspec-p)[:,None]*h)/rho
   ecases=np.exp(lcases)
-  return lcases,ecases,h
+  return lcases,ecases,h,rho
 
 # Initial guess (could improve this)
 lcasesd0=np.log(cases+0.5);lcasesd0[p:,:]=lcasesd0[p,None]
 lcasesop0=np.copy(lcasesd0[p,:])
 h0=0.3
-xx0=np.concatenate([lcasesd0.reshape([-1]),lcasesop0,[h0]])
-lcases0,ecases0,h0=unpack(xx0)
+rho0=1
+xx0=np.concatenate([lcasesd0.reshape([-1]),lcasesop0,[h0,rho0]])
+lcases0,ecases0,h0,rho0=unpack(xx0)
 esv0=ecases0.sum(axis=2)
 lesv0=np.log(esv0)
 
 change=10
-bounds0=list(zip(xx0[:-1]-change,xx0[:-1]+change))
+bounds0=list(zip(xx0[:-2]-change,xx0[:-2]+change))
 bounds1=[(0.1,0.5)]
-bounds=bounds0+bounds1
+bounds2=[(0.25,2)]
+bounds=bounds0+bounds1+bounds2
 
 assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
@@ -114,7 +117,7 @@ sfmax=2000# Penalty for growth increasing
 def LL(xx):
   ll=0
   
-  lcases,ecases,h=unpack(xx)
+  lcases,ecases,h,rho=unpack(xx)
   
   # Scaled Poisson for cases
   esv=ecases.sum(axis=2)
@@ -145,6 +148,17 @@ optmethod="SLSQP";minopts={"maxiter":10000}#,"eps":1e-4,'ftol':1e-12}
 
 res=minimize(NLL,xx0,bounds=bounds,method=optmethod,options=minopts)
 if not res.success: raise RuntimeError(res.message)
+
+if 0:
+  # Redo
+  xx0=res.x
+  lcases0,ecases0,h0,rho0=unpack(xx0)
+  esv0=ecases0.sum(axis=2)
+  lesv0=np.log(esv0)
+  LL0=LL(xx0)
+  res=minimize(NLL,xx0,bounds=bounds,method=optmethod,options=minopts)
+  if not res.success: raise RuntimeError(res.message)
+
 print(res.message)
 print('Function value =',res.fun)
 print()
@@ -152,14 +166,23 @@ xx=res.x
 for i in range(len(xx)):
   if xx[i]>bounds[i][1]-1e-3 or xx[i]<bounds[i][0]+1e-3: print("Variable %d = %g hitting bound (%g, %g)"%(i,xx[i],bounds[i][0],bounds[i][1]))
 
-lcases,ecases,h=unpack(xx)
+lcases,ecases,h,rho=unpack(xx)
 aa=ecases.sum(axis=1)
 gr=lcases[1:,:,0]-lcases[:-1,:,0]
 
+def findcross(l):
+  n=l.shape[0]
+  for i in range(n):
+    if l[i,1]>l[i,0]:
+      if i==0: return 0
+      return i-(l[i-1,1]-l[i-1,0]+l[i,1]-l[i,0]>0)
+  return n-1
+
 print('Location:',location)
 print('Omicron/Delta growth = %.3f'%h)
+print('Generation time ratio GT(Omicron)/GT(Delta) = %.3f'%rho)
 print('Age bands:',ages)
-print("Crossovers:",[Date(minday+int(p+(lcases[p,a,0]-lcases[p,a,1])/h+.5)) for a in range(nages)])
+print("Crossovers:",[Date(int(minday)+findcross(lcases[:,a,:])) for a in range(nages)])
 print()
 
 print("Date      ",end='')
@@ -174,7 +197,7 @@ print('  l(O/D)a',end='')
 print()
 
 for d in range(nspec):
-  print(Date(minday+d),end='')
+  print(minday+d,end='')
   for a in range(nages): print('     %6.0f %6.0f'%(ecases[d,a,0],ecases[d,a,1]),end='')
   print('  ',end='')
   for a in range(nages):
