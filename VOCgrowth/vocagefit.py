@@ -5,7 +5,7 @@ import numpy as np
 np.set_printoptions(precision=3,linewidth=250,suppress=True)
 
 l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
-if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
+if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
 sgtf=loadcsv(max(l))
 
 minday0=Date('2021-09-20')
@@ -68,23 +68,41 @@ nsgtf=vn.shape[0]
 #for day in Daterange(minday,maxday): print(day,cases[day-minday].sum()/vn[day-minday].sum())
 #for day in Daterange(minday,maxday): print(day,sp[day-minday0].sum()/vn[day-minday].sum())
 
+pivotdate=Date('2021-12-16')
+p=pivotdate-minday
+
 # Variables:
-# nspec*nages: log(ecases) array of shape (nspec,nages)
-# nages:       crossover days relative to minday
+# nspec*nages: log(ecases_delta) (array of shape (nspec,nages))
+# nages:       log(ecases_omicron) on pivotdate
 # 1:           h
 
-# Initial guess
-lcases0=np.log(cases+0.5)
-cross0=[Date('2021-12-15')-minday]*nages
-h0=0.3
-xx0=np.concatenate([lcases0.reshape([-1]),cross0,[h0]])
+# Axes: (day, age, variant)   variant=0 or 1
+#    E.g., 36 x 3 x 2
 
-flcases=lcases0.reshape([-1])
-change=3
-bounds0=list(zip(flcases-change,flcases+change))
-bounds1=[(Date('2021-12-01')-minday,Date('2022-01-01')-minday)]*nages
-bounds2=[(0.1,0.5)]
-bounds=bounds0+bounds1+bounds2
+def unpack(xx):
+  # lcases = log of expected number of cases
+  # h = variant growth advantage
+  lcases=np.zeros([nspec,nages,2])
+  lcases[:,:,0]=xx[:nspec*nages].reshape([nspec,nages])
+  lcasesop0=xx[nspec*nages:nspec*nages+nages]
+  h=xx[nspec*nages+nages]
+  lcases[:,:,1]=lcasesop0[None,:]+lcases[:,:,0]-lcases[p,:,0]+np.arange(-p,nspec-p)[:,None]*h
+  ecases=np.exp(lcases)
+  return lcases,ecases,h
+
+# Initial guess (could improve this)
+lcasesd0=np.log(cases+0.5);lcasesd0[p:,:]=lcasesd0[p,None]
+lcasesop0=np.copy(lcasesd0[p,:])
+h0=0.3
+xx0=np.concatenate([lcasesd0.reshape([-1]),lcasesop0,[h0]])
+lcases0,ecases0,h0=unpack(xx0)
+esv0=ecases0.sum(axis=2)
+lesv0=np.log(esv0)
+
+change=10
+bounds0=list(zip(xx0[:-1]-change,xx0[:-1]+change))
+bounds1=[(0.1,0.5)]
+bounds=bounds0+bounds1
 
 assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
@@ -93,51 +111,24 @@ nif2=1# Non-independence factor for SGTF counts
 sfmin=50 # Penalty for growth decreasing
 sfmax=2000# Penalty for growth increasing
 
-# Axes: (day, age, variant)   variant=0 or 1
-#    E.g., 36 x 3 x 2
-
-def unpack(xx):
-  # log of expected number of cases, summed over variant
-  lcases=xx[:nspec*nages].reshape(lcases0.shape)
-
-  # Crossover days for each age
-  cross=xx[nspec*nages:nspec*nages+nages]
-
-  # Variant growth advantage
-  h=xx[nspec*nages+nages]
-
-  return lcases,cross,h
-
 def LL(xx):
   ll=0
   
-  lcases,cross,h=unpack(xx)
-  
-  ecases=np.exp(lcases)
+  lcases,ecases,h=unpack(xx)
   
   # Scaled Poisson for cases
-  ll+=((cases-ecases).sum()+(cases*(lcases-lcases0)).sum())*nif1
+  esv=ecases.sum(axis=2)
+  lesv=np.log(esv)
+  ll+=((cases-esv).sum()+(cases*(lesv-lesv0)).sum())*nif1
   
-  # May be better to normalise like this, but requires using a constraint to "gauge-fix"
-  # ecases*=cases.sum()/ecases.sum()
-  # ecases.sum() is a constant; subtract off lcases0 to keep numbers not too big
-  # ll+=(cases*(lcases-lcases0)).sum()*nif1
-  
-  # Variant odds ratios for each (day, age band)
-  vf=np.exp((np.arange(nspec)[:,None]-np.array(cross)[None,:])*h)
-  
-  # Expected no. of cases for each variant
-  v0=ecases*1/(1+vf)
-  v1=ecases*vf/(1+vf)
   # Sum over ages
-  s0=v0.sum(axis=1)
-  s1=v1.sum(axis=1)
+  aa=ecases.sum(axis=1)
   
   # Binomial probability of variant
-  pp=(s1/(s0+s1))[:nsgtf]
-  ll+=(vn[:,0]*np.log(1-pp)+vn[:,1]*np.log(pp)).sum()*nif2
+  p1=(aa[:,1]/aa.sum(axis=1))[:nsgtf]
+  ll+=(vn[:,0]*np.log(1-p1)+vn[:,1]*np.log(p1)).sum()*nif2
   
-  gr=np.log(v0[1:]/v0[:-1])
+  gr=lcases[1:,:,0]-lcases[:-1,:,0]
   dgr=gr[1:,:]-gr[:-1,:]
   dgrmax=np.maximum(dgr,0)
   dgrmin=np.minimum(dgr,0)
@@ -161,19 +152,14 @@ xx=res.x
 for i in range(len(xx)):
   if xx[i]>bounds[i][1]-1e-3 or xx[i]<bounds[i][0]+1e-3: print("Variable %d = %g hitting bound (%g, %g)"%(i,xx[i],bounds[i][0],bounds[i][1]))
 
-lcases,cross,h=unpack(xx)
-ecases=np.exp(lcases)
-vf=np.exp((np.arange(nspec)[:,None]-np.array(cross)[None,:])*h)
-v0=ecases*1/(1+vf)
-v1=ecases*vf/(1+vf)
-s0=v0.sum(axis=1)
-s1=v1.sum(axis=1)
-gr=np.log(v0[1:]/v0[:-1])
+lcases,ecases,h=unpack(xx)
+aa=ecases.sum(axis=1)
+gr=lcases[1:,:,0]-lcases[:-1,:,0]
 
 print('Location:',location)
 print('Omicron/Delta growth = %.3f'%h)
 print('Age bands:',ages)
-print("Crossovers:",[Date(minday+int(x+.5)) for x in cross])
+print("Crossovers:",[Date(minday+int(p+(lcases[p,a,0]-lcases[p,a,1])/h+.5)) for a in range(nages)])
 print()
 
 print("Date      ",end='')
@@ -189,20 +175,20 @@ print()
 
 for d in range(nspec):
   print(Date(minday+d),end='')
-  for a in range(nages): print('     %6.0f %6.0f'%(v0[d][a],v1[d][a]),end='')
+  for a in range(nages): print('     %6.0f %6.0f'%(ecases[d,a,0],ecases[d,a,1]),end='')
   print('  ',end='')
   for a in range(nages):
     if d<nspec-1:
       print('  %6.3f'%gr[d][a],end='')
-      print('  %6.3f'%(log(v0[d][a]*v1[d+1][a]/(v0[d+1][a]*v1[d][a]))),end='')
+      print('  %6.3f'%(lcases[d,a,0]+lcases[d+1,a,1]-lcases[d+1,a,0]-lcases[d,a,1]),end='')
     else:
       print('       -',end='')
       print('       -',end='')
   if d<nspec-1:
-    print('  %6.3f'%(log(s0[d]*s1[d+1]/(s0[d+1]*s1[d]))),end='')
+    print('  %6.3f'%(log(aa[d,0]*aa[d+1,1]/(aa[d+1,0]*aa[d,1]))),end='')
   else:
     print('       -',end='')
-  print('  %7.3f'%log(s1[d]/s0[d]),end='')
+  print('  %7.3f'%log(aa[d,1]/aa[d,0]),end='')
   if d<nsgtf and vn[d][0]>0 and vn[d][1]>0: print('  %7.3f'%log(vn[d][1]/vn[d][0]),end='')
   else: print('        -',end='')
   print()
