@@ -5,12 +5,12 @@ import numpy as np
 np.set_printoptions(precision=3,linewidth=250,suppress=True)
 
 l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
-if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current directory")
+if l==[]: raise RuntimeError("No sgtf_regionepicurve csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
 sgtf=loadcsv(max(l))
 
 minday0=Date('2021-09-20')
 minday=Date('2021-10-17')
-pubday=Date('2021-12-27')
+pubday=getpublishdate()
 maxday=max(Date(d) for d in sgtf['specimen_date'])+1
 ndays=maxday-minday
 skip=2

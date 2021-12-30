@@ -251,6 +251,10 @@ def parseage(x):
   aa=[int(y) for y in x.split("_")]
   return (aa[0],aa[1]+1)
 
+def getpublishdate():
+  t=getapidata('areaType=nation&areaName=England&metric=newCasesByPublishDate')
+  return Date(t[-1]['date'])
+
 def getcasesbyage_raw(pubday,location):
   # Target save format is
   # filename=publishdate, td[sex][specimendate][agerange] = cumulative cases,
