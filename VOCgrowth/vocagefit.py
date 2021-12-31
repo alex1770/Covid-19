@@ -182,7 +182,7 @@ print('Location:',location)
 print('Omicron/Delta growth = %.3f'%h)
 print('Generation time ratio GT(Omicron)/GT(Delta) = %.3f'%rho)
 print('Age bands:',ages)
-print("Crossovers:",[Date(int(minday)+findcross(lcases[:,a,:])) for a in range(nages)])
+print("Crossovers:",[minday+findcross(lcases[:,a,:]) for a in range(nages)])# Work out why Date is behaving strangely here
 print()
 
 print("Date      ",end='')
