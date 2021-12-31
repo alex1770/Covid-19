@@ -8,12 +8,31 @@ l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
 if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
 sgtf=loadcsv(max(l))
 
+location='England'
+#ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
+#ages=[(0,40),(40,60),(60,150)]
+ages=[(0,50),(50,150)]
+#ages=[(20,40),(60,150)]
+nages=len(ages)
+
 minday0=Date('2021-09-20')
 minday=Date('2021-10-17')
 pubday=getpublishdate()
 maxday=max(Date(d) for d in sgtf['specimen_date'])+1
 ndays=maxday-minday
 skip=2
+
+# From fig. 8B of Tech Briefing 33, https://www.gov.uk/government/publications/investigation-of-sars-cov-2-variants-technical-briefings
+avd=loadcsv('age_variant_date.csv')
+navd=max(Date(x+'US') for x in avd['spec.date'])+1-minday
+avdata=np.zeros([navd,nages,2],dtype=int)
+for (date,var,age,n) in zip(avd['spec.date'],avd['variant'],avd['age.group'],avd['count_age']):
+  a=parseage(age)
+  l=[i for (i,b) in enumerate(ages) if a[0]>=b[0] and a[1]<=b[1]]
+  assert len(l)==1
+  d=Date(date+'US')-minday
+  if d>=0:
+    avdata[d,l[0],int(var=='Omicron')]+=n
 
 # Get SGTF data into a suitable form
 vocnum={}
@@ -42,12 +61,6 @@ if 0:
       print(date,'%6d %6d   %8.5f'%(ndelta,nomicron,nomicron/(ndelta+nomicron)))
   poi
 
-location='London'
-#ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
-#ages=[(0,40),(40,60),(60,150)]
-ages=[(0,50),(50,150)]
-#ages=[(20,40),(60,150)]
-nages=len(ages)
 sp0,sp=getcasesbyagespeccomplete(minday=minday0,maxday=pubday,ages=ages,location=location)
 
 # Simple weekday adjustment by dividing by the average count for that day of the week.
@@ -130,7 +143,13 @@ def LL(xx):
   # Binomial probability of variant
   p1=(aa[:,1]/aa.sum(axis=1))[:nsgtf]
   ll+=(vn[:,0]*np.log(1-p1)+vn[:,1]*np.log(p1)).sum()*nif2
-  
+
+  # Binomial probability of variant, by age
+  lp=np.log(ecases/ecases.sum(axis=2)[:,:,None])
+  n=min(nspec,navd)
+  ll+=(avdata[:n]*lp[:n]).sum()*nif2
+
+  # Distribution on change in growth rates
   gr=lcases[1:,:,0]-lcases[:-1,:,0]
   dgr=gr[1:,:]-gr[:-1,:]
   dgrmax=np.maximum(dgr,0)
