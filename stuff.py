@@ -188,6 +188,7 @@ def weekdayadj_slow(nn,alpha=0.1):
   return adjusted*nn.sum()/adjusted.sum()
 
 # Not doing strict typechecking for all operations: e.g., -Date('2021-01-01') = -18628, Date('2021-01-01')+Date('2021-01-01') = Date('2072-01-02')
+# Can't remember all the reasons, but I think the advantage of making it a subclass of int is that you don't have to define arithmetic operations like *, /, %, etc: it will just decay to an int.
 class Date(int):
   def __new__(cls, daydate):
     if type(daydate)==str: return super(cls,cls).__new__(cls,datetoday(daydate))
@@ -202,7 +203,8 @@ class Date(int):
   # Date + str = str
   def __add__(self, other):
     if type(other)==str: return daytodate(int(self))+other
-    res = super(Date, self).__add__(other)
+    # Can't remember why we don't just return Date(int(self)+int(other)) here
+    res = super(Date, self).__add__(int(other))# int(other) rather than other makes it work when other is a numpy.int64
     return self.__class__(res)
   def __radd__(self, other):
     if type(other)==str: return other+daytodate(int(self))
