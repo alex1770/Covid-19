@@ -12,6 +12,7 @@ location='England'
 #ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)]
 #ages=[(0,40),(40,60),(60,150)]
 ages=[(0,50),(50,150)]
+#ages=[(0,60),(60,70),(70,150)]
 #ages=[(20,40),(60,150)]
 nages=len(ages)
 
@@ -21,18 +22,20 @@ pubday=getpublishdate()
 maxday=max(Date(d) for d in sgtf['specimen_date'])+1
 ndays=maxday-minday
 skip=2
+useagedata=True
 
-# From fig. 8B of Tech Briefing 33, https://www.gov.uk/government/publications/investigation-of-sars-cov-2-variants-technical-briefings
-avd=loadcsv('age_variant_date.csv')
-navd=max(Date(x+'US') for x in avd['spec.date'])+1-minday
-avdata=np.zeros([navd,nages,2],dtype=int)
-for (date,var,age,n) in zip(avd['spec.date'],avd['variant'],avd['age.group'],avd['count_age']):
-  a=parseage(age)
-  l=[i for (i,b) in enumerate(ages) if a[0]>=b[0] and a[1]<=b[1]]
-  assert len(l)==1
-  d=Date(date+'US')-minday
-  if d>=0:
-    avdata[d,l[0],int(var=='Omicron')]+=n
+sp0,sp=getcasesbyagespeccomplete(minday=minday0,maxday=pubday,ages=ages,location=location)
+
+# Simple weekday adjustment by dividing by the average count for that day of the week.
+# Use a relatively stable period (inclusive) over which to take the weekday averages.
+weekadjdates=['2021-09-20','2021-11-21']
+weekadj=np.zeros(7)
+for day in Daterange(*weekadjdates):
+  assert day>=minday0 and day<pubday-7
+  weekadj[day%7]+=sp0[day-minday0].sum()
+weekadjp=weekadj*7/sum(weekadj)
+cases=np.array([sp[day-minday0]/weekadjp[day%7] for day in Daterange(minday,pubday-skip)])
+nspec=cases.shape[0]
 
 # Get SGTF data into a suitable form
 vocnum={}
@@ -52,6 +55,30 @@ for place in vocnum:
   for daynum in range(ndays):
     vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
+vn=vocnum[location]
+nsgtf=vn.shape[0]
+
+# From fig. 8B of Tech Briefing 33, https://www.gov.uk/government/publications/investigation-of-sars-cov-2-variants-technical-briefings
+avd=loadcsv('age_variant_date.csv')
+navd=max(Date(x+'US') for x in avd['spec.date'])+1-minday
+avdata=np.zeros([navd,nages,2],dtype=int)
+for (date,var,age,n) in zip(avd['spec.date'],avd['variant'],avd['age.group'],avd['count_age']):
+  a=parseage(age)
+  l=[i for (i,b) in enumerate(ages) if a[0]>=b[0] and a[1]<=b[1]]
+  assert len(l)==1
+  d=Date(date+'US')-minday
+  if d>=0:
+    avdata[d,l[0],int(var=='Omicron')]+=n
+if useagedata: print("Using age-variant data")
+else: print("Not using age-variant data")
+
+# Normalise variant-age data to sgtf data with which it disagrees because I think the sgtf data is more reliable
+# But keep overall normalisation so that the optimisation process correctly weights according to how much evidence there is
+# I.e., (for all dates) make sum_{age}avdata(age,variant) = const*sgtfdata(variant)
+# where const is chosen so that sum_{age,variant}avdata(age,variant) is unchanged.
+a=avdata.astype(float)+1e-20
+s=vn[:navd]+1e-20
+avdata=a/a.sum(axis=1)[:,None,:]*a.sum(axis=(1,2))[:,None,None]*s[:,None,:]/s.sum(axis=1)[:,None,None]
 
 if 0:
   for d in range(ndays):
@@ -61,25 +88,29 @@ if 0:
       print(date,'%6d %6d   %8.5f'%(ndelta,nomicron,nomicron/(ndelta+nomicron)))
   poi
 
-sp0,sp=getcasesbyagespeccomplete(minday=minday0,maxday=pubday,ages=ages,location=location)
 
-# Simple weekday adjustment by dividing by the average count for that day of the week.
-# Use a relatively stable period (inclusive) over which to take the weekday averages.
-weekadjdates=['2021-09-20','2021-11-21']
-weekadj=np.zeros(7)
-for day in Daterange(*weekadjdates):
-  assert day>=minday0 and day<pubday-7
-  weekadj[day%7]+=sp0[day-minday0].sum()
-weekadjp=weekadj*7/sum(weekadj)
+with open('gg-by-region','w') as fp:
+  n=min(nsgtf,nspec)
+  for loc in vocnum:
+    if loc=='England': continue
+    vv=vocnum[loc][:n,:]
+    #cv=casesbyregion[:n,None]*(vv/vv.sum(axis=1)[:,None])
+    cv=vv
+    for i in range(n-1):
+      if (vv[i:i+2,:]>=100).all():
+        print("%7.4f %7.4f"%(log(cv[i+1][0]/cv[i][0]),log(cv[i+1][1]/cv[i][1])),file=fp)
 
-cases=np.array([sp[day-minday0]/weekadjp[day%7] for day in Daterange(minday,pubday-skip)])
-nspec=cases.shape[0]
-vn=vocnum[location]
-nsgtf=vn.shape[0]
-
-#for day in Daterange(minday,maxday): print(day,"%8.3f"%(log(vn[day-minday][1]/vn[day-minday][0]+1e-100)),cases[day-minday])
-#for day in Daterange(minday,maxday): print(day,cases[day-minday].sum()/vn[day-minday].sum())
-#for day in Daterange(minday,maxday): print(day,sp[day-minday0].sum()/vn[day-minday].sum())
+if 0:
+  with open('gg-by-age','w') as fp:
+    assert location=='England'
+    n=min(navd,nspec)
+    vv=avdata[:n,:,:]# Date, age, variant
+    cv=vv
+    #cv=cases[:n,:,None]*(vv/vv.sum(axis=2)[:,:,None])
+    for a in range(nages):
+      for i in range(n-1):
+        if (vv[i:i+2,a,:]>=10).all():
+          print("%7.4f %7.4f"%(log(cv[i+1,a,0]/cv[i,a,0]),log(cv[i+1,a,1]/cv[i,a,1])),file=fp)
 
 pivotdate=Date('2021-12-16')
 p=pivotdate-minday
@@ -117,15 +148,15 @@ lesv0=np.log(esv0)
 change=10
 bounds0=list(zip(xx0[:-2]-change,xx0[:-2]+change))
 bounds1=[(0.1,0.5)]
-bounds2=[(0.25,2)]
+bounds2=[(0.1,2)]
 bounds=bounds0+bounds1+bounds2
 
 assert (np.array(bounds)[:,0]<=xx0).all() and (xx0<=np.array(bounds)[:,1]).all()
 
 nif1=0.3# Non-independence factor for case counts
 nif2=1# Non-independence factor for SGTF counts
-sfmin=50 # Penalty for growth decreasing
-sfmax=2000# Penalty for growth increasing
+sfmin=100 # Penalty for growth decreasing
+sfmax=2000 # Penalty for growth increasing
 
 def LL(xx):
   ll=0
@@ -144,10 +175,11 @@ def LL(xx):
   p1=(aa[:,1]/aa.sum(axis=1))[:nsgtf]
   ll+=(vn[:,0]*np.log(1-p1)+vn[:,1]*np.log(p1)).sum()*nif2
 
-  # Binomial probability of variant, by age
-  lp=np.log(ecases/ecases.sum(axis=2)[:,:,None])
-  n=min(nspec,navd)
-  ll+=(avdata[:n]*lp[:n]).sum()*nif2
+  if useagedata:
+    # Binomial probability of variant, by age
+    lp=np.log(ecases/ecases.sum(axis=2)[:,:,None])
+    n=min(nspec,navd)
+    ll+=(avdata[:n]*lp[:n]).sum()*nif2
 
   # Distribution on change in growth rates
   gr=lcases[1:,:,0]-lcases[:-1,:,0]
@@ -201,7 +233,7 @@ print('Location:',location)
 print('Omicron/Delta growth = %.3f'%h)
 print('Generation time ratio GT(Omicron)/GT(Delta) = %.3f'%rho)
 print('Age bands:',ages)
-print("Crossovers:",[minday+findcross(lcases[:,a,:]) for a in range(nages)])# Work out why Date is behaving strangely here
+print("Crossovers:",[minday+findcross(lcases[:,a,:]) for a in range(nages)])
 print()
 
 print("Date      ",end='')
@@ -234,3 +266,23 @@ for d in range(nspec):
   if d<nsgtf and vn[d][0]>0 and vn[d][1]>0: print('  %7.3f'%log(vn[d][1]/vn[d][0]),end='')
   else: print('        -',end='')
   print()
+
+with open('gg-%s-modelled'%location,'w') as fp:
+  n=min(nsgtf,nspec)
+  for d in range(n-1):
+    for a in range(nages):
+      print('%7.4f %7.4f'%(lcases[d+1,a,0]-lcases[d,a,0],lcases[d+1,a,1]-lcases[d,a,1]),file=fp)
+
+if location=='England':
+  with open('av-comparison','w') as fp:
+    n=min(nsgtf,nspec,navd)
+    vv=avdata[:n,:,:]# Date, age, variant
+    #cv=vv
+    cv=cases[:n,:,None]*(vv/vv.sum(axis=2)[:,:,None])
+    for d in range(n-1):
+      if (vv[d:d+2,:,:]>=10).all():
+        print(minday+d,end='',file=fp)
+        for a in range(nages):
+          for var in [0,1]:
+            print('   %6.0f %6.0f'%(ecases[d,a,var],cv[d,a,var]),end='',file=fp)
+        print(file=fp)
