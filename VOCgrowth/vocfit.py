@@ -166,7 +166,8 @@ discardcogdays=2
 # (Makes little difference in practice)
 bundleremainder=True
 
-minopts={"maxiter":10000,"eps":1e-4,'ftol':1e-12}
+optmethod="SLSQP";minopts={"maxiter":100000,"eps":1e-4,'ftol':1e-11}
+#optmethod="L-BFGS-B";minopts={"maxiter":50000,"maxfun":1000000}
 
 mode="local growth rates"
 #mode="global growth rate"
@@ -463,7 +464,7 @@ if 0:
       for w in range(nweeks):
         print(daytodate(firstweek+voclen*w),"%6d %6d"%tuple(vocnum[place][w]),file=fp)
 
-# Work out pre-Delta case counts, amalgamated to at least region level
+# Work out pre-variant case counts, amalgamated to at least region level
 if reduceltla!=None:
   precases={}
   for place in precases0:
@@ -699,7 +700,7 @@ if plainvarcountest:
     print()
     
     bounds=[(hmin,hmax)]+[(x-100,x+100) for x in xx[1:]]
-    res=minimize(NLL_vonly,xx,bounds=bounds,method="SLSQP",options=minopts)
+    res=minimize(NLL_vonly,xx,bounds=bounds,method=optmethod,options=minopts)
     print("--- Quasi-Poisson regression controlling for %s ---"%locationsize)
     print("Growth: %.2f%%    crossover on"%(res.x[0]*100),daytodate(firstweek+res.x[1]))
     print()
@@ -869,7 +870,7 @@ def optimiseplace(place,hint=np.zeros(bmN+nfp),fixedh=None,fixedgtr=None,statpha
   bounds=[(-10,20),(-10,20),(0,1),(-1,1)]+[(-1.5,1.5)]*(nfp-4)+[(-10,10)]*bmN
   if fixedh!=None: xx[2]=fixedh;bounds[2]=(fixedh,fixedh)
   if fixedgtr!=None: xx[4]=fixedgtr;bounds[4]=(fixedgtr,fixedgtr)
-  res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig0,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method="SLSQP",options=minopts)
+  res=minimize(NLL,xx*condition,args=(cases[place],vocnum[place],sig0,asc,precases[prereduce(place)]),bounds=bounds*np.repeat(condition,2).reshape([len(bounds),2]),method=optmethod,options=minopts)
   if not res.success:
     print(res)
     print(fixedh)
@@ -1180,11 +1181,18 @@ def printsummary(summary):
 
 if mode=="local growth rates":
   summary={}
+  xx0=np.zeros(bmN+nfp)
   for place in places:
     printplaceinfo(place)
-    xx0,L0=optimiseplace(place)
+    xx0,L0=optimiseplace(place,hint=xx0)
+    optmethod="L-BFGS-B";minopts={"maxiter":50000,"maxfun":1000000}
+    xx0,L0=optimiseplace(place,hint=xx0)
+    optmethod="SLSQP";minopts={"maxiter":100000,"eps":1e-4,'ftol':1e-11}
+    xx0,L0=optimiseplace(place,hint=xx0)
+    xx0,L0=optimiseplace(place,hint=xx0,fixedgtr=xx0[4])
+    xx0,L0=optimiseplace(place,hint=xx0)
     if len(places)<10:
-      xx1,L1=optimiseplace(place,statphase=True)
+      xx1,L1=optimiseplace(place,hint=xx0,statphase=True)
       print("Corrected log likelihood",L1)
     AA,BB,GG=expand(xx0)
     
@@ -1201,7 +1209,7 @@ if mode=="local growth rates":
       (Tmin,T,Tmax)=[h0-zconf*dh,h0,h0+zconf*dh]
     else:
       (Tmin,T,Tmax)=[None,h0,None]
-
+    
     gtr0=xx0[4]
     ff=[0,L0,0]
     eps=0.01
@@ -1219,6 +1227,13 @@ if mode=="local growth rates":
       gtr=None
       
     SSS=getsamples(place,xx0)
+    if SSS is None:
+      xx0,L0=optimiseplace(place,hint=xx0)
+      optmethod="L-BFGS-B";minopts={"maxiter":50000,"maxfun":1000000}
+      xx0,L0=optimiseplace(place,hint=xx0)
+      optmethod="SLSQP";minopts={"maxiter":100000,"eps":1e-4,'ftol':1e-11}
+      xx0,L0=optimiseplace(place,hint=xx0)
+      SSS=getsamples(place,xx0)
     print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS,gtr=gtr)
     summary[place]=(Q,R,T,Tmin,Tmax)
