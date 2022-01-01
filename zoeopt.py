@@ -1,3 +1,4 @@
+from stuff import *
 import json,os,time,calendar,requests,sys
 import numpy as np
 from math import sqrt
@@ -14,19 +15,14 @@ if locationsize!="ltla" and locationsize!="region": raise RuntimeError("Unknown 
 
 mindate='2020-10-01'
 #mindate='2021-03-01'
+#metric='newCasesBySpecimenDate'
+metric='newCasesByPublishDate'
+CAR=0.4
 
 print("Using locations:",locationsize)
 
 np.set_printoptions(precision=3,suppress=True)
 np.set_printoptions(edgeitems=30, linewidth=100000)
-
-def datetoday(x):
-  t=time.strptime(x+'UTC','%Y-%m-%d%Z')
-  return calendar.timegm(t)//86400
-
-def daytodate(r):
-  t=time.gmtime(r*86400)
-  return time.strftime('%Y-%m-%d',t)
 
 def apicall(params):
   endpoint="https://api.coronavirus.data.gov.uk/v2/data"
@@ -40,10 +36,10 @@ def getdata_ltla(mindate):
   os.makedirs(cdir,exist_ok=True)
   laststored=max((x for x in os.listdir(cdir) if x[:2]=="20"),default="0000-00-00")
   # Small test query to get the latest date
-  data=apicall({"areaType":"ltla", "areaName":"Barnet", "metric":"newCasesBySpecimenDate", "format":"json"})
+  data=apicall({"areaType":"ltla", "areaName":"Barnet", "metric":metric, "format":"json"})
   lastavail=data[0]['date']
   if lastavail>laststored:
-    data=apicall({"areaType":"ltla", "metric":"newCasesBySpecimenDate", "format":"json"})
+    data=apicall({"areaType":"ltla", "metric":metric, "format":"json"})
     with open(os.path.join(cdir,lastavail),'w') as fp:
       json.dump(data,fp,indent=2)
   else:
@@ -101,7 +97,7 @@ def getdata_ltla(mindate):
   zdates=np.zeros(n,dtype=bool)
   for d in data:
     t=datetoday(d['date'])-minday
-    if t>=0 and d['areaCode'] in locind: cases[locind[d['areaCode']],t]=d['newCasesBySpecimenDate']
+    if t>=0 and d['areaCode'] in locind: cases[locind[d['areaCode']],t]=d[metric]
   for date in os.listdir('zoemapdata'):
     if date[:2]=='20' and date>=mindate and date<=lastdate:
       with open(os.path.join('zoemapdata',date),'r') as fp:
@@ -128,7 +124,7 @@ def getdata_ltla(mindate):
             
 
 def getdata_region(mindate):
-  apidata=apicall({"areaType":"region", "metric":"newCasesBySpecimenDate", "format":"json"})
+  apidata=apicall({"areaType":"region", "metric":metric, "format":"json"})
   
   # Load example map file to get location data
   with open('zoemapdata/2021-01-17','r') as fp: zm=json.load(fp)
@@ -152,7 +148,7 @@ def getdata_region(mindate):
   zdates=np.zeros(n,dtype=bool)
   for d in apidata:
     t=datetoday(d['date'])-minday
-    if t>=0 and d['areaName'] in locind: apicases[locind[d['areaName']],t]=d['newCasesBySpecimenDate']
+    if t>=0 and d['areaName'] in locind: apicases[locind[d['areaName']],t]=d[metric]
   for date in os.listdir('zoemapdata'):
     if date[:2]=='20' and date>=mindate and date<=lastdate:
       with open(os.path.join('zoemapdata',date),'r') as fp:
@@ -205,31 +201,43 @@ for offset in range(30):
 #  print(zvals[:,t].sum(),apicases[:,t].sum())
 
 import PtoI_noncheat
+outdir='zoeoutput'
+os.makedirs(outdir,exist_ok=True)
 
-if 1:
-  region='England'
-  a=zvals.sum(axis=0);b=apicases.sum(axis=0)
-else:
-  region='North West'
-  i=locs.index(region);a=zvals[i];b=apicases[i]
+for region in ['England']+locs:
+  if region=='England':
+    a=zvals.sum(axis=0);b=apicases.sum(axis=0)
+  else:
+    i=locs.index(region);a=zvals[i];b=apicases[i]
 
-kernel=PtoI_noncheat.getkernel()
-# A large sameweight combined with noncheat introduces lag in the inferred incidence
-ad=PtoI_noncheat.deconvolve_noncheat(a,kernel,5)
-#ad=PtoI_noncheat.deconvolve(a,kernel,5)
+  kernel=PtoI_noncheat.getkernel(shape=6.25,scale=0.8)
+  
+  # Tradeoff: a large sameweight combined with noncheat introduces lag in the inferred incidence
+  ad=PtoI_noncheat.deconvolve_noncheat(a,kernel,5)
+  #ad=PtoI_noncheat.deconvolve(a,kernel,5)
 
-with open('temp','w') as fp:
-  s=sum(b)
-  c=[sum(b[i::7])/s*7 for i in range(7)]
-  for t in range(n):
-    print(dates[t],ad[t],a[t],b[t],sum(b[max(t-3,0):t+4])/len(b[max(t-3,0):t+4]),sum(b[max(t-6,0):t+1])/len(b[max(t-6,0):t+1]),b[t]/c[t%7],file=fp)
+  with open(os.path.join(outdir,region+'.dat'),'w') as fp:
+    s=sum(b)
+    c=[sum(b[i::7])/s*7 for i in range(7)]
+    for t in range(n):
+      print(dates[t],ad[t],a[t],b[t],sum(b[max(t-3,0):t+4])/len(b[max(t-3,0):t+4]),sum(b[max(t-6,0):t+1])/len(b[max(t-6,0):t+1]),b[t]/c[t%7],file=fp)
 
-print("""gnuplot
-set timefmt "%Y-%m-%d"
-set format x "%Y-%m-%d"
-set xdata time""")
-print('plot "temp" u 1:2 w linespoints lw 3 title "%s: Zoe symptoms, non-cheat", "temp" u 1:6 w linespoints lw 3 title "%s: cases, 7 day lagged average"'%(region,region))
-
+  data=[]
+  data.append({
+    'title': "%.2f * (Zoe symptom incidence using non-cheating deconvolution)"%CAR,
+    'values' :[(dates[t],CAR*ad[t]) for t in range(n)]
+  })
+  data.append({
+    'title': "Confirmed cases, 7 day lagged average",
+    'values': [(dates[t],sum(b[max(t-6,0):t+1])/len(b[max(t-6,0):t+1])) for t in range(n)]
+  })
+  
+  title=region+': comparison of new cases per day. Unofficial Zoe-incidence, as predicted by symptoms, cf confirmed cases'
+  fn=os.path.join(outdir,region+'.png')
+  #mindate_display=mindate
+  mindate_display='2021-11-01'
+  makegraph(title=title, mindate=mindate_display, data=data, ylabel='New cases per day (log scale)', outfn=fn, extra=["set key top left", "set logscale y 2"])
+  
 # ad[] is about 7 days ahead of sum(b[t-7:t])/7
 # but that smoothing of b loses 3.5 days, and there might be a clever smoothing that doesn't lose any.
 # But that would really be pushing it, and in any case at least 3.5 days ahead.
