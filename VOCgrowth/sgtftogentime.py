@@ -100,7 +100,7 @@ def regress(data,var):
 
 # Bootstrap to get confidence intervals
 n=len(data)
-nsamp=1000
+nsamp=10000
 conf=0.95
 
 samples=[]
@@ -160,7 +160,7 @@ samples.sort(key=lambda x:x[1])
 low=samples[int((1-conf)/2*nsamp)]
 high=samples[int((1+conf)/2*nsamp)]
 central=regress(data,var)
-print("Central",central)
+print("Central estimate: y=%.3f+%.3f*x (y=%.3f+%.3f*x - y=%.3f+%.3f*x)"%(central+low+high))
 (a,b)=central
 
 # Make lower, upper curves for plotting
