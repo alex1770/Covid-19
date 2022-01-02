@@ -8,23 +8,23 @@ l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
 if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
 sgtf=loadcsv(max(l))
 regions=sorted(list(set(sgtf['UKHSA_region'])))
-skip=2
 minday=Date('2021-11-25')
+maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
-maxday=max(Date(d) for d in sgtf['specimen_date'])+1
-nsgtf=maxday-minday
+discard=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
 
 ages=[(0,150)]
 casesbyregion={}
 for loc in regions:
   sp0,sp=getcasesbyagespeccomplete(minday=minday,maxday=pubday,ages=ages,location=loc)
-  casesbyregion[loc]=sp[:maxday-minday-skip]
+  casesbyregion[loc]=sp[:pubday-discard-minday]
 casesbyregion['England']=sum(casesbyregion.values())
 nspec=casesbyregion['England'].shape[0]
   
 # Get SGTF data into a suitable form
 vocnum={}
 background=[0,0]
+nsgtf=max(Date(d) for d in sgtf['specimen_date'])+1-minday
 for (date,region,var,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sgtf['sgtf'],sgtf['n']):
   day=Date(date)
   daynum=day-minday
@@ -46,7 +46,8 @@ nsgtf=vocnum['England'].shape[0]
 
 step=7
 with open('gg-by-region%d'%step,'w') as fp:
-  n='2021-12-24'-minday#min(nsgtf,nspec)
+  n=maxday-minday
+  #n=min(nsgtf,nspec)
   for loc in vocnum:
     if loc=='England': continue
     vv=vocnum[loc][:n,:]
