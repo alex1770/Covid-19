@@ -14,7 +14,7 @@ minday=Date('2021-11-25')
 maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
 discard=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
-mincount=50
+mincount=10
 step=7
 
 ages=[(0,150)]
@@ -68,17 +68,14 @@ with open('gg-by-region%d'%step,'w') as fp:
 data=np.array(data)
 var=np.array(var)
 
-# isotropic weighted regression
+# 2d weighted regression
 def regress(data,var):
-  # Start with simple weighted regression, pretending uncertainty in (x,y) is isotropic, to give a starting point
+  # To get a starting point, do standard weighted regression, pretending uncertainty in (x,y) is all in the y
   W=1/(var.sum(axis=1))
   (X,Y)=data[:,0],data[:,1]
   m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
   r=np.array([sum(W*Y),sum(W*X*Y)])
   c=np.linalg.solve(m,r)
-  #print(c)
-  #res=c[0]+c[1]*X-Y
-  #tres=(W*res*res).sum()
 
   # Calculate weighted square-distance to putative best fit line of gradient b
   def f(b):
@@ -184,13 +181,28 @@ outdir='gentimeoutput'
 os.makedirs(outdir,exist_ok=True)
 
 with open(os.path.join(outdir,'rawdata'),'w') as fp:
-  for (x,y) in data: print("%10.7f %10.7f"%(x,y),file=fp)
+  W=1/(var.sum(axis=1))
+  for ((x,y),w) in zip(data,W): print("%10.7f %10.7f    %10.3f"%(x,y,w),file=fp)
   
-with open(os.path.join(outdir,'bestfit'),'w') as fp:
-  for x in xrange:
-    print("%10.7f %10.7f"%(x,a+b*x),file=fp)
-
 with open(os.path.join(outdir,'CI'),'w') as fp:
   for (x,y0,y1) in CI:
     print("%10.7f %10.7f %10.7f"%(x,y0,y1),file=fp)
 
+(a,b)=central
+cmd="""
+set terminal pngcairo font "sans,13" size 1920,1280
+set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5
+cd "%s"
+set output "growthcomparison.png"
+set key left
+set title "Comparison of growth rate of Omicron and growth rate of Delta"
+set xlabel "Average growth per day of Delta over 7-day period"
+set ylabel "Average growth per day of Omicron over 7-day period"
+set style fill transparent solid 0.5 noborder
+plot "rawdata" u 1:2:(($3)/200) w points pt 5 ps variable lc 2 title "Pairs of growths over 7 day intervals over regions of England and days in December; size indicates degree of confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
+"""%(outdir,a,b,a,b)
+po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
+p=po.stdin
+p.write(cmd.encode('utf-8'))
+p.close()
+po.wait()
