@@ -12,6 +12,8 @@ minday=Date('2021-11-25')
 maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
 discard=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
+mincount=50
+step=7
 
 ages=[(0,150)]
 casesbyregion={}
@@ -40,11 +42,9 @@ f=background[1]/background[0]
 for place in vocnum:
   for daynum in range(nsgtf):
     vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
-
 vocnum['England']=sum(vocnum.values())
-nsgtf=vocnum['England'].shape[0]
 
-step=7
+data=[]
 with open('gg-by-region%d'%step,'w') as fp:
   n=maxday-minday
   #n=min(nsgtf,nspec)
@@ -54,5 +54,8 @@ with open('gg-by-region%d'%step,'w') as fp:
     cv=casesbyregion[loc][:n,:].sum(axis=1)[:,None]*(vv/vv.sum(axis=1)[:,None])
     #cv=vv
     for i in range(n-step):
-      if (vv[i:i+2*step:step,:]>=50).all():
-        print("%7.4f %7.4f"%(log(cv[i+step][0]/cv[i][0])/step,log(cv[i+step][1]/cv[i][1])/step),Date(minday+i),Date(minday+i+step),"%6d %6d %6d %6d"%tuple(vv[i:i+2,:].reshape(-1)),loc,file=fp)
+      if (vv[i:i+2*step:step,:]>=mincount).all():
+        data.append((log(cv[i+step][0]/cv[i][0])/step,log(cv[i+step][1]/cv[i][1])/step))
+        print("%7.4f %7.4f"%(data[-1]),Date(minday+i),Date(minday+i+step),"%6d %6d %6d %6d"%tuple(vv[i:i+2*step:step,:].reshape(-1)),loc,file=fp)
+data=np.array(data)
+
