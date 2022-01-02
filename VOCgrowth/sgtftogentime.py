@@ -2,6 +2,7 @@ from stuff import *
 from math import log,exp
 from scipy.optimize import minimize
 from random import randrange
+from math import sqrt
 import numpy as np
 np.set_printoptions(precision=6,linewidth=250,suppress=True)
 
@@ -101,7 +102,7 @@ def regress(data,wt):
   
 # Bootstrap to get confidence intervals
 n=len(data)
-nsamp=1000
+nsamp=10000
 conf=0.95
 
 samples=[]
@@ -115,7 +116,53 @@ for samp in range(nsamp):
     wt1[i]=wt[r]
   samples.append(regress(data1,wt1))
 
+# Simple CI of gradient
 samples.sort(key=lambda x:x[1])
 low=samples[int((1-conf)/2*nsamp)]
 high=samples[int((1+conf)/2*nsamp)]
-print(low,high)
+central=regress(data,wt)
+#print(central)
+#print(low,high)
+#print()
+
+# Compare with Delta
+
+# https://www.medrxiv.org/content/10.1101/2021.10.21.21265216v1
+# Delta (intrinsic): 4.6 (4.0-5.4) days  3.1 (3.0-3.7) days
+# >>> from scipy.stats import gamma
+# >>> a=170;mu=4.64;gamma.ppf(.025,a,scale=mu/a),gamma.ppf(.975,a,scale=mu/a)
+# (3.9687044779630987, 5.3629770162251926)
+
+from scipy.stats import gamma,expon
+csamples=[]
+for (a,b) in samples:
+  # Generate meanGT_Delta with characteristics 4.6 (4.0 - 5.4)
+  ag=170;mu=4.64;mean_d=gamma.rvs(ag,scale=mu/ag)
+
+  # Generate sdGT_Delta with characteristics 3.1 (3.0 - 3.7)
+  # This is very skew, so do it in two pieces, setting the median (not the mean) to 3.1
+  e=expon.ppf(0.95)
+  if randrange(2): sd_d=3.1+.6/e*expon.rvs()
+  else: sd_d=3.1-.1/e*expon.rvs()
+  
+  th_d=sd_d**2/mean_d
+  k_d=(mean_d/sd_d)**2
+  th_o=1/(b/th_d-a)
+  k_o=k_d# Assume equal shape (or coefficient of variation)
+  rr=(b*th_o/th_d)**k_d
+  mean_o=th_o*k_o
+  sd_o=th_o*sqrt(k_o)
+  gtr=mean_o/mean_d
+  csamples.append([mean_d,sd_d,mean_o,sd_o,gtr,rr])
+csamples=np.array(csamples)
+
+desc=["meanGT_Delta","sdGT_Delta","meanGT_Omicron","sdGT_Omicron","GT_Om/GT_Delta","R_Om/R_Delta"]
+nd=len(desc)
+for i in range(nd):
+  lsamp=list(csamples[:,i])
+  lsamp.sort()
+  low=lsamp[int((1-conf)/2*nsamp)]
+  med=lsamp[int(0.5*nsamp)]
+  high=lsamp[int((1+conf)/2*nsamp)]
+  print("%-16s  %6.3f (%.3f - %.3f)"%(desc[i],med,low,high))
+  
