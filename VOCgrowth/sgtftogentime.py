@@ -29,15 +29,15 @@ nspec=casesbyregion['England'].shape[0]
 vocnum={}
 background=[0,0]
 nsgtf=max(Date(d) for d in sgtf['specimen_date'])+1-minday
-for (date,region,var,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sgtf['sgtf'],sgtf['n']):
+for (date,region,variant,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sgtf['sgtf'],sgtf['n']):
   day=Date(date)
   daynum=day-minday
   if daynum>=0 and daynum<nsgtf:
     place=region
     if place not in vocnum: vocnum[place]=np.zeros([nsgtf,2],dtype=int)
-    vocnum[place][daynum][int("SGTF" in var)]+=n
+    vocnum[place][daynum][int("SGTF" in variant)]+=n
   if date>=Date('2021-10-01') and date<Date('2021-11-10'):
-    background[int("SGTF" in var)]+=n
+    background[int("SGTF" in variant)]+=n
 
 # Adjust for non-Omicron SGTFs, based on the assumption that these are in a non-location-dependent proportion to the number of non-Omicron cases
 f=background[1]/background[0]
@@ -46,8 +46,8 @@ for place in vocnum:
     vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
 
-data=[]
-wt=[]
+data=[]# list of (growth in Delta, growth in Omicron)
+var=[]# list of variances of the above
 with open('gg-by-region%d'%step,'w') as fp:
   n=maxday-minday
   #n=min(nsgtf,nspec)
@@ -60,17 +60,18 @@ with open('gg-by-region%d'%step,'w') as fp:
       if (vv[i:i+2*step:step,:]>=mincount).all():
         gr0=log(cv[i+step][0]/cv[i][0])/step
         gr1=log(cv[i+step][1]/cv[i][1])/step
-        wt0=1/(1/vv[i,0]+1/vv[i+step,0])
-        wt1=1/(1/vv[i,1]+1/vv[i+step,1])
+        v0=1/vv[i,0]+1/vv[i+step,0]
+        v1=1/vv[i,1]+1/vv[i+step,1]
         data.append((gr0,gr1))
-        wt.append((wt0,wt1))
+        var.append((v0,v1))
         print("%7.4f %7.4f"%(data[-1]),Date(minday+i),Date(minday+i+step),"%6d %6d %6d %6d"%tuple(vv[i:i+2*step:step,:].reshape(-1)),loc,file=fp)
 data=np.array(data)
-wt=np.array(wt)
+var=np.array(var)
 
-def regress(data,wt):
+# isotropic weighted regression
+def regress(data,var):
   # Start with simple weighted regression, pretending uncertainty in (x,y) is isotropic, to give a starting point
-  W=wt.sum(axis=1)
+  W=1/(var.sum(axis=1))
   (X,Y)=data[:,0],data[:,1]
   m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
   r=np.array([sum(W*Y),sum(W*X*Y)])
@@ -82,7 +83,7 @@ def regress(data,wt):
   # Calculate weighted square-distance to putative best fit line of gradient b
   def f(b):
     (X,Y)=data[:,0],data[:,1]
-    (V,W)=wt[:,0],wt[:,1]
+    (V,W)=var[:,0],var[:,1]
     N=Y-b*X
     D=W+b*b*V
     a=sum(N/D)/sum(1/D)
@@ -99,31 +100,22 @@ def regress(data,wt):
   #if b<bounds[0]+1e-6 or b>bounds[1]-1e-6: raise RuntimeError("Hit bounds %g %g"%bounds)
   #if b<bounds[0]+1e-6 or b>bounds[1]-1e-6: print("Warning: Hit bounds %g %g"%bounds,file=sys.stderr)
   return (a,b)
-  
+
 # Bootstrap to get confidence intervals
 n=len(data)
-nsamp=10000
+nsamp=1000
 conf=0.95
 
 samples=[]
 print("Generating %d samples"%nsamp)
 for samp in range(nsamp):
   data1=np.zeros(data.shape)
-  wt1=np.zeros(wt.shape)
+  var1=np.zeros(var.shape)
   for i in range(n):
     r=randrange(n)
     data1[i]=data[r]
-    wt1[i]=wt[r]
-  samples.append(regress(data1,wt1))
-
-# Simple CI of gradient
-samples.sort(key=lambda x:x[1])
-low=samples[int((1-conf)/2*nsamp)]
-high=samples[int((1+conf)/2*nsamp)]
-central=regress(data,wt)
-#print(central)
-#print(low,high)
-#print()
+    var1[i]=var[r]
+  samples.append(regress(data1,var1))
 
 # Compare with Delta
 
@@ -166,3 +158,39 @@ for i in range(nd):
   high=lsamp[int((1+conf)/2*nsamp)]
   print("%-16s  %6.3f (%.3f - %.3f)"%(desc[i],med,low,high))
   
+# Simple CI of gradient
+samples.sort(key=lambda x:x[1])
+low=samples[int((1-conf)/2*nsamp)]
+high=samples[int((1+conf)/2*nsamp)]
+central=regress(data,var)
+print("Central",central)
+(a,b)=central
+
+# Make lower, upper curves for plotting
+x0,x1=data[:,0].min(),data[:,0].max()
+d=x1-x0
+x0-=0.05*d
+x1+=0.05*d
+n=1000
+probsamples=np.array(samples[int((1-conf)/2*nsamp):int((1+conf)/2*nsamp)])
+low=[];high=[]
+xrange=np.arange(x0,x1,(x1-x0)/n)
+CI=[]
+for x in xrange:
+  yy=probsamples@[1,x]
+  CI.append([x,yy.min(),yy.max()])
+
+outdir='gentimeoutput'
+os.makedirs(outdir,exist_ok=True)
+
+with open(os.path.join(outdir,'rawdata'),'w') as fp:
+  for (x,y) in data: print("%10.7f %10.7f"%(x,y),file=fp)
+  
+with open(os.path.join(outdir,'bestfit'),'w') as fp:
+  for x in xrange:
+    print("%10.7f %10.7f"%(x,a+b*x),file=fp)
+
+with open(os.path.join(outdir,'CI'),'w') as fp:
+  for (x,y0,y1) in CI:
+    print("%10.7f %10.7f %10.7f"%(x,y0,y1),file=fp)
+
