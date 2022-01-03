@@ -6,16 +6,19 @@ from math import sqrt
 import numpy as np
 np.set_printoptions(precision=6,linewidth=250,suppress=True)
 
-l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
-if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
-sgtf=loadcsv(max(l))
-regions=sorted(list(set(sgtf['UKHSA_region'])))
 minday=Date('2021-11-25')
 maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
 discard=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
 mincount=10
 step=7
+outdir='gentimeoutput'
+os.makedirs(outdir,exist_ok=True)
+
+l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
+if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
+sgtf=loadcsv(max(l))
+regions=sorted(list(set(sgtf['UKHSA_region'])))
 
 ages=[(0,150)]
 casesbyregion={}
@@ -46,6 +49,52 @@ for place in vocnum:
     vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
 
+def regressYonX(W,X,Y):
+  W=np.array(W);X=np.array(X);Y=np.array(Y)
+  m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
+  r=np.array([sum(W*Y),sum(W*X*Y)])
+  return np.linalg.solve(m,r)
+  
+
+date0=Date('2021-11-25')
+date1=Date('2021-12-29')
+vn=vocnum['England']
+dat=[]
+for date in Daterange(date0,date1):
+  vv=vn[date-minday]
+  if vv[0]>0 and vv[1]>0:
+    dat.append((str(date),log(vv[1]/vv[0]),1/(1/vv[0]+1/vv[1])))
+fn=os.path.join(outdir,'deltaomicron.dat')
+with open(fn,'w') as fp:
+  for (date,y,w) in dat:
+    print(date,'%10.6f %12g'%(y,w),file=fp)
+
+cutoff=Date('2021-12-14')
+ll=[]
+for after in [0,1]:
+  W=[];X=[];Y=[]
+  for (x,(date,y,w)) in enumerate(dat):
+    if (date>cutoff)==after: W.append(w);X.append(x);Y.append(y)
+  ll.append(regressYonX(W,X,Y))
+
+cmd="""
+set terminal pngcairo font "sans,13" size 1920,1920
+set bmargin 5;set lmargin 15;set rmargin 10;set tmargin 5
+cd "%s"
+set output "deltaomicron.png"
+set key left Left reverse
+set xdata time;fmt="%%Y-%%m-%%d";set timefmt fmt;set format x "%%Y-%%m-%%d"
+set title "Simple regression of log(Omicron)/log(Delta) against time\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData source: SGTF numbers from UKHSA Omicron daily overview"
+set ylabel "log(number of likely Omicron on given day/number of likely Delta on given day)"
+set xtics "2020-01-06", 604800
+plot "deltaomicron.dat" u 1:2:(sqrt($3)/15) w points pt 5 ps variable lc 2 title "log(number of likely Omicron on given day/number of likely Delta on given day); larger sizes indicates more confidence in vertical position",%g+%g*(x-strptime(fmt,"%s"))/86400 lc 3 lw 3 title "Best fit line up to %s: slope %.3f",%g+%g*(x-strptime(fmt,"%s"))/86400 lc 4 lw 3 title "Best fit line after %s: slope %.3f"
+"""%(outdir,ll[0][0],ll[0][1],str(minday),str(cutoff),ll[0][1],ll[1][0],ll[1][1],str(minday),str(cutoff),ll[1][1])
+po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
+p=po.stdin
+p.write(cmd.encode('utf-8'))
+p.close()
+po.wait()
+
 data=[]# list of (growth in Delta, growth in Omicron)
 var=[]# list of variances of the above
 with open('gg-by-region%d'%step,'w') as fp:
@@ -73,9 +122,7 @@ def regress(data,var):
   # To get a starting point, do standard weighted regression, pretending uncertainty in (x,y) is all in the y
   W=1/(var.sum(axis=1))
   (X,Y)=data[:,0],data[:,1]
-  m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
-  r=np.array([sum(W*Y),sum(W*X*Y)])
-  c=np.linalg.solve(m,r)
+  c=regressYonX(W,X,Y)
 
   # Calculate weighted square-distance to putative best fit line of gradient b
   def f(b):
@@ -100,7 +147,7 @@ def regress(data,var):
 
 # Bootstrap to get confidence intervals
 n=len(data)
-nsamp=10000
+nsamp=1000
 conf=0.95
 
 samples=[]
@@ -177,9 +224,6 @@ for x in xrange:
   yy=probsamples@[1,x]
   CI.append([x,yy.min(),yy.max()])
 
-outdir='gentimeoutput'
-os.makedirs(outdir,exist_ok=True)
-
 with open(os.path.join(outdir,'rawdata'),'w') as fp:
   W=1/(var.sum(axis=1))
   for ((x,y),w) in zip(data,W): print("%10.7f %10.7f    %10.3f"%(x,y,w),file=fp)
@@ -190,16 +234,16 @@ with open(os.path.join(outdir,'CI'),'w') as fp:
 
 (a,b)=central
 cmd="""
-set terminal pngcairo font "sans,13" size 1920,1280
-set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5
+set terminal pngcairo font "sans,13" size 1920,1920
+set bmargin 5;set lmargin 15;set rmargin 10;set tmargin 5
 cd "%s"
 set output "growthcomparison.png"
 set key left
-set title "Comparison of growth rate of Omicron and growth rate of Delta"
+set title "Comparison of growth rate of Omicron and growth rate of Delta\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData sources: UKHSA Omicron daily overview and dashboard"
 set xlabel "Average growth per day of Delta over 7-day period"
 set ylabel "Average growth per day of Omicron over 7-day period"
 set style fill transparent solid 0.5 noborder
-plot "rawdata" u 1:2:(($3)/200) w points pt 5 ps variable lc 2 title "Pairs of growths over 7 day intervals over regions of England and days in December; size indicates degree of confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
+plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths over 7 day intervals over regions of England and days in December; larger sizes indicate more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
 """%(outdir,a,b,a,b)
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
 p=po.stdin
