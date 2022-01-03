@@ -10,10 +10,11 @@ minday=Date('2021-11-25')
 maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
 discard=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
-mincount=10
+mincount=5
 step=7
 outdir='gentimeoutput'
 os.makedirs(outdir,exist_ok=True)
+conf=0.95
 
 l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
 if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
@@ -97,6 +98,7 @@ po.wait()
 
 data=[]# list of (growth in Delta, growth in Omicron)
 var=[]# list of variances of the above
+regionblockindex=[]# Keep track of which data entries came from the same region
 with open('gg-by-region%d'%step,'w') as fp:
   n=maxday-minday
   #n=min(nsgtf,nspec)
@@ -105,17 +107,26 @@ with open('gg-by-region%d'%step,'w') as fp:
     vv=vocnum[loc][:n,:]
     cv=casesbyregion[loc][:n,:].sum(axis=1)[:,None]*(vv/vv.sum(axis=1)[:,None])
     #cv=vv
-    for i in range(n-step):
-      if (vv[i:i+2*step:step,:]>=mincount).all():
-        gr0=log(cv[i+step][0]/cv[i][0])/step
-        gr1=log(cv[i+step][1]/cv[i][1])/step
-        v0=1/vv[i,0]+1/vv[i+step,0]
-        v1=1/vv[i,1]+1/vv[i+step,1]
-        data.append((gr0,gr1))
-        var.append((v0,v1))
-        print("%7.4f %7.4f"%(data[-1]),Date(minday+i),Date(minday+i+step),"%6d %6d %6d %6d"%tuple(vv[i:i+2*step:step,:].reshape(-1)),loc,file=fp)
+    # Need to find (biggest) contiguous block of allowable days so that the moving-block bootstrap makes sense
+    for i in range(n-step-1,-1,-1):
+      if (vv[i:i+2*step:step,:]<mincount).any(): break
+    else: i=-1
+    i0=i+1
+    regionblockindex.append((len(data),len(data)+n-step-i0))
+    for i in range(i0,n-step):
+      assert (vv[i:i+2*step:step,:]>=mincount).all()
+      gr0=log(cv[i+step][0]/cv[i][0])/step
+      gr1=log(cv[i+step][1]/cv[i][1])/step
+      v0=1/vv[i,0]+1/vv[i+step,0]
+      v1=1/vv[i,1]+1/vv[i+step,1]
+      data.append((gr0,gr1))
+      var.append((v0,v1))
+      print("%7.4f %7.4f"%(data[-1]),Date(minday+i),Date(minday+i+step),"%6d %6d %6d %6d"%tuple(vv[i:i+2*step:step,:].reshape(-1)),loc,file=fp)
 data=np.array(data)
 var=np.array(var)
+regionblockindex=np.array(regionblockindex)
+rbs=regionblockindex[:,1]-regionblockindex[:,0]
+nreg=regionblockindex.shape[0]
 
 # 2d weighted regression
 def regress(data,var):
@@ -145,24 +156,68 @@ def regress(data,var):
   #if b<bounds[0]+1e-6 or b>bounds[1]-1e-6: print("Warning: Hit bounds %g %g"%bounds,file=sys.stderr)
   return (a,b)
 
+def blockbootstrap(nsamp,bl):
+  samples=[]
+  print("Generating %d samples using block length %d"%(nsamp,bl))
+  for samp in range(nsamp):
+    data1=np.zeros([n,2])
+    var1=np.zeros([n,2])
+    for bn in range((n+bl-1)//bl):
+      i0=bl*bn
+      i1=min(bl*(bn+1),n)
+      lbl=i1-i0;assert lbl>0
+      lrbs=np.maximum(rbs-lbl+1,0)
+      r=randrange(sum(lrbs))
+      for i in range(nreg):
+        r-=lrbs[i]
+        if r<0: break
+      else: assert 0
+      j0=regionblockindex[i][0]+r+lrbs[i]
+      j1=j0+lbl
+      assert j1<=regionblockindex[i][1]
+      data1[i0:i1]=data[j0:j1]
+      var1[i0:i1]=var[j0:j1]
+    samples.append(regress(data1,var1))
+  samples.sort(key=lambda x:x[1])
+  return samples
+  
+central=regress(data,var)
+print("Central estimate: y=%.3f+%.3f*x"%central)
+
+if 0:
+  # Diagnostics to measure autocorrelation and find worst (most conservative) block size
+  (a,b)=central
+  (X,Y)=data[:,0],data[:,1]
+  (V,W)=var[:,0],var[:,1]
+  resid=(Y-(a+b*X))/np.sqrt(W+b*b*V)
+  n=len(resid)
+  for r in range(1,11):
+    num=den=0
+    for reg in range(nreg):
+      i0,i1=regionblockindex[reg]
+      if i1-i0>r:
+        num+=((resid[i0+r:i1]-resid[i0:i1-r])**2).sum()
+        den+=(resid[i0:i1]@resid[i0:i1])*((i1-i0-r)/(i1-i0))
+    dw=num/den
+    print("Adjusted Durbin-Watson statistic at step %d = %g"%(r,dw))
+  print()
+
+  # Search for worst (most conservative) block size. Turns out to be 7.
+  print("Mincount =",mincount)
+  nsamp=5000
+  for bl in range(1,max(rbs)+1):
+    samples=blockbootstrap(nsamp,bl)
+    low=samples[int((1-conf)/2*nsamp)]
+    high=samples[int((1+conf)/2*nsamp)]
+    print('   ',bl,high[1]-low[1],low[1],high[1])
+
 # Bootstrap to get confidence intervals
 n=len(data)
-nsamp=1000
-conf=0.95
+nsamp=10000
+blocklength=7
+samples=blockbootstrap(nsamp,blocklength)
 
-samples=[]
-print("Generating %d samples"%nsamp)
-for samp in range(nsamp):
-  data1=np.zeros(data.shape)
-  var1=np.zeros(var.shape)
-  for i in range(n):
-    r=randrange(n)
-    data1[i]=data[r]
-    var1[i]=var[r]
-  samples.append(regress(data1,var1))
-
-# Compare with Delta
-
+# Compare with Delta:
 # https://www.medrxiv.org/content/10.1101/2021.10.21.21265216v1
 # Delta (intrinsic): 4.6 (4.0-5.4) days  3.1 (3.0-3.7) days
 # >>> from scipy.stats import gamma
@@ -202,14 +257,6 @@ for i in range(nd):
   high=lsamp[int((1+conf)/2*nsamp)]
   print("%-16s  %6.3f (%.3f - %.3f)"%(desc[i],med,low,high))
   
-# Simple CI of gradient
-samples.sort(key=lambda x:x[1])
-low=samples[int((1-conf)/2*nsamp)]
-high=samples[int((1+conf)/2*nsamp)]
-central=regress(data,var)
-print("Central estimate: y=%.3f+%.3f*x (y=%.3f+%.3f*x - y=%.3f+%.3f*x)"%(central+low+high))
-(a,b)=central
-
 # Make lower, upper curves for plotting
 x0,x1=data[:,0].min(),data[:,0].max()
 d=x1-x0
