@@ -1,4 +1,676 @@
 {
+  "2022-01-04": {
+    "Eastern Cape": {
+      "Facilities Reporting": 104,
+      "Admissions to Date": 44784,
+      "Died to Date": 12553,
+      "Discharged to Date": 29399,
+      "Currently Admitted": 935,
+      "Currently in ICU": 30,
+      "Currently Ventilated": 62,
+      "Currently Oxygenated": 163,
+      "Admissions in Previous Day": 40
+    },
+    "Free State": {
+      "Facilities Reporting": 55,
+      "Admissions to Date": 28745,
+      "Died to Date": 5770,
+      "Discharged to Date": 20503,
+      "Currently Admitted": 416,
+      "Currently in ICU": 26,
+      "Currently Ventilated": 16,
+      "Currently Oxygenated": 115,
+      "Admissions in Previous Day": 16
+    },
+    "Gauteng": {
+      "Facilities Reporting": 136,
+      "Admissions to Date": 139363,
+      "Died to Date": 28599,
+      "Discharged to Date": 104685,
+      "Currently Admitted": 2950,
+      "Currently in ICU": 278,
+      "Currently Ventilated": 110,
+      "Currently Oxygenated": 438,
+      "Admissions in Previous Day": 86
+    },
+    "KwaZulu-Natal": {
+      "Facilities Reporting": 116,
+      "Admissions to Date": 77030,
+      "Died to Date": 16153,
+      "Discharged to Date": 56064,
+      "Currently Admitted": 1791,
+      "Currently in ICU": 145,
+      "Currently Ventilated": 57,
+      "Currently Oxygenated": 263,
+      "Admissions in Previous Day": 59
+    },
+    "Limpopo": {
+      "Facilities Reporting": 48,
+      "Admissions to Date": 19099,
+      "Died to Date": 5051,
+      "Discharged to Date": 13270,
+      "Currently Admitted": 187,
+      "Currently in ICU": 6,
+      "Currently Ventilated": 4,
+      "Currently Oxygenated": 45,
+      "Admissions in Previous Day": 22
+    },
+    "Mpumalanga": {
+      "Facilities Reporting": 40,
+      "Admissions to Date": 20167,
+      "Died to Date": 4622,
+      "Discharged to Date": 14781,
+      "Currently Admitted": 262,
+      "Currently in ICU": 19,
+      "Currently Ventilated": 12,
+      "Currently Oxygenated": 33,
+      "Admissions in Previous Day": 12
+    },
+    "North West": {
+      "Facilities Reporting": 30,
+      "Admissions to Date": 30889,
+      "Died to Date": 4599,
+      "Discharged to Date": 23599,
+      "Currently Admitted": 355,
+      "Currently in ICU": 26,
+      "Currently Ventilated": 19,
+      "Currently Oxygenated": 143,
+      "Admissions in Previous Day": 9
+    },
+    "Northern Cape": {
+      "Facilities Reporting": 35,
+      "Admissions to Date": 10728,
+      "Died to Date": 2334,
+      "Discharged to Date": 7737,
+      "Currently Admitted": 127,
+      "Currently in ICU": 5,
+      "Currently Ventilated": 5,
+      "Currently Oxygenated": 52,
+      "Admissions in Previous Day": 11
+    },
+    "Western Cape": {
+      "Facilities Reporting": 102,
+      "Admissions to Date": 105857,
+      "Died to Date": 17425,
+      "Discharged to Date": 86349,
+      "Currently Admitted": 1834,
+      "Currently in ICU": 155,
+      "Currently Ventilated": 24,
+      "Currently Oxygenated": 42,
+      "Admissions in Previous Day": 54
+    },
+    "South Africa": {
+      "Facilities Reporting": 666,
+      "Admissions to Date": 476662,
+      "Died to Date": 97106,
+      "Discharged to Date": 356387,
+      "Currently Admitted": 8857,
+      "Currently in ICU": 690,
+      "Currently Ventilated": 309,
+      "Currently Oxygenated": 1294,
+      "Admissions in Previous Day": 309
+    }
+  },
+  "2022-01-03": {
+    "Eastern Cape": {
+      "Facilities Reporting": 104,
+      "Admissions to Date": 44599,
+      "Died to Date": 12512,
+      "Discharged to Date": 29253,
+      "Currently Admitted": 937,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 46,
+      "Currently Oxygenated": 154,
+      "Admissions in Previous Day": 17
+    },
+    "Free State": {
+      "Facilities Reporting": 55,
+      "Admissions to Date": 28652,
+      "Died to Date": 5760,
+      "Discharged to Date": 20390,
+      "Currently Admitted": 456,
+      "Currently in ICU": 24,
+      "Currently Ventilated": 24,
+      "Currently Oxygenated": 114,
+      "Admissions in Previous Day": 10
+    },
+    "Gauteng": {
+      "Facilities Reporting": 136,
+      "Admissions to Date": 138898,
+      "Died to Date": 28538,
+      "Discharged to Date": 104160,
+      "Currently Admitted": 3084,
+      "Currently in ICU": 280,
+      "Currently Ventilated": 117,
+      "Currently Oxygenated": 477,
+      "Admissions in Previous Day": 19
+    },
+    "KwaZulu-Natal": {
+      "Facilities Reporting": 116,
+      "Admissions to Date": 76601,
+      "Died to Date": 16101,
+      "Discharged to Date": 55646,
+      "Currently Admitted": 1836,
+      "Currently in ICU": 153,
+      "Currently Ventilated": 53,
+      "Currently Oxygenated": 257,
+      "Admissions in Previous Day": 18
+    },
+    "Limpopo": {
+      "Facilities Reporting": 48,
+      "Admissions to Date": 18991,
+      "Died to Date": 5030,
+      "Discharged to Date": 13135,
+      "Currently Admitted": 239,
+      "Currently in ICU": 9,
+      "Currently Ventilated": 14,
+      "Currently Oxygenated": 50,
+      "Admissions in Previous Day": 11
+    },
+    "Mpumalanga": {
+      "Facilities Reporting": 40,
+      "Admissions to Date": 20076,
+      "Died to Date": 4612,
+      "Discharged to Date": 14672,
+      "Currently Admitted": 291,
+      "Currently in ICU": 20,
+      "Currently Ventilated": 12,
+      "Currently Oxygenated": 43,
+      "Admissions in Previous Day": 2
+    },
+    "North West": {
+      "Facilities Reporting": 30,
+      "Admissions to Date": 30838,
+      "Died to Date": 4588,
+      "Discharged to Date": 23524,
+      "Currently Admitted": 392,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 18,
+      "Currently Oxygenated": 143,
+      "Admissions in Previous Day": 13
+    },
+    "Northern Cape": {
+      "Facilities Reporting": 35,
+      "Admissions to Date": 10624,
+      "Died to Date": 2328,
+      "Discharged to Date": 7651,
+      "Currently Admitted": 117,
+      "Currently in ICU": 6,
+      "Currently Ventilated": 7,
+      "Currently Oxygenated": 35,
+      "Admissions in Previous Day": 2
+    },
+    "Western Cape": {
+      "Facilities Reporting": 102,
+      "Admissions to Date": 105446,
+      "Died to Date": 17388,
+      "Discharged to Date": 85896,
+      "Currently Admitted": 1931,
+      "Currently in ICU": 152,
+      "Currently Ventilated": 32,
+      "Currently Oxygenated": 23,
+      "Admissions in Previous Day": 35
+    },
+    "South Africa": {
+      "Facilities Reporting": 666,
+      "Admissions to Date": 474725,
+      "Died to Date": 96857,
+      "Discharged to Date": 354327,
+      "Currently Admitted": 9283,
+      "Currently in ICU": 702,
+      "Currently Ventilated": 323,
+      "Currently Oxygenated": 1296,
+      "Admissions in Previous Day": 127
+    }
+  },
+  "2022-01-02": {
+    "Eastern Cape": {
+      "Facilities Reporting": 104,
+      "Admissions to Date": 44476,
+      "Died to Date": 12464,
+      "Discharged to Date": 29128,
+      "Currently Admitted": 989,
+      "Currently in ICU": 25,
+      "Currently Ventilated": 37,
+      "Currently Oxygenated": 164,
+      "Admissions in Previous Day": 0
+    },
+    "Free State": {
+      "Facilities Reporting": 55,
+      "Admissions to Date": 28586,
+      "Died to Date": 5743,
+      "Discharged to Date": 20343,
+      "Currently Admitted": 456,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 23,
+      "Currently Oxygenated": 111,
+      "Admissions in Previous Day": 7
+    },
+    "Gauteng": {
+      "Facilities Reporting": 136,
+      "Admissions to Date": 138730,
+      "Died to Date": 28513,
+      "Discharged to Date": 103967,
+      "Currently Admitted": 3136,
+      "Currently in ICU": 282,
+      "Currently Ventilated": 113,
+      "Currently Oxygenated": 492,
+      "Admissions in Previous Day": 4
+    },
+    "KwaZulu-Natal": {
+      "Facilities Reporting": 116,
+      "Admissions to Date": 76423,
+      "Died to Date": 16068,
+      "Discharged to Date": 55383,
+      "Currently Admitted": 1960,
+      "Currently in ICU": 156,
+      "Currently Ventilated": 52,
+      "Currently Oxygenated": 284,
+      "Admissions in Previous Day": 3
+    },
+    "Limpopo": {
+      "Facilities Reporting": 48,
+      "Admissions to Date": 18934,
+      "Died to Date": 5008,
+      "Discharged to Date": 13097,
+      "Currently Admitted": 243,
+      "Currently in ICU": 21,
+      "Currently Ventilated": 13,
+      "Currently Oxygenated": 61,
+      "Admissions in Previous Day": 0
+    },
+    "Mpumalanga": {
+      "Facilities Reporting": 40,
+      "Admissions to Date": 20030,
+      "Died to Date": 4608,
+      "Discharged to Date": 14642,
+      "Currently Admitted": 279,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 14,
+      "Currently Oxygenated": 45,
+      "Admissions in Previous Day": 0
+    },
+    "North West": {
+      "Facilities Reporting": 30,
+      "Admissions to Date": 30814,
+      "Died to Date": 4584,
+      "Discharged to Date": 23479,
+      "Currently Admitted": 418,
+      "Currently in ICU": 32,
+      "Currently Ventilated": 19,
+      "Currently Oxygenated": 159,
+      "Admissions in Previous Day": 13
+    },
+    "Northern Cape": {
+      "Facilities Reporting": 35,
+      "Admissions to Date": 10591,
+      "Died to Date": 2324,
+      "Discharged to Date": 7614,
+      "Currently Admitted": 126,
+      "Currently in ICU": 10,
+      "Currently Ventilated": 8,
+      "Currently Oxygenated": 40,
+      "Admissions in Previous Day": 0
+    },
+    "Western Cape": {
+      "Facilities Reporting": 102,
+      "Admissions to Date": 104801,
+      "Died to Date": 17382,
+      "Discharged to Date": 85444,
+      "Currently Admitted": 1746,
+      "Currently in ICU": 149,
+      "Currently Ventilated": 31,
+      "Currently Oxygenated": 34,
+      "Admissions in Previous Day": 0
+    },
+    "South Africa": {
+      "Facilities Reporting": 666,
+      "Admissions to Date": 473385,
+      "Died to Date": 96694,
+      "Discharged to Date": 353097,
+      "Currently Admitted": 9353,
+      "Currently in ICU": 733,
+      "Currently Ventilated": 310,
+      "Currently Oxygenated": 1390,
+      "Admissions in Previous Day": 27
+    }
+  },
+  "2022-01-01": {
+    "Eastern Cape": {
+      "Facilities Reporting": 104,
+      "Admissions to Date": 44465,
+      "Died to Date": 12462,
+      "Discharged to Date": 29122,
+      "Currently Admitted": 986,
+      "Currently in ICU": 25,
+      "Currently Ventilated": 37,
+      "Currently Oxygenated": 160,
+      "Admissions in Previous Day": 11
+    },
+    "Free State": {
+      "Facilities Reporting": 55,
+      "Admissions to Date": 28570,
+      "Died to Date": 5742,
+      "Discharged to Date": 20339,
+      "Currently Admitted": 445,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 23,
+      "Currently Oxygenated": 111,
+      "Admissions in Previous Day": 12
+    },
+    "Gauteng": {
+      "Facilities Reporting": 136,
+      "Admissions to Date": 138711,
+      "Died to Date": 28511,
+      "Discharged to Date": 103938,
+      "Currently Admitted": 3157,
+      "Currently in ICU": 282,
+      "Currently Ventilated": 113,
+      "Currently Oxygenated": 503,
+      "Admissions in Previous Day": 10
+    },
+    "KwaZulu-Natal": {
+      "Facilities Reporting": 116,
+      "Admissions to Date": 76404,
+      "Died to Date": 16062,
+      "Discharged to Date": 55343,
+      "Currently Admitted": 1987,
+      "Currently in ICU": 156,
+      "Currently Ventilated": 52,
+      "Currently Oxygenated": 290,
+      "Admissions in Previous Day": 4
+    },
+    "Limpopo": {
+      "Facilities Reporting": 48,
+      "Admissions to Date": 18928,
+      "Died to Date": 5008,
+      "Discharged to Date": 13097,
+      "Currently Admitted": 237,
+      "Currently in ICU": 21,
+      "Currently Ventilated": 13,
+      "Currently Oxygenated": 61,
+      "Admissions in Previous Day": 3
+    },
+    "Mpumalanga": {
+      "Facilities Reporting": 40,
+      "Admissions to Date": 20030,
+      "Died to Date": 4608,
+      "Discharged to Date": 14642,
+      "Currently Admitted": 279,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 14,
+      "Currently Oxygenated": 45,
+      "Admissions in Previous Day": 0
+    },
+    "North West": {
+      "Facilities Reporting": 30,
+      "Admissions to Date": 30800,
+      "Died to Date": 4582,
+      "Discharged to Date": 23474,
+      "Currently Admitted": 413,
+      "Currently in ICU": 28,
+      "Currently Ventilated": 16,
+      "Currently Oxygenated": 155,
+      "Admissions in Previous Day": 19
+    },
+    "Northern Cape": {
+      "Facilities Reporting": 35,
+      "Admissions to Date": 10591,
+      "Died to Date": 2324,
+      "Discharged to Date": 7614,
+      "Currently Admitted": 127,
+      "Currently in ICU": 10,
+      "Currently Ventilated": 8,
+      "Currently Oxygenated": 40,
+      "Admissions in Previous Day": 1
+    },
+    "Western Cape": {
+      "Facilities Reporting": 102,
+      "Admissions to Date": 104801,
+      "Died to Date": 17382,
+      "Discharged to Date": 85444,
+      "Currently Admitted": 1747,
+      "Currently in ICU": 149,
+      "Currently Ventilated": 31,
+      "Currently Oxygenated": 34,
+      "Admissions in Previous Day": 2
+    },
+    "South Africa": {
+      "Facilities Reporting": 666,
+      "Admissions to Date": 473300,
+      "Died to Date": 96681,
+      "Discharged to Date": 353013,
+      "Currently Admitted": 9378,
+      "Currently in ICU": 729,
+      "Currently Ventilated": 307,
+      "Currently Oxygenated": 1399,
+      "Admissions in Previous Day": 62
+    }
+  },
+  "2021-12-31": {
+    "Eastern Cape": {
+      "Facilities Reporting": 104,
+      "Admissions to Date": 44460,
+      "Died to Date": 12462,
+      "Discharged to Date": 29107,
+      "Currently Admitted": 996,
+      "Currently in ICU": 25,
+      "Currently Ventilated": 38,
+      "Currently Oxygenated": 163,
+      "Admissions in Previous Day": 54
+    },
+    "Free State": {
+      "Facilities Reporting": 55,
+      "Admissions to Date": 28555,
+      "Died to Date": 5740,
+      "Discharged to Date": 20319,
+      "Currently Admitted": 453,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 23,
+      "Currently Oxygenated": 117,
+      "Admissions in Previous Day": 39
+    },
+    "Gauteng": {
+      "Facilities Reporting": 136,
+      "Admissions to Date": 138689,
+      "Died to Date": 28510,
+      "Discharged to Date": 103919,
+      "Currently Admitted": 3160,
+      "Currently in ICU": 284,
+      "Currently Ventilated": 115,
+      "Currently Oxygenated": 504,
+      "Admissions in Previous Day": 97
+    },
+    "KwaZulu-Natal": {
+      "Facilities Reporting": 116,
+      "Admissions to Date": 76393,
+      "Died to Date": 16060,
+      "Discharged to Date": 55341,
+      "Currently Admitted": 1980,
+      "Currently in ICU": 156,
+      "Currently Ventilated": 52,
+      "Currently Oxygenated": 290,
+      "Admissions in Previous Day": 81
+    },
+    "Limpopo": {
+      "Facilities Reporting": 48,
+      "Admissions to Date": 18923,
+      "Died to Date": 5007,
+      "Discharged to Date": 13090,
+      "Currently Admitted": 240,
+      "Currently in ICU": 21,
+      "Currently Ventilated": 13,
+      "Currently Oxygenated": 60,
+      "Admissions in Previous Day": 10
+    },
+    "Mpumalanga": {
+      "Facilities Reporting": 40,
+      "Admissions to Date": 20030,
+      "Died to Date": 4608,
+      "Discharged to Date": 14641,
+      "Currently Admitted": 280,
+      "Currently in ICU": 29,
+      "Currently Ventilated": 14,
+      "Currently Oxygenated": 45,
+      "Admissions in Previous Day": 19
+    },
+    "North West": {
+      "Facilities Reporting": 30,
+      "Admissions to Date": 30778,
+      "Died to Date": 4580,
+      "Discharged to Date": 23460,
+      "Currently Admitted": 418,
+      "Currently in ICU": 27,
+      "Currently Ventilated": 15,
+      "Currently Oxygenated": 171,
+      "Admissions in Previous Day": 27
+    },
+    "Northern Cape": {
+      "Facilities Reporting": 35,
+      "Admissions to Date": 10589,
+      "Died to Date": 2322,
+      "Discharged to Date": 7614,
+      "Currently Admitted": 127,
+      "Currently in ICU": 10,
+      "Currently Ventilated": 8,
+      "Currently Oxygenated": 41,
+      "Admissions in Previous Day": 2
+    },
+    "Western Cape": {
+      "Facilities Reporting": 102,
+      "Admissions to Date": 104801,
+      "Died to Date": 17382,
+      "Discharged to Date": 85444,
+      "Currently Admitted": 1747,
+      "Currently in ICU": 149,
+      "Currently Ventilated": 31,
+      "Currently Oxygenated": 34,
+      "Admissions in Previous Day": 89
+    },
+    "South Africa": {
+      "Facilities Reporting": 666,
+      "Admissions to Date": 473218,
+      "Died to Date": 96671,
+      "Discharged to Date": 352935,
+      "Currently Admitted": 9401,
+      "Currently in ICU": 730,
+      "Currently Ventilated": 309,
+      "Currently Oxygenated": 1425,
+      "Admissions in Previous Day": 418
+    }
+  },
+  "2021-12-30": {
+    "Eastern Cape": {
+      "Facilities Reporting": 104,
+      "Admissions to Date": 44269,
+      "Died to Date": 12433,
+      "Discharged to Date": 28956,
+      "Currently Admitted": 986,
+      "Currently in ICU": 22,
+      "Currently Ventilated": 36,
+      "Currently Oxygenated": 175,
+      "Admissions in Previous Day": 57
+    },
+    "Free State": {
+      "Facilities Reporting": 55,
+      "Admissions to Date": 28485,
+      "Died to Date": 5726,
+      "Discharged to Date": 20240,
+      "Currently Admitted": 479,
+      "Currently in ICU": 30,
+      "Currently Ventilated": 24,
+      "Currently Oxygenated": 116,
+      "Admissions in Previous Day": 47
+    },
+    "Gauteng": {
+      "Facilities Reporting": 136,
+      "Admissions to Date": 138465,
+      "Died to Date": 28491,
+      "Discharged to Date": 103708,
+      "Currently Admitted": 3170,
+      "Currently in ICU": 287,
+      "Currently Ventilated": 118,
+      "Currently Oxygenated": 504,
+      "Admissions in Previous Day": 121
+    },
+    "KwaZulu-Natal": {
+      "Facilities Reporting": 116,
+      "Admissions to Date": 76143,
+      "Died to Date": 16049,
+      "Discharged to Date": 55120,
+      "Currently Admitted": 1965,
+      "Currently in ICU": 150,
+      "Currently Ventilated": 53,
+      "Currently Oxygenated": 270,
+      "Admissions in Previous Day": 90
+    },
+    "Limpopo": {
+      "Facilities Reporting": 48,
+      "Admissions to Date": 18867,
+      "Died to Date": 4995,
+      "Discharged to Date": 13030,
+      "Currently Admitted": 257,
+      "Currently in ICU": 20,
+      "Currently Ventilated": 15,
+      "Currently Oxygenated": 64,
+      "Admissions in Previous Day": 24
+    },
+    "Mpumalanga": {
+      "Facilities Reporting": 40,
+      "Admissions to Date": 19974,
+      "Died to Date": 4603,
+      "Discharged to Date": 14577,
+      "Currently Admitted": 295,
+      "Currently in ICU": 32,
+      "Currently Ventilated": 13,
+      "Currently Oxygenated": 51,
+      "Admissions in Previous Day": 6
+    },
+    "North West": {
+      "Facilities Reporting": 30,
+      "Admissions to Date": 30718,
+      "Died to Date": 4573,
+      "Discharged to Date": 23415,
+      "Currently Admitted": 416,
+      "Currently in ICU": 19,
+      "Currently Ventilated": 15,
+      "Currently Oxygenated": 163,
+      "Admissions in Previous Day": 29
+    },
+    "Northern Cape": {
+      "Facilities Reporting": 35,
+      "Admissions to Date": 10570,
+      "Died to Date": 2318,
+      "Discharged to Date": 7597,
+      "Currently Admitted": 130,
+      "Currently in ICU": 12,
+      "Currently Ventilated": 10,
+      "Currently Oxygenated": 42,
+      "Admissions in Previous Day": 9
+    },
+    "Western Cape": {
+      "Facilities Reporting": 102,
+      "Admissions to Date": 104412,
+      "Died to Date": 17374,
+      "Discharged to Date": 85143,
+      "Currently Admitted": 1681,
+      "Currently in ICU": 150,
+      "Currently Ventilated": 28,
+      "Currently Oxygenated": 32,
+      "Admissions in Previous Day": 89
+    },
+    "South Africa": {
+      "Facilities Reporting": 666,
+      "Admissions to Date": 471903,
+      "Died to Date": 96562,
+      "Discharged to Date": 351786,
+      "Currently Admitted": 9379,
+      "Currently in ICU": 722,
+      "Currently Ventilated": 312,
+      "Currently Oxygenated": 1417,
+      "Admissions in Previous Day": 472
+    }
+  },
   "2021-12-29": {
     "Eastern Cape": {
       "Facilities Reporting": 104,

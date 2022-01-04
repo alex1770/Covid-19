@@ -57,6 +57,8 @@ for day in range(minday,today+1):
     url='https://www.nicd.ac.za/37362-2/'
   elif date=='2021-12-29':
     url='https://www.nicd.ac.za/confirmed-cases-of-covid-19-in-south-africa-29-december-2021/'
+  elif date=='2021-12-30':
+    url='https://www.nicd.ac.za/confirmed-cases-of-covid-19-in-south-africa-30-december-2021/'
   elif date<'2021-01-10':
     suffix=d.strftime('%d-%b-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
