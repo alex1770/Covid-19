@@ -15,6 +15,8 @@ step=7
 outdir='gentimeoutput'
 os.makedirs(outdir,exist_ok=True)
 conf=0.95
+adjustbycases=True
+print("Adjust by cases:",adjustbycases)
 
 l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
 if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
@@ -99,14 +101,18 @@ po.wait()
 data=[]# list of (growth in Delta, growth in Omicron)
 var=[]# list of variances of the above
 regionblockindex=[]# Keep track of which data entries came from the same region
-with open('gg-by-region%d'%step,'w') as fp:
+with open(os.path.join(outdir,'gg-by-region%d'%step),'w') as fp:
   n=maxday-minday
   #n=min(nsgtf,nspec)
   for loc in vocnum:
     if loc=='England': continue
     vv=vocnum[loc][:n,:]
-    cv=casesbyregion[loc][:n,:].sum(axis=1)[:,None]*(vv/vv.sum(axis=1)[:,None])
-    #cv=vv
+    if adjustbycases:
+      cases=casesbyregion[loc][:n,:].sum(axis=1)
+      sprop=vv/(vv.sum(axis=1)[:,None])
+      cv=cases[:,None]*sprop
+    else:
+      cv=vv
     # Need to find (biggest) contiguous block of allowable days so that the moving-block bootstrap makes sense
     for i in range(n-step-1,-1,-1):
       if (vv[i:i+2*step:step,:]<mincount).any(): break
@@ -117,8 +123,12 @@ with open('gg-by-region%d'%step,'w') as fp:
       assert (vv[i:i+2*step:step,:]>=mincount).all()
       gr0=log(cv[i+step][0]/cv[i][0])/step
       gr1=log(cv[i+step][1]/cv[i][1])/step
-      v0=1/vv[i,0]+1/vv[i+step,0]
-      v1=1/vv[i,1]+1/vv[i+step,1]
+      if adjustbycases:
+        v0=1/cases[i]+sprop[i,1]/vv[i,0]+1/cases[i+7]+sprop[i+7,1]/vv[i+7,0]
+        v1=1/cases[i]+sprop[i,0]/vv[i,1]+1/cases[i+7]+sprop[i+7,0]/vv[i+7,1]
+      else:
+        v0=1/vv[i,0]+1/vv[i+step,0]
+        v1=1/vv[i,1]+1/vv[i+step,1]
       data.append((gr0,gr1))
       var.append((v0,v1))
       print("%7.4f %7.4f"%(data[-1]),Date(minday+i),Date(minday+i+step),"%6d %6d %6d %6d"%tuple(vv[i:i+2*step:step,:].reshape(-1)),loc,file=fp)
@@ -127,6 +137,16 @@ var=np.array(var)
 regionblockindex=np.array(regionblockindex)
 rbs=regionblockindex[:,1]-regionblockindex[:,0]
 nreg=regionblockindex.shape[0]
+
+with open(os.path.join(outdir,'checksgtftotals'),'w') as fp:
+  n=maxday-minday
+  for loc in vocnum:
+    if loc=='England': continue
+    vv=vocnum[loc][:n,:]
+    for i in range(maxday-minday):
+      totsgtf=vv[i].sum()
+      totcases=casesbyregion[loc][i].sum()
+      print(Date(minday+i),"%6d %6d %6.4f"%(totsgtf,totcases,totsgtf/totcases),loc,file=fp)
 
 # 2d weighted regression
 def regress(data,var):
