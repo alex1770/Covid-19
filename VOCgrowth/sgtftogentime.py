@@ -3,6 +3,7 @@ from math import log,exp
 from scipy.optimize import minimize
 from random import randrange
 from math import sqrt
+import sys
 import numpy as np
 np.set_printoptions(precision=6,linewidth=250,suppress=True)
 
@@ -17,6 +18,8 @@ os.makedirs(outdir,exist_ok=True)
 conf=0.95
 adjustbycases=True
 print("Adjust by cases:",adjustbycases)
+nsamp=1000
+if len(sys.argv)>1: nsamp=int(sys.argv[1])
 regions=['East Midlands', 'East of England', 'London', 'North East', 'North West', 'South East', 'South West', 'West Midlands', 'Yorkshire and The Humber']
 
 l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
@@ -57,6 +60,7 @@ for region in vocnum:
     vocnum[region][daynum][1]=max(vocnum[region][daynum][1]-int(f*vocnum[region][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
 
+# Weighted least squares regression Y on X
 def regressYonX(W,X,Y):
   W=np.array(W);X=np.array(X);Y=np.array(Y)
   m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
@@ -228,18 +232,20 @@ if 0:
 
   # Search for worst (most conservative) block size. Turns out to be 7.
   print("Mincount =",mincount)
-  nsamp=5000
+  lnsamp=5000
   for bl in range(1,max(rbs)+1):
-    samples=blockbootstrap(nsamp,bl)
-    low=samples[int((1-conf)/2*nsamp)]
-    high=samples[int((1+conf)/2*nsamp)]
+    samples=blockbootstrap(lnsamp,bl)
+    low=samples[int((1-conf)/2*lnsamp)]
+    high=samples[int((1+conf)/2*lnsamp)]
     print('   ',bl,high[1]-low[1],low[1],high[1])
 
 # Bootstrap to get confidence intervals
 n=len(data)
-nsamp=10000
 blocklength=7
 samples=blockbootstrap(nsamp,blocklength)
+low=samples[int((1-conf)/2*nsamp)]
+high=samples[int((1+conf)/2*nsamp)]
+print("95%% CI for gradient: %.3f - %.3f"%(low[1],high[1]))
 
 # Compare with Delta:
 # https://www.medrxiv.org/content/10.1101/2021.10.21.21265216v1
