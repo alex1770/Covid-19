@@ -9,7 +9,7 @@ np.set_printoptions(precision=6,linewidth=250,suppress=True)
 minday=Date('2021-11-25')
 maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
-discard=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
+discarddays=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
 mincount=5
 step=7
 outdir='gentimeoutput'
@@ -17,20 +17,25 @@ os.makedirs(outdir,exist_ok=True)
 conf=0.95
 adjustbycases=True
 print("Adjust by cases:",adjustbycases)
+regions=['East Midlands', 'East of England', 'London', 'North East', 'North West', 'South East', 'South West', 'West Midlands', 'Yorkshire and The Humber']
 
 l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
 if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
 sgtf=loadcsv(max(l))
-regions=sorted(list(set(sgtf['UKHSA_region'])))
 
-ages=[(0,150)]
-casesbyregion={}
-for loc in regions:
-  sp0,sp=getcasesbyagespeccomplete(minday=minday,maxday=pubday,ages=ages,location=loc)
-  casesbyregion[loc]=sp[:pubday-discard-minday]
-casesbyregion['England']=sum(casesbyregion.values())
-nspec=casesbyregion['England'].shape[0]
-  
+casesfn='casesbyregion.csv'
+if os.path.isfile(casesfn):
+  cbr=loadcsv(casesfn)
+else:
+  req=api_v2('areaType=region&metric=newCasesBySpecimenDate&format=csv')
+  cbr=loadcsv_it(req.text.rstrip().split('\n'))
+  savecsv(cbr,casesfn)
+nspec=max(cbr['date'])-minday+1-discarddays
+casesbyregion={loc:np.zeros(nspec,dtype=int) for loc in regions}
+for (date,loc,n) in zip(cbr['date'],cbr['areaName'],cbr['newCasesBySpecimenDate']):
+  d=date-minday
+  if d>=0 and d<nspec: casesbyregion[loc][d]+=n
+
 # Get SGTF data into a suitable form
 vocnum={}
 background=[0,0]
@@ -39,17 +44,17 @@ for (date,region,variant,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sg
   day=Date(date)
   daynum=day-minday
   if daynum>=0 and daynum<nsgtf:
-    place=region
-    if place not in vocnum: vocnum[place]=np.zeros([nsgtf,2],dtype=int)
-    vocnum[place][daynum][int("SGTF" in variant)]+=n
+    if region=='Yorkshire and Humber': region='Yorkshire and The Humber'
+    if region not in vocnum: vocnum[region]=np.zeros([nsgtf,2],dtype=int)
+    vocnum[region][daynum][int("SGTF" in variant)]+=n
   if date>=Date('2021-10-01') and date<Date('2021-11-10'):
     background[int("SGTF" in variant)]+=n
 
 # Adjust for non-Omicron SGTFs, based on the assumption that these are in a non-location-dependent proportion to the number of non-Omicron cases
 f=background[1]/background[0]
-for place in vocnum:
+for region in vocnum:
   for daynum in range(nsgtf):
-    vocnum[place][daynum][1]=max(vocnum[place][daynum][1]-int(f*vocnum[place][daynum][0]+.5),0)
+    vocnum[region][daynum][1]=max(vocnum[region][daynum][1]-int(f*vocnum[region][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
 
 def regressYonX(W,X,Y):
@@ -57,7 +62,6 @@ def regressYonX(W,X,Y):
   m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
   r=np.array([sum(W*Y),sum(W*X*Y)])
   return np.linalg.solve(m,r)
-  
 
 date0=Date('2021-11-25')
 date1=Date('2021-12-29')
@@ -108,7 +112,7 @@ with open(os.path.join(outdir,'gg-by-region%d'%step),'w') as fp:
     if loc=='England': continue
     vv=vocnum[loc][:n,:]
     if adjustbycases:
-      cases=casesbyregion[loc][:n,:].sum(axis=1)
+      cases=casesbyregion[loc][:n]
       sprop=vv/(vv.sum(axis=1)[:,None])
       cv=cases[:,None]*sprop
     else:
@@ -145,7 +149,7 @@ with open(os.path.join(outdir,'checksgtftotals'),'w') as fp:
     vv=vocnum[loc][:n,:]
     for i in range(maxday-minday):
       totsgtf=vv[i].sum()
-      totcases=casesbyregion[loc][i].sum()
+      totcases=casesbyregion[loc][i]
       print(Date(minday+i),"%6d %6d %6.4f"%(totsgtf,totcases,totsgtf/totcases),loc,file=fp)
 
 # 2d weighted regression
