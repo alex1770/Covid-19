@@ -51,6 +51,14 @@ def csvrows(fn,reqheadings,sep=','):
     for x in csvrows_it(fp,reqheadings,sep):
       yield x
 
+def savecsv(incsv,fn,reqheadings=None,sep=','):
+  if reqheadings==None: reqheadings=list(incsv)
+  with open(fn,'w') as fp:
+    writer=csv.writer(fp)
+    writer.writerow(list(incsv))
+    for row in zip(*[incsv[h] for h in reqheadings]):
+      writer.writerow(row)
+
 def datetoday(x):
   format=None
   if x[-2:]=='US':
