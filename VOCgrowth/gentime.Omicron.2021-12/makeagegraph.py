@@ -1,27 +1,15 @@
 from stuff import *
-from math import log,exp
-from scipy.optimize import minimize
-from random import randrange
-from math import sqrt
 import sys
 import numpy as np
 np.set_printoptions(precision=6,linewidth=250,suppress=True)
 
 minday=Date('2021-11-25')
-maxday=Date('2021-12-25')# Only go up to dates strictly before this one
 pubday=getpublishdate()
 discarddays=3# Discard last few case counts by specimen date since these are incomplete (irrelevant here because we're stopping much earlier anyway)
-mincount=5
-step=7
 outdir='gentimeoutput'
 os.makedirs(outdir,exist_ok=True)
-conf=0.95
 adjustbycases=True
 print("Adjust by cases:",adjustbycases)
-nsamp=1000
-if len(sys.argv)>1: nsamp=int(sys.argv[1])
-mode="byage"
-print("Mode",mode)
 
 ages=[(a,a+10) for a in range(0,80,10)]+[(80,150)]
 nages=len(ages)
@@ -35,8 +23,8 @@ for (desc,acode,sex,age,n) in csvrows('ONS-population_2021-08-05.csv',['category
 
 sp0,sp=getcasesbyagespeccomplete(minday=minday,maxday=pubday,ages=ages,location='England')
 casesbyregion={ages[a]:sp[:pubday-discarddays-minday,a] for a in range(nages)}
-casesbyregion['England']=sum(casesbyregion.values())
-nspec=casesbyregion['England'].shape[0]
+casesbyregion['Allages']=sum(casesbyregion.values())
+nspec=casesbyregion['Allages'].shape[0]
 
 # From fig. 8B of Tech Briefing 33, https://www.gov.uk/government/publications/investigation-of-sars-cov-2-variants-technical-briefings
 avd=loadcsv('age_variant_series.csv')
