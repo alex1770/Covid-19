@@ -18,7 +18,7 @@ set output "age-variant-Omicron.png"
 plot "../age-variant.csv" u 1:(log($3)/log(2)) w lines lw 3 title "0-9", "" u 1:(log($5)/log(2)) w lines lw 3 title "10-19", "" u 1:(log($7)/log(2)) w lines lw 3 title "20-29", "" u 1:(log($9)/log(2)) w lines lw 3 title "30-39", "" u 1:(log($11)/log(2)) w lines lw 3 title "40-49", "" u 1:(log($13)/log(2)) w lines lw 3 title "50-59", "" u 1:(log($15)/log(2)) w lines lw 3 title "60-69", "" u 1:(log($17)/log(2)) w lines lw 3 title "70-79", "" u 1:(log($19)/log(2)) w lines lw 3 title "80+"
 
 set ylabel "log_2((Om new cases per day)/(Delta new cases per day))"
-set title "(Omicron new cases day)/(Delta new cases per day) by age group (log scale)"
+set title "(Omicron new cases day)/(Delta new cases per day) by age group (log scale)\nSource: UKHSA Technical briefing 33"
 set output "age-variant-Omicron_to_Delta.png"
 plot "../age-variant.csv" u 1:(log($3/$2)) w lines lw 3 title "0-9", "" u 1:(log($5/$4)) w lines lw 3 title "10-19", "" u 1:(log($7/$6)) w lines lw 3 title "20-29", "" u 1:(log($9/$8)) w lines lw 3 title "30-39", "" u 1:(log($11/$10)) w lines lw 3 title "40-49", "" u 1:(log($13/$12)) w lines lw 3 title "50-59", "" u 1:(log($15/$14)) w lines lw 3 title "60-69", "" u 1:(log($17/$16)) w lines lw 3 title "70-79", "" u 1:(log($19/$18)) w lines lw 3 title "80+"
 
