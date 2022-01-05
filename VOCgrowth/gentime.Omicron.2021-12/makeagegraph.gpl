@@ -1,0 +1,23 @@
+set datafile separator ","
+set xdata time;set format x "%Y-%m-%d";set timefmt "%Y-%m-%d"
+set terminal pngcairo font "sans,13" size 1920,1280
+set bmargin 5;set lmargin 15;set rmargin 15;set tmargin 5
+set xtics nomirror rotate by 45 right offset 0.5,0
+set xtics "2020-01-06", 604800
+set for [i=9:16] linetype i dashtype (20,7)
+set ylabel "log_2(new cases per 100k per day)"
+cd "gentimeoutput"
+
+set title "Delta: New cases per 100k per day by age group (log scale)\nSource: Delta proportion from UKHSA Technical briefing 33, scaled up by confirmed cases from UK dashboard"
+set output "age-variant-Delta.png"
+plot "../age-variant.csv" u 1:(log($2)/log(2)) w lines lw 3 title "0-9", "" u 1:(log($4)/log(2)) w lines lw 3 title "10-19", "" u 1:(log($6)/log(2)) w lines lw 3 title "20-29", "" u 1:(log($8)/log(2)) w lines lw 3 title "30-39", "" u 1:(log($10)/log(2)) w lines lw 3 title "40-49", "" u 1:(log($12)/log(2)) w lines lw 3 title "50-59", "" u 1:(log($14)/log(2)) w lines lw 3 title "60-69", "" u 1:(log($16)/log(2)) w lines lw 3 title "70-79", "" u 1:(log($18)/log(2)) w lines lw 3 title "80+"
+
+set title "Omicron: New cases per 100k per day by age group (log scale)\nSource: Omicron proportion from UKHSA Technical briefing 33, scaled up by confirmed cases from UK dashboard"
+set output "age-variant-Omicron.png"
+plot "../age-variant.csv" u 1:(log($3)/log(2)) w lines lw 3 title "0-9", "" u 1:(log($5)/log(2)) w lines lw 3 title "10-19", "" u 1:(log($7)/log(2)) w lines lw 3 title "20-29", "" u 1:(log($9)/log(2)) w lines lw 3 title "30-39", "" u 1:(log($11)/log(2)) w lines lw 3 title "40-49", "" u 1:(log($13)/log(2)) w lines lw 3 title "50-59", "" u 1:(log($15)/log(2)) w lines lw 3 title "60-69", "" u 1:(log($17)/log(2)) w lines lw 3 title "70-79", "" u 1:(log($19)/log(2)) w lines lw 3 title "80+"
+
+set ylabel "log_2((Om new cases per day)/(Delta new cases per day))"
+set title "(Omicron new cases day)/(Delta new cases per day) by age group (log scale)"
+set output "age-variant-Omicron_to_Delta.png"
+plot "../age-variant.csv" u 1:(log($3/$2)) w lines lw 3 title "0-9", "" u 1:(log($5/$4)) w lines lw 3 title "10-19", "" u 1:(log($7/$6)) w lines lw 3 title "20-29", "" u 1:(log($9/$8)) w lines lw 3 title "30-39", "" u 1:(log($11/$10)) w lines lw 3 title "40-49", "" u 1:(log($13/$12)) w lines lw 3 title "50-59", "" u 1:(log($15/$14)) w lines lw 3 title "60-69", "" u 1:(log($17/$16)) w lines lw 3 title "70-79", "" u 1:(log($19/$18)) w lines lw 3 title "80+"
+
