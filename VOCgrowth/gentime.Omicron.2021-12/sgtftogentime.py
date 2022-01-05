@@ -20,44 +20,77 @@ adjustbycases=True
 print("Adjust by cases:",adjustbycases)
 nsamp=1000
 if len(sys.argv)>1: nsamp=int(sys.argv[1])
-regions=['East Midlands', 'East of England', 'London', 'North East', 'North West', 'South East', 'South West', 'West Midlands', 'Yorkshire and The Humber']
+mode="byregion"
+print("Mode",mode)
 
-l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
-if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
-sgtf=loadcsv(max(l))
+if mode=="byregion":
+  regions=['East Midlands', 'East of England', 'London', 'North East', 'North West', 'South East', 'South West', 'West Midlands', 'Yorkshire and The Humber']
+  casesfn='casesbyregion.csv'
+  if os.path.isfile(casesfn):
+    cbr=loadcsv(casesfn)
+  else:
+    req=api_v2('areaType=region&metric=newCasesBySpecimenDate&format=csv')
+    cbr=loadcsv_it(req.text.rstrip().split('\n'))
+    savecsv(cbr,casesfn)
+  nspec=max(cbr['date'])-minday+1-discarddays
+  casesbyregion={loc:np.zeros(nspec,dtype=int) for loc in regions}
+  for (date,loc,n) in zip(cbr['date'],cbr['areaName'],cbr['newCasesBySpecimenDate']):
+    d=date-minday
+    if d>=0 and d<nspec: casesbyregion[loc][d]+=n
+  
+  l=[x for x in os.listdir('.') if x[:19]=='sgtf_regionepicurve']
+  if l==[]: raise RuntimeError("No sgtf_regionepicurve*.csv file found in current directory; download from https://www.gov.uk/government/publications/covid-19-omicron-daily-overview")
+  sgtf=loadcsv(max(l))
+  
+  # Get SGTF data into a suitable form
+  vocnum={}
+  background=[0,0]
+  nsgtf=max(Date(d) for d in sgtf['specimen_date'])+1-minday
+  for (date,region,variant,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sgtf['sgtf'],sgtf['n']):
+    day=Date(date)
+    daynum=day-minday
+    if daynum>=0 and daynum<nsgtf:
+      if region=='Yorkshire and Humber': region='Yorkshire and The Humber'
+      if region not in vocnum: vocnum[region]=np.zeros([nsgtf,2],dtype=int)
+      vocnum[region][daynum][int("SGTF" in variant)]+=n
+    if date>=Date('2021-10-01') and date<Date('2021-11-10'):
+      background[int("SGTF" in variant)]+=n
+  
+  # Adjust for non-Omicron SGTFs, based on the assumption that these are in a non-location-dependent proportion to the number of non-Omicron cases
+  f=background[1]/background[0]
+  for region in vocnum:
+    for daynum in range(nsgtf):
+      vocnum[region][daynum][1]=max(vocnum[region][daynum][1]-int(f*vocnum[region][daynum][0]+.5),0)
+elif mode=="byage":
+  #ages=[(0,150)]
+  #ages=[(a,a+10) for a in range(0,80,10)]+[(80,150)]
+  #ages=[(0,40),(40,60),(60,150)]
+  ages=[(0,50),(50,150)]
+  #ages=[(0,20),(20,40),(40,60),(60,150)]
+  #ages=[(0,60),(60,70),(70,150)]
+  #ages=[(20,40),(60,150)]
+  nages=len(ages)
+  
+  sp0,sp=getcasesbyagespeccomplete(minday=minday,maxday=pubday,ages=ages,location='England')
+  casesbyregion={ages[a]:sp[:pubday-discarddays-minday,a] for a in range(nages)}
+  casesbyregion['England']=sum(casesbyregion.values())
+  nspec=casesbyregion['England'].shape[0]
+  
+  # From fig. 8B of Tech Briefing 33, https://www.gov.uk/government/publications/investigation-of-sars-cov-2-variants-technical-briefings
+  avd=loadcsv('age_variant_series.csv')
+  navd=max(Date(x+'US') for x in avd['spec.date'])+1-minday
+  vocnum={age:np.zeros([navd,2],dtype=int) for age in ages}
+  for (date,var,age,n) in zip(avd['spec.date'],avd['variant'],avd['age.group'],avd['count_age']):
+    d=Date(date+'US')-minday
+    if d>=0:
+      a=parseage(age)
+      l=[b for b in ages if a[0]>=b[0] and a[1]<=b[1]]
+      assert len(l)<=1
+      if len(l)==1:
+        vocnum[l[0]][d,int(var=='Omicron')]+=n
+  nsgtf=navd
+else: raise RuntimeError("Unrecognised mode "+mode)
 
-casesfn='casesbyregion.csv'
-if os.path.isfile(casesfn):
-  cbr=loadcsv(casesfn)
-else:
-  req=api_v2('areaType=region&metric=newCasesBySpecimenDate&format=csv')
-  cbr=loadcsv_it(req.text.rstrip().split('\n'))
-  savecsv(cbr,casesfn)
-nspec=max(cbr['date'])-minday+1-discarddays
-casesbyregion={loc:np.zeros(nspec,dtype=int) for loc in regions}
-for (date,loc,n) in zip(cbr['date'],cbr['areaName'],cbr['newCasesBySpecimenDate']):
-  d=date-minday
-  if d>=0 and d<nspec: casesbyregion[loc][d]+=n
-
-# Get SGTF data into a suitable form
-vocnum={}
-background=[0,0]
-nsgtf=max(Date(d) for d in sgtf['specimen_date'])+1-minday
-for (date,region,variant,n) in zip(sgtf['specimen_date'],sgtf['UKHSA_region'],sgtf['sgtf'],sgtf['n']):
-  day=Date(date)
-  daynum=day-minday
-  if daynum>=0 and daynum<nsgtf:
-    if region=='Yorkshire and Humber': region='Yorkshire and The Humber'
-    if region not in vocnum: vocnum[region]=np.zeros([nsgtf,2],dtype=int)
-    vocnum[region][daynum][int("SGTF" in variant)]+=n
-  if date>=Date('2021-10-01') and date<Date('2021-11-10'):
-    background[int("SGTF" in variant)]+=n
-
-# Adjust for non-Omicron SGTFs, based on the assumption that these are in a non-location-dependent proportion to the number of non-Omicron cases
-f=background[1]/background[0]
-for region in vocnum:
-  for daynum in range(nsgtf):
-    vocnum[region][daynum][1]=max(vocnum[region][daynum][1]-int(f*vocnum[region][daynum][0]+.5),0)
 vocnum['England']=sum(vocnum.values())
 
 # Weighted least squares regression Y on X
@@ -68,7 +101,7 @@ def regressYonX(W,X,Y):
   return np.linalg.solve(m,r)
 
 date0=Date('2021-11-25')
-date1=Date('2021-12-29')
+date1=min(Date('2021-12-29'),minday+nsgtf)
 vn=vocnum['England']
 dat=[]
 for date in Daterange(date0,date1):
@@ -110,8 +143,7 @@ data=[]# list of (growth in Delta, growth in Omicron)
 var=[]# list of variances of the above
 regionblockindex=[]# Keep track of which data entries came from the same region
 with open(os.path.join(outdir,'gg-by-region%d'%step),'w') as fp:
-  n=maxday-minday
-  #n=min(nsgtf,nspec)
+  n=min(nsgtf,nspec,maxday-minday)
   for loc in vocnum:
     if loc=='England': continue
     vv=vocnum[loc][:n,:]
@@ -147,21 +179,24 @@ rbs=regionblockindex[:,1]-regionblockindex[:,0]
 nreg=regionblockindex.shape[0]
 
 with open(os.path.join(outdir,'checksgtftotals'),'w') as fp:
-  n=maxday-minday
+  n=min(maxday-minday,nsgtf)
   for loc in vocnum:
     if loc=='England': continue
     vv=vocnum[loc][:n,:]
-    for i in range(maxday-minday):
+    for i in range(n):
       totsgtf=vv[i].sum()
       totcases=casesbyregion[loc][i]
       print(Date(minday+i),"%6d %6d %6.4f"%(totsgtf,totcases,totsgtf/totcases),loc,file=fp)
 
 # 2d weighted regression
 def regress(data,var):
-  # To get a starting point, do standard weighted regression, pretending uncertainty in (x,y) is all in the y
-  W=1/(var.sum(axis=1))
-  (X,Y)=data[:,0],data[:,1]
-  c=regressYonX(W,X,Y)
+  if mode=="byregion":
+    # To get a starting point, do standard weighted regression, pretending uncertainty in (x,y) is all in the y
+    W=1/(var.sum(axis=1))
+    (X,Y)=data[:,0],data[:,1]
+    c=regressYonX(W,X,Y)
+  else:
+    c=[0,1]
 
   # Calculate weighted square-distance to putative best fit line of gradient b
   def f(b):
@@ -175,7 +210,7 @@ def regress(data,var):
   f0=f(c[1])[1]
   def g(b): return f(b)[1]/f0
   
-  bounds=(c[1]*0.5,c[1]/0.5)
+  bounds=(c[1]*0.1,c[1]/0.1)
   res=minimize(g,[c[1]],bounds=[bounds],method="SLSQP")
   if not res.success: raise RuntimeError(res.message)
   b=res.x[0]
@@ -208,7 +243,7 @@ def blockbootstrap(nsamp,bl):
     samples.append(regress(data1,var1))
   samples.sort(key=lambda x:x[1])
   return samples
-  
+
 central=regress(data,var)
 print("Central estimate: y=%.3f+%.3f*x"%central)
 
@@ -320,8 +355,8 @@ set title "Comparison of growth rate of Omicron and growth rate of Delta\\nDiscu
 set xlabel "Average growth per day of Delta over 7-day period"
 set ylabel "Average growth per day of Omicron over 7-day period"
 set style fill transparent solid 0.5 noborder
-plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths over 7 day intervals over regions of England and days in December; larger sizes indicate more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
-"""%(outdir,a,b,a,b)
+plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths in regions of England over %d day intervals in %s - %s; larger sizes imply more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
+"""%(outdir,step,str(minday),str(maxday-1),a,b,a,b)
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
 p=po.stdin
 p.write(cmd.encode('utf-8'))
