@@ -1115,6 +1115,7 @@ def fullprint(AA,BB,lvocnum,lcases,T=None,Tmin=None,Tmax=None,area=None,using=''
       print("Written graph to %s"%graphfn)
     
     p.close();po.wait()
+  sys.stdout.flush()
   return Q,R
 
 def makecombinedgrowthgraph(places):
@@ -1143,7 +1144,7 @@ def makecombinedgrowthgraph(places):
   for rel in [0,1]:
     graphfn=sanitise(args.graph_filename+'_combinedgrowth'+'adv'*rel+'s.png')
     write('set output "'+graphfn+'"')
-    write('set ylabel "Estimated growth rate of %s'%variant+('/%s'%nonvariant if rel else ''))
+    write('set ylabel "Estimated growth rate of %s'%variant+('/%s'%nonvariant if rel else '')+' (1/day)')
     s='set title "Estimated continuous growth rates of '
     if rel: s+='the ratio %s/%s'%(variant,nonvariant)
     else: s+='the %s variant'%variant
@@ -1228,12 +1229,19 @@ if mode=="local growth rates":
       
     SSS=getsamples(place,xx0)
     if SSS is None:
+      print("GH0",L0)
       xx0,L0=optimiseplace(place,hint=xx0)
+      print("GH1",L0)
       optmethod="L-BFGS-B";minopts={"maxiter":50000,"maxfun":1000000}
       xx0,L0=optimiseplace(place,hint=xx0)
+      print("GH2",L0)
       optmethod="SLSQP";minopts={"maxiter":100000,"eps":1e-4,'ftol':1e-11}
-      xx0,L0=optimiseplace(place,hint=xx0)
-      SSS=getsamples(place,xx0)
+      for it in range(5):
+        xx0,L0=optimiseplace(place,hint=xx0)
+        print("GH3",L0)
+        SSS=getsamples(place,xx0)
+        print("GH4",SSS is not None)
+        if SSS is not None: break
     print("Locally optimised growth advantage")
     Q,R=fullprint(AA,BB,vocnum[place],cases[place],area=ltla2name.get(place,place),samples=SSS,gtr=gtr)
     summary[place]=(Q,R,T,Tmin,Tmax)
