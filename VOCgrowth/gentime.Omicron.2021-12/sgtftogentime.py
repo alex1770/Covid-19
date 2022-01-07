@@ -122,11 +122,13 @@ for after in [0,1]:
   ll.append(regressYonX(W,X,Y))
 
 cmd="""
-set terminal pngcairo font "sans,13" size 1920,1920
+set terminal pngcairo font "sans,16" size 1920,1920
 set bmargin 5;set lmargin 15;set rmargin 10;set tmargin 5
 cd "%s"
 set output "deltaomicron.png"
+set key font ",14"
 set key left Left reverse
+set tics scale 2,0.5
 set xdata time;fmt="%%Y-%%m-%%d";set timefmt fmt;set format x "%%Y-%%m-%%d"
 set title "Simple regression of log(Omicron)/log(Delta) against time\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData source: SGTF numbers from UKHSA Omicron daily overview"
 set ylabel "log(number of likely Omicron on given day/number of likely Delta on given day)"
@@ -247,6 +249,27 @@ def blockbootstrap(nsamp,bl):
 central=regress(data,var)
 print("Central estimate: y=%.3f+%.3f*x"%central)
 
+(a,b)=central
+cmd="""
+set terminal pngcairo font "sans,16" size 1920,1920
+set bmargin 5;set lmargin 16;set rmargin 10;set tmargin 5
+cd "%s"
+set output "growthcomparison.png"
+set key font ",14"
+set key left Left reverse
+#set key at graph -0.2, 0.98
+set title "Comparison of growth rate of Omicron and growth rate of Delta\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData sources: UKHSA Omicron daily overview and dashboard"
+set xlabel "Average growth per day of Delta over 7-day period"
+set ylabel "Average growth per day of Omicron over 7-day period"
+set style fill transparent solid 0.5 noborder
+plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths in regions of England over %d day intervals in %s - %s; larger sizes imply more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
+"""%(outdir,step,str(minday),str(maxday-1),a,b,a,b)
+po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
+p=po.stdin
+p.write(cmd.encode('utf-8'))
+p.close()
+po.wait()
+
 if 0:
   # Diagnostics to measure autocorrelation and find worst (most conservative) block size
   (a,b)=central
@@ -343,22 +366,3 @@ with open(os.path.join(outdir,'rawdata'),'w') as fp:
 with open(os.path.join(outdir,'CI'),'w') as fp:
   for (x,y0,y1) in CI:
     print("%10.7f %10.7f %10.7f"%(x,y0,y1),file=fp)
-
-(a,b)=central
-cmd="""
-set terminal pngcairo font "sans,13" size 1920,1920
-set bmargin 5;set lmargin 15;set rmargin 10;set tmargin 5
-cd "%s"
-set output "growthcomparison.png"
-set key left
-set title "Comparison of growth rate of Omicron and growth rate of Delta\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData sources: UKHSA Omicron daily overview and dashboard"
-set xlabel "Average growth per day of Delta over 7-day period"
-set ylabel "Average growth per day of Omicron over 7-day period"
-set style fill transparent solid 0.5 noborder
-plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths in regions of England over %d day intervals in %s - %s; larger sizes imply more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
-"""%(outdir,step,str(minday),str(maxday-1),a,b,a,b)
-po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
-p=po.stdin
-p.write(cmd.encode('utf-8'))
-p.close()
-po.wait()
