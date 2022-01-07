@@ -22,6 +22,8 @@ nsamp=1000
 if len(sys.argv)>1: nsamp=int(sys.argv[1])
 mode="byregion"
 print("Mode",mode)
+usehart=True
+print("Use Hart:",usehart)
 
 if mode=="byregion":
   regions=['East Midlands', 'East of England', 'London', 'North East', 'North West', 'South East', 'South West', 'West Midlands', 'Yorkshire and The Humber']
@@ -249,27 +251,6 @@ def blockbootstrap(nsamp,bl):
 central=regress(data,var)
 print("Central estimate: y=%.3f+%.3f*x"%central)
 
-(a,b)=central
-cmd="""
-set terminal pngcairo font "sans,16" size 1920,1920
-set bmargin 5;set lmargin 16;set rmargin 10;set tmargin 5
-cd "%s"
-set output "growthcomparison.png"
-set key font ",14"
-set key left Left reverse
-#set key at graph -0.2, 0.98
-set title "Comparison of growth rate of Omicron and growth rate of Delta\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData sources: UKHSA Omicron daily overview and dashboard"
-set xlabel "Average growth per day of Delta over 7-day period"
-set ylabel "Average growth per day of Omicron over 7-day period"
-set style fill transparent solid 0.5 noborder
-plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths in regions of England over %d day intervals in %s - %s; larger sizes imply more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
-"""%(outdir,step,str(minday),str(maxday-1),a,b,a,b)
-po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
-p=po.stdin
-p.write(cmd.encode('utf-8'))
-p.close()
-po.wait()
-
 if 0:
   # Diagnostics to measure autocorrelation and find worst (most conservative) block size
   (a,b)=central
@@ -315,15 +296,19 @@ print("95%% CI for gradient: %.3f - %.3f"%(low[1],high[1]))
 from scipy.stats import gamma,expon
 csamples=[]
 for (a,b) in samples:
-  # Generate meanGT_Delta with characteristics 4.6 (4.0 - 5.4)
-  ag=170;mu=4.64;mean_d=gamma.rvs(ag,scale=mu/ag)
-
-  # Generate sdGT_Delta with characteristics 3.1 (3.0 - 3.7)
-  # This is very skew, so do it in two pieces, setting the median (not the mean) to 3.1
-  e=expon.ppf(0.95)
-  if randrange(2): sd_d=3.1+.6/e*expon.rvs()
-  else: sd_d=3.1-.1/e*expon.rvs()
+  if usehart:
+    # Generate meanGT_Delta with characteristics 4.6 (4.0 - 5.4)
+    ag=170;mu=4.64;mean_d=gamma.rvs(ag,scale=mu/ag)
   
+    # Generate sdGT_Delta with characteristics 3.1 (3.0 - 3.7)
+    # This is very skew, so do it in two pieces, setting the median (not the mean) to 3.1
+    e=expon.ppf(0.95)
+    if randrange(2): sd_d=3.1+.6/e*expon.rvs()
+    else: sd_d=3.1-.1/e*expon.rvs()
+  else:
+    mean_d=5.5
+    sd_d=1.8
+    
   th_d=sd_d**2/mean_d
   k_d=(mean_d/sd_d)**2
   th_o=1/(b/th_d-a)
@@ -366,3 +351,24 @@ with open(os.path.join(outdir,'rawdata'),'w') as fp:
 with open(os.path.join(outdir,'CI'),'w') as fp:
   for (x,y0,y1) in CI:
     print("%10.7f %10.7f %10.7f"%(x,y0,y1),file=fp)
+
+(a,b)=central
+cmd="""
+set terminal pngcairo font "sans,16" size 1920,1920
+set bmargin 5;set lmargin 16;set rmargin 10;set tmargin 5
+cd "%s"
+set output "growthcomparison.png"
+set key font ",14"
+set key left Left reverse
+#set key at graph -0.2, 0.98
+set title "Comparison of growth rate of Omicron and growth rate of Delta\\nDiscussion: http://sonorouschocolate.com/covid19/index.php?title=Estimating\\\\_Generation\\\\_Time\\\\_Of\\\\_Omicron\\nData sources: UKHSA Omicron daily overview and dashboard"
+set xlabel "Average growth per day of Delta over 7-day period"
+set ylabel "Average growth per day of Omicron over 7-day period"
+set style fill transparent solid 0.5 noborder
+plot "rawdata" u 1:2:(sqrt($3)/10) w points pt 5 ps variable lc 2 title "Pairs of growths in regions of England over %d day intervals in %s - %s; larger sizes imply more confidence in position", "CI" u 1:2:3 w filledcurves lc 3 title "95%% bootstrap confidence interval of best fit line",%g+%g*x lc 3 lw 3 title "Best fit line: y=%.3f+%.3f*x"
+"""%(outdir,step,str(minday),str(maxday-1),a,b,a,b)
+po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
+p=po.stdin
+p.write(cmd.encode('utf-8'))
+p.close()
+po.wait()
