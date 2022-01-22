@@ -122,7 +122,7 @@ precases=[{} for i in range(len(deaths))]
 ave=7
 minlag=15
 maxlag=21
-back=180
+back=270
 for n in range(-back-ave,0):
   for a in ages:
     t=0
@@ -142,17 +142,19 @@ for a in ages: print(" %6s"%("%d-%d"%a),end='')
 print()
 
 print()
-for n in range(-back,-1+back-1,back-1):
+comparison=Date('2021-12-01')# Week ending
+back=deaths[-1]['date']-comparison+1
+for n in [-back,-1]:
   print(deaths[n-(ave-1)]['date'],'-',deaths[n]['date'],end='')
   for a in ages:
     d=sum(deaths[n-i][a] for i in range(ave))
     print(" %6d"%d,end='')
-  print()
+  print(" Deaths")
   print(deaths[n-(ave-1)]['date'],'-',deaths[n]['date'],end='')
   for a in ages:
     p=sum(precases[n-i][a] for i in range(ave))
     print(" %6.0f"%p,end='')
-  print()
+  print(" Cases")
 print("                       ",end='')
 for a in ages: print(" %6s"%("%d-%d"%a),end='')
 print()
