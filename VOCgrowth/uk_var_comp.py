@@ -55,7 +55,9 @@ from math import sqrt,floor,log
 # So imagine: V0/=mult, V1/=mult, W/=mult, M/=mult, r/=mult, C*=mult, X, Y, a, b, c unchanged.
 # Then M/mult is the precision (inverse-covariance) matrix = observed Fisher information,
 # and (M/mult)^{-1} is the "observed covariance" matrix, and bottom right of this is est variance of b, the gradient.
-
+# Effectively our posterior is (a,b) ~ MVN(c,C)
+# We're interested in b (growth) and a/b (essentially the crossover point). Can get a/b by simulation
+# or can get it simply and analytically if we don't worry about the small chance of b going negative.
 V0=np.array(V0)+1e-30
 V1=np.array(V1)+1e-30
 n=len(V0)
@@ -70,11 +72,11 @@ res=c[0]+c[1]*X-Y
 mult=(W*res*res).sum()/n
 print("Residual multiplier = %.3f"%mult)
 qa=c[1]**2-zconf**2*C[1,1]*mult
-qb=-c[0]*c[1]+zconf**2*C[0,1]*mult
+qb=c[0]*c[1]-zconf**2*C[0,1]*mult
 qc=c[0]**2-zconf**2*C[0,0]*mult
 descrim=qb**2-qa*qc
-lam0=(qb-sqrt(descrim))/qa
-lam1=(qb+sqrt(descrim))/qa
+lam0=(-qb-sqrt(descrim))/qa
+lam1=(-qb+sqrt(descrim))/qa
 # from scipy.stats import multivariate_normal as mvn
 # N=100000
 # test=mvn.rvs(mean=c,cov=C,size=N)
