@@ -85,7 +85,7 @@ lam1=(-qb+sqrt(descrim))/qa
 
 grad=c[1]
 graderr=sqrt(mult*C[1,1])*zconf
-cross=qb/qa
+cross=-qb/qa
 crosserr=sqrt(descrim)/qa
 growthstr=f"Relative growth in {VV[1]} vs {VV[0]} of {grad:.3f} ({grad-graderr:.3f} - {grad+graderr:.3f}) per day"
 doubstr=f"Doubling of {VV[1]}/{VV[0]} every {log(2)/grad:.1f} ({log(2)/(grad+graderr):.1f} - {log(2)/(grad-graderr):.1f}) days"
