@@ -243,7 +243,7 @@ for zoomstate in [0,1]:
     write('set grid xtics ytics lc rgb "#dddddd" lt 1')
     s='plot [:] '
     if zoomstate:
-      if desc=='cases': s+='[20:2500] '
+      if desc=='cases': s+='[20:9000] '
       else: s+='[0.1:50] '
     first=True
     for country in countries:
