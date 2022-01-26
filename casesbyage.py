@@ -20,7 +20,7 @@ parser.add_argument('-o', '--outfile', default='logcasesbyage.png', type=str, he
 args=parser.parse_args()
 
 # Need to know public holidays (England), because they will be treated like Sundays
-holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-25","2021-12-27","2021-12-28"]]
+holidays=[datetoday(x) for x in ["2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31","2021-08-30","2021-12-25","2021-12-27","2021-12-28","2022-01-03","2022-04-15","2022-04-18","2022-05-02","2022-06-02","2022-06-03","2022-08-29","2022-12-26","2022-12-27"]]
 monday=datetoday('2021-09-20')# Any Monday
 
 #specmode="TimeToPublishAdjustment"
