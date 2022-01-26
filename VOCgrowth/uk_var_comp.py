@@ -111,11 +111,11 @@ set xtics rotate by 45 right offset 0.5,0
 set xtics nomirror
 set grid xtics ytics lc rgb "#dddddd" lt 1
 set terminal pngcairo font "sans,13" size 1728,1296
-set bmargin 6;set lmargin 13;set rmargin 13;set tmargin 7
+set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
 set ylabel "log(New {VV[1]} per day / New {VV[0]} per day)"
 
 set output "{graphfn}"
-set title "New cases per day in the UK of {VV[1]} compared with {VV[0]}\\nNB: This is the est'd relative growth of {VV[1]} compared to {VV[0]}, not the absolute growth of {VV[1]}. It indicates how fast {VV[1]} is taking over from {VV[0]}\\nStats/analysis: https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/uk\\\\_var\\\\_comp.py\\nSource: Sequenced cases from COG-UK {cogdate}"
+set title "New cases per day in the UK of {VV[1]} compared with {VV[0]}\\nNB: This is the est'd relative growth of {VV[1]} compared to {VV[0]}, not the absolute growth of {VV[1]}. It indicates how fast {VV[1]} is taking over from {VV[0]}\\nNB2: Growth estimates assume that sequenced cases are representative of infections\\nStats/analysis: https://github.com/alex1770/Covid-19/blob/master/VOCgrowth/uk\\\\_var\\\\_comp.py\\nSource: Sequenced cases from COG-UK {cogdate}"
 plot "{datafn}" u 1:(log($3/$2)):(sqrt($2*$3/($2+$3))/{ndates/5}) pt 5 ps variable title "log(Daily {VV[1]} / Daily {VV[0]}); larger blobs indicate more certainty (more samples)", (x/86400-{int(mindate)+cross})*{grad} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}"
 """
 
