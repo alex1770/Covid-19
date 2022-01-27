@@ -62,12 +62,15 @@ for day in range(minday,today+1):
   elif date<'2021-01-10':
     suffix=d.strftime('%d-%b-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
-  elif (date>='2021-07-01' and date<='2021-07-06') or date=='2021-07-09' or (date>='2021-09-06' and date<='2021-09-09'):
+  elif (date>='2021-07-01' and date<='2021-07-06') or date=='2021-07-09' or (date>='2021-09-06' and date<='2021-09-09') or (date>='2022-01-06' and date<='2022-01-09'):
+    # E.g. https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-06-january-2022
     suffix=d.strftime('%d-%B-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
   elif date<'2021-04-01' or (date>='2021-04-10' and date<'2021-05-01'):
     suffix=d.strftime('%e-%b-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
+  elif date=='2022-01-17':
+    url='https://www.nicd.ac.za/confirmed-cases-of-covid-19-in-south-africa-17-january-2022/'
   else:
     suffix=d.strftime('%e-%B-%Y').strip().lower()
     url='https://www.nicd.ac.za/latest-confirmed-cases-of-covid-19-in-south-africa-'+suffix
