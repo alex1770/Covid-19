@@ -41,7 +41,7 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump((data,continents,countries),fp)
 
-l=list(data)
+l=[loc for loc in data if loc not in continents]
 l.sort(key=lambda x:sum(y[-1] for y in data[x].values()),reverse=True)
 
 n=10
