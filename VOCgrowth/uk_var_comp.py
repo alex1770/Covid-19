@@ -160,3 +160,5 @@ p=po.stdin
 p.write(cmd.encode('utf-8'))
 p.close()
 po.wait()
+print()
+print("Written graph to",graphfn)
