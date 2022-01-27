@@ -8,6 +8,9 @@ set -e
 
 bash regionalcasesbyage.sh
 
+(cd COG-UK; bash update.sh)
+(cd VOCgrowth; python3 uk_var_comp.py; python3 uk_var_comp.py BA.1,BA.2; python3 uk_var_comp.py BA.1.1,BA.2)
+
 make
 python3 maketrend.py
 
@@ -15,7 +18,7 @@ python3 maketrend.py
 
 #(cd Traffic; python3 parsetraffic.py; python3 maketrafficgraph.py; convert trafficgraph.png -resize '1200x320!' trafficgraph.small.png)
 
-bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
+bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png VOCgrowth/UK_BA.1_BA.1.1_BA.2.png VOCgrowth/UK_BA.1_BA.2.png VOCgrowth/UK_BA.1.1_BA.2.png'
 pics=$bigpics
 for x in $bigpics; do
     small=${x/.png/.small.png}
