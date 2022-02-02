@@ -11,7 +11,6 @@ mindate=Date('2000-01-01')
 maxdate=Date('2099-12-31')
 mincount=5
 conf=0.95
-load=1
 
 if len(sys.argv)>1: Vnames=sys.argv[1].split(',')
 if len(sys.argv)>2: mindate=Date(sys.argv[2])
@@ -72,18 +71,26 @@ def bestfit(V0,V1):
   # L(a,b) = -(1/2)sum_i w_i(a+bx_i-y_i)^2
   #      c = (a,b); can write L(c)
   # L is quadratic in a,b so
-  # dL/dc = dL/dc(0) + (d^2L/dc^2).c = r - M.c, where M and r are as below (known and constant, i.e. independent of a,b).
+  # L'(c) = L'(0) + L''(0).c = r - M.c, where M and r are as below (known and constant, i.e. independent of a,b).
   # So c*=M^{-1}r and L(x) = L(c*) - (1/2)(x-c*)^t.M.(x-c*)
   # To correct for dependence, we're going to deem the average residual to be equal to 1, which we're going to achieve by rescaling V0, V1.
-  # So imagine: V0/=mult, V1/=mult, W/=mult, M/=mult, r/=mult, C*=mult, X, Y, a, b, c unchanged.
+  # So if mult is the average residual, imagine doing: V0/=mult, V1/=mult, W/=mult, M/=mult, r/=mult, C*=mult, X, Y, a, b, c unchanged.
   # Then M/mult is the precision (inverse-covariance) matrix = observed Fisher information,
   # and (M/mult)^{-1} is the "observed covariance" matrix, and bottom right of this is est variance of b, the gradient.
   # Effectively our posterior is (a,b) ~ MVN(c,C)
   # We're interested in b (growth) and a/b (essentially the crossover point). Can get a/b by simulation
   # or can get it simply and analytically if we don't worry about the small chance of b going negative.
-  V0=np.array(V0)+1e-30
-  V1=np.array(V1)+1e-30
+
+  # Only start when variant gets going
+  ok0=ok1=off=0
+  while off<len(V0) and (ok0==0 or ok1==0):
+    if V0[off]>=mincount: ok0=1
+    if V1[off]>=mincount: ok1=1
+    off+=1
+  V0=np.array(V0[off:])+1e-30
+  V1=np.array(V1[off:])+1e-30
   n=len(V0)
+  if n<2: return None
   W=V0*V1/(V0+V1)
   X=np.arange(n)
   Y=np.log(V1/V0)
@@ -107,7 +114,7 @@ def bestfit(V0,V1):
   # print(t[int(N*(1-conf)/2)],t[int(N*(1+conf)/2)])
   grad=c[1]
   graderr=sqrt(mult*C[1,1])*zconf
-  cross=-qb/qa
+  cross=off-qb/qa
   crosserr=sqrt(descrim)/qa
   return grad,graderr,cross,crosserr
 
