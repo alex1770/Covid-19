@@ -13,10 +13,11 @@ else:
   
 if locationsize!="ltla" and locationsize!="region": raise RuntimeError("Unknown locationsize: "+locationsize)
 
-mindate='2020-10-01'
+#mindate='2020-10-01'
 #mindate='2021-03-01'
-#metric='newCasesBySpecimenDate'
-metric='newCasesByPublishDate'
+mindate='2021-11-01'
+metric='newCasesBySpecimenDate'
+#metric='newCasesByPublishDate'
 CAR=0.4
 
 print("Using locations:",locationsize)
@@ -144,11 +145,14 @@ def getdata_region(mindate):
   minday=datetoday(mindate)
   n=datetoday(lastdate)-minday+1
   zvals=np.zeros([N,n])# (predicted cases)/(respondents)*(population)  # , (corrected covid positive)
-  apicases=np.zeros([N,n],dtype=int)
+  apicases=np.zeros([N,n])
+  for (i,loc) in enumerate(locs):
+    xx=getcasesbyagespeccomplete(Date(lastdate)+1,minday=mindate,location=loc)
+    apicases[i,:]=xx[1].sum(axis=1)
+  #for d in apidata:
+  #  t=datetoday(d['date'])-minday
+  #  if t>=0 and d['areaName'] in locind: apicases[locind[d['areaName']],t]=d[metric]
   zdates=np.zeros(n,dtype=bool)
-  for d in apidata:
-    t=datetoday(d['date'])-minday
-    if t>=0 and d['areaName'] in locind: apicases[locind[d['areaName']],t]=d[metric]
   for date in os.listdir('zoemapdata'):
     if date[:2]=='20' and date>=mindate and date<=lastdate:
       with open(os.path.join('zoemapdata',date),'r') as fp:
