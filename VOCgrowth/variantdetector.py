@@ -92,9 +92,9 @@ def getgrowth(daycounts,mutdaycount,invert=False):
       s0+=1
       syy+=w*y*y
       tv0+=v0;tv1+=v1
-  if m[0,0]<10: return (0,1000),(0,10),(tv0,tv1)#alter
+  if m[0,0]<10: return None#(0,1000),(0,10),(tv0,tv1)#alter
   mi=np.linalg.pinv(m)
-  c=np.linalg.solve(m,r)
+  c=mi@r#c=np.linalg.solve(m,r)
   cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
 
   # alter - not using residual yet
@@ -119,7 +119,9 @@ print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-08-15'),given={name2num['S:T95I']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-01'),maxday1=datetoday('2021-08-01'),lineage='AY.4')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-09-01'),maxday1=datetoday('2021-10-07'),given={name2num['S:Y145H']})
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-10-14'),lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-10-14'),notlineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),maxday1=datetoday('2021-10-10'),lineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-10-14'),notlineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),maxday1=datetoday('2021-10-10'),notlineage='AY.4.2')
@@ -127,22 +129,29 @@ daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-0
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',maxday1=datetoday('2021-10-12'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2',given={name2num['N:Q9L']})
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-12-25'),lineage='BA.1')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-12-25'),lineage='BA.1',given={name2num['S:N440K']})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-17'),lineage='BA.1')
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-17'),lineage='BA.2')
 print("GH1",time.clock()-tim0)
 
 if 1:
   growth={};tv={}
+  okmuts=[]
   for mut in range(nmut):
     gr=getgrowth(daycounts,mutdaycounts[mut])
-    growth[mut]=gr[1]
-    tv[mut]=gr[2]
-  
+    if gr!=None:
+      growth[mut]=gr[1]
+      tv[mut]=gr[2]
+      okmuts.append(mut)
+
   with open('tempvargr','w') as fp:
     sg=[growth[x][0]/growth[x][1] for x in growth]
     n=len(sg)
     d=int(sqrt(n))
     sg.sort()
     x0=sg[int(0.01*n)]
-    x1=sg[-int(0.01*n)]
+    x1=sg[-max(int(0.01*n),1)]
     hist=[0]*d
     low=high=0
     for x in sg:
@@ -154,8 +163,8 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# Low %d"%low,file=fp)
     print("# High %d"%high,file=fp)
-  
-  sd=12
+
+  sd=8
   gr0=0.0
   def gval(mut):
     if tv[mut][0]+tv[mut][1]==0: return -1e9
@@ -170,7 +179,7 @@ if 1:
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-gval(x))
 
-  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif Numnonvar  Numvar")
+  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif NumNonVar  NumVar")
   nm=0
   for mut in l:
     gr=growth[mut]
@@ -185,7 +194,7 @@ if 1:
     print("   %7.2f"%((ga-.5*(gha-gla))*100),end='')
     print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]))
     nm+=1
-    if nm==100: break
+    if nm==30: break
   
   nmd=min(nm,10)
   print()
