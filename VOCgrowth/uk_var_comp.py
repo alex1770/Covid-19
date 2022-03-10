@@ -160,7 +160,7 @@ plot [:] [{ymin-0.5}:{ymax+1}]"""
 for i in range(1,numv):
   (grad,graderr,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
   cmd+=f"""  "{datafn}" u 1:{numv+2*i}:(min(${numv+2*i+1},20)/{ndates/5}) pt 5 lc {i} ps variable title "log(Daily {Vnames[i]} / Daily {Vnames[0]}); larger blobs indicate more certainty (more samples)", (x/86400-{int(mindate)+cross})*{grad} lc {i} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}", """
-cmd+=" 0/0 notitle"
+cmd+=f""" 0 lw 3 title "{Vnames[0]} baseline" """
 
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
 p=po.stdin
