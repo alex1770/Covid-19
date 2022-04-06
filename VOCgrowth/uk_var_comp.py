@@ -6,7 +6,7 @@ from math import sqrt,floor,log
 
 cachedir="cogukcachedir"
 datafile='cog_metadata.csv'
-Vnames=["BA.1","BA.1.1","BA.2"]
+Vnames=["BA.1","BA.1.1","BA.2"]# Considered as prefixes, so BA.1.14 is included in BA.1
 mindate=Date('2000-01-01')
 maxdate=Date('2099-12-31')
 mincount=5
@@ -29,11 +29,17 @@ if os.path.isfile(fn):
 else:
   data={}
   for (date,p2,lin) in csvrows(datafile,['sample_date','is_pillar_2','lineage']):
-    if lin not in Vnames or len(date)!=10: continue
     #if p2!='Y': continue
-    i=Vnames.index(lin)
+    if len(date)!=10: continue
+    # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1","BA.1.1","BA.2"] then BA.1.14 is counted as BA.1
+    longest=-1;ind=-1
+    lin+='.'
+    for (i,vn) in enumerate(Vnames):
+      vn+='.'
+      if lin[:len(vn)]==vn and len(vn)>longest: ind=i;longest=len(vn)
+    if ind==-1: continue
     if date not in data: data[date]=[0]*numv
-    data[date][i]+=1
+    data[date][ind]+=1
     #if date<mindate: break
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
