@@ -31,7 +31,7 @@ else:
   for (date,p2,lin) in csvrows(datafile,['sample_date','is_pillar_2','lineage']):
     #if p2!='Y': continue
     if len(date)!=10: continue
-    # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1","BA.1.1","BA.2"] then BA.1.14 is counted as BA.1
+    # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1+","BA.1.1+","BA.2"] then BA.1.14 is counted as BA.1+ but BA.1.1.14 is counted as BA.1.1+
     longest=-1;ind=-1
     for (i,vn) in enumerate(Vnames):
       if lin==vn or (vn[-1]=='+' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
