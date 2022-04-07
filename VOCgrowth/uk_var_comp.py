@@ -78,14 +78,13 @@ def bestfit(V0,V1):
   #      c = (a,b); can write L(c)
   # L is quadratic in a,b so
   # L'(c) = L'(0) + L''(0).c = r - M.c, where M and r are as below (known and constant, i.e. independent of a,b).
-  # So c*=M^{-1}r and L(x) = L(c*) - (1/2)(x-c*)^t.M.(x-c*)
+  # If c* is defined by L'(c*)=0 then c*=M^{-1}r and L(x) = L(c*) - (1/2)(x-c*)^t.M.(x-c*). (BTW, writing C for M^{-1})
   # To correct for dependence, we're going to deem the average residual to be equal to 1, which we're going to achieve by rescaling V0, V1.
   # So if mult is the average residual, imagine doing: V0/=mult, V1/=mult, W/=mult, M/=mult, r/=mult, C*=mult, X, Y, a, b, c unchanged.
-  # Then M/mult is the precision (inverse-covariance) matrix = observed Fisher information,
-  # and (M/mult)^{-1} is the "observed covariance" matrix, and bottom right of this is est variance of b, the gradient.
-  # Effectively our posterior is (a,b) ~ MVN(c,C)
-  # We're interested in b (growth) and a/b (essentially the crossover point). Can get a/b by simulation
-  # or can get it simply and analytically if we don't worry about the small chance of b going negative.
+  # Then M/mult is the corrected precision (inverse covariance) matrix = observed Fisher information,
+  # and (M/mult)^{-1} is the corrected "observed covariance" matrix, and bottom right of this is est variance of b, the gradient.
+  # Effectively our posterior is (a,b) ~ MVN(c*,C_new)
+  # We're interested in b (growth) and a/b (essentially the crossover point)
 
   # Only start when variant gets going
   ok0=ok1=off=0
@@ -107,21 +106,30 @@ def bestfit(V0,V1):
   res=c[0]+c[1]*X-Y
   mult=(W*res*res).sum()/n
   print("Residual multiplier = %.3f"%mult)
-  qa=c[1]**2-zconf**2*C[1,1]*mult
-  qb=c[0]*c[1]-zconf**2*C[0,1]*mult
-  qc=c[0]**2-zconf**2*C[0,0]*mult
-  descrim=qb**2-qa*qc
-  # lam0=(-qb-sqrt(descrim))/qa
-  # lam1=(-qb+sqrt(descrim))/qa
-  # from scipy.stats import multivariate_normal as mvn
-  # N=100000
-  # test=mvn.rvs(mean=c,cov=C,size=N)
-  # t=sorted(-test[:,0]/test[:,1])
-  # print(t[int(N*(1-conf)/2)],t[int(N*(1+conf)/2)])
+  
+  if 0:
+    # "Clever" method to get a/b analytically, but only works if there is only a small chance of b crossing 0.
+    qa=c[1]**2-zconf**2*C[1,1]*mult
+    qb=c[0]*c[1]-zconf**2*C[0,1]*mult
+    qc=c[0]**2-zconf**2*C[0,0]*mult
+    descrim=qb**2-qa*qc
+    # lam0=(-qb-sqrt(descrim))/qa
+    # lam1=(-qb+sqrt(descrim))/qa
+    cross=off-qb/qa
+    crosserr=sqrt(descrim)/qa
+  else:
+    # And numpy is really fast at simulating MVNs so there is nothing lost really in doing it properly.
+    from scipy.stats import multivariate_normal as mvn
+    N=100000
+    test=mvn.rvs(mean=c,cov=C*mult,size=N)
+    t=sorted(-test[:,0]/test[:,1])
+    cross=off+t[int(N/2)]
+    crosslow,crosshigh=t[int(N*(1-conf)/2)],t[int(N*(1+conf)/2)]
+    crosserr=(crosshigh-crosslow)/2
+
   grad=c[1]
   graderr=sqrt(mult*C[1,1])*zconf
-  cross=off-qb/qa
-  crosserr=sqrt(descrim)/qa
+
   return grad,graderr,cross,crosserr
 
 out=[None]
