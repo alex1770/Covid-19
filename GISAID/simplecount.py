@@ -28,10 +28,12 @@ for (date,loc,lineage) in csvrows('metadata.tsv',['Collection date','Location','
   if len(date)==7: date+='-XX'
   if date<mindate: continue
   if date not in d: d[date]=[0]*(len(VV)+1)
-  if lineage in VV: i=VV.index(lineage)
+  if lineage in VV:
+    i=VV.index(lineage)
   else:
+    lineage1=lineage+'.'
     for i,pat in enumerate(VV):
-      if pat[-1]=='*' and lineage[:len(pat)-1]==pat[:-1]: break
+      if pat[-1]=='*' and lineage1[:len(pat)-1]==pat[:-1]: break
     else: i=len(VV)
   d[date][i]+=1
 
