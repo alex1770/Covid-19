@@ -1,4 +1,4 @@
-import sys
+import sys,os
 from stuff import *
 
 c='Europe / United Kingdom'
@@ -17,6 +17,16 @@ if len(sys.argv)>1: c=sys.argv[1]
 if len(sys.argv)>2: mindate=sys.argv[2]
 if len(sys.argv)>3: VV=sys.argv[3].split(',')
 
+infile='metadata.tsv';inputsorted=False
+t0=os.path.getmtime(infile)
+try:
+  t1=os.path.getmtime('metadata_sorted.tsv')
+  if t1>=t0: infile='metadata_sorted.tsv';inputsorted=True
+except:
+  pass
+
+print('Using input file',infile)
+
 print("#Country/region:",c)
 print("#From:",mindate)
 
@@ -24,10 +34,12 @@ print('#Date             All        ',end='')
 for v in VV: print(' %10s'%v,end='')
 print('     Others')
 d={}
-for (date,loc,lineage) in csvrows('metadata.tsv',['Collection date','Location','Pango lineage'],sep='\t'):
+for (date,loc,lineage) in csvrows(infile,['Collection date','Location','Pango lineage'],sep='\t'):
   if loc[:len(c)]!=c: continue
   if len(date)==7: date+='-XX'
-  if date<mindate: continue
+  if date<mindate:
+    if inputsorted: break
+    continue
   if date not in d: d[date]=[0]*(len(VV)+1)
   if lineage in VV:
     i=VV.index(lineage)
