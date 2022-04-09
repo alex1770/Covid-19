@@ -4,9 +4,6 @@ from stuff import *
 c='Europe / United Kingdom'
 mindate='2021-01-01'
 
-if len(sys.argv)>1: c=sys.argv[1]
-if len(sys.argv)>2: mindate=sys.argv[2]
-
 #VV=['B.1.1.7','B.1.617','B.1.617.1','B.1.617.2','B.1.617.3']
 #VV=['B.1.1.7','B.1.617.2','AY.1','AY.2','AY.3','AY.4','AY.5','AY.6','C.1.2']
 #VV=['B.1.617.2','AY.1','AY.2','AY.3','AY.4','AY.5','AY.6','AY.4.2']
@@ -15,6 +12,10 @@ if len(sys.argv)>2: mindate=sys.argv[2]
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 VV=['B.1.617.2','AY.*','BA.1','BA.1.1','BA.2','BA.3']
+
+if len(sys.argv)>1: c=sys.argv[1]
+if len(sys.argv)>2: mindate=sys.argv[2]
+if len(sys.argv)>3: VV=sys.argv[3].split(',')
 
 print("#Country/region:",c)
 print("#From:",mindate)
