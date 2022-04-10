@@ -28,13 +28,16 @@ if os.path.isfile(fn):
     data=pickle.load(fp)
 else:
   data={}
-  for (date,p2,lin) in csvrows(datafile,['sample_date','is_pillar_2','lineage']):
+  for (date,p2,lin,mutations) in csvrows(datafile,['sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
     if len(date)!=10: continue
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1+","BA.1.1+","BA.2"] then BA.1.14 is counted as BA.1+ but BA.1.1.14 is counted as BA.1.1+
     longest=-1;ind=-1
     for (i,vn) in enumerate(Vnames):
       if lin==vn or (vn[-1]=='+' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
+    if ind==-1 and 'XE' in Vnames:
+      # Simple check pro tem for unassigned XEs because classifier isn't complete (as of 2022-04-10)
+      if lin=='Unassigned' and '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: ind=Vnames.index('XE')
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
