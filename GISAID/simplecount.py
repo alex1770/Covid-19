@@ -25,7 +25,7 @@ try:
 except:
   pass
 
-print('Using input file',infile)
+print('#Using input file',infile)
 
 print("#Country/region:",c)
 print("#From:",mindate)
