@@ -1,6 +1,6 @@
 import sys,pickle,os
 from stuff import *
-from scipy.stats import norm
+from scipy.stats import norm, multivariate_normal as mvn
 import numpy as np
 from math import sqrt,floor,log
 
@@ -75,6 +75,7 @@ print("Written data to",datafn)
 VV=np.transpose(VV)
 
 def bestfit(V0,V1):
+  # Y ~ a+b*X
   # L(a,b) = -(1/2)sum_i w_i(a+bx_i-y_i)^2
   #      c = (a,b); can write L(c)
   # L is quadratic in a,b so
@@ -87,11 +88,12 @@ def bestfit(V0,V1):
   # Effectively our posterior is (a,b) ~ MVN(c*,C_new)
   # We're interested in b (growth) and a/b (essentially the crossover point)
 
-  # Only start when variant gets going
+  # Only start when variants get going
   ok0=ok1=off=0
-  while off<len(V0) and (ok0==0 or ok1==0):
+  while off<len(V0):
     if V0[off]>=mincount: ok0=1
     if V1[off]>=mincount: ok1=1
+    if ok0 and ok1: break
     off+=1
   V0=np.array(V0[off:])+1e-30
   V1=np.array(V1[off:])+1e-30
@@ -108,35 +110,24 @@ def bestfit(V0,V1):
   mult=(W*res*res).sum()/n
   print("Residual multiplier = %.3f"%mult)
   
-  if 0:
-    # "Clever" method to get a/b analytically, but only works if there is only a small chance of b crossing 0.
-    qa=c[1]**2-zconf**2*C[1,1]*mult
-    qb=c[0]*c[1]-zconf**2*C[0,1]*mult
-    qc=c[0]**2-zconf**2*C[0,0]*mult
-    descrim=qb**2-qa*qc
-    # lam0=(-qb-sqrt(descrim))/qa
-    # lam1=(-qb+sqrt(descrim))/qa
-    cross=off-qb/qa
-    crosserr=sqrt(descrim)/qa
-  else:
-    # And numpy is really fast at simulating MVNs so there is nothing lost really in doing it properly.
-    from scipy.stats import multivariate_normal as mvn
-    N=100000
-    test=mvn.rvs(mean=c,cov=C*mult,size=N)
-    t=sorted(-test[:,0]/test[:,1])
-    cross=off+t[int(N/2)]
-    crosslow,crosshigh=t[int(N*(1-conf)/2)],t[int(N*(1+conf)/2)]
-    crosserr=(crosshigh-crosslow)/2
-
+  yoff=c[0]-off*c[1]
+  
   grad=c[1]
   graderr=sqrt(mult*C[1,1])*zconf
 
-  return grad,graderr,cross,crosserr
+  N=100000
+  test=mvn.rvs(mean=c,cov=C*mult,size=N)
+  t=sorted(-test[:,0]/test[:,1])
+  cross=off+t[int(N/2)]
+  crosslow,crosshigh=t[int(N*(1-conf)/2)],t[int(N*(1+conf)/2)]
+  crosserr=(crosshigh-crosslow)/2
+
+  return grad,graderr,yoff,cross,crosserr
 
 out=[None]
 for i in range(1,numv):
   print()
-  grad,graderr,cross,crosserr=bestfit(VV[0],VV[i])
+  grad,graderr,yoff,cross,crosserr=bestfit(VV[0],VV[i])
   growthstr=f"Relative growth in {Vnames[i]} vs {Vnames[0]} of {grad:.3f} ({grad-graderr:.3f} - {grad+graderr:.3f}) per day"
   doubstr=f"Doubling of ratio {Vnames[i]}/{Vnames[0]} every {log(2)/grad:.1f} ({log(2)/(grad+graderr):.1f} - {log(2)/(grad-graderr):.1f}) days"
   print(growthstr)
@@ -144,7 +135,7 @@ for i in range(1,numv):
   cr1=int(floor(cross))
   crossstr=f"Est'd %s/%s crossover on %s.%d +/- %.1f days"%(Vnames[i],Vnames[0],mindate+cr1,int((cross-cr1)*10),crosserr)
   print(crossstr)
-  out.append((grad,graderr,cross,crosserr,growthstr,doubstr,crossstr))
+  out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
 graphfn=datafn+'.png'
 ndates=maxdate-mindate+1
@@ -173,8 +164,8 @@ min(a,b)=(a<b)?a:b
 plot [:] [{ymin-0.5}:{ymax+1}]"""
 
 for i in range(1,numv):
-  (grad,graderr,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  cmd+=f"""  "{datafn}" u 1:{numv+2*i}:(min(${numv+2*i+1},20)/{ndates/5}) pt 5 lc {i} ps variable title "log(Daily {Vnames[i]} / Daily {Vnames[0]}); larger blobs indicate more certainty (more samples)", (x/86400-{int(mindate)+cross})*{grad} lc {i} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}", """
+  (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
+  cmd+=f"""  "{datafn}" u 1:{numv+2*i}:(min(${numv+2*i+1},20)/{ndates/5}) pt 5 lc {i} ps variable title "log(Daily {Vnames[i]} / Daily {Vnames[0]}); larger blobs indicate more certainty (more samples)", (x/86400-{int(mindate)})*{grad}+{yoff} lc {i} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}", """
 cmd+=f""" 0 lw 3 title "{Vnames[0]} baseline" """
 
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
