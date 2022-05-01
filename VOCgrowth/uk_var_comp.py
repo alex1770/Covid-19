@@ -70,8 +70,10 @@ with open(datafn,'w') as fp:
       prec=sqrt(a*b/(a+b))
       print(" %12g %12g"%(y,prec),end='',file=fp)
       if prec>visthr: ymin=min(ymin,y);ymax=max(ymax,y)
+      #if v[0]>0 and v[i]>0: ymin=min(ymin,y);ymax=max(ymax,y)
     print(file=fp)
 print("Written data to",datafn)
+if VV==[]: print("No data points found");sys.exit(0)
 VV=np.transpose(VV)
 
 def bestfit(V0,V1):
@@ -108,6 +110,7 @@ def bestfit(V0,V1):
   c=C@r
   res=c[0]+c[1]*X-Y
   mult=(W*res*res).sum()/n
+  mult=max(mult,1)
   print("Residual multiplier = %.3f"%mult)
   
   yoff=c[0]-off*c[1]
