@@ -6,7 +6,7 @@ from math import sqrt,floor,log
 
 cachedir="cogukcachedir"
 datafile='cog_metadata.csv'
-Vnames=["BA.1","BA.1.1+","BA.2+"]# A name ending in '+' is considered as a prefix/ancestor, so BA.1+ includes BA.1 and BA.1.17 though not BA.12
+Vnames=["BA.1","BA.1.1*","BA.2*"]# A name ending in '*' is considered as a prefix/ancestor, so BA.1* includes BA.1 and BA.1.17 though not BA.12
 mindate=Date('2000-01-01')
 maxdate=Date('2099-12-31')
 mincount=5
@@ -31,10 +31,10 @@ else:
   for (date,p2,lin,mutations) in csvrows(datafile,['sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
     if len(date)!=10: continue
-    # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1+","BA.1.1+","BA.2"] then BA.1.14 is counted as BA.1+ but BA.1.1.14 is counted as BA.1.1+
+    # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     longest=-1;ind=-1
     for (i,vn) in enumerate(Vnames):
-      if lin==vn or (vn[-1]=='+' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
+      if lin==vn or (vn[-1]=='*' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
     mutations='|'+mutations+'|'
     if 'XE' in Vnames and ind==-1:
       # Simple check pro tem for unassigned XEs because classifier isn't complete (as of 2022-04-10)
