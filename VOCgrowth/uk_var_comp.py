@@ -35,9 +35,13 @@ else:
     longest=-1;ind=-1
     for (i,vn) in enumerate(Vnames):
       if lin==vn or (vn[-1]=='+' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
-    if ind==-1 and 'XE' in Vnames:
+    mutations='|'+mutations+'|'
+    if 'XE' in Vnames and ind==-1:
       # Simple check pro tem for unassigned XEs because classifier isn't complete (as of 2022-04-10)
       if lin=='Unassigned' and '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: ind=Vnames.index('XE')
+    if 'BA.2.12.1' in Vnames and lin=='BA.2.12':
+      # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
+      if '|S:S704L|' in mutations and '|S:L452Q|' in mutations: ind=Vnames.index('BA.2.12.1')
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
