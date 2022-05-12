@@ -1,6 +1,6 @@
-
 // Aligns SARS-CoV-2 fasta files to reference genome Wuhan-Hu-1
 // Todo: handle files with \r\n lines
+//       multithread if need for speed arises
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,33 +13,17 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <unordered_map>
-#include <unordered_set>
 using std::string;
 using std::vector;
-using std::array;
-using std::min;
-using std::max;
-using std::pair;
-using std::unordered_map;
-using std::unordered_set;
 
 typedef unsigned char UC;
-template<class T> struct array2d {
-  size_t rows,cols;
-  vector<T> data;
-  array2d(){}
-  array2d(size_t r, size_t c):rows(r),cols(c),data(r*c){}
-  void resize(size_t r, size_t c){rows=r;cols=c;data.resize(r*c);}
-  T* operator[](size_t index){return &data[index*cols];}// First level indexing
-};
 
 // R = number of bases from which the indexes are formed
 #define R 9
 vector<int> refdict[1<<R*2];
 
 // Maximum number of bases
-#define MAXGS 50000
+#define MAXGS 40000
 
 // Count threshold for offsets
 #define MINOFFSETCOUNT 20
@@ -59,6 +43,7 @@ int main(){
     std::getline(fp,refgenome);
     fp.close();
     N=refgenome.size();
+    assert(N<=MAXGS);
   }
 
   int base2num[256];
@@ -93,8 +78,8 @@ int main(){
     }
     
     // Offset = (index in ref genome) - (index in current genome)
-    unordered_map<int,int> offsetcount;
-    vector<int> indexkey(M-(R-1));
+    UC offsetcount[MAXGS*2]={0};
+    int indexkey[MAXGS]={0};
     int badi=-1;
     for(i=0,t=0;i<M;i++){
       int b=base2num[genome[i]];
@@ -103,36 +88,38 @@ int main(){
       if(i>=badi+R){
         assert(t>=0&&t<(1<<R*2));
         indexkey[i-(R-1)]=t;
-        for(int x:refdict[t])offsetcount[x-(i-(R-1))]+=1;
+        for(int x:refdict[t]){
+          int k=x-(i-(R-1));
+          if(offsetcount[MAXGS+k]<MINOFFSETCOUNT)offsetcount[MAXGS+k]++;
+        }
       }else if(i>=R-1)indexkey[i-(R-1)]=undefined;
     }
-    unordered_set<int> okoffsets;
-    for(auto &o:offsetcount)if(o.second>=MINOFFSETCOUNT)okoffsets.insert(o.first);
-    if(okoffsets.size()==0){fprintf(stderr,"Warning: Can't find offsets for genome at lines preceding %d\n",linenum);break;}
-    //for(int o:okoffsets)printf("Offset %d : %d\n",o,offsetcount[o]);
+    //if(!ok){fprintf(stderr,"Warning: Can't find offsets for genome at lines preceding %d\n",linenum);break;}
+    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]==MINOFFSETCOUNT)printf("Offset %d\n",o-MAXGS);
 
-    array2d<int> offsets(M,2);
-
+    int pointoffset[MAXGS],offsets[MAXGS][2]={0};
+    for(i=0;i<=M-R;i++){
+      t=indexkey[i];
+      pointoffset[i]=undefined;
+      if(t!=undefined)for(int x:refdict[t])if(offsetcount[MAXGS+x-i]>=MINOFFSETCOUNT)pointoffset[i]=x-i;
+    }
     // Approach from right
     int nearest=undefined;
     for(i=M-1;i>M-R;i--)offsets[i][1]=undefined;
     for(i=M-R;i>=0;i--){
-      t=indexkey[i];
-      if(t!=undefined)for(int x:refdict[t])if(okoffsets.count(x-i))nearest=x-i;
+      if(pointoffset[i]!=undefined)nearest=pointoffset[i];
       offsets[i][1]=nearest;
     }
-
     // Approach from left
     nearest=undefined;
     for(i=0;i<R-1;i++)offsets[i][0]=undefined;
     for(i=R-1;i<M;i++){
-      t=indexkey[i-(R-1)];
-      if(t!=undefined)for(int x:refdict[t])if(okoffsets.count(x-(i-(R-1))))nearest=x-(i-(R-1));
+      if(pointoffset[i-(R-1)]!=undefined)nearest=pointoffset[i-(R-1)];
       offsets[i][0]=nearest;
     }
 
     // Dyn prog on two allowable offsets: offsets[i][]
-    array2d<int> bp(M,2);// Back pointers; bp[i][j] is defined if value is finite
+    int bp[MAXGS][2]={0};// Back pointers; bp[i][j] is defined if value is finite
     int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset offsets[i-1][j]
     for(i=0;i<M;i++){
       // Transition j -> k,  j=prev offset index, k=current offset index
@@ -160,15 +147,16 @@ int main(){
       st[1]=newst[1];
     }
 
-    vector<UC> out(N+1);
-    memset(&out[0],'-',N);
+    UC out[MAXGS+1];
+    memset(out,'-',N);
+    out[N]=0;
     int s=(st[1]<st[0]);
     for(i=M-1;i>=0;i--){
       int o=offsets[i][s];
       if(o!=undefined&&i+o>=0&&i+o<N)out[i+o]=genome[i];
       s=bp[i][s];
     }
-    printf("%s\n",&out[0]);
+    printf("%s\n",out);
   }
-  
+
 }
