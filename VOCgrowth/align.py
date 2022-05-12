@@ -21,6 +21,7 @@ except StopIteration:
   last=True
 
 while not last:
+  print(name)
   lines=[]
   while 1:
     try:
@@ -111,7 +112,6 @@ while not last:
       if off!=infinity: print(ref[i+off]+'!'*(genome[i] in 'ACGT' and ref[i+off]!=genome[i]))
       else: print('-')
   
-  print(name)
   out=['N']*N
   for i in range(M):
     off=offs[i]
