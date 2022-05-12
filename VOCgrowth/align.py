@@ -112,7 +112,7 @@ while not last:
       if off!=infinity: print(ref[i+off]+'!'*(genome[i] in 'ACGT' and ref[i+off]!=genome[i]))
       else: print('-')
   
-  out=['N']*N
+  out=['-']*N
   for i in range(M):
     off=offs[i]
     if off!=infinity: out[i+off]=genome[i]
