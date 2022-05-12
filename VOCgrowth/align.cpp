@@ -113,9 +113,9 @@ int main(){
     // Approach from left
     nearest=undefined;
     for(i=0;i<R-1;i++)offsets[i][0]=undefined;
-    for(i=R-1;i<M;i++){
-      if(pointoffset[i-(R-1)]!=undefined)nearest=pointoffset[i-(R-1)];
-      offsets[i][0]=nearest;
+    for(i=0;i<=M-R;i++){
+      if(pointoffset[i]!=undefined)nearest=pointoffset[i];
+      offsets[i+R-1][0]=nearest;
     }
 
     // Dyn prog on two allowable offsets: offsets[i][]
