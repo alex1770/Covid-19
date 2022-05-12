@@ -81,7 +81,7 @@ while not last:
       if off!=infinity:
         for k in range(2):
           [p,v]=st[k]
-          v1=v+int(sqrt(abs(off-p)))*(p!=infinity)+(genome[i]!=ref[i+off])
+          v1=v+int(sqrt(abs(off-p)))*(p!=infinity)+(i+off<0 or i+off>=N or genome[i]!=ref[i+off])
           if v1<best[0]: best=[v1,k]
         bp[i][j]=best[1]
         newst[j]=[off,best[0]]
@@ -115,5 +115,5 @@ while not last:
   out=['-']*N
   for i in range(M):
     off=offs[i]
-    if off!=infinity: out[i+off]=genome[i]
+    if off!=infinity and i+off>=0 and i+off<N: out[i+off]=genome[i]
   print(''.join(out))

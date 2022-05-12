@@ -149,7 +149,7 @@ int main(){
               if(p==undefined)continue;
               v=jumppen[abs(off-p)];
             }
-            v+=st[j]+(genome[i]!=refgenome[i+off]);
+            v+=st[j]+(i+off<0||i+off>=N||genome[i]!=refgenome[i+off]);
             if(v<best){best=v;bestj=j;}
           }
           newst[k]=best;
@@ -165,7 +165,7 @@ int main(){
     int s=(st[1]<st[0]);
     for(i=M-1;i>=0;i--){
       int o=offsets[i][s];
-      if(o!=undefined){assert(i+o>=0&&i+o<N);out[i+o]=genome[i];}
+      if(o!=undefined&&i+o>=0&&i+o<N)out[i+o]=genome[i];
       s=bp[i][s];
     }
     printf("%s\n",&out[0]);
