@@ -48,10 +48,10 @@ int main(){
 
   int base2num[256];
   for(i=0;i<256;i++)base2num[i]=-1;
-  base2num['A']=0;
-  base2num['C']=1;
-  base2num['G']=2;
-  base2num['T']=3;
+  base2num['A']=base2num['a']=0;
+  base2num['C']=base2num['c']=1;
+  base2num['G']=base2num['g']=2;
+  base2num['T']=base2num['t']=3;
   for(i=0,t=0;i<N;i++){
     t=t>>2|base2num[refgenome[i]&255]<<(R-1)*2;
     if(i>=R-1&&t>=0&&t<(1<<R*2))refdict[t].push_back(i-(R-1));
