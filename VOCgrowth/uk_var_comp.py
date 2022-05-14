@@ -168,7 +168,7 @@ set ylabel "log(New {oneother} per day / New {Vnames[0]} per day)"
 set output "{graphfn}"
 set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nDescription/caveats/current graph: http://sonorouschocolate.com/covid19/index.php?title=Omicron\\\\_BA.2\\\\_vs\\\\_BA.1\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
-plot [:] [{ymin-0.5}:{max(ymax+1,1.8)}]"""
+plot [:] [{ymin-0.5}:{max(ymax+numv-0.2,1.8)}]"""
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
