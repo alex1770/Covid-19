@@ -1,6 +1,5 @@
 // Aligns SARS-CoV-2 fasta files to reference genome Wuhan-Hu-1
-// Todo: handle files with \r\n lines
-//       multithread if need for speed arises
+// Todo: handle files with \r\n lines?
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,6 +39,21 @@ vector<int> refdict[1<<R*2];
 
 const int undefined=0x7fffffff;
 const int infinity=1000000000;
+
+double cpu(){return clock()/double(CLOCKS_PER_SEC);}
+int timings=1;
+#define MAXTIM 50
+double ncpu[MAXTIM]={0},lcpu[MAXTIM]={0},tcpu[MAXTIM]={0};
+void tick(int i){if(timings)lcpu[i]=cpu();}
+void tock(int i){if(timings){ncpu[i]+=1;tcpu[i]+=cpu()-lcpu[i];}}
+void prtim(){
+  int i;
+  double x=(ncpu[0]>0?tcpu[0]/ncpu[0]:0);
+  for(i=1;i<MAXTIM;i++)if(ncpu[i]){
+    double t=tcpu[i]-ncpu[i]*x;
+    printf("Time %2d: CPU %12gs / %12g = %12gus\n",i,t,ncpu[i],t/ncpu[i]*1e6);
+  }
+}
 
 // Split string into a sequence of substrings using any character from sep (default whitespace) as a separator.
 vector<string> split(string in,string sep=" \r\t\n\f\v"){
@@ -107,6 +121,8 @@ int main(int ac,char**av){
     exit(1);
   }
 
+  std::ios_base::sync_with_stdio(false);
+  
   vector<pair<string,string>> index;
   set<string> done;
   if(datadir!=""){
@@ -268,4 +284,5 @@ int main(int ac,char**av){
     writeheaders(datadir,index);
     printf("Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
   }
+  prtim();
 }
