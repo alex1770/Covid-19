@@ -16,12 +16,14 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <unordered_set>
+#include <set>
+#include <tuple>
+#include <algorithm>
 using std::string;
 using std::pair;
 using std::tie;
 using std::vector;
-using std::unordered_set;
+using std::set;
 
 typedef unsigned char UC;
 typedef unsigned int UI;
@@ -52,60 +54,42 @@ vector<string> split(string in,string sep=" \r\t\n\f\v"){
   }
 }
 
-// Read headers from everything under 'path' into 'headers'
-// (But actually, maybe this only gets used on my format fasta files)
-// GISAID fasta headers look like this:
-// >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
-// or occasionally like this:
-// >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
-// COG-UK fasta headers look like this:
-// >England/PHEC-YYF8DBE/2022
-
 // Takes an input like this
-// >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
-// >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
-// >England/PHEC-YYF8DBE/2022
+// (GISAID style, unknown date)  >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
+// (GISAID style, known date)    >hCoV-19/Austria/CeMM11657/2021|2021-06-14|2021-07-01
+// (GISAID style, extra prefix)  >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
+// (COG-UK style, no date)       >England/PHEC-YYF8DBE/2022
 // and returns (ID,sample date), e.g.,
 // ("England/PHEC-L303L83F/2021","2021-06-30")
-// Sample date is "" if this date is not available
-pair<string,string> parseheader(string head){
-  assert(head.size()>0&&head[0]=='>');
-  vector<string> hs=split(head,">/|");
-  if(hs.size()>=3){
-    UI i=0;
-    if(hs[i]=="hCoV-19")i++;
-    if(hs[i]=="env"||hs[i]=="cat")i++;// check - alter
-    if(hs.size()>=i+3){
-      string id=hs[i]+"/"+hs[i+1]+"/"+hs[i+2];
-      string date;
-      if(hs.size()>=i+4&&hs[i+3].size()==10&&hs[i+3][0]=='2')date=hs[i+3];
-      return {id,date};
-    }
+// "" means not available
+pair<string,string> parseheader(string &header){
+  assert(header.size()>0&&header[0]=='>');
+  vector<string> hs=split(header,">|");
+  string id,date;
+  if(hs.size()>0){
+    vector<string> ida=split(hs[0],"/");
+    int n=ida.size();
+    if(n>=3)id=ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
+    if(hs.size()>=3&&hs[2].size()==10&&hs[2][0]=='2'&&hs[2][1]=='0')date=hs[2];
   }
-  return {"",""};
+  return {id,date};
 }
 
-unordered_set<string> headers;
-void readheaders(string &path){
-  auto fn=[](const char*fpath,const struct stat*sb,int typeflag)->int{
-    if(typeflag==FTW_F){
-      std::ifstream fp(fpath);
-      if(fp.fail())error(1,errno,"\nCouldn't open %s",fpath);
-      string l;
-      while(std::getline(fp,l)){
-        if(l.size()>0&&l[0]=='>'){
-          string id,date;
-          tie(id,date)=parseheader(l);
-          if(id!=""&&date!="")headers.insert(id);
-        }
-      }
-      fp.close();
-    }
-    return 0;
-  };
-  ftw(path.c_str(),fn,100);
-  int n=headers.size();
-  printf("Read %d genome header%s\n",n,n==1?"":"s");
+void readheaders(string &dir,vector<pair<string,string>>&index){
+  string fname=dir+"/index";
+  std::ifstream fp(fname);// Use read-lock
+  if(fp.fail())return;
+  string l;
+  while(std::getline(fp,l))index.push_back({l.substr(0,10),l.substr(11)});
+  fp.close();
+  int n=index.size();
+  printf("Read %d genome ID%s from %s\n",n,n==1?"":"s",fname.c_str());
+}
+
+void writeheaders(string &dir,vector<pair<string,string>>&index){
+  std::ofstream fp(dir+"/index");// Use write-lock
+  for(auto &ind:index)fp<<ind.first<<" "<<ind.second<<"\n";
+  fp.close();
 }
 
 int main(int ac,char**av){
@@ -123,9 +107,16 @@ int main(int ac,char**av){
     exit(1);
   }
 
+  vector<pair<string,string>> index;
+  set<string> done;
   if(datadir!=""){
     mkdir(datadir.c_str(),0777);
-    readheaders(datadir);
+    readheaders(datadir,index);
+    string id,date;
+    for(auto &ind:index){
+      tie(id,date)=parseheader(ind.second);
+      done.insert(id);
+    }
   }
   
   int i,t;
@@ -158,33 +149,35 @@ int main(int ac,char**av){
 
   int linenum=0,nwrite=0;
   bool last;
-  string name;
+  string header;
   UC genome[MAXGS];
-  last=!std::getline(std::cin,name);linenum++;
+  last=!std::getline(std::cin,header);linenum++;
   while(!last){
     string id,date;
-    tie(id,date)=parseheader(name);
-    if(headers.count(id)||date==""){
+    tie(id,date)=parseheader(header);
+    if(done.count(id)||date==""){
       // Skip genome we already have, or one for which the date isn't known
       while(1){
-        last=!std::getline(std::cin,name);linenum++;
+        last=!std::getline(std::cin,header);linenum++;
         if(last)break;
-        int s=name.size();
-        if(s>0&&name[0]=='>')break;
+        int s=header.size();
+        if(s>0&&header[0]=='>')break;
       }
       continue;
     }
+    index.push_back({date,header});
+    done.insert(id);
     FILE*fp;
     if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
-    fprintf(fp,"%s\n",name.c_str());
+    fprintf(fp,"%s\n",header.c_str());// Move this to later when we do locking
     int M=0;// Length of genome;
     while(1){
-      last=!std::getline(std::cin,name);linenum++;
+      last=!std::getline(std::cin,header);linenum++;
       if(last)break;
-      int s=name.size();
-      if(s>0&&name[0]=='>')break;
+      int s=header.size();
+      if(s>0&&header[0]=='>')break;
       if(M+s>MAXGS){fprintf(stderr,"Warning: Overlong genome at line %d\n",linenum);continue;}
-      memcpy(genome+M,&name[0],s);M+=s;
+      memcpy(genome+M,&header[0],s);M+=s;
     }
     
     // Offset = (index in ref genome) - (index in current genome)
@@ -270,5 +263,9 @@ int main(int ac,char**av){
     if(datadir!="")fclose(fp);
     nwrite++;
   }
-  if(datadir!="")printf("Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
+  if(datadir!=""){
+    std::sort(index.begin(),index.end());
+    writeheaders(datadir,index);
+    printf("Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
+  }
 }
