@@ -186,8 +186,6 @@ int main(int ac,char**av){
     }
     index.push_back({date,header});
     done.insert(id);
-    FILE*fp;
-    if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
     int M=0;// Length of genome;
     while(1){
       last=!std::getline(std::cin,line);linenum++;
@@ -279,6 +277,8 @@ int main(int ac,char**av){
       s=bp[i][s];
     }
 
+    FILE*fp;
+    if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
     fprintf(fp,"%s|C%d\n",header.c_str(),compression);
     header=line;// Next header is the last-read line
     switch(compression){
