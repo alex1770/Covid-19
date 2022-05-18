@@ -68,14 +68,13 @@ vector<string> split(string in,string sep=" \r\t\n\f\v"){
   }
 }
 
-// Takes an input like this
+// Take an input like this
 // (GISAID style, unknown date)  >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
 // (GISAID style, known date)    >hCoV-19/Austria/CeMM11657/2021|2021-06-14|2021-07-01
 // (GISAID style, extra prefix)  >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
 // (COG-UK style, no date)       >England/PHEC-YYF8DBE/2022
-// and returns (ID,sample date), e.g.,
-// ("England/PHEC-L303L83F/2021","2021-06-30")
-// "" means not available
+// and return (ID,sample date), e.g.,
+// ("England/PHEC-L303L83F/2021","2021-06-30"), or "" means not available
 pair<string,string> parseheader(string &header){
   assert(header.size()>0&&header[0]=='>');
   vector<string> hs=split(header,">|");
@@ -108,7 +107,9 @@ void writeheaders(string &dir,vector<pair<string,string>>&index){
 
 int main(int ac,char**av){
   string datadir;
-  while(1)switch(getopt(ac,av,"x:")){
+  int compression=0;
+  while(1)switch(getopt(ac,av,"c:x:")){
+    case 'c': compression=atoi(optarg);break;
     case 'x': datadir=strdup(optarg);break;
     case -1: goto ew0;
     default: goto err0;
@@ -118,9 +119,11 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -x<string> Data directory\n");
+    fprintf(stderr,"       -c<int>    Compression mode (0=default=standard fasta=uncompressed ACGT)\n");
     exit(1);
   }
 
+  // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
   
   vector<pair<string,string>> index;
@@ -165,7 +168,7 @@ int main(int ac,char**av){
 
   int linenum=0,nwrite=0;
   bool last;
-  string header;
+  string header,line;
   UC genome[MAXGS];
   last=!std::getline(std::cin,header);linenum++;
   while(!last){
@@ -185,15 +188,14 @@ int main(int ac,char**av){
     done.insert(id);
     FILE*fp;
     if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
-    fprintf(fp,"%s\n",header.c_str());// Move this to later when we do locking
     int M=0;// Length of genome;
     while(1){
-      last=!std::getline(std::cin,header);linenum++;
+      last=!std::getline(std::cin,line);linenum++;
       if(last)break;
-      int s=header.size();
-      if(s>0&&header[0]=='>')break;
+      int s=line.size();
+      if(s>0&&line[0]=='>')break;
       if(M+s>MAXGS){fprintf(stderr,"Warning: Overlong genome at line %d\n",linenum);continue;}
-      memcpy(genome+M,&header[0],s);M+=s;
+      memcpy(genome+M,&line[0],s);M+=s;
     }
     
     // Offset = (index in ref genome) - (index in current genome)
@@ -266,6 +268,7 @@ int main(int ac,char**av){
       st[1]=newst[1];
     }
 
+    // Write aligned genome, out[]
     UC out[MAXGS+1];
     memset(out,'-',N);
     out[N]=0;
@@ -275,7 +278,30 @@ int main(int ac,char**av){
       if(o!=undefined&&i+o>=0&&i+o<N)out[i+o]=genome[i];
       s=bp[i][s];
     }
-    fprintf(fp,"%s\n",out);
+
+    fprintf(fp,"%s|C%d\n",header.c_str(),compression);
+    header=line;// Next header is the last-read line
+    switch(compression){
+    case 0:
+      fprintf(fp,"%s\n",out);
+      break;
+    case 1:
+      for(i=0;i<N;i++){
+        int j;
+        if(out[i]==refgenome[i])continue;
+        if(out[i]=='N'||out[i]=='-'){
+          for(j=i;j<N&&out[j]==out[i];j++);
+          fprintf(fp,"%d-%d %c\n",i,j-1,out[i]);
+          i=j;
+        }else{
+          fprintf(fp,"%d %c\n",i,out[i]);
+        }
+      }
+      break;
+    default:
+      error(1,0,"Unknown compression type %d\n",compression);
+    }
+      
     if(datadir!="")fclose(fp);
     nwrite++;
   }
