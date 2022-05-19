@@ -83,7 +83,7 @@ pair<string,string> parseheader(string &header){
     vector<string> ida=split(hs[0],"/");
     int n=ida.size();
     if(n>=3)id=ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
-    if(hs.size()>=3&&hs[2].size()==10&&hs[2][0]=='2'&&hs[2][1]=='0')date=hs[2];
+    if(hs.size()>=2&&hs[1].size()==10&&hs[1][0]=='2'&&hs[1][1]=='0')date=hs[1];
   }
   return {id,date};
 }
