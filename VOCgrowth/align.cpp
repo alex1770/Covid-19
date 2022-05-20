@@ -90,12 +90,12 @@ string parseheader(string &header){
   return "";
 }
 
-// index file format:
-// Space-separated. No spaces within fields (converted to _).
-// date ID provisionallineage location
-unordered_set<string> readheaders(string dir){
+// IDs_present file format:
+// Space-separated. No spaces within fields.
+// date ID
+unordered_set<string> readIDs(string dir){
   unordered_set<string> done;
-  string fname=dir+"/index";
+  string fname=dir+"/IDs_present";
   std::ifstream fp(fname);// Use read-lock
   if(fp.fail())return done;
   string l;
@@ -109,26 +109,36 @@ unordered_set<string> readheaders(string dir){
   return done;
 }
 
-unordered_map<string,string> csv2map(string fn,string sep,string id,string date){
-  unordered_map<string,string> ret;
-  std::ifstream fp(fn);
-  if(fp.fail())error(1,errno,"Couldn't open %s",fn.c_str());
-  string header;
-  std::getline(fp,header);
-  vector<string> headers=split(header,sep);
+// metadata file format:
+// Tab-separated, like GISAID.
+// date ID provisionallineage location
+// location is "Continent / Country[ / subsidiary [ / subsidiary ...]]"
+unordered_map<string,string> readmeta(string dir){
+  unordered_map<string,string> id2date;
+  string fname=dir+"/metadata.tsv";
+  std::ifstream fp(fname);// Use read-lock
+  if(fp.fail())return id2date;
+  string l;
+  std::getline(fp,l);
+  vector<string> headers=split(l,"\t");
   int idcol=-1,datecol=-1;
   for(UI i=0;i<headers.size();i++){
-    if(headers[i]==id)idcol=i;
-    if(headers[i]==date)datecol=i;
+    if(headers[i]=="ID")idcol=i;
+    if(headers[i]=="sample_date")datecol=i;
   }
   assert(idcol>=0&&datecol>=0);
-  string line;
-  while(std::getline(fp,line)){
-    vector<string> data=split(line,sep);
-    ret[getid(data[idcol])]=data[datecol];
+  while(std::getline(fp,l)){
+    vector<string> ll=split(l,"\t");
+    id2date[ll[idcol]]=ll[datecol];
   }
   fp.close();
-  return ret;
+  int n=id2date.size();
+  printf("Read %d metadata entr%s from %s\n",n,n==1?"y":"ies",fname.c_str());
+  return id2date;
+}
+
+bool okdate(string date){
+  return date.size()==10&&date[0]=='2'&&date[1]=='0'&&date[4]=='-'&&date[7]=='-';
 }
 
 int main(int ac,char**av){
@@ -152,13 +162,12 @@ int main(int ac,char**av){
   // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
 
-  unordered_map<string,string> id2date,cog2date;
-  
-  vector<pair<string,string>> index;
   unordered_set<string> done;
+  unordered_map<string,string> id2date;
   if(datadir!=""){
     mkdir(datadir.c_str(),0777);
-    done=readheaders(datadir);
+    done=readIDs(datadir);
+    id2date=readmeta(datadir);
   }
   
   int i,t;
@@ -174,13 +183,6 @@ int main(int ac,char**av){
     N=refgenome.size();
     assert(N<=MAXGS);
   }
-
-  fprintf(stderr,"Loading metadata\n");
-  cog2date=csv2map("cog_metadata.csv",",","sequence_name","sample_date");
-  fprintf(stderr,"Read %lu entries from COG-UK\n",cog2date.size());
-  id2date=csv2map("metadata.tsv","\t","Virus name","Collection date");
-  fprintf(stderr,"Read %lu entries from GISAID\n",id2date.size());
-  for(auto &m:cog2date)id2date[m.first]=m.second;
 
   // refdict[R-tuple of bases, X] = list of positions in the reference genome with that R-tuple, X
   int base2num[256];
@@ -204,7 +206,7 @@ int main(int ac,char**av){
   last=!std::getline(std::cin,header);linenum++;
   while(!last){// Main loop
     string id=parseheader(header);
-    if(done.count(id)||id==""||id2date.count(id)==0){
+    if(id==""||done.count(id)||(datadir!=""&&id2date.count(id)==0)){
       // Skip genome we already have, or one for which the date isn't known
       while(1){
         last=!std::getline(std::cin,header);linenum++;
@@ -214,7 +216,8 @@ int main(int ac,char**av){
       }
       continue;
     }
-    string date=id2date[id];
+    string date;
+    if(datadir!="")date=id2date[id];
     done.insert(id);
     int M=0;// Length of genome;
     while(1){
@@ -314,23 +317,43 @@ int main(int ac,char**av){
     header=line;// Next header is the last-read line
     switch(compression){
     case 0:
-      fprintf(fp,"%s|%s\n",id.c_str(),date.c_str());
-      fprintf(fp,"%s\n",out);
+      fprintf(fp,"%s",id.c_str());
+      if(date!="")fprintf(fp,"|%s",date.c_str());
+      fprintf(fp,"\n%s\n",out);
       break;
     case 1:
-      fprintf(fp,"%s|C%d\n",id.c_str(),compression);
+      fprintf(fp,"%s|C%d",id.c_str(),compression);
       for(i=0;i<N;i++){
         int j;
         if(out[i]==refgenome[i])continue;
         // Output in count-from-1 notation
         if(out[i]=='N'||out[i]=='-'){
           for(j=i;j<N&&out[j]==out[i];j++);
-          fprintf(fp,"%d-%d %c\n",i+1,j,out[i]);
+          fprintf(fp,"|%d-%d%c",i+1,j,out[i]);
           i=j;
         }else{
-          fprintf(fp,"%d %c\n",i+1,out[i]);
+          fprintf(fp,"|%d%c",i+1,out[i]);
         }
       }
+      fprintf(fp,"\n");
+      break;
+    case 2:
+      fprintf(fp,"%s|C%d|",id.c_str(),compression);
+      int p;
+      p=0;
+      for(i=0;i<N;i++){
+        int j;
+        if(out[i]==refgenome[i])continue;
+        if(out[i]=='N'||out[i]=='-'){
+          for(j=i;j<N&&out[j]==out[i];j++);
+          fprintf(fp,"%d+%d%c",i-p,j-i,out[i]);
+          p=i=j;
+        }else{
+          fprintf(fp,"%d%c",i-p,out[i]);
+          p=i+1;
+        }
+      }
+      fprintf(fp,"\n");
       break;
     default:
       error(1,0,"Unknown compression type %d\n",compression);
