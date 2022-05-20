@@ -289,12 +289,13 @@ int main(int ac,char**av){
       for(i=0;i<N;i++){
         int j;
         if(out[i]==refgenome[i])continue;
+        // Output in count-from-1 notation
         if(out[i]=='N'||out[i]=='-'){
           for(j=i;j<N&&out[j]==out[i];j++);
-          fprintf(fp,"%d-%d %c\n",i,j-1,out[i]);
+          fprintf(fp,"%d-%d %c\n",i+1,j,out[i]);
           i=j;
         }else{
-          fprintf(fp,"%d %c\n",i,out[i]);
+          fprintf(fp,"%d %c\n",i+1,out[i]);
         }
       }
       break;
