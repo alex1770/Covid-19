@@ -145,7 +145,7 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -x<string> Data directory\n");
-    fprintf(stderr,"       -c<int>    Compression mode (0=default=standard fasta=uncompressed ACGT)\n");
+    fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
     exit(1);
   }
 
@@ -175,8 +175,11 @@ int main(int ac,char**av){
     assert(N<=MAXGS);
   }
 
+  fprintf(stderr,"Loading metadata\n");
+  cog2date=csv2map("cog_metadata.csv",",","sequence_name","sample_date");
+  fprintf(stderr,"Read %lu entries from COG-UK\n",cog2date.size());
   id2date=csv2map("metadata.tsv","\t","Virus name","Collection date");
-  cog2date=csv2map("cog_metadata.csv",",","sequence name","sample_date");
+  fprintf(stderr,"Read %lu entries from GISAID\n",id2date.size());
   for(auto &m:cog2date)id2date[m.first]=m.second;
 
   // refdict[R-tuple of bases, X] = list of positions in the reference genome with that R-tuple, X
@@ -199,7 +202,7 @@ int main(int ac,char**av){
   string header,line;
   UC genome[MAXGS];
   last=!std::getline(std::cin,header);linenum++;
-  while(!last){
+  while(!last){// Main loop
     string id=parseheader(header);
     if(done.count(id)||id==""||id2date.count(id)==0){
       // Skip genome we already have, or one for which the date isn't known
@@ -308,13 +311,14 @@ int main(int ac,char**av){
 
     FILE*fp;
     if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
-    if(compression>0)fprintf(fp,"%s|C%d\n",id.c_str(),compression); else fprintf(fp,"%s\n",id.c_str());
     header=line;// Next header is the last-read line
     switch(compression){
     case 0:
+      fprintf(fp,"%s|%s\n",id.c_str(),date.c_str());
       fprintf(fp,"%s\n",out);
       break;
     case 1:
+      fprintf(fp,"%s|C%d\n",id.c_str(),compression);
       for(i=0;i<N;i++){
         int j;
         if(out[i]==refgenome[i])continue;
