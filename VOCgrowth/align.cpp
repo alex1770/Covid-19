@@ -15,14 +15,16 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
-#include <set>
 #include <tuple>
 #include <algorithm>
+#include <unordered_set>
+#include <unordered_map>
 using std::string;
 using std::pair;
 using std::tie;
 using std::vector;
-using std::set;
+using std::unordered_set;
+using std::unordered_map;
 
 typedef unsigned char UC;
 typedef unsigned int UI;
@@ -68,41 +70,65 @@ vector<string> split(string in,string sep=" \r\t\n\f\v"){
   }
 }
 
+string getid(string gisaidname){
+  vector<string> ida=split(gisaidname,"/");
+  int n=ida.size();
+  if(n>=3)return ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
+  return "";
+}
+
 // Take an input like this
 // (GISAID style, unknown date)  >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
 // (GISAID style, known date)    >hCoV-19/Austria/CeMM11657/2021|2021-06-14|2021-07-01
 // (GISAID style, extra prefix)  >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
 // (COG-UK style, no date)       >England/PHEC-YYF8DBE/2022
-// and return (ID,sample date), e.g.,
-// ("England/PHEC-L303L83F/2021","2021-06-30"), or "" means not available
-pair<string,string> parseheader(string &header){
+// and extract the ID, e.g., "England/PHEC-L303L83F/2021" or "Austria/CeMM11657/2021". "" means not available
+string parseheader(string &header){
   assert(header.size()>0&&header[0]=='>');
   vector<string> hs=split(header,">|");
-  string id,date;
-  if(hs.size()>0){
-    vector<string> ida=split(hs[0],"/");
-    int n=ida.size();
-    if(n>=3)id=ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
-    if(hs.size()>=2&&hs[1].size()==10&&hs[1][0]=='2'&&hs[1][1]=='0')date=hs[1];
-  }
-  return {id,date};
+  if(hs.size()>0)return getid(hs[0]);
+  return "";
 }
 
-void readheaders(string &dir,vector<pair<string,string>>&index){
+// index file format:
+// Space-separated. No spaces within fields (converted to _).
+// date ID provisionallineage location
+unordered_set<string> readheaders(string dir){
+  unordered_set<string> done;
   string fname=dir+"/index";
   std::ifstream fp(fname);// Use read-lock
-  if(fp.fail())return;
+  if(fp.fail())return done;
   string l;
-  while(std::getline(fp,l))index.push_back({l.substr(0,10),l.substr(11)});
+  while(std::getline(fp,l)){
+    vector<string> ll=split(l);
+    done.insert(ll[1]);
+  }
   fp.close();
-  int n=index.size();
+  int n=done.size();
   printf("Read %d genome ID%s from %s\n",n,n==1?"":"s",fname.c_str());
+  return done;
 }
 
-void writeheaders(string &dir,vector<pair<string,string>>&index){
-  std::ofstream fp(dir+"/index");// Use write-lock
-  for(auto &ind:index)fp<<ind.first<<" "<<ind.second<<"\n";
+unordered_map<string,string> csv2map(string fn,string sep,string id,string date){
+  unordered_map<string,string> ret;
+  std::ifstream fp(fn);
+  if(fp.fail())error(1,errno,"Couldn't open %s",fn.c_str());
+  string header;
+  std::getline(fp,header);
+  vector<string> headers=split(header,sep);
+  int idcol=-1,datecol=-1;
+  for(UI i=0;i<headers.size();i++){
+    if(headers[i]==id)idcol=i;
+    if(headers[i]==date)datecol=i;
+  }
+  assert(idcol>=0&&datecol>=0);
+  string line;
+  while(std::getline(fp,line)){
+    vector<string> data=split(line,sep);
+    ret[getid(data[idcol])]=data[datecol];
+  }
   fp.close();
+  return ret;
 }
 
 int main(int ac,char**av){
@@ -125,17 +151,14 @@ int main(int ac,char**av){
 
   // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
+
+  unordered_map<string,string> id2date,cog2date;
   
   vector<pair<string,string>> index;
-  set<string> done;
+  unordered_set<string> done;
   if(datadir!=""){
     mkdir(datadir.c_str(),0777);
-    readheaders(datadir,index);
-    string id,date;
-    for(auto &ind:index){
-      tie(id,date)=parseheader(ind.second);
-      done.insert(id);
-    }
+    done=readheaders(datadir);
   }
   
   int i,t;
@@ -152,6 +175,11 @@ int main(int ac,char**av){
     assert(N<=MAXGS);
   }
 
+  id2date=csv2map("metadata.tsv","\t","Virus name","Collection date");
+  cog2date=csv2map("cog_metadata.csv",",","sequence name","sample_date");
+  for(auto &m:cog2date)id2date[m.first]=m.second;
+
+  // refdict[R-tuple of bases, X] = list of positions in the reference genome with that R-tuple, X
   int base2num[256];
   for(i=0;i<256;i++)base2num[i]=-1;
   base2num['A']=base2num['a']=0;
@@ -172,9 +200,8 @@ int main(int ac,char**av){
   UC genome[MAXGS];
   last=!std::getline(std::cin,header);linenum++;
   while(!last){
-    string id,date;
-    tie(id,date)=parseheader(header);
-    if(done.count(id)||date==""){
+    string id=parseheader(header);
+    if(done.count(id)||id==""||id2date.count(id)==0){
       // Skip genome we already have, or one for which the date isn't known
       while(1){
         last=!std::getline(std::cin,header);linenum++;
@@ -184,7 +211,7 @@ int main(int ac,char**av){
       }
       continue;
     }
-    index.push_back({date,header});
+    string date=id2date[id];
     done.insert(id);
     int M=0;// Length of genome;
     while(1){
@@ -197,6 +224,8 @@ int main(int ac,char**av){
     }
     
     // Offset = (index in ref genome) - (index in current genome)
+    // offsetcount[MAXGS+offset] = number of possible uses of this offset (assuming any R-tuple in genome can match same R-tuple anywhere in reference genome)
+    // indexkey[i] = R-tuple of bases at position i in the current genome
     UC offsetcount[MAXGS*2]={0};
     int indexkey[MAXGS]={0};
     int badi=-1;
@@ -213,9 +242,9 @@ int main(int ac,char**av){
         }
       }else if(i>=R-1)indexkey[i-(R-1)]=undefined;
     }
-    //if(!ok){fprintf(stderr,"Warning: Can't find offsets for genome at lines preceding %d\n",linenum);break;}
     //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]==MINOFFSETCOUNT)printf("Offset %d\n",o-MAXGS);
 
+    // Build two possible offsets, offsets[i][], to use at each position, i in the current genome.
     int pointoffset[MAXGS],offsets[MAXGS][2]={0};
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
@@ -237,7 +266,7 @@ int main(int ac,char**av){
       offsets[i+R-1][0]=nearest;
     }
 
-    // Dyn prog on two allowable offsets: offsets[i][]
+    // Dyn prog on the two allowable offsets: offsets[i][]
     int bp[MAXGS][2]={0};// Back pointers; bp[i][j] is defined if value is finite
     int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset offsets[i-1][j]
     for(i=0;i<M;i++){
@@ -279,7 +308,7 @@ int main(int ac,char**av){
 
     FILE*fp;
     if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
-    fprintf(fp,"%s|C%d\n",header.c_str(),compression);
+    if(compression>0)fprintf(fp,"%s|C%d\n",id.c_str(),compression); else fprintf(fp,"%s\n",id.c_str());
     header=line;// Next header is the last-read line
     switch(compression){
     case 0:
@@ -307,8 +336,6 @@ int main(int ac,char**av){
     nwrite++;
   }
   if(datadir!=""){
-    std::sort(index.begin(),index.end());
-    writeheaders(datadir,index);
     printf("Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
   }
   prtim();
