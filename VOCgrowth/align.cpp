@@ -256,7 +256,7 @@ int main(int ac,char**av){
               v=jumppen[abs(off-p)];
             }
             v+=st[j]+(i+off<0||i+off>=N||genome[i]!=refgenome[i+off]);
-            if(v<best){best=v;bestj=j;}
+            if(v<=best){best=v;bestj=j;}
           }
           newst[k]=best;
           bp[i][k]=bestj;
