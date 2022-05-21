@@ -52,7 +52,7 @@ void prtim(){
   double x=(ncpu[0]>0?tcpu[0]/ncpu[0]:0);
   for(i=1;i<MAXTIM;i++)if(ncpu[i]){
     double t=tcpu[i]-ncpu[i]*x;
-    printf("Time %2d: CPU %12gs / %12g = %12gus\n",i,t,ncpu[i],t/ncpu[i]*1e6);
+    fprintf(stderr,"Time %2d: CPU %12gs / %12g = %12gus\n",i,t,ncpu[i],t/ncpu[i]*1e6);
   }
 }
 
@@ -108,7 +108,7 @@ unordered_set<string> readIDs(string dir){
   }
   fp.close();
   int n=done.size();
-  printf("Read %d genome ID%s from %s\n",n,n==1?"":"s",fname.c_str());
+  fprintf(stderr,"Read %d genome ID%s from %s\n",n,n==1?"":"s",fname.c_str());
   return done;
 }
 
@@ -136,7 +136,7 @@ unordered_map<string,string> readmeta(string dir){
   }
   fp.close();
   int n=id2date.size();
-  printf("Read %d metadata entr%s from %s\n",n,n==1?"y":"ies",fname.c_str());
+  fprintf(stderr,"Read %d metadata entr%s from %s\n",n,n==1?"y":"ies",fname.c_str());
   return id2date;
 }
 
@@ -207,18 +207,19 @@ int main(int ac,char**av){
   string header,line;
   UC genome[MAXGS];
   last=!std::getline(std::cin,header);linenum++;
+  int skip[3]={0};
   while(!last){// Main loop
     string id=parseheader(header);
-    if(id==""||done.count(id)||(datadir!=""&&id2date.count(id)==0)){
-      // Skip genome we already have, or one for which the date isn't known
-      while(1){
-        last=!std::getline(std::cin,header);linenum++;
-        if(last)break;
-        int s=header.size();
-        if(s>0&&header[0]=='>')break;
-      }
-      continue;
+    if(id=="")skip[0]++; else if(done.count(id))skip[1]++; else if(datadir!=""&&id2date.count(id)==0)skip[2]++; else goto ok0;
+    // Skip genome we already have, or one for which the date isn't known
+    while(1){
+      last=!std::getline(std::cin,header);linenum++;
+      if(last)break;
+      int s=header.size();
+      if(s>0&&header[0]=='>')break;
     }
+    continue;
+  ok0:
     string date;
     if(datadir!="")date=id2date[id];
     done.insert(id);
@@ -251,7 +252,7 @@ int main(int ac,char**av){
         }
       }else if(i>=R-1)indexkey[i-(R-1)]=undefined;
     }
-    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]==MINOFFSETCOUNT)printf("Offset %d\n",o-MAXGS);
+    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]==MINOFFSETCOUNT)fprintf(stderr,"Offset %d\n",o-MAXGS);
 
     // Build two possible offsets, offsets[i][], to use at each position, i in the current genome.
     int pointoffset[MAXGS],offsets[MAXGS][2]={0};
@@ -365,8 +366,9 @@ int main(int ac,char**av){
     if(datadir!="")fclose(fp);
     nwrite++;
   }
-  if(datadir!=""){
-    printf("Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
-  }
+  fprintf(stderr,"Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
+  fprintf(stderr,"Skipped %d because ID could not be read\n",skip[0]);
+  fprintf(stderr,"Skipped %d because already stored\n",skip[1]);
+  fprintf(stderr,"Skipped %d because date was not available\n",skip[2]);
   prtim();
 }
