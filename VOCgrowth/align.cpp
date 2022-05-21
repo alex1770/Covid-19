@@ -93,23 +93,30 @@ string parseheader(string &header){
   return "";
 }
 
-// IDs_present file format:
-// Space-separated. No spaces within fields.
-// date ID
+// IDs_present file format - just a simple list of IDs
 unordered_set<string> readIDs(string dir){
   unordered_set<string> done;
   string fname=dir+"/IDs_present";
   std::ifstream fp(fname);// Use read-lock
   if(fp.fail())return done;
   string l;
-  while(std::getline(fp,l)){
-    vector<string> ll=split(l);
-    done.insert(ll[1]);
-  }
+  while(std::getline(fp,l))done.insert(l);
   fp.close();
   int n=done.size();
   fprintf(stderr,"Read %d genome ID%s from %s\n",n,n==1?"":"s",fname.c_str());
   return done;
+}
+
+// IDs_present file format - just a simple list of IDs
+void writeIDs(string dir,unordered_set<string> done){
+  string fname=dir+"/IDs_present";
+  std::ofstream fp(fname);// Use write-lock
+  if(fp.fail()){fprintf(stderr,"Couldn't write %s\n",fname.c_str());return;}
+  vector<string> vs;
+  for(const string &s:done)vs.push_back(s);
+  std::sort(vs.begin(),vs.end());
+  for(string &s:vs)fp<<s<<"\n";
+  fp.close();
 }
 
 // metadata file format:
@@ -366,6 +373,7 @@ int main(int ac,char**av){
     if(datadir!="")fclose(fp);
     nwrite++;
   }
+  if(datadir!="")writeIDs(datadir,done);
   fprintf(stderr,"Wrote %d new genome%s\n",nwrite,nwrite==1?"":"s");
   fprintf(stderr,"Skipped %d because ID could not be read\n",skip[0]);
   fprintf(stderr,"Skipped %d because already stored\n",skip[1]);
