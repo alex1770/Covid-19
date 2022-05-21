@@ -10,7 +10,6 @@
 #include <error.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <ftw.h>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -58,15 +57,19 @@ void prtim(){
 }
 
 // Split string into a sequence of substrings using any character from sep (default whitespace) as a separator.
-vector<string> split(string in,string sep=" \r\t\n\f\v"){
-  size_t i,j,p=0;
+vector<string> split(string in,string sep=" \r\t\n\f\v",bool ignoreempty=false,size_t startpos=0){
+  size_t i,j=startpos;
   vector<string> rv;
+  // Imagine separators at -1 and n; j points to 1 after the previous separator
   while(1){
-    i=in.find_first_not_of(sep,p);if(i==string::npos)i=in.size();
+    if(ignoreempty){
+      i=in.find_first_not_of(sep,j);
+      if(i==string::npos)return rv;
+    }else i=j;
     j=in.find_first_of(sep,i);if(j==string::npos)j=in.size();
-    if(i==j)return rv;
     rv.push_back(in.substr(i,j-i));
-    p=j;
+    if(j==in.size())return rv;
+    j++;
   }
 }
 
@@ -85,7 +88,7 @@ string getid(string gisaidname){
 // and extract the ID, e.g., "England/PHEC-L303L83F/2021" or "Austria/CeMM11657/2021". "" means not available
 string parseheader(string &header){
   assert(header.size()>0&&header[0]=='>');
-  vector<string> hs=split(header,">|");
+  vector<string> hs=split(header,"|",false,1);
   if(hs.size()>0)return getid(hs[0]);
   return "";
 }
@@ -124,7 +127,7 @@ unordered_map<string,string> readmeta(string dir){
   int idcol=-1,datecol=-1;
   for(UI i=0;i<headers.size();i++){
     if(headers[i]=="ID")idcol=i;
-    if(headers[i]=="sample_date")datecol=i;
+    if(headers[i]=="date")datecol=i;
   }
   assert(idcol>=0&&datecol>=0);
   while(std::getline(fp,l)){
