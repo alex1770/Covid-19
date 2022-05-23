@@ -188,7 +188,7 @@ int main(int ac,char**av){
     const char*reffn="refgenome";
     std::ifstream fp(reffn);
     if(fp.fail())error(1,errno,"\nCouldn't open %s",reffn);
-    std::getline(fp,refgenome);
+    while(std::getline(fp,refgenome))if(refgenome.size()>0&&refgenome[0]!='>')break;
     fp.close();
     N=refgenome.size();
     assert(N<=MAXGS);
@@ -201,9 +201,12 @@ int main(int ac,char**av){
   base2num['C']=base2num['c']=1;
   base2num['G']=base2num['g']=2;
   base2num['T']=base2num['t']=3;
+  int badi=-1;
   for(i=0,t=0;i<N;i++){
-    t=t>>2|base2num[refgenome[i]&255]<<(R-1)*2;
-    if(i>=R-1&&t>=0&&t<(1<<R*2))refdict[t].push_back(i-(R-1));
+    int b=base2num[refgenome[i]&255];
+    if(b<0){badi=i;continue;}
+    t=t>>2|b<<(R-1)*2;
+    if(i>=badi+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(i-(R-1));}
   }
 
   int jumppen[MAXGS+1];
@@ -243,30 +246,31 @@ int main(int ac,char**av){
     // Offset = (index in ref genome) - (index in current genome)
     // offsetcount[MAXGS+offset] = number of possible uses of this offset (assuming any R-tuple in genome can match same R-tuple anywhere in reference genome)
     // indexkey[i] = R-tuple of bases at position i in the current genome
-    UC offsetcount[MAXGS*2]={0};
+    int offsetcount[MAXGS*2]={0};
     int indexkey[MAXGS]={0};
     int badi=-1;
     for(i=0,t=0;i<M;i++){
       int b=base2num[genome[i]];
       if(b<0){badi=i;continue;}
+      int j=i-(R-1);
       t=t>>2|b<<(R-1)*2;
-      if(i>=badi+R){
+      if(j>badi){
         assert(t>=0&&t<(1<<R*2));
-        indexkey[i-(R-1)]=t;
-        for(int x:refdict[t]){
-          int k=x-(i-(R-1));
-          if(offsetcount[MAXGS+k]<MINOFFSETCOUNT)offsetcount[MAXGS+k]++;
-        }
-      }else if(i>=R-1)indexkey[i-(R-1)]=undefined;
+        indexkey[j]=t;
+        for(int x:refdict[t])offsetcount[MAXGS+x-j]++;
+      }else if(i>=R-1)indexkey[j]=undefined;
     }
-    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]==MINOFFSETCOUNT)fprintf(stderr,"Offset %d\n",o-MAXGS);
+    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-MAXGS,offsetcount[o]);
 
     // Build two possible offsets, offsets[i][], to use at each position, i in the current genome.
     int pointoffset[MAXGS],offsets[MAXGS][2]={0};
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       pointoffset[i]=undefined;
-      if(t!=undefined)for(int x:refdict[t])if(offsetcount[MAXGS+x-i]>=MINOFFSETCOUNT)pointoffset[i]=x-i;
+      if(t!=undefined){
+        int best=MINOFFSETCOUNT-1;
+        for(int x:refdict[t])if(offsetcount[MAXGS+x-i]>best){best=offsetcount[MAXGS+x-i];pointoffset[i]=x-i;}
+      }
     }
     // Approach from right
     int nearest=undefined;
@@ -328,7 +332,7 @@ int main(int ac,char**av){
     header=line;// Next header is the last-read line
     switch(compression){
     case 0:
-      fprintf(fp,"%s",id.c_str());
+      fprintf(fp,">%s",id.c_str());
       if(date!="")fprintf(fp,"|%s",date.c_str());
       fprintf(fp,"\n%s\n",out);
       break;
