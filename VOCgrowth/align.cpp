@@ -180,7 +180,7 @@ int main(int ac,char**av){
     id2date=readmeta(datadir);
   }
   
-  int i,t;
+  int i,j,t;
   
   string refgenome;
   int N;
@@ -188,7 +188,7 @@ int main(int ac,char**av){
     const char*reffn="refgenome";
     std::ifstream fp(reffn);
     if(fp.fail())error(1,errno,"\nCouldn't open %s",reffn);
-    while(std::getline(fp,refgenome))if(refgenome.size()>0&&refgenome[0]!='>')break;
+    while(std::getline(fp,refgenome))if(refgenome.size()>0&&refgenome[0]!='>')break;      
     fp.close();
     N=refgenome.size();
     assert(N<=MAXGS);
@@ -263,53 +263,54 @@ int main(int ac,char**av){
     //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-MAXGS,offsetcount[o]);
 
     // Build two possible offsets, offsets[i][], to use at each position, i in the current genome.
-    int pointoffset[MAXGS],offsets[MAXGS][2]={0};
+    int pointoffset[MAXGS],best[MAXGS]={0},offsets[MAXGS][2]={0};
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
-      pointoffset[i]=undefined;
       if(t!=undefined){
-        int best=MINOFFSETCOUNT-1;
-        for(int x:refdict[t])if(offsetcount[MAXGS+x-i]>best){best=offsetcount[MAXGS+x-i];pointoffset[i]=x-i;}
+        for(int j:refdict[t])if(offsetcount[MAXGS+j-i]>best[j]){best[j]=offsetcount[MAXGS+j-i];pointoffset[j]=j-i;}
       }
     }
+    //for(i=0;i<=M-R;i++)fprintf(stderr,"%6d %10d\n",i,pointoffset[i]);
     // Approach from right
     int nearest=undefined;
-    for(i=M-1;i>M-R;i--)offsets[i][1]=undefined;
-    for(i=M-R;i>=0;i--){
-      if(pointoffset[i]!=undefined)nearest=pointoffset[i];
-      offsets[i][1]=nearest;
+    for(j=N-1;j>N-R;j--)offsets[j][1]=undefined;
+    for(j=N-R;j>=0;j--){
+      if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
+      offsets[j][1]=nearest;
     }
     // Approach from left
     nearest=undefined;
-    for(i=0;i<R-1;i++)offsets[i][0]=undefined;
-    for(i=0;i<=M-R;i++){
-      if(pointoffset[i]!=undefined)nearest=pointoffset[i];
-      offsets[i+R-1][0]=nearest;
+    for(j=0;j<R-1;j++)offsets[j][0]=undefined;
+    for(j=0;j<=N-R;j++){
+      if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
+      offsets[j+R-1][0]=nearest;
     }
+    //for(i=0;i<M;i++)fprintf(stderr,"%6d %10d %10d\n",i,offsets[i][0],offsets[i][1]);
 
     // Dyn prog on the two allowable offsets: offsets[i][]
     int bp[MAXGS][2]={0};// Back pointers; bp[i][j] is defined if value is finite
     int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset offsets[i-1][j]
-    for(i=0;i<M;i++){
-      // Transition j -> k,  j=prev offset index, k=current offset index
-      int k,newst[2]={infinity,infinity};
-      for(k=0;k<2;k++){
-        int j;
-        int off=offsets[i][k];
+    for(j=0;j<N;j++){
+      // Transition x -> y,  x=prev offset index, y=current offset index
+      int y,newst[2]={infinity,infinity};
+      for(y=0;y<2;y++){
+        int x;
+        int off=offsets[j][y];
         if(off!=undefined){
-          int best=infinity,bestj=0;
-          for(j=0;j<2;j++){
+          int best=infinity,bestx=0;
+          for(x=0;x<2;x++){
             int v=0;
-            if(i>0){// Initial jump is free
-              int p=offsets[i-1][j];
+            if(j>0){// Initial jump is free
+              int p=offsets[j-1][x];
               if(p==undefined)continue;
               v=jumppen[abs(off-p)];
             }
-            v+=st[j]+(i+off<0||i+off>=N||genome[i]!=refgenome[i+off]);
-            if(v<=best){best=v;bestj=j;}
+            i=j-off;
+            v+=st[x]+(i<0||i>=M||refgenome[j]!=genome[i]);
+            if(v<=best){best=v;bestx=x;}
           }
-          newst[k]=best;
-          bp[i][k]=bestj;
+          newst[y]=best;
+          bp[j][y]=bestx;
         }
       }
       st[0]=newst[0];
@@ -321,10 +322,18 @@ int main(int ac,char**av){
     memset(out,'-',N);
     out[N]=0;
     int s=(st[1]<st[0]);
-    for(i=M-1;i>=0;i--){
-      int o=offsets[i][s];
-      if(o!=undefined&&i+o>=0&&i+o<N)out[i+o]=genome[i];
-      s=bp[i][s];
+    //fprintf(stderr,"Score %d\n",st[s]);
+    int prj=N-1;
+    for(j=N-1;j>=0;j--){
+      int o=offsets[j][s];
+      int i=j-o;
+      //fprintf(stderr,"%6d (%10d %10d) %10d  %6d\n",j,offsets[j][0],offsets[j][1],o,i);
+      if(o!=undefined&&i>=0&&i<M)out[j]=genome[i];
+      s=bp[j][s];
+      if(0)if(j==0||(offsets[j-1][s]!=undefined&&offsets[j-1][s]!=o)){
+        fprintf(stderr,"%6d - %6d   %10d -->  %6d - %6d\n",j,prj,o,j-o,prj-o);
+        prj=j-1;
+      }
     }
 
     FILE*fp;
