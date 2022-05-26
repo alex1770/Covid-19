@@ -1,5 +1,4 @@
 // Aligns SARS-CoV-2 fasta files to reference genome Wuhan-Hu-1
-// Todo: handle files with \r\n lines?
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,12 +15,14 @@
 #include <iostream>
 #include <tuple>
 #include <algorithm>
+#include <set>
 #include <unordered_set>
 #include <unordered_map>
 using std::string;
 using std::pair;
 using std::tie;
 using std::vector;
+using std::set;
 using std::unordered_set;
 using std::unordered_map;
 
@@ -33,10 +34,12 @@ typedef unsigned int UI;
 vector<int> refdict[1<<R*2];
 
 // Maximum number of bases
-#define MAXGS 40000
+#define MAXGS 250000 // 40000 // alter
 
 // Count threshold for offsets
 #define MINOFFSETCOUNT 20
+
+#define MAXSLIPPAGE 5
 
 const int undefined=0x7fffffff;
 const int infinity=1000000000;
@@ -74,6 +77,7 @@ vector<string> split(string in,string sep=" \r\t\n\f\v",bool ignoreempty=false,s
 }
 
 string getid(string gisaidname){
+  //  return gisaidname;// alter
   vector<string> ida=split(gisaidname,"/");
   int n=ida.size();
   if(n>=3)return ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
@@ -219,6 +223,7 @@ int main(int ac,char**av){
   last=!std::getline(std::cin,header);linenum++;
   int skip[3]={0};
   while(!last){// Main loop
+    tick(1);
     string id=parseheader(header);
     if(id=="")skip[0]++; else if(done.count(id))skip[1]++; else if(datadir!=""&&id2date.count(id)==0)skip[2]++; else goto ok0;
     // Skip genome we already have, or one for which the date isn't known
@@ -228,8 +233,11 @@ int main(int ac,char**av){
       int s=header.size();
       if(s>0&&header[0]=='>')break;
     }
+    tock(1);
     continue;
   ok0:
+    tock(1);
+    tick(2);
     string date;
     if(datadir!="")date=id2date[id];
     done.insert(id);
@@ -242,13 +250,15 @@ int main(int ac,char**av){
       if(M+s>MAXGS){fprintf(stderr,"Warning: Overlong genome at line %d\n",linenum);continue;}
       memcpy(genome+M,&line[0],s);M+=s;
     }
+    tock(2);
     
-    // Offset = (index in ref genome) - (index in current genome)
+    // Offset = (index in ref genome) - (index in current genome) = j-i
     // offsetcount[MAXGS+offset] = number of possible uses of this offset (assuming any R-tuple in genome can match same R-tuple anywhere in reference genome)
     // indexkey[i] = R-tuple of bases at position i in the current genome
     int offsetcount[MAXGS*2]={0};
     int indexkey[MAXGS]={0};
     int badi=-1;
+    tick(3);
     for(i=0,t=0;i<M;i++){
       int b=base2num[genome[i]];
       if(b<0){badi=i;continue;}
@@ -260,53 +270,165 @@ int main(int ac,char**av){
         for(int x:refdict[t])offsetcount[MAXGS+x-j]++;
       }else if(i>=R-1)indexkey[j]=undefined;
     }
-    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-MAXGS,offsetcount[o]);
+    for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-MAXGS,offsetcount[o]);
+    tock(3);
 
-    // Build two possible offsets, offsets[i][], to use at each position, i in the current genome.
-    int pointoffset[MAXGS],best[MAXGS]={0},offsets[MAXGS][2]={0};
+    tick(4);
+    int pointoffset_i[MAXGS],pointoffset[MAXGS],best[MAXGS]={0};
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
+      pointoffset_i[i]=undefined;
       if(t!=undefined){
-        for(int j:refdict[t])if(offsetcount[MAXGS+j-i]>best[j]){best[j]=offsetcount[MAXGS+j-i];pointoffset[j]=j-i;}
+        int best_i=MINOFFSETCOUNT-1;
+        for(int j:refdict[t]){
+          int c=offsetcount[MAXGS+j-i];
+          if(c>best[j]){best[j]=c;pointoffset[j]=j-i;}
+          if(c>best_i){best_i=c;pointoffset_i[i]=j-i;}
+        }
       }
     }
-    //for(i=0;i<=M-R;i++)fprintf(stderr,"%6d %10d\n",i,pointoffset[i]);
+    tock(4);
+    tick(5);
+    // Build up to 4 possible offsets, offsets_i[i][0,1], offsets_j[j][0,1], to use at each position (i in the current genome, j in ref)
+    // offsets_i[][] works well for deletions
+    // offsets_j[][] works well for insertions
+    int offsets_i[MAXGS][2],offsets_j[MAXGS][2];
     // Approach from right
     int nearest=undefined;
-    for(j=N-1;j>N-R;j--)offsets[j][1]=undefined;
+    for(i=M-1;i>M-R;i--)offsets_i[i][1]=undefined;
+    for(i=M-R;i>=0;i--){
+      if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
+      if(nearest!=undefined)offsets_i[i][1]=i+nearest; else offsets_i[i][1]=undefined;
+    }
+    nearest=undefined;
+    for(j=N-1;j>N-R;j--)offsets_j[j][1]=undefined;
     for(j=N-R;j>=0;j--){
       if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
-      offsets[j][1]=nearest;
+      if(nearest!=undefined)offsets_j[j][1]=j-nearest; else offsets_j[j][1]=undefined;
     }
     // Approach from left
     nearest=undefined;
-    for(j=0;j<R-1;j++)offsets[j][0]=undefined;
+    for(i=0;i<R-1;i++)offsets_i[i][0]=undefined;
+    for(i=0;i<=M-R;i++){
+      if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
+      if(nearest!=undefined)offsets_i[i+R-1][0]=i+R-1+nearest; else offsets_i[i+R-1][0]=undefined;
+    }
+    nearest=undefined;
+    for(j=0;j<R-1;j++)offsets_j[j][0]=undefined;
     for(j=0;j<=N-R;j++){
       if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
-      offsets[j+R-1][0]=nearest;
+      if(nearest!=undefined)offsets_j[j+R-1][0]=j+R-1-nearest; else offsets_j[j+R-1][0]=undefined;
     }
-    //for(i=0;i<M;i++)fprintf(stderr,"%6d %10d %10d\n",i,offsets[i][0],offsets[i][1]);
+    tock(5);
 
-    // Dyn prog on the two allowable offsets: offsets[i][]
+    /*
+    for(j=27500;j<N;j++){
+      fprintf(stderr,"%6d |",j);
+      if(best[j]>=MINOFFSETCOUNT)fprintf(stderr," %10d %6d |",pointoffset[j],best[j]); else fprintf(stderr," ---------- %6d |",best[j]);
+      int y;
+      for(y=0;y<2;y++){
+        i=offsets_j[j][y];
+        fprintf(stderr," %10d %s",i,i>=0&&i<M&&genome[i]==refgenome[j]?"*":".");
+      }
+      fprintf(stderr,"\n");
+    }
+    exit(0);
+    */
+    
+    /*
+    for(j=0;j<N;j++){
+      fprintf(stderr,"%6d |",j);
+      int y;
+      for(y=0;y<2;y++){
+        i=offsets_j[j][y];
+        //fprintf(stderr," *%d",off);
+        if(i!=undefined){
+          fprintf(stderr," %6d %6d |",i,j);
+          if(i>=0&&i<M){
+            int x;
+            for(x=0;x<2;x++){
+              int j_i=offsets_i[i][x];
+              fprintf(stderr," %6d %6d |",i,j_i);
+            }
+          }
+        }
+      }
+      fprintf(stderr,"\n");
+    }
+    exit(0);
+    */
+    /*
+    for(i=0;i<M;i++){
+      int y;
+      for(y=0;y<2;y++){
+        j=offsets_i[i][y];
+        if(j!=undefined&&(y==0||j!=offsets_i[i][y-1])){
+          if(j>=0&&j<N){
+            int uniq=1;
+            int x;
+            for(x=0;x<2;x++){
+              int i_j=offsets_j[j][x];
+              if(i_j!=undefined){
+                if(i==i_j)uniq=0;
+              }
+            }
+            if(uniq)fprintf(stderr,"UUU %6d %6d\n",i,j);
+          }
+        }
+      }
+    }
+    exit(0);
+    */
+
+    /*
+    int count[MAXGS]={0};
+    for(j=0;j<N;j++){
+      int y;
+      for(y=0;y<2;y++){
+        i=offsets_j[j][y];
+        if(i!=undefined&&(y==0||i!=offsets_j[j][y-1])){
+          if(i>=0&&i<M){
+            int uniq=1;
+            int x;
+            for(x=0;x<2;x++){
+              int j_i=offsets_i[i][x];
+              if(j_i!=undefined){
+                if(j==j_i)uniq=0;
+              }
+            }
+            if(uniq){
+              count[i]++;
+              fprintf(stderr,"UUU %6d %6d\n",i,j);
+            }
+          }
+        }
+      }
+    }
+    for(i=0;i<M;i++)if(count[i]!=0)fprintf(stderr,"CCC %6d %6d\n",i,count[i]);
+    exit(0);
+    */
+    
+    tick(6);
+    // Dyn prog on the two allowable offsets: offsets_j[i][]
     int bp[MAXGS][2]={0};// Back pointers; bp[i][j] is defined if value is finite
-    int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset offsets[i-1][j]
+    int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset offsets_j[i-1][j]
     for(j=0;j<N;j++){
       // Transition x -> y,  x=prev offset index, y=current offset index
       int y,newst[2]={infinity,infinity};
       for(y=0;y<2;y++){
         int x;
-        int off=offsets[j][y];
-        if(off!=undefined){
+        i=offsets_j[j][y];
+        if(i!=undefined){
           int best=infinity,bestx=0;
           for(x=0;x<2;x++){
+            int i0=-1;
             int v=0;
             if(j>0){// Initial jump is free
-              int p=offsets[j-1][x];
-              if(p==undefined)continue;
-              v=jumppen[abs(off-p)];
+              i0=offsets_j[j-1][x];
+              if(i0==undefined)continue;
+              v=jumppen[abs(i-1-i0)];
             }
-            i=j-off;
-            v+=st[x]+(i<0||i>=M||refgenome[j]!=genome[i]);
+            v+=st[x]+(i0>=i||i<0||i>=M||refgenome[j]!=genome[i]);
             if(v<=best){best=v;bestx=x;}
           }
           newst[y]=best;
@@ -315,27 +437,35 @@ int main(int ac,char**av){
       }
       st[0]=newst[0];
       st[1]=newst[1];
+      //fprintf(stderr,"%6d | %10d %10d %d %10d | %10d %10d %d %10d\n",j,offsets_j[j][0],j-offsets_j[j][0],bp[j][0],st[0],offsets_j[j][1],j-offsets_j[j][1],bp[j][1],st[1]);
     }
+    tock(6);
 
+    tick(7);
     // Write aligned genome, out[]
     UC out[MAXGS+1];
     memset(out,'-',N);
     out[N]=0;
     int s=(st[1]<st[0]);
     //fprintf(stderr,"Score %d\n",st[s]);
-    int prj=N-1;
+    int pri=M,prj=N-1;
     for(j=N-1;j>=0;j--){
-      int o=offsets[j][s];
-      int i=j-o;
-      //fprintf(stderr,"%6d (%10d %10d) %10d  %6d\n",j,offsets[j][0],offsets[j][1],o,i);
-      if(o!=undefined&&i>=0&&i<M)out[j]=genome[i];
+      i=offsets_j[j][s];
+      //fprintf(stderr,"%6d (%10d %10d) %10d  %6d\n",j,offsets_j[j][0],offsets_j[j][1],o,i);
+      assert(i!=undefined);
+      //fprintf(stderr,"%6d %6d %6d %s %s\n",j,i,j-i,i>=0&&i<M&&refgenome[j]==genome[i]?"*":".",i!=undefined&&i>=0&&i<pri?"U":".");
+      if(i!=undefined&&i>=0&&i<pri){
+        out[j]=genome[i];pri=i;
+      }
       s=bp[j][s];
-      if(0)if(j==0||(offsets[j-1][s]!=undefined&&offsets[j-1][s]!=o)){
-        fprintf(stderr,"%6d - %6d   %10d -->  %6d - %6d\n",j,prj,o,j-o,prj-o);
+      if(0)if(j==0||(offsets_j[j-1][s]!=undefined&&offsets_j[j-1][s]+1!=i)){
+        fprintf(stderr,"%6d - %6d   %10d -->  %6d - %6d\n",j,prj,j-i,i,prj-(j-i));
         prj=j-1;
       }
     }
-
+    tock(7);
+    
+    tick(8);
     FILE*fp;
     if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
     header=line;// Next header is the last-read line
@@ -384,6 +514,7 @@ int main(int ac,char**av){
     }
       
     if(datadir!="")fclose(fp);
+    tock(8);
     nwrite++;
   }
   if(datadir!="")writeIDs(datadir,done);
