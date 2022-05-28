@@ -214,7 +214,7 @@ int main(int ac,char**av){
   int jumppen[MAXGS+1];
   for(t=0;t<=MAXGS;t++)jumppen[t]=int(floor(sqrt(t)+1e-6));
 
-  vector<int> j_to_num_i(N), j_to_ind_i(N), list_i;
+  vector<int> j2num_i(N), j2ind_i(N), list_i;
 
   int linenum=0,nwrite=0;
   bool last;
@@ -290,41 +290,41 @@ int main(int ac,char**av){
     }
     tock(4);
     tick(5);
-    // Build up to 4 possible offsets, i_to_j[i][0,1], j_to_i[j][0,1], to use at each position (i in the current genome, j in ref)
-    // i_to_j[][] works well for deletions
-    // j_to_i[][] works well for insertions
-    int i_to_j[MAXGS][2],j_to_i[MAXGS][2];
+    // Build up to 4 possible offsets, i2j[i][0,1], j2i[j][0,1], to use at each position (i in the current genome, j in ref)
+    // i2j[][] works well for deletions
+    // j2i[][] works well for insertions
+    int i2j[MAXGS][2],j2i[MAXGS][2];
     // Approach from right
     int nearest=undefined;
-    for(i=M-1;i>M-R;i--)i_to_j[i][1]=undefined;
+    for(i=M-1;i>M-R;i--)i2j[i][1]=undefined;
     for(i=M-R;i>=0;i--){
       if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
-      if(nearest!=undefined)i_to_j[i][1]=i+nearest; else i_to_j[i][1]=undefined;
+      if(nearest!=undefined)i2j[i][1]=i+nearest; else i2j[i][1]=undefined;
     }
     nearest=undefined;
-    for(j=N-1;j>N-R;j--)j_to_i[j][1]=undefined;
+    for(j=N-1;j>N-R;j--)j2i[j][1]=undefined;
     for(j=N-R;j>=0;j--){
       if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
-      if(nearest!=undefined)j_to_i[j][1]=j-nearest; else j_to_i[j][1]=undefined;
+      if(nearest!=undefined)j2i[j][1]=j-nearest; else j2i[j][1]=undefined;
     }
     // Approach from left
     nearest=undefined;
-    for(i=0;i<R-1;i++)i_to_j[i][0]=undefined;
+    for(i=0;i<R-1;i++)i2j[i][0]=undefined;
     for(i=0;i<=M-R;i++){
       if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
-      if(nearest!=undefined)i_to_j[i+R-1][0]=i+R-1+nearest; else i_to_j[i+R-1][0]=undefined;
+      if(nearest!=undefined)i2j[i+R-1][0]=i+R-1+nearest; else i2j[i+R-1][0]=undefined;
     }
     nearest=undefined;
-    for(j=0;j<R-1;j++)j_to_i[j][0]=undefined;
+    for(j=0;j<R-1;j++)j2i[j][0]=undefined;
     for(j=0;j<=N-R;j++){
       if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
-      if(nearest!=undefined)j_to_i[j+R-1][0]=j+R-1-nearest; else j_to_i[j+R-1][0]=undefined;
+      if(nearest!=undefined)j2i[j+R-1][0]=j+R-1-nearest; else j2i[j+R-1][0]=undefined;
     }
     tock(5);
 
     /*
-    for(i=0;i<M;i++)printf("PI %6d %10d %10d %10d\n",i,pointoffset_i[i],i_to_j[i][0]-i,i_to_j[i][1]-i);
-    for(j=0;j<N;j++)printf("PJ %6d %10d %10d %10d\n",j,pointoffset[j],j-j_to_i[j][0],j-j_to_i[j][1]);
+    for(i=0;i<M;i++)printf("PI %6d %10d %10d %10d\n",i,pointoffset_i[i],i2j[i][0]-i,i2j[i][1]-i);
+    for(j=0;j<N;j++)printf("PJ %6d %10d %10d %10d\n",j,pointoffset[j],j-j2i[j][0],j-j2i[j][1]);
     int prev=undefined,chg=0;
     for(i=0;i<M;i++){
       int o=pointoffset_i[i];
@@ -348,7 +348,7 @@ int main(int ac,char**av){
       if(best[j]>=MINOFFSETCOUNT)fprintf(stderr," %10d %6d |",pointoffset[j],best[j]); else fprintf(stderr," ---------- %6d |",best[j]);
       int y;
       for(y=0;y<2;y++){
-        i=j_to_i[j][y];
+        i=j2i[j][y];
         fprintf(stderr," %10d %s",i,i>=0&&i<M&&genome[i]==refgenome[j]?"*":".");
       }
       fprintf(stderr,"\n");
@@ -361,14 +361,14 @@ int main(int ac,char**av){
       fprintf(stderr,"%6d |",j);
       int y;
       for(y=0;y<2;y++){
-        i=j_to_i[j][y];
+        i=j2i[j][y];
         //fprintf(stderr," *%d",off);
         if(i!=undefined){
           fprintf(stderr," %6d %6d |",i,j);
           if(i>=0&&i<M){
             int x;
             for(x=0;x<2;x++){
-              int j_i=i_to_j[i][x];
+              int j_i=i2j[i][x];
               fprintf(stderr," %6d %6d |",i,j_i);
             }
           }
@@ -382,13 +382,13 @@ int main(int ac,char**av){
     for(i=0;i<M;i++){
       int y;
       for(y=0;y<2;y++){
-        j=i_to_j[i][y];
-        if(j!=undefined&&(y==0||j!=i_to_j[i][y-1])){
+        j=i2j[i][y];
+        if(j!=undefined&&(y==0||j!=i2j[i][y-1])){
           if(j>=0&&j<N){
             int uniq=1;
             int x;
             for(x=0;x<2;x++){
-              int i_j=j_to_i[j][x];
+              int i_j=j2i[j][x];
               if(i_j!=undefined){
                 if(i==i_j)uniq=0;
               }
@@ -406,13 +406,13 @@ int main(int ac,char**av){
     for(j=0;j<N;j++){
       int y;
       for(y=0;y<2;y++){
-        i=j_to_i[j][y];
-        if(i!=undefined&&(y==0||i!=j_to_i[j][y-1])){
+        i=j2i[j][y];
+        if(i!=undefined&&(y==0||i!=j2i[j][y-1])){
           if(i>=0&&i<M){
             int uniq=1;
             int x;
             for(x=0;x<2;x++){
-              int j_i=i_to_j[i][x];
+              int j_i=i2j[i][x];
               if(j_i!=undefined){
                 if(j==j_i)uniq=0;
               }
@@ -431,57 +431,61 @@ int main(int ac,char**av){
 
     // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
     tick(9);
-    memset(&j_to_num_i[0],0,N*sizeof(int));
+    memset(&j2num_i[0],0,N*sizeof(int));
     for(j=0;j<N;j++){
-      int i0=j_to_i[j][0],i1=j_to_i[j][1];
-      if(        i0>=0&&i0<M)j_to_num_i[j]++;
-      if(i1!=i0&&i1>=0&&i1<M)j_to_num_i[j]++;
+      int i0=j2i[j][0],i1=j2i[j][1];
+      if(        i0>=0&&i0<M)j2num_i[j]++;
+      if(i1!=i0&&i1>=0&&i1<M)j2num_i[j]++;
     }
     for(i=0;i<M;i++){
-      int j0=i_to_j[i][0],j1=i_to_j[i][1];
-      if(        j0>=0&&j0<N&&i!=j_to_i[j0][0]&&i!=j_to_i[j0][1])j_to_num_i[j0]++;
-      if(j1!=j0&&j1>=0&&j1<N&&i!=j_to_i[j1][0]&&i!=j_to_i[j1][1])j_to_num_i[j1]++;
+      int j0=i2j[i][0],j1=i2j[i][1];
+      if(        j0>=0&&j0<N&&i!=j2i[j0][0]&&i!=j2i[j0][1])j2num_i[j0]++;
+      if(j1!=j0&&j1>=0&&j1<N&&i!=j2i[j1][0]&&i!=j2i[j1][1])j2num_i[j1]++;
     }
     int tot=0;
     for(j=0;j<N;j++){
-      j_to_ind_i[j]=tot;
-      tot+=j_to_num_i[j];
+      j2ind_i[j]=tot;
+      tot+=j2num_i[j];
     }
     fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(std::max(M,N)));
     list_i.resize(tot);
     for(j=0;j<N;j++){
-      int i0=j_to_i[j][0],i1=j_to_i[j][1];
-      if(        i0>=0&&i0<M)list_i[j_to_ind_i[j]++]=i0;
-      if(i1!=i0&&i1>=0&&i1<M)list_i[j_to_ind_i[j]++]=i1;
+      int i0=j2i[j][0],i1=j2i[j][1];
+      if(        i0>=0&&i0<M)list_i[j2ind_i[j]++]=i0;
+      if(i1!=i0&&i1>=0&&i1<M)list_i[j2ind_i[j]++]=i1;
     }
     for(i=0;i<M;i++){
-      int j0=i_to_j[i][0],j1=i_to_j[i][1];
-      if(        j0>=0&&j0<N&&i!=j_to_i[j0][0]&&i!=j_to_i[j0][1])list_i[j_to_ind_i[j0]++]=i;
-      if(j1!=j0&&j1>=0&&j1<N&&i!=j_to_i[j1][0]&&i!=j_to_i[j1][1])list_i[j_to_ind_i[j1]++]=i;
+      int j0=i2j[i][0],j1=i2j[i][1];
+      if(        j0>=0&&j0<N&&i!=j2i[j0][0]&&i!=j2i[j0][1])list_i[j2ind_i[j0]++]=i;
+      if(j1!=j0&&j1>=0&&j1<N&&i!=j2i[j1][0]&&i!=j2i[j1][1])list_i[j2ind_i[j1]++]=i;
     }
     tock(9);
     
     tick(10);
-    
+    int val[MAXGS];
+    for(i=0;i<M;i++)val[i]=i;
+    for(j=0;j<N;j++){
+      
+    }
     tock(10);
     
     tick(6);
-    // Dyn prog on the two allowable offsets: j_to_i[i][]
+    // Dyn prog on the two allowable offsets: j2i[i][]
     int bp[MAXGS][2]={0};// Back pointers; bp[i][j] is defined if value is finite
-    int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset j_to_i[i-1][j]
+    int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset j2i[i-1][j]
     for(j=0;j<N;j++){
       // Transition x -> y,  x=prev offset index, y=current offset index
       int y,newst[2]={infinity,infinity};
       for(y=0;y<2;y++){
         int x;
-        i=j_to_i[j][y];
+        i=j2i[j][y];
         if(i!=undefined){
           int best=infinity,bestx=0;
           for(x=0;x<2;x++){
             int i0=-1;
             int v=0;
             if(j>0){// Initial jump is free
-              i0=j_to_i[j-1][x];
+              i0=j2i[j-1][x];
               if(i0==undefined)continue;
               v=jumppen[abs(i-1-i0)];
             }
@@ -494,7 +498,7 @@ int main(int ac,char**av){
       }
       st[0]=newst[0];
       st[1]=newst[1];
-      //fprintf(stderr,"%6d | %10d %10d %d %10d | %10d %10d %d %10d\n",j,j_to_i[j][0],j-j_to_i[j][0],bp[j][0],st[0],j_to_i[j][1],j-j_to_i[j][1],bp[j][1],st[1]);
+      //fprintf(stderr,"%6d | %10d %10d %d %10d | %10d %10d %d %10d\n",j,j2i[j][0],j-j2i[j][0],bp[j][0],st[0],j2i[j][1],j-j2i[j][1],bp[j][1],st[1]);
     }
     tock(6);
 
@@ -507,15 +511,15 @@ int main(int ac,char**av){
     //fprintf(stderr,"Score %d\n",st[s]);
     int pri=M,prj=N-1;
     for(j=N-1;j>=0;j--){
-      i=j_to_i[j][s];
-      //fprintf(stderr,"%6d (%10d %10d) %10d  %6d\n",j,j_to_i[j][0],j_to_i[j][1],o,i);
+      i=j2i[j][s];
+      //fprintf(stderr,"%6d (%10d %10d) %10d  %6d\n",j,j2i[j][0],j2i[j][1],o,i);
       assert(i!=undefined);
       //fprintf(stderr,"%6d %6d %6d %s %s\n",j,i,j-i,i>=0&&i<M&&refgenome[j]==genome[i]?"*":".",i!=undefined&&i>=0&&i<pri?"U":".");
       if(i!=undefined&&i>=0&&i<pri){
         out[j]=genome[i];pri=i;
       }
       s=bp[j][s];
-      if(0)if(j==0||(j_to_i[j-1][s]!=undefined&&j_to_i[j-1][s]+1!=i)){
+      if(0)if(j==0||(j2i[j-1][s]!=undefined&&j2i[j-1][s]+1!=i)){
         fprintf(stderr,"%6d - %6d   %10d -->  %6d - %6d\n",j,prj,j-i,i,prj-(j-i));
         prj=j-1;
       }
