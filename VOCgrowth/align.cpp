@@ -34,7 +34,7 @@ typedef unsigned int UI;
 vector<int> refdict[1<<R*2];
 
 // Maximum number of bases
-#define MAXGS 40000 // 40000 // alter
+#define MAXGS 240000 // 40000 // alter
 
 // Count threshold for offsets
 #define MINOFFSETCOUNT 20
@@ -75,7 +75,7 @@ vector<string> split(string in,string sep=" \r\t\n\f\v",bool ignoreempty=false,s
 }
 
 string getid(string gisaidname){
-  //  return gisaidname;// alter
+  return gisaidname;// alter
   vector<string> ida=split(gisaidname,"/");
   int n=ida.size();
   if(n>=3)return ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
@@ -275,9 +275,10 @@ int main(int ac,char**av){
 
     tick(4);
     int pointoffset_i[MAXGS],pointoffset[MAXGS],best[MAXGS]={0};
+    memset(pointoffset_i,0x7f,M*sizeof(int));
+    memset(pointoffset,0x7f,N*sizeof(int));
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
-      pointoffset_i[i]=undefined;
       if(t!=undefined){
         int best_i=MINOFFSETCOUNT-1;
         for(int j:refdict[t]){
@@ -321,6 +322,26 @@ int main(int ac,char**av){
     }
     tock(5);
 
+    /*
+    for(i=0;i<M;i++)printf("PI %6d %10d %10d %10d\n",i,pointoffset_i[i],i_to_j[i][0]-i,i_to_j[i][1]-i);
+    for(j=0;j<N;j++)printf("PJ %6d %10d %10d %10d\n",j,pointoffset[j],j-j_to_i[j][0],j-j_to_i[j][1]);
+    int prev=undefined,chg=0;
+    for(i=0;i<M;i++){
+      int o=pointoffset_i[i];
+      if(o!=undefined && o!=prev){prev=o;chg++;}
+    }
+    printf("ICHANGE %6d\n",chg);
+    prev=undefined;chg=0;
+    for(j=0;j<N;j++){
+      if(best[j]>=MINOFFSETCOUNT){
+        int o=pointoffset[j];
+        if(o!=undefined && o!=prev){prev=o;chg++;}
+      }
+    }
+    printf("JCHANGE %6d\n",chg);
+    exit(0);
+    */
+    
     /*
     for(j=27500;j<N;j++){
       fprintf(stderr,"%6d |",j);
@@ -408,33 +429,41 @@ int main(int ac,char**av){
     exit(0);
     */
 
+    // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
     tick(9);
     memset(&j_to_num_i[0],0,N*sizeof(int));
+    for(j=0;j<N;j++){
+      int i0=j_to_i[j][0],i1=j_to_i[j][1];
+      if(        i0>=0&&i0<M)j_to_num_i[j]++;
+      if(i1!=i0&&i1>=0&&i1<M)j_to_num_i[j]++;
+    }
     for(i=0;i<M;i++){
-      j=i_to_j[i][0];
-      if(j>=0&&j<N){
-        if(i!=j_to_i[j][0]&&i!=j_to_i[j][1])j_to_num_i[j]++;
-        int j1=i_to_j[i][1];
-        if(j1!=j&&j1>=0&&j1<N&&i!=j_to_i[j1][0]&&i!=j_to_i[j1][1])j_to_num_i[j1]++;
-      }
+      int j0=i_to_j[i][0],j1=i_to_j[i][1];
+      if(        j0>=0&&j0<N&&i!=j_to_i[j0][0]&&i!=j_to_i[j0][1])j_to_num_i[j0]++;
+      if(j1!=j0&&j1>=0&&j1<N&&i!=j_to_i[j1][0]&&i!=j_to_i[j1][1])j_to_num_i[j1]++;
     }
     int tot=0;
     for(j=0;j<N;j++){
       j_to_ind_i[j]=tot;
       tot+=j_to_num_i[j];
     }
-    assert(tot<=2*M);
+    fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(std::max(M,N)));
     list_i.resize(tot);
-    for(i=0;i<M;i++){
-      j=i_to_j[i][0];
-      if(j>=0&&j<N){
-        if(i!=j_to_i[j][0]&&i!=j_to_i[j][1])list_i[j_to_ind_i[j]++]=i;
-        int j1=i_to_j[i][1];
-        if(j1!=j&&j1>=0&&j1<N&&i!=j_to_i[j1][0]&&i!=j_to_i[j1][1])list_i[j_to_ind_i[j1]++]=i;
-      }
+    for(j=0;j<N;j++){
+      int i0=j_to_i[j][0],i1=j_to_i[j][1];
+      if(        i0>=0&&i0<M)list_i[j_to_ind_i[j]++]=i0;
+      if(i1!=i0&&i1>=0&&i1<M)list_i[j_to_ind_i[j]++]=i1;
     }
-    fprintf(stderr,"Total %6d\n",tot);
+    for(i=0;i<M;i++){
+      int j0=i_to_j[i][0],j1=i_to_j[i][1];
+      if(        j0>=0&&j0<N&&i!=j_to_i[j0][0]&&i!=j_to_i[j0][1])list_i[j_to_ind_i[j0]++]=i;
+      if(j1!=j0&&j1>=0&&j1<N&&i!=j_to_i[j1][0]&&i!=j_to_i[j1][1])list_i[j_to_ind_i[j1]++]=i;
+    }
     tock(9);
+    
+    tick(10);
+    
+    tock(10);
     
     tick(6);
     // Dyn prog on the two allowable offsets: j_to_i[i][]
