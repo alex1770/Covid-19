@@ -1,4 +1,4 @@
-// Aligns SARS-CoV-2 fasta files to reference genome Wuhan-Hu-1
+// Aligns fasta format input to a given reference genome
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -167,12 +167,14 @@ bool okdate(string date){
 }
 
 int main(int ac,char**av){
+  string reffn="refgenome";
   string idprefix,datadir;
   int compression=0;
-  while(1)switch(getopt(ac,av,"c:p:x:")){
+  while(1)switch(getopt(ac,av,"c:p:r:x:")){
     case 'c': compression=atoi(optarg);break;
     case 'x': datadir=strdup(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
+    case 'r': reffn=strdup(optarg);break;
     case -1: goto ew0;
     default: goto err0;
   }
@@ -182,6 +184,7 @@ int main(int ac,char**av){
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
+    fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
@@ -202,9 +205,8 @@ int main(int ac,char**av){
   string refgenome;
   int N;
   {
-    const char*reffn="refgenome";
     std::ifstream fp(reffn);
-    if(fp.fail())error(1,errno,"\nCouldn't open %s",reffn);
+    if(fp.fail())error(1,errno,"\nCouldn't open %s",reffn.c_str());
     while(std::getline(fp,refgenome))if(refgenome.size()>0&&refgenome[0]!='>')break;      
     fp.close();
     N=refgenome.size();
