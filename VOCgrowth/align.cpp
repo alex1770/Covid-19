@@ -36,9 +36,6 @@ typedef long long int int64;
 #define R 9
 vector<int> refdict[1<<R*2];
 
-// Count threshold for offsets
-#define MINOFFSETCOUNT 20
-
 const int undefined=0x7f7f7f7f;
 const int infinity=1000000000;
 
@@ -169,12 +166,13 @@ bool okdate(string date){
 int main(int ac,char**av){
   string reffn="refgenome";
   string idprefix,datadir;
-  int compression=0;
-  while(1)switch(getopt(ac,av,"c:p:r:x:")){
+  int compression=0,minoffsetcount=20;
+  while(1)switch(getopt(ac,av,"c:p:m:r:x:")){
     case 'c': compression=atoi(optarg);break;
-    case 'x': datadir=strdup(optarg);break;
+    case 'm': minoffsetcount=atoi(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
     case 'r': reffn=strdup(optarg);break;
+    case 'x': datadir=strdup(optarg);break;
     case -1: goto ew0;
     default: goto err0;
   }
@@ -183,6 +181,7 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
+    fprintf(stderr,"       -m<int>    minoffsetcount (default 20)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
     fprintf(stderr,"       -x<string> Data directory\n");
@@ -283,7 +282,7 @@ int main(int ac,char**av){
         for(int j:refdict[t])offsetcount[M+j-i1]++;
       }else if(i>=R-1)indexkey[i1]=undefined;
     }
-    //for(int o=0;o<M+N;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-M,offsetcount[o]);
+    //for(int o=0;o<M+N;o++)if(offsetcount[o]>=minoffsetcount)fprintf(stderr,"Offset %d %d\n",o-M,offsetcount[o]);
     tock(3);
 
     tick(4);
@@ -292,7 +291,7 @@ int main(int ac,char**av){
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       if(t!=undefined){
-        int best_i=MINOFFSETCOUNT-1;
+        int best_i=minoffsetcount-1;
         for(int j:refdict[t]){
           int c=offsetcount[M+j-i];
           if(c>best[j]){best[j]=c;pointoffset[j]=j-i;}
@@ -316,7 +315,7 @@ int main(int ac,char**av){
     nearest=undefined;
     for(j=N-1;j>N-R;j--)j2i[j][1]=undefined;
     for(j=N-R;j>=0;j--){
-      if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
+      if(best[j]>=minoffsetcount)nearest=pointoffset[j];
       if(nearest!=undefined)j2i[j][1]=j-nearest; else j2i[j][1]=undefined;
     }
     // Approach from left
@@ -329,7 +328,7 @@ int main(int ac,char**av){
     nearest=undefined;
     for(j=0;j<R-1;j++)j2i[j][0]=undefined;
     for(j=0;j<=N-R;j++){
-      if(best[j]>=MINOFFSETCOUNT)nearest=pointoffset[j];
+      if(best[j]>=minoffsetcount)nearest=pointoffset[j];
       if(nearest!=undefined)j2i[j+R-1][0]=j+R-1-nearest; else j2i[j+R-1][0]=undefined;
     }
     tock(5);
