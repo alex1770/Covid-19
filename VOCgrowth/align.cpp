@@ -472,14 +472,14 @@ int main(int ac,char**av){
     int val[MAXGS],vhwm=0,ihwm=0;
     int64 work=0;
     // val[i] is defined for i<ihwm
-    // For i>=ihwm, val[i] is treated as if it were vhwm+i
+    // For i>=ihwm, val[i] is treated as if it were vhwm
     // Score is the optimal path reaching (-1,-1) by descending in i and j using moves of the form (i,j) -> (i',j'), where (i,j) and (i',j') are in the list (or (-1,-1)).
     // Such moves (with -1<=i'<i, -1<=j'<j) incur
     // (i) a skip penalty of (j-1-j')+(i-1-i'), and
     // (ii) a mutation penalty of (refgenome[j]!=genome[i])*C for some C to be decided on.
     for(j=0;j<N;j++){
-      // At this point, the best(lowest) score achievable if you start at (i,j) and descend, but not including the mutation penalty for (i,j) itself, is val[i]+j
-      // You can think of this being a virtual waypoint of (i,j') with a score of val[i]+j'+1, so that when you add the skip penalty of (j-1-j') you get val[i]+j.
+      // At this point, the best(lowest) score achievable if you start at (i,j) and descend, but not including the mutation penalty for (i,j) itself, is val[i]+i+j
+      // You can think of this being a virtual waypoint of (i,j') with a score of val[i]+i+j'+1, so that when you add the skip penalty of (j-1-j') you get val[i]+i+j.
       int k;
       if(0&&j%100==0){
         printf("j=%d:\n",j);
@@ -491,24 +491,23 @@ int main(int ac,char**av){
         int i1=list_i[j2ind_i[j]+k];
         // printf(" %6d",i1);
         // See if waypoint (i1,j) improves val_{j+1}(i) for some i>i1, otherwise it will be left with its value based on earlier waypoints (*,<j)
-        int v0=(i1<ihwm?val[i1]:vhwm+i1)-i1-2+(refgenome[j]!=genome[i1])*2;
+        int v0=(i1<ihwm?val[i1]:vhwm)-2+(refgenome[j]!=genome[i1])*2;
         printf("XXX %6d %6d\n",v0,i1);
         for(i=i1+1;i<ihwm;i++){
           // Working on newval[i]=val_{j+1}[i] based on (i,j+1) -> (i1,j) -> optimal score of val[i1]+j
-          // Skip penalty = i-1-i1. Score = i-1-i1+val[i1]+j = i-2-i1+val[i1]+(j+1), so we're minning i-2-i1+val[i1]+mutpen(i1,j) into val_{j+1}[i]
-          int v=v0+i;
-          if(v<val[i])val[i]=v;
+          // Skip penalty = i-1-i1. Score = i-1-i1+val[i1]+i1+j = i-2+val[i1]+(j+1), so we're minning val[i1]-2+mutpen(i1,j) into val_{j+1}[i]
+          if(v0<val[i])val[i]=v0;
         }
         work+=max(ihwm-(i1+1),0);
         if(v0<vhwm){
-          for(i=ihwm;i<i1+1;i++)val[i]=vhwm+i;
+          for(i=ihwm;i<i1+1;i++)val[i]=vhwm;
           work+=max(i1+1-ihwm,0);
           ihwm=i;vhwm=v0;
         }
       }
     }
     if(1){
-      for(i=0;i<M;i++)printf("YYY %6d %6d\n",i,(i<ihwm?val[i]:vhwm+i));
+      for(i=0;i<M;i++)printf("YYY %6d %6d\n",i,(i<ihwm?val[i]+i:vhwm+i));
     }
     printf("Work %lld\n",work);
     tock(10);
