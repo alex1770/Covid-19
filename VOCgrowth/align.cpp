@@ -36,14 +36,20 @@ typedef long long int int64;
 #define R 9
 vector<int> refdict[1<<R*2];
 
-// Maximum number of bases
-#define MAXGS 240000 // 40000 // alter
-
 // Count threshold for offsets
 #define MINOFFSETCOUNT 20
 
 const int undefined=0x7f7f7f7f;
 const int infinity=1000000000;
+
+template<class T> struct array2d {
+  size_t rows,cols;
+  vector<T> data;
+  array2d(){}
+  array2d(size_t r, size_t c):rows(r),cols(c),data(r*c){}
+  void size(size_t r, size_t c){rows=r;cols=c;data.resize(r*c);}
+  T* operator[](size_t index){return &data[index*cols];}// First level indexing
+};
 
 double cpu(){return clock()/double(CLOCKS_PER_SEC);}
 int timings=1;
@@ -196,7 +202,6 @@ int main(int ac,char**av){
     while(std::getline(fp,refgenome))if(refgenome.size()>0&&refgenome[0]!='>')break;      
     fp.close();
     N=refgenome.size();
-    assert(N<=MAXGS);
   }
 
   // refdict[R-tuple of bases, X] = list of positions in the reference genome with that R-tuple, X
@@ -206,12 +211,12 @@ int main(int ac,char**av){
   base2num['C']=base2num['c']=1;
   base2num['G']=base2num['g']=2;
   base2num['T']=base2num['t']=3;
-  int badi=-1;
-  for(i=0,t=0;i<N;i++){
-    int b=base2num[refgenome[i]&255];
-    if(b<0){badi=i;continue;}
+  int badj=-1;
+  for(j=0,t=0;j<N;j++){
+    int b=base2num[refgenome[j]&255];
+    if(b<0){badj=j;continue;}
     t=t>>2|b<<(R-1)*2;
-    if(i>=badi+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(i-(R-1));}
+    if(j>=badj+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(j-(R-1));}
   }
 
   vector<int> j2num_i(N), j2ind_i(N), list_i;
@@ -219,7 +224,7 @@ int main(int ac,char**av){
   int linenum=0,nwrite=0;
   bool last;
   string header,line;
-  UC genome[MAXGS];
+  vector<UC> genome;
   last=!std::getline(std::cin,header);linenum++;
   int skip[3]={0};
   while(!last){// Main loop
@@ -247,42 +252,41 @@ int main(int ac,char**av){
       if(last)break;
       int s=line.size();
       if(s>0&&line[0]=='>')break;
-      if(M+s>MAXGS){fprintf(stderr,"Warning: Overlong genome at line %d\n",linenum);continue;}
-      memcpy(genome+M,&line[0],s);M+=s;
+      genome.resize(M+s);
+      memcpy(&genome[M],&line[0],s);M+=s;
     }
     tock(2);
     
     // Offset = (index in ref genome) - (index in current genome) = j-i
-    // offsetcount[MAXGS+offset] = number of possible uses of this offset (assuming any R-tuple in genome can match same R-tuple anywhere in reference genome)
+    // offsetcount[M+offset] = number of possible uses of this offset (assuming any R-tuple in genome can match same R-tuple anywhere in reference genome)
     // indexkey[i] = R-tuple of bases at position i in the current genome
-    int offsetcount[MAXGS*2]={0};
-    int indexkey[MAXGS]={0};
+    vector<int> offsetcount(M+N);
+    vector<int> indexkey(M);
     int badi=-1;
     tick(3);
     for(i=0,t=0;i<M;i++){
       int b=base2num[genome[i]];
       if(b<0){badi=i;continue;}
-      int j=i-(R-1);
+      int i1=i-(R-1);
       t=t>>2|b<<(R-1)*2;
-      if(j>badi){
+      if(i1>badi){
         assert(t>=0&&t<(1<<R*2));
-        indexkey[j]=t;
-        for(int x:refdict[t])offsetcount[MAXGS+x-j]++;
-      }else if(i>=R-1)indexkey[j]=undefined;
+        indexkey[i1]=t;
+        for(int j:refdict[t])offsetcount[M+j-i1]++;
+      }else if(i>=R-1)indexkey[i1]=undefined;
     }
-    //for(int o=0;o<MAXGS*2;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-MAXGS,offsetcount[o]);
+    //for(int o=0;o<M+N;o++)if(offsetcount[o]>=MINOFFSETCOUNT)fprintf(stderr,"Offset %d %d\n",o-M,offsetcount[o]);
     tock(3);
 
     tick(4);
-    int pointoffset_i[MAXGS],pointoffset[MAXGS],best[MAXGS]={0};
-    memset(pointoffset_i,0x7f,M*sizeof(int));
-    memset(pointoffset,0x7f,N*sizeof(int));
+    vector<int> pointoffset_i(M,undefined),pointoffset(N,undefined);
+    vector<int> best(N);
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       if(t!=undefined){
         int best_i=MINOFFSETCOUNT-1;
         for(int j:refdict[t]){
-          int c=offsetcount[MAXGS+j-i];
+          int c=offsetcount[M+j-i];
           if(c>best[j]){best[j]=c;pointoffset[j]=j-i;}
           if(c>best_i){best_i=c;pointoffset_i[i]=j-i;}
         }
@@ -293,7 +297,7 @@ int main(int ac,char**av){
     // Build up to 4 possible offsets, i2j[i][0,1], j2i[j][0,1], to use at each position (i in the current genome, j in ref)
     // i2j[][] works well for deletions
     // j2i[][] works well for insertions
-    int i2j[MAXGS][2],j2i[MAXGS][2];
+    array2d<int> i2j(M,2),j2i(N,2);
     // Approach from right
     int nearest=undefined;
     for(i=M-1;i>M-R;i--)i2j[i][1]=undefined;
@@ -359,7 +363,7 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    int mintree[MAXGS*2+50]={0};
+    vector<int> mintree(M*2+50);
     // mintree[] is a binary tree to do min-query and range-min-update O(logn) time. (Could do O(1) time if feeling energetic.)
     // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form {val[i]=min(val[i],v0) for all i>i1}.
     // At stage j, val[i]+i+j represents the best(lowest) score achievable if you start at (i,j) and descend by legal jumps to (-1,-1),
@@ -394,11 +398,10 @@ int main(int ac,char**av){
     }
     tock(10);
 
-
     tick(11);
     // Write aligned genome, out[]
-    UC out[MAXGS+1];
-    memset(out,'-',N);
+    vector<UC> out(N+1);
+    memset(&out[0],'-',N);
     out[N]=0;
     {
       int k,vl=infinity;
@@ -431,7 +434,7 @@ int main(int ac,char**av){
     case 0:
       fprintf(fp,">%s",id.c_str());
       if(date!="")fprintf(fp,"|%s",date.c_str());
-      fprintf(fp,"\n%s\n",out);
+      fprintf(fp,"\n%s\n",&out[0]);
       break;
     case 1:
       fprintf(fp,"%s|C%d",id.c_str(),compression);
