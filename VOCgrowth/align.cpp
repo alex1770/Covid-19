@@ -33,7 +33,7 @@ typedef unsigned int UI;
 typedef long long int int64;
 
 // R = number of bases from which the indexes are formed
-#define R 9
+#define R 10
 vector<int> refdict[1<<R*2];
 
 const int undefined=0x7f7f7f7f;
