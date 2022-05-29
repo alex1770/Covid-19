@@ -471,14 +471,17 @@ int main(int ac,char**av){
     }
     int mintree[MAXGS*2+50]={0};
     // mintree[] is a binary tree to do min-query and range-min-update O(logn) time. (Could do O(1) time if feeling energetic.)
-    // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form val[i]=min(val[i],v0) for i>i1.
-    // Score is the optimal path reaching (-1,-1) by descending in i and j using moves of the form (i,j) -> (i',j'), where (i,j) and (i',j') are in the list (or (-1,-1)).
+    // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form {val[i]=min(val[i],v0) for all i>i1}.
+    // At stage j, val[i]+i+j represents the best(lowest) score achievable if you start at (i,j) and descend by legal jumps to (-1,-1),
+    // but not including the mutation penalty for (i,j) itself.
+    // You could also say, at stage j*, val[i]+i+j = best score achievable from (i,j) for j>=j*, using only waypoints <j*.
+    // A legal jump is a move of the form (i,j) -> (i',j'), where i'<i, j'<j.
     // Such moves (with -1<=i'<i, -1<=j'<j) incur
-    // (i) a skip penalty of (j-1-j')+(i-1-i'), and
+    // (i) a skip penalty of (j-1-j')+(i-1-i')+(2 if (i',j') isn't in the list), and
     // (ii) a mutation penalty of (refgenome[j]!=genome[i])*C for some C to be decided on.
+    // For these purposes, the list is deemed to include (-1,-1) and (M,N).
+    vector<int> nbp0(tot),nbp1(tot);
     for(j=0;j<N;j++){
-      // At this point, the best(lowest) score achievable if you start at (i,j) and descend, but not including the mutation penalty for (i,j) itself, is val[i]+i+j
-      // You can think of this being a virtual waypoint of (i,j') with a score of val[i]+i+j'+1, so that when you add the skip penalty of (j-1-j') you get val[i]+i+j.
       int k;
       //printf("j=%6d:",j);
       if(j2num_i[j]>1)std::sort(&list_i[j2ind_i[j]],&list_i[j2ind_i[j]+j2num_i[j]],std::greater<>());
@@ -489,24 +492,64 @@ int main(int ac,char**av){
         // See if waypoint (i1,j) improves val_{j+1}(i) for some i>i1, otherwise it will be left with its value based on earlier waypoints (*,<j)
         int mi=infinity;
         {
-          int i=i1,m=M,p=0;
+          int i=i1,m=M+1,p=0;
           do{mi=min(mi,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
         }
         int v0=mi-2+(refgenome[j]!=genome[i1])*2;
+        nbp0[j2ind_i[j]+k]=i1;
+        nbp1[j2ind_i[j]+k]=v0;
         //printf("XXX %6d %6d\n",v0,i1);
-        if(i1+1<M){
-          int i=i1+1,m=M,p=0;
+        //printf("UUU %6d %6d %10d\n",j,i1+1,v0);
+        {
+          int i=i1+1,m=M+1,p=0;
           do{mintree[p+i]=min(mintree[p+i],v0);p+=m;m=(m+1)>>1;i=(i+1)>>1;}while(m>1&&i<m);
         }
       }
       //printf("\n");
     }
     tock(10);
+    /*
+    for(int i1=0;i1<=M;i1++){
+      int mi=infinity;
+      {
+        int i=i1,m=M+1,p=0;
+        do{mi=min(mi,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
+      }
+      printf("YYY %6d %6d\n",i1,mi+i1);
+    }
+    */
     int dum=0;
     for(i=0;i<2*M;i++)dum+=mintree[i];
     fprintf(stderr,"Dummy %d\n",dum);
     prtim();
     //exit(0);
+
+
+    tick(11);
+    {
+      int k,vl=infinity;
+      {
+        int i=M,m=M+1,p=0;
+        do{vl=min(vl,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
+      }
+      printf("Value = %d+%d+%d = %d\n",vl,M,N,vl+M+N);
+      int i1=M;
+      for(j=N-1;j>=0;j--){
+        for(k=0;k<j2num_i[j];k++){
+          int p=j2ind_i[j]+k;
+          int i=list_i[p];
+          if(i<i1)assert(nbp1[p]>=vl);
+          if(i<i1&&nbp1[p]==vl){
+            vl-=-2+(refgenome[j]!=genome[i])*2;
+            i1=i;
+            printf("PPP %6d %6d %10d\n",j,i,vl);
+            break;
+          }
+        }
+      }
+    }
+    tock(11);
+    exit(0);
     
     tick(6);
     // Dyn prog on the two allowable offsets: j2i[i][]
