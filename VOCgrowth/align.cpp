@@ -44,7 +44,7 @@ template<class T> struct array2d {
   vector<T> data;
   array2d(){}
   array2d(size_t r, size_t c):rows(r),cols(c),data(r*c){}
-  void size(size_t r, size_t c){rows=r;cols=c;data.resize(r*c);}
+  void resize(size_t r, size_t c){rows=r;cols=c;data.resize(r*c);}
   T* operator[](size_t index){return &data[index*cols];}// First level indexing
 };
 
@@ -286,15 +286,15 @@ int main(int ac,char**av){
     tock(3);
 
     tick(4);
-    vector<int> pointoffset_i(M,undefined),pointoffset(N,undefined);
-    vector<int> best(N);
+    vector<int> pointoffset_i(M,undefined),pointoffset_j(N,undefined);
+    vector<int> best_j(N);
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       if(t!=undefined){
         int best_i=minoffsetcount-1;
         for(int j:refdict[t]){
           int c=offsetcount[M+j-i];
-          if(c>best[j]){best[j]=c;pointoffset[j]=j-i;}
+          if(c>best_j[j]){best_j[j]=c;pointoffset_j[j]=j-i;}
           if(c>best_i){best_i=c;pointoffset_i[i]=j-i;}
         }
       }
@@ -315,7 +315,7 @@ int main(int ac,char**av){
     nearest=undefined;
     for(j=N-1;j>N-R;j--)j2i[j][1]=undefined;
     for(j=N-R;j>=0;j--){
-      if(best[j]>=minoffsetcount)nearest=pointoffset[j];
+      if(best_j[j]>=minoffsetcount)nearest=pointoffset_j[j];
       if(nearest!=undefined)j2i[j][1]=j-nearest; else j2i[j][1]=undefined;
     }
     // Approach from left
@@ -328,7 +328,7 @@ int main(int ac,char**av){
     nearest=undefined;
     for(j=0;j<R-1;j++)j2i[j][0]=undefined;
     for(j=0;j<=N-R;j++){
-      if(best[j]>=minoffsetcount)nearest=pointoffset[j];
+      if(best_j[j]>=minoffsetcount)nearest=pointoffset_j[j];
       if(nearest!=undefined)j2i[j+R-1][0]=j+R-1-nearest; else j2i[j+R-1][0]=undefined;
     }
     tock(5);
