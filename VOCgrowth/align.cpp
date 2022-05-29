@@ -25,9 +25,12 @@ using std::vector;
 using std::set;
 using std::unordered_set;
 using std::unordered_map;
+using std::min;
+using std::max;
 
 typedef unsigned char UC;
 typedef unsigned int UI;
+typedef long long int int64;
 
 // R = number of bases from which the indexes are formed
 #define R 9
@@ -447,7 +450,7 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(std::max(M,N)));
+    fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     list_i.resize(tot);
     for(j=0;j<N;j++){
       int i0=j2i[j][0],i1=j2i[j][1];
@@ -467,6 +470,7 @@ int main(int ac,char**av){
       tot+=j2num_i[j];
     }
     int val[MAXGS],vhwm=0,ihwm=0;
+    int64 work=0;
     // val[i] is defined for i<ihwm
     // For i>=ihwm, val[i] is treated as if it were vhwm+i
     // Score is the optimal path reaching (-1,-1) by descending in i and j using moves of the form (i,j) -> (i',j'), where (i,j) and (i',j') are in the list (or (-1,-1)).
@@ -479,7 +483,7 @@ int main(int ac,char**av){
       int k;
       if(0&&j%100==0){
         printf("j=%d:\n",j);
-        for(i=0;i<M;i++)printf("%6d: %6d\n",i,val[i]);
+        for(i=0;i<ihwm;i++)printf("%6d: %6d\n",i,val[i]);
       }
       //printf("j=%6d:",j);
       if(j2num_i[j]>1)std::sort(&list_i[j2ind_i[j]],&list_i[j2ind_i[j]+j2num_i[j]],std::greater<>());
@@ -495,15 +499,18 @@ int main(int ac,char**av){
           int v=v0+i;
           if(v<val[i])val[i]=v;
         }
+        work+=max(ihwm-(i1+1),0);
         if(v0<vhwm){
           for(i=ihwm;i<i1+1;i++)val[i]=vhwm+i;
+          work+=max(i1+1-ihwm,0);
           ihwm=i;vhwm=v0;
         }
       }
     }
     if(1){
-      for(i=0;i<M;i++)printf("YYY %6d %6d\n",i,val[i]);
+      for(i=0;i<M;i++)printf("YYY %6d %6d\n",i,(i<ihwm?val[i]:vhwm+i));
     }
+    printf("Work %lld\n",work);
     tock(10);
     prtim();
     exit(0);
