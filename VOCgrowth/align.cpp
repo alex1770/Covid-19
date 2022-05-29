@@ -469,10 +469,9 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    int val[MAXGS],vhwm=0,ihwm=0;
-    int64 work=0;
-    // val[i] is defined for i<ihwm
-    // For i>=ihwm, val[i] is treated as if it were vhwm
+    int mintree[MAXGS*2+50]={0};
+    // mintree[] is a binary tree to do min-query and range-min-update O(logn) time. (Could do O(1) time if feeling energetic.)
+    // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form val[i]=min(val[i],v0) for i>i1.
     // Score is the optimal path reaching (-1,-1) by descending in i and j using moves of the form (i,j) -> (i',j'), where (i,j) and (i',j') are in the list (or (-1,-1)).
     // Such moves (with -1<=i'<i, -1<=j'<j) incur
     // (i) a skip penalty of (j-1-j')+(i-1-i'), and
@@ -481,38 +480,33 @@ int main(int ac,char**av){
       // At this point, the best(lowest) score achievable if you start at (i,j) and descend, but not including the mutation penalty for (i,j) itself, is val[i]+i+j
       // You can think of this being a virtual waypoint of (i,j') with a score of val[i]+i+j'+1, so that when you add the skip penalty of (j-1-j') you get val[i]+i+j.
       int k;
-      if(0&&j%100==0){
-        printf("j=%d:\n",j);
-        for(i=0;i<ihwm;i++)printf("%6d: %6d\n",i,val[i]);
-      }
       //printf("j=%6d:",j);
       if(j2num_i[j]>1)std::sort(&list_i[j2ind_i[j]],&list_i[j2ind_i[j]+j2num_i[j]],std::greater<>());
       for(k=0;k<j2num_i[j];k++){
         int i1=list_i[j2ind_i[j]+k];
-        // printf(" %6d",i1);
+        assert(i1>=0&&i1<M);
+        //printf(" %6d",i1);
         // See if waypoint (i1,j) improves val_{j+1}(i) for some i>i1, otherwise it will be left with its value based on earlier waypoints (*,<j)
-        int v0=(i1<ihwm?val[i1]:vhwm)-2+(refgenome[j]!=genome[i1])*2;
-        printf("XXX %6d %6d\n",v0,i1);
-        for(i=i1+1;i<ihwm;i++){
-          // Working on newval[i]=val_{j+1}[i] based on (i,j+1) -> (i1,j) -> optimal score of val[i1]+j
-          // Skip penalty = i-1-i1. Score = i-1-i1+val[i1]+i1+j = i-2+val[i1]+(j+1), so we're minning val[i1]-2+mutpen(i1,j) into val_{j+1}[i]
-          if(v0<val[i])val[i]=v0;
+        int mi=infinity;
+        {
+          int i=i1,m=M,p=0;
+          do{mi=min(mi,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
         }
-        work+=max(ihwm-(i1+1),0);
-        if(v0<vhwm){
-          for(i=ihwm;i<i1+1;i++)val[i]=vhwm;
-          work+=max(i1+1-ihwm,0);
-          ihwm=i;vhwm=v0;
+        int v0=mi-2+(refgenome[j]!=genome[i1])*2;
+        //printf("XXX %6d %6d\n",v0,i1);
+        if(i1+1<M){
+          int i=i1+1,m=M,p=0;
+          do{mintree[p+i]=min(mintree[p+i],v0);p+=m;m=(m+1)>>1;i=(i+1)>>1;}while(m>1&&i<m);
         }
       }
+      //printf("\n");
     }
-    if(1){
-      for(i=0;i<M;i++)printf("YYY %6d %6d\n",i,(i<ihwm?val[i]+i:vhwm+i));
-    }
-    printf("Work %lld\n",work);
     tock(10);
+    int dum=0;
+    for(i=0;i<2*M;i++)dum+=mintree[i];
+    fprintf(stderr,"Dummy %d\n",dum);
     prtim();
-    exit(0);
+    //exit(0);
     
     tick(6);
     // Dyn prog on the two allowable offsets: j2i[i][]
