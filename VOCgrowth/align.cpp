@@ -131,6 +131,10 @@ void writeIDs(string dir,unordered_set<string> done){
   fp.close();
 }
 
+bool okdate(const string &date){
+  return date.size()==10&&date[0]=='2'&&date[1]=='0'&&date[4]=='-'&&date[7]=='-';
+}
+
 // metadata file format:
 // Tab-separated, like GISAID.
 // date ID provisionallineage location
@@ -151,16 +155,12 @@ unordered_map<string,string> readmeta(string dir){
   assert(idcol>=0&&datecol>=0);
   while(std::getline(fp,l)){
     vector<string> ll=split(l,"\t");
-    id2date[ll[idcol]]=ll[datecol];
+    if(okdate(ll[datecol]))id2date[ll[idcol]]=ll[datecol];
   }
   fp.close();
   int n=id2date.size();
   fprintf(stderr,"Read %d metadata entr%s from %s\n",n,n==1?"y":"ies",fname.c_str());
   return id2date;
-}
-
-bool okdate(string date){
-  return date.size()==10&&date[0]=='2'&&date[1]=='0'&&date[4]=='-'&&date[7]=='-';
 }
 
 int main(int ac,char**av){
@@ -287,7 +287,7 @@ int main(int ac,char**av){
 
     tick(4);
     vector<int> pointoffset_i(M,undefined),pointoffset_j(N,undefined);
-    vector<int> best_j(N);
+    vector<int> best_j(N,minoffsetcount-1);
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       if(t!=undefined){
@@ -300,6 +300,7 @@ int main(int ac,char**av){
       }
     }
     tock(4);
+    
     tick(5);
     // Build up to 4 possible offsets, i2j[i][0,1], j2i[j][0,1], to use at each position (i in the current genome, j in ref)
     // i2j[][] works well for deletions
@@ -315,7 +316,7 @@ int main(int ac,char**av){
     nearest=undefined;
     for(j=N-1;j>N-R;j--)j2i[j][1]=undefined;
     for(j=N-R;j>=0;j--){
-      if(best_j[j]>=minoffsetcount)nearest=pointoffset_j[j];
+      if(pointoffset_j[j]!=undefined)nearest=pointoffset_j[j];
       if(nearest!=undefined)j2i[j][1]=j-nearest; else j2i[j][1]=undefined;
     }
     // Approach from left
@@ -328,7 +329,7 @@ int main(int ac,char**av){
     nearest=undefined;
     for(j=0;j<R-1;j++)j2i[j][0]=undefined;
     for(j=0;j<=N-R;j++){
-      if(best_j[j]>=minoffsetcount)nearest=pointoffset_j[j];
+      if(pointoffset_j[j]!=undefined)nearest=pointoffset_j[j];
       if(nearest!=undefined)j2i[j+R-1][0]=j+R-1-nearest; else j2i[j+R-1][0]=undefined;
     }
     tock(5);
