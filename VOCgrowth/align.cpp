@@ -49,7 +49,7 @@ template<class T> struct array2d {
 };
 
 double cpu(){return clock()/double(CLOCKS_PER_SEC);}
-int timings=1;
+int timings=0;
 #define MAXTIM 50
 double ncpu[MAXTIM]={0},lcpu[MAXTIM]={0},tcpu[MAXTIM]={0};
 void tick(int i){if(timings)lcpu[i]=cpu();}
@@ -180,12 +180,13 @@ int main(int ac,char**av){
   string reffn="refgenome";
   string idprefix,datadir;
   int compression=0,minoffsetcount=8,minrun=3;
-  while(1)switch(getopt(ac,av,"c:p:m:r:s:x:")){
+  while(1)switch(getopt(ac,av,"c:p:m:r:s:tx:")){
     case 'c': compression=atoi(optarg);break;
     case 'm': minoffsetcount=atoi(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
     case 'r': reffn=strdup(optarg);break;
     case 's': minrun=atoi(optarg);break;
+    case 't': timings=1;break;
     case 'x': datadir=strdup(optarg);break;
     case -1: goto ew0;
     default: goto err0;
@@ -198,7 +199,8 @@ int main(int ac,char**av){
     fprintf(stderr,"       -m<int>    minoffsetcount (default 8)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
-    fprintf(stderr,"       -s<int>    min run length for smoothing offsets (default 3)\n");
+    fprintf(stderr,"       -s<int>    Min run length for smoothing offsets (default 3)\n");
+    fprintf(stderr,"       -t         Enable timings\n");
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
@@ -368,7 +370,7 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
+    //fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     list_i.resize(tot);
     for(j=0;j<N;j++){
       int i0=j2i[j][0],i1=j2i[j][1];
