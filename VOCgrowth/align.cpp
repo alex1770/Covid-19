@@ -163,15 +163,29 @@ unordered_map<string,string> readmeta(string dir){
   return id2date;
 }
 
+// Changes runs of <minrun to undefined
+void smoothpointoffset(vector<int> &po,int minrun){
+  int i,i0=0,n=po.size();
+  if(n==0)return;
+  int prev=po[0];
+  for(i=1;i<=n;i++){
+    if(i==n||po[i]!=prev){
+      if(i-i0<minrun)while(i0<i)po[i0++]=undefined; else i0=i;
+      if(i<n)prev=po[i];
+    }
+  }
+}
+
 int main(int ac,char**av){
   string reffn="refgenome";
   string idprefix,datadir;
-  int compression=0,minoffsetcount=20;
-  while(1)switch(getopt(ac,av,"c:p:m:r:x:")){
+  int compression=0,minoffsetcount=8,minrun=3;
+  while(1)switch(getopt(ac,av,"c:p:m:r:s:x:")){
     case 'c': compression=atoi(optarg);break;
     case 'm': minoffsetcount=atoi(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
     case 'r': reffn=strdup(optarg);break;
+    case 's': minrun=atoi(optarg);break;
     case 'x': datadir=strdup(optarg);break;
     case -1: goto ew0;
     default: goto err0;
@@ -181,9 +195,10 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
-    fprintf(stderr,"       -m<int>    minoffsetcount (default 20)\n");
+    fprintf(stderr,"       -m<int>    minoffsetcount (default 8)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
+    fprintf(stderr,"       -s<int>    min run length for smoothing offsets (default 3)\n");
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
@@ -227,7 +242,6 @@ int main(int ac,char**av){
   }
 
   vector<int> j2num_i(N), j2ind_i(N), list_i;
-
   int linenum=0,nwrite=0;
   bool last;
   string header,line;
@@ -299,6 +313,8 @@ int main(int ac,char**av){
         }
       }
     }
+    smoothpointoffset(pointoffset_i,minrun);
+    smoothpointoffset(pointoffset_j,minrun);
     tock(4);
     
     tick(5);
