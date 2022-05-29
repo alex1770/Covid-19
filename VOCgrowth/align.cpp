@@ -214,9 +214,6 @@ int main(int ac,char**av){
     if(i>=badi+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(i-(R-1));}
   }
 
-  int jumppen[MAXGS+1];
-  for(t=0;t<=MAXGS;t++)jumppen[t]=int(floor(sqrt(t)+1e-6));
-
   vector<int> j2num_i(N), j2ind_i(N), list_i;
 
   int linenum=0,nwrite=0;
@@ -325,113 +322,6 @@ int main(int ac,char**av){
     }
     tock(5);
 
-    /*
-    for(i=0;i<M;i++)printf("PI %6d %10d %10d %10d\n",i,pointoffset_i[i],i2j[i][0]-i,i2j[i][1]-i);
-    for(j=0;j<N;j++)printf("PJ %6d %10d %10d %10d\n",j,pointoffset[j],j-j2i[j][0],j-j2i[j][1]);
-    int prev=undefined,chg=0;
-    for(i=0;i<M;i++){
-      int o=pointoffset_i[i];
-      if(o!=undefined && o!=prev){prev=o;chg++;}
-    }
-    printf("ICHANGE %6d\n",chg);
-    prev=undefined;chg=0;
-    for(j=0;j<N;j++){
-      if(best[j]>=MINOFFSETCOUNT){
-        int o=pointoffset[j];
-        if(o!=undefined && o!=prev){prev=o;chg++;}
-      }
-    }
-    printf("JCHANGE %6d\n",chg);
-    exit(0);
-    */
-    
-    /*
-    for(j=27500;j<N;j++){
-      fprintf(stderr,"%6d |",j);
-      if(best[j]>=MINOFFSETCOUNT)fprintf(stderr," %10d %6d |",pointoffset[j],best[j]); else fprintf(stderr," ---------- %6d |",best[j]);
-      int y;
-      for(y=0;y<2;y++){
-        i=j2i[j][y];
-        fprintf(stderr," %10d %s",i,i>=0&&i<M&&genome[i]==refgenome[j]?"*":".");
-      }
-      fprintf(stderr,"\n");
-    }
-    exit(0);
-    */
-    
-    /*
-    for(j=0;j<N;j++){
-      fprintf(stderr,"%6d |",j);
-      int y;
-      for(y=0;y<2;y++){
-        i=j2i[j][y];
-        //fprintf(stderr," *%d",off);
-        if(i!=undefined){
-          fprintf(stderr," %6d %6d |",i,j);
-          if(i>=0&&i<M){
-            int x;
-            for(x=0;x<2;x++){
-              int j_i=i2j[i][x];
-              fprintf(stderr," %6d %6d |",i,j_i);
-            }
-          }
-        }
-      }
-      fprintf(stderr,"\n");
-    }
-    exit(0);
-    */
-    /*
-    for(i=0;i<M;i++){
-      int y;
-      for(y=0;y<2;y++){
-        j=i2j[i][y];
-        if(j!=undefined&&(y==0||j!=i2j[i][y-1])){
-          if(j>=0&&j<N){
-            int uniq=1;
-            int x;
-            for(x=0;x<2;x++){
-              int i_j=j2i[j][x];
-              if(i_j!=undefined){
-                if(i==i_j)uniq=0;
-              }
-            }
-            if(uniq)fprintf(stderr,"UUU %6d %6d\n",i,j);
-          }
-        }
-      }
-    }
-    exit(0);
-    */
-
-    /*
-    int count[MAXGS]={0};
-    for(j=0;j<N;j++){
-      int y;
-      for(y=0;y<2;y++){
-        i=j2i[j][y];
-        if(i!=undefined&&(y==0||i!=j2i[j][y-1])){
-          if(i>=0&&i<M){
-            int uniq=1;
-            int x;
-            for(x=0;x<2;x++){
-              int j_i=i2j[i][x];
-              if(j_i!=undefined){
-                if(j==j_i)uniq=0;
-              }
-            }
-            if(uniq){
-              count[i]++;
-              fprintf(stderr,"UUU %6d %6d\n",i,j);
-            }
-          }
-        }
-      }
-    }
-    for(i=0;i<M;i++)if(count[i]!=0)fprintf(stderr,"CCC %6d %6d\n",i,count[i]);
-    exit(0);
-    */
-
     // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
     tick(9);
     memset(&j2num_i[0],0,N*sizeof(int));
@@ -483,12 +373,10 @@ int main(int ac,char**av){
     vector<int> nbp0(tot),nbp1(tot);
     for(j=0;j<N;j++){
       int k;
-      //printf("j=%6d:",j);
       if(j2num_i[j]>1)std::sort(&list_i[j2ind_i[j]],&list_i[j2ind_i[j]+j2num_i[j]],std::greater<>());
       for(k=0;k<j2num_i[j];k++){
         int i1=list_i[j2ind_i[j]+k];
         assert(i1>=0&&i1<M);
-        //printf(" %6d",i1);
         // See if waypoint (i1,j) improves val_{j+1}(i) for some i>i1, otherwise it will be left with its value based on earlier waypoints (*,<j)
         int mi=infinity;
         {
@@ -498,41 +386,26 @@ int main(int ac,char**av){
         int v0=mi-2+(refgenome[j]!=genome[i1])*2;
         nbp0[j2ind_i[j]+k]=i1;
         nbp1[j2ind_i[j]+k]=v0;
-        //printf("XXX %6d %6d\n",v0,i1);
-        //printf("UUU %6d %6d %10d\n",j,i1+1,v0);
         {
           int i=i1+1,m=M+1,p=0;
           do{mintree[p+i]=min(mintree[p+i],v0);p+=m;m=(m+1)>>1;i=(i+1)>>1;}while(m>1&&i<m);
         }
       }
-      //printf("\n");
     }
     tock(10);
-    /*
-    for(int i1=0;i1<=M;i1++){
-      int mi=infinity;
-      {
-        int i=i1,m=M+1,p=0;
-        do{mi=min(mi,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
-      }
-      printf("YYY %6d %6d\n",i1,mi+i1);
-    }
-    */
-    int dum=0;
-    for(i=0;i<2*M;i++)dum+=mintree[i];
-    fprintf(stderr,"Dummy %d\n",dum);
-    prtim();
-    //exit(0);
 
 
     tick(11);
+    // Write aligned genome, out[]
+    UC out[MAXGS+1];
+    memset(out,'-',N);
+    out[N]=0;
     {
       int k,vl=infinity;
       {
         int i=M,m=M+1,p=0;
         do{vl=min(vl,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
       }
-      printf("Value = %d+%d+%d = %d\n",vl,M,N,vl+M+N);
       int i1=M;
       for(j=N-1;j>=0;j--){
         for(k=0;k<j2num_i[j];k++){
@@ -542,71 +415,13 @@ int main(int ac,char**av){
           if(i<i1&&nbp1[p]==vl){
             vl-=-2+(refgenome[j]!=genome[i])*2;
             i1=i;
-            printf("PPP %6d %6d %10d\n",j,i,vl);
+            out[j]=genome[i];
             break;
           }
         }
       }
     }
     tock(11);
-    exit(0);
-    
-    tick(6);
-    // Dyn prog on the two allowable offsets: j2i[i][]
-    int bp[MAXGS][2]={0};// Back pointers; bp[i][j] is defined if value is finite
-    int st[2]={0,0};// State: st[j] = score (lower is better) given ended with offset j2i[i-1][j]
-    for(j=0;j<N;j++){
-      // Transition x -> y,  x=prev offset index, y=current offset index
-      int y,newst[2]={infinity,infinity};
-      for(y=0;y<2;y++){
-        int x;
-        i=j2i[j][y];
-        if(i!=undefined){
-          int best=infinity,bestx=0;
-          for(x=0;x<2;x++){
-            int i0=-1;
-            int v=0;
-            if(j>0){// Initial jump is free
-              i0=j2i[j-1][x];
-              if(i0==undefined)continue;
-              v=jumppen[abs(i-1-i0)];
-            }
-            v+=st[x]+(i0>=i||i<0||i>=M||refgenome[j]!=genome[i]);
-            if(v<=best){best=v;bestx=x;}
-          }
-          newst[y]=best;
-          bp[j][y]=bestx;
-        }
-      }
-      st[0]=newst[0];
-      st[1]=newst[1];
-      //fprintf(stderr,"%6d | %10d %10d %d %10d | %10d %10d %d %10d\n",j,j2i[j][0],j-j2i[j][0],bp[j][0],st[0],j2i[j][1],j-j2i[j][1],bp[j][1],st[1]);
-    }
-    tock(6);
-
-    tick(7);
-    // Write aligned genome, out[]
-    UC out[MAXGS+1];
-    memset(out,'-',N);
-    out[N]=0;
-    int s=(st[1]<st[0]);
-    //fprintf(stderr,"Score %d\n",st[s]);
-    int pri=M,prj=N-1;
-    for(j=N-1;j>=0;j--){
-      i=j2i[j][s];
-      //fprintf(stderr,"%6d (%10d %10d) %10d  %6d\n",j,j2i[j][0],j2i[j][1],o,i);
-      assert(i!=undefined);
-      //fprintf(stderr,"%6d %6d %6d %s %s\n",j,i,j-i,i>=0&&i<M&&refgenome[j]==genome[i]?"*":".",i!=undefined&&i>=0&&i<pri?"U":".");
-      if(i!=undefined&&i>=0&&i<pri){
-        out[j]=genome[i];pri=i;
-      }
-      s=bp[j][s];
-      if(0)if(j==0||(j2i[j-1][s]!=undefined&&j2i[j-1][s]+1!=i)){
-        fprintf(stderr,"%6d - %6d   %10d -->  %6d - %6d\n",j,prj,j-i,i,prj-(j-i));
-        prj=j-1;
-      }
-    }
-    tock(7);
     
     tick(8);
     FILE*fp;
