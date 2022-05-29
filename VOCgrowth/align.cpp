@@ -83,8 +83,8 @@ vector<string> split(string in,string sep=" \r\t\n\f\v",bool ignoreempty=false,s
   }
 }
 
+// Not currently used
 string getid(string gisaidname){
-  return gisaidname;// alter
   vector<string> ida=split(gisaidname,"/");
   int n=ida.size();
   if(n>=3)return ida[n-3]+"/"+ida[n-2]+"/"+ida[n-1];
@@ -96,11 +96,15 @@ string getid(string gisaidname){
 // (GISAID style, known date)    >hCoV-19/Austria/CeMM11657/2021|2021-06-14|2021-07-01
 // (GISAID style, extra prefix)  >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
 // (COG-UK style, no date)       >England/PHEC-YYF8DBE/2022
-// and extract the ID, e.g., "England/PHEC-L303L83F/2021" or "Austria/CeMM11657/2021". "" means not available
-string parseheader(string &header){
+// and extract the ID, e.g., "hCoV-19/env/Austria/CeMM11657/2021", and possibly prepend with given prefix (to put COG-UK on the same footing as GISAID)
+// "" means not available
+string parseheader(const string &idprefix,const string &header){
   assert(header.size()>0&&header[0]=='>');
   vector<string> hs=split(header,"|",false,1);
-  if(hs.size()>0)return getid(hs[0]);
+  if(hs.size()>0){
+    if(idprefix=="")return hs[0];
+    return idprefix+"/"+hs[0];
+  }
   return "";
 }
 
@@ -163,11 +167,12 @@ bool okdate(string date){
 }
 
 int main(int ac,char**av){
-  string datadir;
+  string idprefix,datadir;
   int compression=0;
-  while(1)switch(getopt(ac,av,"c:x:")){
+  while(1)switch(getopt(ac,av,"c:p:x:")){
     case 'c': compression=atoi(optarg);break;
     case 'x': datadir=strdup(optarg);break;
+    case 'p': idprefix=strdup(optarg);break;
     case -1: goto ew0;
     default: goto err0;
   }
@@ -175,8 +180,9 @@ int main(int ac,char**av){
   if(optind<ac){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
-    fprintf(stderr,"       -x<string> Data directory\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
+    fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
+    fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
 
@@ -229,7 +235,7 @@ int main(int ac,char**av){
   int skip[3]={0};
   while(!last){// Main loop
     tick(1);
-    string id=parseheader(header);
+    string id=parseheader(idprefix,header);
     if(id=="")skip[0]++; else if(done.count(id))skip[1]++; else if(datadir!=""&&id2date.count(id)==0)skip[2]++; else goto ok0;
     // Skip genome we already have, or one for which the date isn't known
     while(1){
