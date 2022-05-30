@@ -186,8 +186,10 @@ int main(int ac,char**av){
   string reffn="refgenome";
   string idprefix,datadir;
   int compression=0,minoffsetcount=8,minrun=3;
-  while(1)switch(getopt(ac,av,"c:p:m:r:s:tx:")){
+  double df=0;
+  while(1)switch(getopt(ac,av,"c:d:p:m:r:s:tx:")){
     case 'c': compression=atoi(optarg);break;
+    case 'd': df=atof(optarg);break;
     case 'm': minoffsetcount=atoi(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
     case 'r': reffn=strdup(optarg);break;
@@ -309,13 +311,14 @@ int main(int ac,char**av){
 
     tick(4);
     vector<int> pointoffset_i(M,undefined),pointoffset_j(N,undefined);
-    vector<int> best_j(N,minoffsetcount-1);
+    vector<double> best_j(N,minoffsetcount-1);
+    double sqrtN=sqrt(N),nm=N/double(M);
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       if(t!=undefined){
-        int best_i=minoffsetcount-1;
+        double best_i=minoffsetcount-1;
         for(int j:refdict[t]){
-          int c=offsetcount[M+j-i];
+          double c=offsetcount[M+j-i]-df*abs(j-i*nm)/sqrtN;
           if(c>best_j[j]){best_j[j]=c;pointoffset_j[j]=j-i;}
           if(c>best_i){best_i=c;pointoffset_i[i]=j-i;}
         }
