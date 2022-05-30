@@ -27,6 +27,7 @@ using std::unordered_set;
 using std::unordered_map;
 using std::min;
 using std::max;
+using std::fill;
 
 typedef unsigned char UC;
 typedef unsigned int UI;
@@ -44,7 +45,9 @@ template<class T> struct array2d {
   vector<T> data;
   array2d(){}
   array2d(size_t r, size_t c):rows(r),cols(c),data(r*c){}
+  array2d(size_t r, size_t c, const T&val):rows(r),cols(c),data(r*c,val){}
   void resize(size_t r, size_t c){rows=r;cols=c;data.resize(r*c);}
+  void fill(const T&val){std::fill(data.begin(),data.end(),val);}
   T* operator[](size_t index){return &data[index*cols];}// First level indexing
 };
 
@@ -167,12 +170,21 @@ unordered_map<string,string> readmeta(string dir){
 void smoothpointoffset(vector<int> &po,int minrun){
   int i,i0=0,n=po.size();
   if(n==0)return;
-  int prev=po[0];
+  int cur=po[0];
   for(i=1;i<=n;i++){
-    if(i==n||po[i]!=prev){
-      if(i-i0<minrun)while(i0<i)po[i0++]=undefined; else i0=i;
-      if(i<n)prev=po[i];
+    if(i==n||po[i]!=cur){
+      if(i-i0<minrun)fill(po.begin()+i0,po.begin()+i,undefined);
+      i0=i;
+      if(i<n)cur=po[i];
     }
+  }
+}
+
+// Extend runs of hits to represent whole of R-block
+void extend(vector<int> &po){
+  int i,n=po.size();
+  for(i=n-R;i>=0;i--){
+    if(po[i]!=undefined&&po[i+1]==undefined)fill(po.begin()+i+1,po.begin()+i+R,po[i]);
   }
 }
 
@@ -185,7 +197,8 @@ int main(int ac,char**av){
   int deb=0;
   string reffn="refgenome";
   string idprefix,datadir;
-  int compression=0,minoffsetcount=8,minrun=3;
+  int compression=0,minrun=3;
+  float minoffsetcount=0;
   double df=0;
   while(1)switch(getopt(ac,av,"c:d:p:m:r:s:tx:")){
     case 'c': compression=atoi(optarg);break;
@@ -204,7 +217,7 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
-    fprintf(stderr,"       -m<int>    minoffsetcount (default 8)\n");
+    fprintf(stderr,"       -m<float>  minoffsetcount (default 0)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
     fprintf(stderr,"       -s<int>    Min run length for smoothing offsets (default 3)\n");
@@ -212,10 +225,11 @@ int main(int ac,char**av){
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
+  fprintf(stderr,"m=%g s=%d df=%g\n",minoffsetcount,minrun,df);
 
   // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
-
+  
   unordered_set<string> done;
   unordered_map<string,string> id2date;
   if(datadir!=""){
@@ -235,8 +249,8 @@ int main(int ac,char**av){
     fp.close();
     N=refgenome.size();
   }
-
-  // refdict[R-tuple of bases, X] = list of positions in the reference genome with that R-tuple, X
+  
+  // refdict[R-tuple of bases, X] = list of positions in the reference genome which start that R-tuple, X
   int base2num[256];
   for(i=0;i<256;i++)base2num[i]=-1;
   base2num['A']=base2num['a']=0;
@@ -251,7 +265,16 @@ int main(int ac,char**av){
     if(j>=badj+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(j-(R-1));}
   }
 
-  vector<int> j2num_i(N), j2ind_i(N), list_i;
+  vector<int> j2num_i(N), j2ind_i(N);
+  vector<float> offsetcount;
+  vector<int> indexkey;
+  vector<double> best_j(N);
+  vector<int> pointoffset_i,pointoffset_j(N);
+  array2d<int> i2j,j2i;
+  vector<int> list_i;
+  vector<int> mintree;
+  vector<int> nbp0,nbp1;
+  vector<UC> out(N+1);
   int linenum=0,nwrite=0;
   bool last;
   string header,line;
@@ -259,6 +282,7 @@ int main(int ac,char**av){
   last=!std::getline(std::cin,header);linenum++;
   int skip[3]={0};
   while(!last){// Main loop
+    tick(0);tock(0);
     tick(1);
     string id=parseheader(idprefix,header);
     if(id=="")skip[0]++; else if(done.count(id))skip[1]++; else if(datadir!=""&&id2date.count(id)==0)skip[2]++; else goto ok0;
@@ -291,8 +315,12 @@ int main(int ac,char**av){
     // Offset = (index in ref genome) - (index in current genome) = j-i
     // offsetcount[M+offset] = number of possible uses of this offset (assuming any R-tuple in genome can match same R-tuple anywhere in reference genome)
     // indexkey[i] = R-tuple of bases at position i in the current genome
-    vector<int> offsetcount(M+N);
-    vector<int> indexkey(M);
+    tick(14);
+    indexkey.resize(M);
+    offsetcount.resize(M+N);
+    fill(offsetcount.begin(),offsetcount.end(),0);
+    fill(indexkey.begin(),indexkey.end(),undefined);
+    tock(14);
     int badi=-1;
     tick(3);
     for(i=0,t=0;i<M;i++){
@@ -303,28 +331,40 @@ int main(int ac,char**av){
       if(i1>badi){
         assert(t>=0&&t<(1<<R*2));
         indexkey[i1]=t;
-        for(int j:refdict[t])offsetcount[M+j-i1]++;
-      }else if(i>=R-1)indexkey[i1]=undefined;
+        if(refdict[t].size()){
+          float x=1./refdict[t].size();
+          for(int j:refdict[t])offsetcount[M+j-i1]+=x;
+        }
+      }
     }
     //for(int o=0;o<M+N;o++)if(offsetcount[o]>=minoffsetcount)fprintf(stderr,"Offset %d %d\n",o-M,offsetcount[o]);
     tock(3);
 
+    double bigthr=10;
     tick(4);
-    vector<int> pointoffset_i(M,undefined),pointoffset_j(N,undefined);
-    vector<double> best_j(N,minoffsetcount-1);
-    double sqrtN=sqrt(N),nm=N/double(M);
+    // First pass: work out a "backbone" of strong offsets
+    pointoffset_i.resize(M);
+    fill(pointoffset_i.begin(),pointoffset_i.end(),undefined);
+    fill(pointoffset_j.begin(),pointoffset_j.end(),undefined);
+    fill(best_j.begin(),best_j.end(),bigthr-1e-6);
     for(i=0;i<=M-R;i++){
       t=indexkey[i];
       if(t!=undefined){
-        double best_i=minoffsetcount-1;
+        double best_i=bigthr-1e-6;
         for(int j:refdict[t]){
-          double c=offsetcount[M+j-i]-df*abs(j-i*nm)/sqrtN;
+          double c=offsetcount[M+j-i];
           if(c>best_j[j]){best_j[j]=c;pointoffset_j[j]=j-i;}
           if(c>best_i){best_i=c;pointoffset_i[i]=j-i;}
         }
       }
     }
+    smoothpointoffset(pointoffset_i,minrun);
+    smoothpointoffset(pointoffset_j,minrun);
+    extend(pointoffset_i);
+    extend(pointoffset_j);
+    tock(4);
     if(deb){
+      printf("First pass\n");
       for(i=0;i<max(M,N);i++){
         printf("%6d",i);
         if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
@@ -332,10 +372,7 @@ int main(int ac,char**av){
         printf("\n");
       }
     }
-    //prarr(pointoffset_i);printf("\n");
-    //prarr(pointoffset_j);printf("\n");
-    smoothpointoffset(pointoffset_i,minrun);
-    smoothpointoffset(pointoffset_j,minrun);
+    // -df*abs(j/double(M)-i/double(N));
     if(deb){
       printf("\n");
       for(i=0;i<max(M,N);i++){
@@ -345,36 +382,34 @@ int main(int ac,char**av){
         printf("\n");
       }
     }
-    tock(4);
-    
+
     tick(5);
     // Build up to 4 possible offsets, i2j[i][0,1], j2i[j][0,1], to use at each position (i in the current genome, j in ref)
     // i2j[][] works well for deletions
     // j2i[][] works well for insertions
-    array2d<int> i2j(M,2),j2i(N,2);
+    i2j.resize(M,3);i2j.fill(undefined);
+    j2i.resize(N,3);j2i.fill(undefined);
     // Approach from right
     int nearest=undefined;
-    for(i=M-1;i>M-R;i--)i2j[i][1]=undefined;
-    for(i=M-R;i>=0;i--){
+    for(i=M-1;i>=0;i--){
       if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
-      if(nearest!=undefined)i2j[i][1]=i+nearest; else i2j[i][1]=undefined;
+      if(nearest!=undefined)i2j[i][1]=i+nearest;
     }
     nearest=undefined;
-    for(j=N-1;j>N-R;j--)j2i[j][1]=undefined;
-    for(j=N-R;j>=0;j--){
+    for(j=N-1;j>=0;j--){
       if(pointoffset_j[j]!=undefined)nearest=pointoffset_j[j];
-      if(nearest!=undefined)j2i[j][1]=j-nearest; else j2i[j][1]=undefined;
+      if(nearest!=undefined)j2i[j][1]=j-nearest;
     }
     // Approach from left
     nearest=undefined;
     for(i=0;i<M;i++){
       if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
-      if(nearest!=undefined)i2j[i][0]=i+nearest; else i2j[i][0]=undefined;
+      if(nearest!=undefined)i2j[i][0]=i+nearest;
     }
     nearest=undefined;
     for(j=0;j<N;j++){
       if(pointoffset_j[j]!=undefined)nearest=pointoffset_j[j];
-      if(nearest!=undefined)j2i[j][0]=j-nearest; else j2i[j][0]=undefined;
+      if(nearest!=undefined)j2i[j][0]=j-nearest;
     }
     tock(5);
     if(deb){
@@ -392,10 +427,14 @@ int main(int ac,char**av){
         printf("\n");
       }
     }
+
+    tick(6);
+    
+    tock(6);
     
     // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
     tick(9);
-    memset(&j2num_i[0],0,N*sizeof(int));
+    fill(j2num_i.begin(),j2num_i.end(),0);
     for(j=0;j<N;j++){
       int i0=j2i[j][0],i1=j2i[j][1];
       if(        i0>=0&&i0<M)j2num_i[j]++;
@@ -411,8 +450,8 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    if(deb)fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     list_i.resize(tot);
+    if(deb)fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     for(j=0;j<N;j++){
       int i0=j2i[j][0],i1=j2i[j][1];
       if(        i0>=0&&i0<M)list_i[j2ind_i[j]++]=i0;
@@ -430,7 +469,9 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    vector<int> mintree(M*2+50);
+
+    mintree.resize(M*2+50);
+    fill(mintree.begin(),mintree.end(),0);
     // mintree[] is a binary tree to do min-query and range-min-update O(logn) time. (Could do O(1) time if feeling energetic.)
     // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form {val[i]=min(val[i],v0) for all i>i1}.
     // At stage j, val[i]+i+j represents the best(lowest) score achievable if you start at (i,j) and descend by legal jumps to (-1,-1),
@@ -441,7 +482,8 @@ int main(int ac,char**av){
     // (i) a skip penalty of (j-1-j')+(i-1-i')+(2 if (i',j') isn't in the list), and
     // (ii) a mutation penalty of (refgenome[j]!=genome[i])*C for some C to be decided on.
     // For these purposes, the list is deemed to include (-1,-1) and (M,N).
-    vector<int> nbp0(tot),nbp1(tot);
+    nbp0.resize(tot);
+    nbp1.resize(tot);
     for(j=0;j<N;j++){
       int k;
       if(j2num_i[j]>1)std::sort(&list_i[j2ind_i[j]],&list_i[j2ind_i[j]+j2num_i[j]],std::greater<>());
@@ -465,9 +507,9 @@ int main(int ac,char**av){
     }
     tock(10);
 
-    tick(11);
+
     // Write aligned genome, out[]
-    vector<UC> out(N+1);
+    tick(11);
     memset(&out[0],'-',N);
     out[N]=0;
     {
