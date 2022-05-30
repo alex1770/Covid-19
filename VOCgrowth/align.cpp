@@ -176,7 +176,13 @@ void smoothpointoffset(vector<int> &po,int minrun){
   }
 }
 
+void prarr(vector<int>&vv){
+  int i,n=vv.size();
+  for(i=0;i<n;i++)printf("%6d  %10d\n",i,vv[i]);
+}
+
 int main(int ac,char**av){
+  int deb=0;
   string reffn="refgenome";
   string idprefix,datadir;
   int compression=0,minoffsetcount=8,minrun=3;
@@ -315,8 +321,27 @@ int main(int ac,char**av){
         }
       }
     }
+    if(deb){
+      for(i=0;i<max(M,N);i++){
+        printf("%6d",i);
+        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
+        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
+        printf("\n");
+      }
+    }
+    //prarr(pointoffset_i);printf("\n");
+    //prarr(pointoffset_j);printf("\n");
     smoothpointoffset(pointoffset_i,minrun);
     smoothpointoffset(pointoffset_j,minrun);
+    if(deb){
+      printf("\n");
+      for(i=0;i<max(M,N);i++){
+        printf("%6d",i);
+        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
+        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
+        printf("\n");
+      }
+    }
     tock(4);
     
     tick(5);
@@ -339,19 +364,32 @@ int main(int ac,char**av){
     }
     // Approach from left
     nearest=undefined;
-    for(i=0;i<R-1;i++)i2j[i][0]=undefined;
-    for(i=0;i<=M-R;i++){
+    for(i=0;i<M;i++){
       if(pointoffset_i[i]!=undefined)nearest=pointoffset_i[i];
-      if(nearest!=undefined)i2j[i+R-1][0]=i+R-1+nearest; else i2j[i+R-1][0]=undefined;
+      if(nearest!=undefined)i2j[i][0]=i+nearest; else i2j[i][0]=undefined;
     }
     nearest=undefined;
-    for(j=0;j<R-1;j++)j2i[j][0]=undefined;
-    for(j=0;j<=N-R;j++){
+    for(j=0;j<N;j++){
       if(pointoffset_j[j]!=undefined)nearest=pointoffset_j[j];
-      if(nearest!=undefined)j2i[j+R-1][0]=j+R-1-nearest; else j2i[j+R-1][0]=undefined;
+      if(nearest!=undefined)j2i[j][0]=j-nearest; else j2i[j][0]=undefined;
     }
     tock(5);
-
+    if(deb){
+      for(i=0;i<max(M,N);i++){
+        int k;
+        printf("%6d",i);
+        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
+        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
+        for(k=0;k<2;k++){
+          if(i<M)printf("  %10d",i2j[i][k]-i); else printf("           .");
+        }
+        for(k=0;k<2;k++){
+          if(i<N)printf("  %10d",i-j2i[i][k]); else printf("           .");
+        }
+        printf("\n");
+      }
+    }
+    
     // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
     tick(9);
     memset(&j2num_i[0],0,N*sizeof(int));
@@ -370,7 +408,7 @@ int main(int ac,char**av){
       j2ind_i[j]=tot;
       tot+=j2num_i[j];
     }
-    //fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
+    if(deb)fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     list_i.resize(tot);
     for(j=0;j<N;j++){
       int i0=j2i[j][0],i1=j2i[j][1];
