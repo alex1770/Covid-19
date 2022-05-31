@@ -201,10 +201,10 @@ int main(int ac,char**av){
   string idprefix,datadir;
   int compression=0,minrun=3,matchweight=4;
   double bigthr=10,smallthr=1;
-  double df=0;
-  while(1)switch(getopt(ac,av,"c:d:p:M:m:r:s:tw:x:")){
+  double jpf=0;
+  while(1)switch(getopt(ac,av,"c:j:p:M:m:r:s:tw:x:")){
     case 'c': compression=atoi(optarg);break;
-    case 'd': df=atof(optarg);break;
+    case 'j': jpf=atof(optarg);break;
     case 'M': bigthr=atof(optarg);break;
     case 'm': smallthr=atof(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
@@ -221,6 +221,7 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
+    fprintf(stderr,"       -j<float>  jump penalty factor (default 0)\n");
     fprintf(stderr,"       -M<float>  big threshold (default 10)\n");
     fprintf(stderr,"       -m<float>  small threshold (default 1)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
@@ -231,7 +232,7 @@ int main(int ac,char**av){
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
-  if(deb)fprintf(stderr,"M=%g m=%g s=%d df=%g\n",bigthr,smallthr,minrun,df);
+  if(deb)fprintf(stderr,"M=%g m=%g s=%d jpf=%g\n",bigthr,smallthr,minrun,jpf);
 
   // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
@@ -456,11 +457,11 @@ int main(int ac,char**av){
         double best_i=smallthr-1e-6;
         for(int j:refdict[t]){
           if(i!=j2i[j][0]&&i!=j2i[j][1]){
-            double c=offsetcount[M+j-i]-df*jumppen(j2i[j][0],j2i[j][1],i);
+            double c=offsetcount[M+j-i]-jpf*jumppen(j2i[j][0],j2i[j][1],i);
             if(c>best_j[j]){best_j[j]=c;j2i[j][2]=i;}
           }
           if(j!=i2j[i][0]&&j!=i2j[i][1]){
-            double c=offsetcount[M+j-i]-df*jumppen(i2j[i][0],i2j[i][1],j);
+            double c=offsetcount[M+j-i]-jpf*jumppen(i2j[i][0],i2j[i][1],j);
             if(c>best_i){best_i=c;i2j[i][2]=j;}
           }
         }
