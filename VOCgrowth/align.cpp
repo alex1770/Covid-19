@@ -278,7 +278,7 @@ int main(int ac,char**av){
   vector<int> pointoffset_i,pointoffset_j(N);
   array2d<int> i2j,j2i;
   vector<int> list_i;
-  vector<int> mintree;
+  vector<int> maxtree;
   vector<int> nbp0,nbp1;
   vector<UC> out(N+1);
   int linenum=0,nwrite=0;
@@ -505,18 +505,18 @@ int main(int ac,char**av){
       tot+=j2num_i[j];
     }
 
-    mintree.resize(M*2+50);
-    fill(mintree.begin(),mintree.end(),0);
-    // mintree[] is a binary tree to do min-query and range-min-update O(logn) time. (Could do O(1) time if feeling energetic.)
-    // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form {val[i]=min(val[i],v0) for all i>i1}.
-    // At stage j, val[i]+i+j represents the best(lowest) score achievable if you start at (i,j) and descend by legal jumps to (-1,-1),
-    // but not including the mutation penalty for (i,j) itself.
-    // You could also say, at stage j*, val[i]+i+j = best score achievable from (i,j) for j>=j*, using only waypoints <j*.
+    maxtree.resize(M*2+50);
+    fill(maxtree.begin(),maxtree.end(),0);
+    // maxtree[] is a binary tree to do max-query and range-max-update O(logn) time. (Could do O(1) time if feeling energetic.)
+    // It implements an array val[0...M-1] with queries of the form val[i1] and updates of the form {val[i]=max(val[i],v0) for all i>i1}.
+    // M refers to the length of the candidate genome, and indexes into it use the letter i
+    // N refers to the length of the reference genome, and indexes into it use the letter j
+    // A chain is a sequence of legal jumps (down) from (M,N) to (-1,-1).  (M,N) -> (i_1,j_1) -> (i_2,j_2) -> ... -> (i_k,j_k) -> (-1,-1),
+    // where each (i_r,j_r) is in the list of allowable waypoints.
     // A legal jump is a move of the form (i,j) -> (i',j'), where i'<i, j'<j.
-    // Such moves (with -1<=i'<i, -1<=j'<j) incur
-    // (i) a skip penalty of (j-1-j')+(i-1-i')+(2 if (i',j') isn't in the list), and
-    // (ii) a mutation penalty of (refgenome[j]!=genome[i])*C for some C to be decided on.
-    // For these purposes, the list is deemed to include (-1,-1) and (M,N).
+    // The score of such a chain is the number of jumps (=k+1) plus matchweight * (the number of matches of genome[i_r] with refgenome[j_r]).
+    // At stage j, val[i] represents the best score achievable if you start at (i,j) instead of (M,N).
+    // (The matchscore matchweight*(genome[i]==refgenome[j]) is not included in val[i].)
     nbp0.resize(tot);
     nbp1.resize(tot);
     for(j=0;j<N;j++){
@@ -526,17 +526,17 @@ int main(int ac,char**av){
         int i1=list_i[j2ind_i[j]+k];
         assert(i1>=0&&i1<M);
         // See if waypoint (i1,j) improves val_{j+1}(i) for some i>i1, otherwise it will be left with its value based on earlier waypoints (*,<j)
-        int mi=infinity;
+        int mx=-infinity;
         {
           int i=i1,m=M+1,p=0;
-          do{mi=min(mi,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
+          do{mx=max(mx,maxtree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
         }
-        int v0=mi-matchweight*(refgenome[j]==genome[i1])-1;
+        int v0=mx+matchweight*(refgenome[j]==genome[i1])+1;
         nbp0[j2ind_i[j]+k]=i1;
         nbp1[j2ind_i[j]+k]=v0;
         {
           int i=i1+1,m=M+1,p=0;
-          do{mintree[p+i]=min(mintree[p+i],v0);p+=m;m=(m+1)>>1;i=(i+1)>>1;}while(m>1&&i<m);
+          do{maxtree[p+i]=max(maxtree[p+i],v0);p+=m;m=(m+1)>>1;i=(i+1)>>1;}while(m>1&&i<m);
         }
       }
     }
@@ -548,19 +548,19 @@ int main(int ac,char**av){
     memset(&out[0],'-',N);
     out[N]=0;
     {
-      int k,vl=infinity;
+      int k,vl=-infinity;
       {
         int i=M,m=M+1,p=0;
-        do{vl=min(vl,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
+        do{vl=max(vl,maxtree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
       }
       int i1=M;
       for(j=N-1;j>=0;j--){
         for(k=0;k<j2num_i[j];k++){
           int p=j2ind_i[j]+k;
           int i=list_i[p];
-          if(i<i1)assert(nbp1[p]>=vl);
+          if(i<i1)assert(nbp1[p]<=vl);
           if(i<i1&&nbp1[p]==vl){
-            vl-=-matchweight*(refgenome[j]==genome[i])-1;
+            vl-=matchweight*(refgenome[j]==genome[i])+1;
             i1=i;
             out[j]=genome[i];
             break;
