@@ -1,4 +1,5 @@
 // Aligns fasta format input to a given reference genome
+// Intended to be used for genomes you expect to be somewhat similar
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +47,7 @@ template<class T> struct array2d {
   array2d(){}
   array2d(size_t r, size_t c):rows(r),cols(c),data(r*c){}
   array2d(size_t r, size_t c, const T&val):rows(r),cols(c),data(r*c,val){}
+  size_t size(void){return (rows*cols)/sizeof(T);}
   void resize(size_t r, size_t c){rows=r;cols=c;data.resize(r*c);}
   void fill(const T&val){std::fill(data.begin(),data.end(),val);}
   T* operator[](size_t index){return &data[index*cols];}// First level indexing
@@ -198,12 +200,13 @@ int main(int ac,char**av){
   string reffn="refgenome";
   string idprefix,datadir;
   int compression=0,minrun=3;
-  float minoffsetcount=0;
+  double bigthr=10,smallthr=1;
   double df=0;
-  while(1)switch(getopt(ac,av,"c:d:p:m:r:s:tx:")){
+  while(1)switch(getopt(ac,av,"c:d:p:M:m:r:s:tx:")){
     case 'c': compression=atoi(optarg);break;
     case 'd': df=atof(optarg);break;
-    case 'm': minoffsetcount=atoi(optarg);break;
+    case 'M': bigthr=atof(optarg);break;
+    case 'm': smallthr=atof(optarg);break;
     case 'p': idprefix=strdup(optarg);break;
     case 'r': reffn=strdup(optarg);break;
     case 's': minrun=atoi(optarg);break;
@@ -217,7 +220,8 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
-    fprintf(stderr,"       -m<float>  minoffsetcount (default 0)\n");
+    fprintf(stderr,"       -M<float>  big threshold (default 10)\n");
+    fprintf(stderr,"       -m<float>  small threshold (default 1)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
     fprintf(stderr,"       -s<int>    Min run length for smoothing offsets (default 3)\n");
@@ -225,7 +229,7 @@ int main(int ac,char**av){
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
-  fprintf(stderr,"m=%g s=%d df=%g\n",minoffsetcount,minrun,df);
+  if(deb)fprintf(stderr,"M=%g m=%g s=%d df=%g\n",bigthr,smallthr,minrun,df);
 
   // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
@@ -337,10 +341,8 @@ int main(int ac,char**av){
         }
       }
     }
-    //for(int o=0;o<M+N;o++)if(offsetcount[o]>=minoffsetcount)fprintf(stderr,"Offset %d %d\n",o-M,offsetcount[o]);
     tock(3);
 
-    double bigthr=10;
     tick(4);
     // First pass: work out a "backbone" of strong offsets
     pointoffset_i.resize(M);
@@ -372,7 +374,6 @@ int main(int ac,char**av){
         printf("\n");
       }
     }
-    // -df*abs(j/double(M)-i/double(N));
     if(deb){
       printf("\n");
       for(i=0;i<max(M,N);i++){
@@ -427,23 +428,53 @@ int main(int ac,char**av){
         printf("\n");
       }
     }
-
-    tick(6);
     
+    tick(6);
+    fill(best_j.begin(),best_j.end(),smallthr-1e-6);
+    for(i=0;i<=M-R;i++){
+      t=indexkey[i];
+      if(t!=undefined){
+        double best_i=smallthr-1e-6;
+        for(int j:refdict[t]){
+          double c=offsetcount[M+j-i];// -df*abs(j/double(M)-i/double(N));
+          if(i!=j2i[j][0]&&i!=j2i[j][1]&&c>best_j[j]){best_j[j]=c;j2i[j][2]=i;}
+          if(j!=i2j[i][0]&&j!=i2j[i][1]&&c>best_i){best_i=c;i2j[i][2]=j;}
+        }
+      }
+    }
+    for(i=M-R;i>=0;i--)if(i2j[i][2]!=undefined&&i2j[i+1][2]==undefined)for(int i1=i+1;i1<i+R;i1++)i2j[i1][2]=i2j[i][2]+i1-i;
+    for(j=N-R;j>=0;j--)if(j2i[j][2]!=undefined&&j2i[j+1][2]==undefined)for(int j1=j+1;j1<j+R;j1++)j2i[j1][2]=j2i[j][2]+j1-j;
+    if(0){
+      for(i=0;i<max(M,N);i++){
+        int k;
+        printf("%6d",i);
+        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
+        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
+        for(k=0;k<3;k++){
+          if(i<M)printf("  %10d",i2j[i][k]-i); else printf("           .");
+        }
+        for(k=0;k<3;k++){
+          if(i<N)printf("  %10d",i-j2i[i][k]); else printf("           .");
+        }
+        printf("\n");
+      }
+    }
     tock(6);
     
     // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
     tick(9);
     fill(j2num_i.begin(),j2num_i.end(),0);
     for(j=0;j<N;j++){
-      int i0=j2i[j][0],i1=j2i[j][1];
-      if(        i0>=0&&i0<M)j2num_i[j]++;
-      if(i1!=i0&&i1>=0&&i1<M)j2num_i[j]++;
+      int i0=j2i[j][0],i1=j2i[j][1],i2=j2i[j][2];
+      if(                i0>=0&&i0<M)j2num_i[j]++;
+      if(        i1!=i0&&i1>=0&&i1<M)j2num_i[j]++;
+      if(i2!=i1&&i2!=i0&&i2>=0&&i2<M)j2num_i[j]++;
     }
     for(i=0;i<M;i++){
-      int j0=i2j[i][0],j1=i2j[i][1];
-      if(        j0>=0&&j0<N&&i!=j2i[j0][0]&&i!=j2i[j0][1])j2num_i[j0]++;
-      if(j1!=j0&&j1>=0&&j1<N&&i!=j2i[j1][0]&&i!=j2i[j1][1])j2num_i[j1]++;
+      int j0=i2j[i][0],j1=i2j[i][1],j2=i2j[i][2];
+      if(                j0>=0&&j0<N&&i!=j2i[j0][0]&&i!=j2i[j0][1]&&i!=j2i[j0][2])j2num_i[j0]++;
+      if(        j1!=j0&&j1>=0&&j1<N&&i!=j2i[j1][0]&&i!=j2i[j1][1]&&i!=j2i[j1][2])j2num_i[j1]++;
+      if(j2!=j1&&j2!=j0&&j2>=0&&j2<N&&i!=j2i[j2][0]&&i!=j2i[j2][1]&&i!=j2i[j2][2])j2num_i[j2]++;
     }
     int tot=0;
     for(j=0;j<N;j++){
@@ -453,14 +484,16 @@ int main(int ac,char**av){
     list_i.resize(tot);
     if(deb)fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     for(j=0;j<N;j++){
-      int i0=j2i[j][0],i1=j2i[j][1];
-      if(        i0>=0&&i0<M)list_i[j2ind_i[j]++]=i0;
-      if(i1!=i0&&i1>=0&&i1<M)list_i[j2ind_i[j]++]=i1;
+      int i0=j2i[j][0],i1=j2i[j][1],i2=j2i[j][2];
+      if(                i0>=0&&i0<M)list_i[j2ind_i[j]++]=i0;
+      if(        i1!=i0&&i1>=0&&i1<M)list_i[j2ind_i[j]++]=i1;
+      if(i2!=i1&&i2!=i0&&i2>=0&&i2<M)list_i[j2ind_i[j]++]=i2;
     }
     for(i=0;i<M;i++){
-      int j0=i2j[i][0],j1=i2j[i][1];
-      if(        j0>=0&&j0<N&&i!=j2i[j0][0]&&i!=j2i[j0][1])list_i[j2ind_i[j0]++]=i;
-      if(j1!=j0&&j1>=0&&j1<N&&i!=j2i[j1][0]&&i!=j2i[j1][1])list_i[j2ind_i[j1]++]=i;
+      int j0=i2j[i][0],j1=i2j[i][1],j2=i2j[i][2];
+      if(                j0>=0&&j0<N&&i!=j2i[j0][0]&&i!=j2i[j0][1]&&i!=j2i[j0][2])list_i[j2ind_i[j0]++]=i;
+      if(        j1!=j0&&j1>=0&&j1<N&&i!=j2i[j1][0]&&i!=j2i[j1][1]&&i!=j2i[j1][2])list_i[j2ind_i[j1]++]=i;
+      if(j2!=j1&&j2!=j0&&j2>=0&&j2<N&&i!=j2i[j2][0]&&i!=j2i[j2][1]&&i!=j2i[j2][2])list_i[j2ind_i[j2]++]=i;
     }
     tock(9);
     
