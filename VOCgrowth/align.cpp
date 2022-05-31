@@ -199,10 +199,10 @@ int main(int ac,char**av){
   int deb=0;
   string reffn="refgenome";
   string idprefix,datadir;
-  int compression=0,minrun=3;
+  int compression=0,minrun=3,matchweight=4;
   double bigthr=10,smallthr=1;
   double df=0;
-  while(1)switch(getopt(ac,av,"c:d:p:M:m:r:s:tx:")){
+  while(1)switch(getopt(ac,av,"c:d:p:M:m:r:s:tw:x:")){
     case 'c': compression=atoi(optarg);break;
     case 'd': df=atof(optarg);break;
     case 'M': bigthr=atof(optarg);break;
@@ -212,6 +212,7 @@ int main(int ac,char**av){
     case 's': minrun=atoi(optarg);break;
     case 't': timings=1;break;
     case 'x': datadir=strdup(optarg);break;
+    case 'w': matchweight=atoi(optarg);break;
     case -1: goto ew0;
     default: goto err0;
   }
@@ -226,6 +227,7 @@ int main(int ac,char**av){
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
     fprintf(stderr,"       -s<int>    Min run length for smoothing offsets (default 3)\n");
     fprintf(stderr,"       -t         Enable timings\n");
+    fprintf(stderr,"       -w<int>    Match weight (default 4)\n");
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
@@ -529,7 +531,7 @@ int main(int ac,char**av){
           int i=i1,m=M+1,p=0;
           do{mi=min(mi,mintree[p+i]);p+=m;m=(m+1)>>1;i=i>>1;}while(m>1&&i<m);
         }
-        int v0=mi-2+(refgenome[j]!=genome[i1])*2;
+        int v0=mi-matchweight*(refgenome[j]==genome[i1])-1;
         nbp0[j2ind_i[j]+k]=i1;
         nbp1[j2ind_i[j]+k]=v0;
         {
@@ -558,7 +560,7 @@ int main(int ac,char**av){
           int i=list_i[p];
           if(i<i1)assert(nbp1[p]>=vl);
           if(i<i1&&nbp1[p]==vl){
-            vl-=-2+(refgenome[j]!=genome[i])*2;
+            vl-=-matchweight*(refgenome[j]==genome[i])-1;
             i1=i;
             out[j]=genome[i];
             break;
