@@ -191,7 +191,6 @@ void extend(vector<int> &po){
 }
 
 int main(int ac,char**av){
-  int deb=0;
   string reffn="refgenome";
   string idprefix,datadir;
   int compression=0,minrun=4,matchweight=4;
@@ -227,7 +226,7 @@ int main(int ac,char**av){
     fprintf(stderr,"       -x<string> Data directory\n");
     exit(1);
   }
-  if(deb)fprintf(stderr,"M=%g m=%g s=%d jpf=%g\n",bigthr,smallthr,minrun,jpf);
+  //fprintf(stderr,"M=%g m=%g s=%d jpf=%g\n",bigthr,smallthr,minrun,jpf);
 
   // It seems you need this otherwise std::getline will be ridiculously slow because it synchronises to C stdio
   std::ios_base::sync_with_stdio(false);
@@ -380,24 +379,6 @@ int main(int ac,char**av){
     extend(pointoffset_i);
     extend(pointoffset_j);
     tock(4);
-    if(deb){
-      printf("First pass\n");
-      for(i=0;i<max(M,N);i++){
-        printf("%6d",i);
-        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
-        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
-        printf("\n");
-      }
-    }
-    if(deb){
-      printf("\n");
-      for(i=0;i<max(M,N);i++){
-        printf("%6d",i);
-        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
-        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
-        printf("\n");
-      }
-    }
 
     tick(5);
     // Build up to 4 possible offsets, i2j[i][0,1], j2i[j][0,1], to use at each position (i in the current genome, j in ref)
@@ -428,21 +409,6 @@ int main(int ac,char**av){
       if(nearest!=undefined)j2i[j][0]=j-nearest;
     }
     tock(5);
-    if(deb){
-      for(i=0;i<max(M,N);i++){
-        int k;
-        printf("%6d",i);
-        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
-        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
-        for(k=0;k<2;k++){
-          if(i<M)printf("  %10d",i2j[i][k]-i); else printf("           .");
-        }
-        for(k=0;k<2;k++){
-          if(i<N)printf("  %10d",i-j2i[i][k]); else printf("           .");
-        }
-        printf("\n");
-      }
-    }
     
     tick(6);
     fill(best_j.begin(),best_j.end(),smallthr-1e-6);
@@ -464,24 +430,6 @@ int main(int ac,char**av){
     }
     for(i=M-R;i>=0;i--)if(i2j[i][2]!=undefined&&i2j[i+1][2]==undefined)for(int i1=i+1;i1<i+R;i1++)i2j[i1][2]=i2j[i][2]+i1-i;
     for(j=N-R;j>=0;j--)if(j2i[j][2]!=undefined&&j2i[j+1][2]==undefined)for(int j1=j+1;j1<j+R;j1++)j2i[j1][2]=j2i[j][2]+j1-j;
-    if(0){
-      for(i=0;i<max(M,N);i++){
-        int k;
-        printf("%6d",i);
-        if(i<M)printf("  %11d",pointoffset_i[i]); else printf("           .");
-        if(i<N)printf("  %11d",pointoffset_j[i]); else printf("           .");
-        printf("  |");
-        for(k=0;k<3;k++){
-          if(i<M)printf("  %11d",i2j[i][k]-i); else printf("           .");
-        }
-        printf("  |");
-        for(k=0;k<3;k++){
-          if(i<N)printf("  %11d",i-j2i[i][k]); else printf("           .");
-        }
-        printf("\n");
-      }
-      exit(0);
-    }
     tock(6);
     
     // Make antichains - make an linear order of all allowable (i,j) such that a later (i,j) is never less-in-the-partial-order than an earlier one.
@@ -505,7 +453,7 @@ int main(int ac,char**av){
       tot+=j2num_i[j];
     }
     list_i.resize(tot);
-    if(deb)fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
+    //fprintf(stderr,"Total %6d   Ratio=%g\n",tot,tot/double(max(M,N)));
     for(j=0;j<N;j++){
       int i0=j2i[j][0],i1=j2i[j][1],i2=j2i[j][2];
       if(                i0>=0&&i0<M)list_i[j2ind_i[j]++]=i0;
