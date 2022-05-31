@@ -243,7 +243,7 @@ int main(int ac,char**av){
     done=readIDs(datadir);
     id2date=readmeta(datadir);
   }
-  
+
   int i,j,t;
   
   string refgenome;
@@ -271,6 +271,23 @@ int main(int ac,char**av){
     if(j>=badj+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(j-(R-1));}
   }
 
+  vector<float> jumppentab(N+1);
+  for(j=0;j<=N;j++)jumppentab[j]=sqrt(j);
+  auto jumppen=[N,&jumppentab](int a,int b,int c)->double{
+    if(a==undefined&&b==undefined)return 0;
+    if(a==undefined)return jumppentab[min(abs(b-c),N)];
+    if(b==undefined)return jumppentab[min(abs(a-c),N)];
+    if(a<b){
+      if(c<a)return jumppentab[min(a-c,N)];
+      if(c<=b)return 0;
+      return jumppentab[min(c-b,N)];
+    }else{
+      if(c<b)return jumppentab[min(b-c,N)];
+      if(c<=a)return 0;
+      return jumppentab[min(c-a,N)];
+    }
+  };
+  
   vector<int> j2num_i(N), j2ind_i(N);
   vector<float> offsetcount;
   vector<int> indexkey;
@@ -438,9 +455,14 @@ int main(int ac,char**av){
       if(t!=undefined){
         double best_i=smallthr-1e-6;
         for(int j:refdict[t]){
-          double c=offsetcount[M+j-i];// -df*abs(j/double(M)-i/double(N));
-          if(i!=j2i[j][0]&&i!=j2i[j][1]&&c>best_j[j]){best_j[j]=c;j2i[j][2]=i;}
-          if(j!=i2j[i][0]&&j!=i2j[i][1]&&c>best_i){best_i=c;i2j[i][2]=j;}
+          if(i!=j2i[j][0]&&i!=j2i[j][1]){
+            double c=offsetcount[M+j-i]-df*jumppen(j2i[j][0],j2i[j][1],i);
+            if(c>best_j[j]){best_j[j]=c;j2i[j][2]=i;}
+          }
+          if(j!=i2j[i][0]&&j!=i2j[i][1]){
+            double c=offsetcount[M+j-i]-df*jumppen(i2j[i][0],i2j[i][1],j);
+            if(c>best_i){best_i=c;i2j[i][2]=j;}
+          }
         }
       }
     }
@@ -450,16 +472,19 @@ int main(int ac,char**av){
       for(i=0;i<max(M,N);i++){
         int k;
         printf("%6d",i);
-        if(i<M)printf("  %10d",pointoffset_i[i]); else printf("           .");
-        if(i<N)printf("  %10d",pointoffset_j[i]); else printf("           .");
+        if(i<M)printf("  %11d",pointoffset_i[i]); else printf("           .");
+        if(i<N)printf("  %11d",pointoffset_j[i]); else printf("           .");
+        printf("  |");
         for(k=0;k<3;k++){
-          if(i<M)printf("  %10d",i2j[i][k]-i); else printf("           .");
+          if(i<M)printf("  %11d",i2j[i][k]-i); else printf("           .");
         }
+        printf("  |");
         for(k=0;k<3;k++){
-          if(i<N)printf("  %10d",i-j2i[i][k]); else printf("           .");
+          if(i<N)printf("  %11d",i-j2i[i][k]); else printf("           .");
         }
         printf("\n");
       }
+      exit(0);
     }
     tock(6);
     
