@@ -54,6 +54,7 @@ bool okdate(string date){
   return date.size()==10&&date[0]=='2'&&date[1]=='0'&&date[4]=='-'&&date[7]=='-';
 }
 
+// Not currently used
 string getid(string gisaidname){
   vector<string> ida=split(gisaidname,"/");
   int n=ida.size();
@@ -70,7 +71,7 @@ string processlocation(string &id,string &loc){
   return loc;
 }
 
-unordered_map<string,metadata> csv2map(string fn,string sep,string id,string date,string lineage,string location){
+unordered_map<string,metadata> csv2map(string fn,string sep,string idprefix,string id,string date,string lineage,string location){
   unordered_map<string,metadata> ret;
   std::ifstream fp(fn);
   if(fp.fail())error(1,errno,"Couldn't open %s",fn.c_str());
@@ -90,7 +91,7 @@ unordered_map<string,metadata> csv2map(string fn,string sep,string id,string dat
     vector<string> data=split(line,sep);
     string date=data[datecol];
     if(okdate(date)){
-      string id=getid(data[idcol]);
+      string id=idprefix+data[idcol];
       string loc=processlocation(id,data[loccol]);
       ret[id]={date,id,data[lincol],loc};
     }
@@ -120,10 +121,10 @@ int main(int ac,char**av){
   
   cerr << "Loading metadata\n";
   
-  id2meta=csv2map("metadata.tsv","\t","Virus name","Collection date","Pango lineage","Location");
+  id2meta=csv2map("metadata.tsv",     "\t","",       "Virus name",   "Collection date","Pango lineage","Location");
   cerr << "Read " << id2meta.size() << " entries from GISAID metadata\n";
   
-  cog2meta=csv2map("cog_metadata.csv",",","sequence_name","sample_date","lineage","country");
+  cog2meta=csv2map("cog_metadata.csv",",","hCoV-19/","sequence_name","sample_date",    "lineage",      "country");
   cerr << "Read " << cog2meta.size() << " entries from COG-UK metadata\n";
   
   for(auto &m:cog2meta)id2meta[m.first]=m.second;
