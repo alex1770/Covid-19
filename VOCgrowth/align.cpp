@@ -190,18 +190,13 @@ void extend(vector<int> &po){
   }
 }
 
-void prarr(vector<int>&vv){
-  int i,n=vv.size();
-  for(i=0;i<n;i++)printf("%6d  %10d\n",i,vv[i]);
-}
-
 int main(int ac,char**av){
   int deb=0;
   string reffn="refgenome";
   string idprefix,datadir;
-  int compression=0,minrun=3,matchweight=4;
-  double bigthr=10,smallthr=1;
-  double jpf=0;
+  int compression=0,minrun=4,matchweight=4;
+  double bigthr=6,smallthr=0;
+  double jpf=0.5;
   while(1)switch(getopt(ac,av,"c:j:p:M:m:r:s:tw:x:")){
     case 'c': compression=atoi(optarg);break;
     case 'j': jpf=atof(optarg);break;
@@ -221,12 +216,12 @@ int main(int ac,char**av){
   err0:
     fprintf(stderr,"Usage: align [options]\n");
     fprintf(stderr,"       -c<int>    Compression mode (0=default=uncompressed fasta output)\n");
-    fprintf(stderr,"       -j<float>  jump penalty factor (default 0)\n");
-    fprintf(stderr,"       -M<float>  big threshold (default 10)\n");
-    fprintf(stderr,"       -m<float>  small threshold (default 1)\n");
+    fprintf(stderr,"       -j<float>  jump penalty factor (default 0.5)\n");
+    fprintf(stderr,"       -M<float>  big threshold (default 6)\n");
+    fprintf(stderr,"       -m<float>  small threshold (default 0)\n");
     fprintf(stderr,"       -p<string> ID prefix (e.g., \"hCoV-19\" to put COG-UK on same footing as GISAID)\n");
     fprintf(stderr,"       -r<string> Reference genome fasta file (default \"refgenome\")\n");
-    fprintf(stderr,"       -s<int>    Min run length for smoothing offsets (default 3)\n");
+    fprintf(stderr,"       -s<int>    Min run length for smoothing offsets in backbone phase (default 4)\n");
     fprintf(stderr,"       -t         Enable timings\n");
     fprintf(stderr,"       -w<int>    Match weight (default 4)\n");
     fprintf(stderr,"       -x<string> Data directory\n");
