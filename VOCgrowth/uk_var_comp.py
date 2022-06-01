@@ -166,7 +166,7 @@ set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
 set ylabel "log(New {oneother} per day / New {Vnames[0]} per day)"
 
 set output "{graphfn}"
-set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nDescription/caveats/current graph: http://sonorouschocolate.com/covid19/index.php?title=Omicron\\\\_BA.2\\\\_vs\\\\_BA.1\\nSource: Sequenced cases from COG-UK {cogdate}"
+set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nDescription/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
 plot [:] [{ymin-0.5}:{max(ymax+numv-0.2,1.8)}]"""
 
