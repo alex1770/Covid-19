@@ -9,7 +9,19 @@ set -e
 bash regionalcasesbyage.sh
 
 (cd COG-UK; bash update.sh)
-(cd VOCgrowth; python3 uk_var_comp.py BA.1+,BA.1.1+,BA.2+; python3 uk_var_comp.py BA.1+,BA.2+; python3 uk_var_comp.py BA.1.1+,BA.2+; python3 uk_var_comp.py BA.1+,BA.1.1+; python3 uk_var_comp.py BA.2,XE; python3 uk_var_comp.py BA.2,BA.2.1,BA.2.3)
+(
+    cd VOCgrowth
+    #python3 uk_var_comp.py BA.1+,BA.1.1+,BA.2+
+    #python3 uk_var_comp.py BA.1+,BA.2+
+    #python3 uk_var_comp.py BA.1.1+,BA.2+
+    #python3 uk_var_comp.py BA.1+,BA.1.1+
+    #python3 uk_var_comp.py BA.2,BA.2.1,BA.2.3
+    python3 uk_var_comp.py BA.2,BA.2.12.1
+    python3 uk_var_comp.py BA.2,BA.4,BA.5
+    python3 uk_var_comp.py BA.2,XE
+    python3 uk_var_comp.py BA.2,BA.2.18
+    python3 uk_var_comp.py BA.2,BA.2.23
+)
 
 make
 python3 maketrend.py
@@ -18,7 +30,8 @@ python3 maketrend.py
 
 #(cd Traffic; python3 parsetraffic.py; python3 maketrafficgraph.py; convert trafficgraph.png -resize '1200x320!' trafficgraph.small.png)
 
-bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png VOCgrowth/UK_BA.1+_BA.1.1+_BA.2+.png VOCgrowth/UK_BA.1+_BA.2+.png VOCgrowth/UK_BA.1.1+_BA.2+.png VOCgrowth/UK_BA.1+_BA.1.1+.png VOCgrowth/UK_BA.2_BA.2.1_BA.2.3.png VOCgrowth/UK_BA.2_XE.png'
+bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.2_BA.2.12.1.png VOCgrowth/UK_BA.2_XE.png VOCgrowth/UK_BA.2_BA.2.18.png VOCgrowth/UK_BA.2_BA.2.23.png VOCgrowth/UK_BA.2_BA.4_BA.5.png'
 pics=$bigpics
 for x in $bigpics; do
     small=${x/.png/.small.png}
