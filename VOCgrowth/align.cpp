@@ -240,7 +240,6 @@ int main(int ac,char**av){
   }
 
   int i,j,t;
-  
   string refgenome;
   int N;
   {
@@ -265,6 +264,8 @@ int main(int ac,char**av){
     t=t>>2|b<<(R-1)*2;
     if(j>=badj+R){assert(t>=0&&t<(1<<R*2));refdict[t].push_back(j-(R-1));}
   }
+  UC upper[256];
+  for(i=0;i<256;i++)upper[i]=toupper(i);
 
   vector<float> jumppentab(N+1);
   for(j=0;j<=N;j++)jumppentab[j]=sqrt(j);
@@ -531,7 +532,7 @@ int main(int ac,char**av){
           if(i<i1&&nbp1[p]==vl){
             vl-=matchweight*(refgenome[j]==genome[i])+1;
             i1=i;
-            out[j]=genome[i];
+            out[j]=upper[genome[i]];
             break;
           }
         }
