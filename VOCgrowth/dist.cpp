@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <assert.h>
 #include <error.h>
+#include <string.h>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -12,12 +13,13 @@ typedef unsigned char UC;
 
 int main(int ac,char **av){
   bool showall=false;
-  int ignorestart=0,ignoreend=0;
+  int ignorestart=0,ignoreend=0,acgtweight=1;
   std::ios_base::sync_with_stdio(false);
-  while(1)switch(getopt(ac,av,"ae:s:")){
+  while(1)switch(getopt(ac,av,"ae:s:w:")){
     case 'a': showall=true;break;
     case 's': ignorestart=atoi(optarg);break;
     case 'e': ignoreend=atoi(optarg);break;
+    case 'w': acgtweight=atoi(optarg);break;
     case -1: goto ew0;
     default: goto err0;
   }
@@ -28,10 +30,14 @@ int main(int ac,char **av){
     fprintf(stderr,"       -a         Show result for each genome\n");
     fprintf(stderr,"       -s<int>    Ignore this many bases at the start (default 0)\n");
     fprintf(stderr,"       -e<int>    Ignore this many bases at the end (default 0)\n");
+    fprintf(stderr,"       -w<int>    Weight for ACGT difference (vs A!=N, G!=- etc) (default 1)\n");
     exit(1);
   }
-  UC upper[256];
-  for(int i=0;i<256;i++)upper[i]=toupper(i);
+  UC upper[256],isacgt[256];
+  for(int i=0;i<256;i++){
+    upper[i]=toupper(i);
+    isacgt[i]=strchr("ACGTacgt",i)!=0;
+  }
   std::ifstream fp0(av[optind]);
   if(fp0.fail())error(1,errno,"Couldn't open %s",av[optind]);
   std::ifstream fp1(av[optind+1]);
@@ -59,7 +65,11 @@ int main(int ac,char **av){
     if(gen0.size()!=gen1.size())error(2,0,"Genomes %s and %s are of different lengths, %lu and %lu\n",name0.c_str(),name1.c_str(),gen0.size(),gen1.size());
     unsigned int i;
     long long int d=0;
-    for(i=ignorestart;i<gen0.size()-ignoreend;i++)d+=(upper[UC(gen0[i])]!=upper[UC(gen1[i])]);
+    for(i=ignorestart;i<gen0.size()-ignoreend;i++){
+      int c0=upper[UC(gen0[i])];
+      int c1=upper[UC(gen1[i])];
+      if(c0!=c1)d+=(isacgt[c0]&&isacgt[c1]?acgtweight:1);
+    }
     if(showall)printf("Distance %8lld between %s and %s\n",d,name0.c_str(),name1.c_str());
     dist+=d;
     totsize+=gen0.size()-ignorestart-ignoreend;
