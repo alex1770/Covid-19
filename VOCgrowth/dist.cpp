@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 using std::string;
+typedef unsigned char UC;
 
 int main(int ac,char **av){
   bool showall=false;
@@ -29,6 +30,8 @@ int main(int ac,char **av){
     fprintf(stderr,"       -e<int>    Ignore this many bases at the end (default 0)\n");
     exit(1);
   }
+  UC upper[256];
+  for(int i=0;i<256;i++)upper[i]=toupper(i);
   std::ifstream fp0(av[optind]);
   if(fp0.fail())error(1,errno,"Couldn't open %s",av[optind]);
   std::ifstream fp1(av[optind+1]);
@@ -56,7 +59,7 @@ int main(int ac,char **av){
     if(gen0.size()!=gen1.size())error(2,0,"Genomes %s and %s are of different lengths, %lu and %lu\n",name0.c_str(),name1.c_str(),gen0.size(),gen1.size());
     unsigned int i;
     long long int d=0;
-    for(i=ignorestart;i<gen0.size()-ignoreend;i++)d+=(gen0[i]!=gen1[i]);
+    for(i=ignorestart;i<gen0.size()-ignoreend;i++)d+=(upper[UC(gen0[i])]!=upper[UC(gen1[i])]);
     if(showall)printf("Distance %8lld between %s and %s\n",d,name0.c_str(),name1.c_str());
     dist+=d;
     totsize+=gen0.size()-ignorestart-ignoreend;
