@@ -31,17 +31,21 @@ else:
   for (date,p2,lin,mutations) in csvrows(datafile,['sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
     if len(date)!=10: continue
+    
+    # Various simple classifications for those waiting to be assigned
+    if lin=="Unassigned":
+      if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: lin="XE"
+      if '|S:F486V|' in mutations:
+        if '|N:P151S|' in mutations: lin="BA.4"
+        else: lin="BA.5"
+    # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
+    if lin=="BA.2.12" and '|S:S704L|' in mutations and '|S:L452Q|' in mutations: lin="BA.2.12.1"
+    
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     longest=-1;ind=-1
     for (i,vn) in enumerate(Vnames):
       if lin==vn or (vn[-1]=='*' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
     mutations='|'+mutations+'|'
-    if 'XE' in Vnames and ind==-1:
-      # Simple check pro tem for unassigned XEs because classifier isn't complete (as of 2022-04-10)
-      if lin=='Unassigned' and '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: ind=Vnames.index('XE')
-    if 'BA.2.12.1' in Vnames and lin=='BA.2.12':
-      # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
-      if '|S:S704L|' in mutations and '|S:L452Q|' in mutations: ind=Vnames.index('BA.2.12.1')
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
