@@ -9,8 +9,10 @@ mincount=100
 lineages=None;numtoplin=None
 if len(sys.argv)>1: mindate=sys.argv[1]
 if len(sys.argv)>2:
-  if ',' in sys.argv[2]: lineages=sys.argv[2].split(',')
-  else: numtoplin=int(sys.argv[2])
+  try:
+    numtoplin=int(sys.argv[2])
+  except:
+    lineages=sys.argv[2].split(',')
 if len(sys.argv)>3: mincount=int(sys.argv[3])
 
 infile='metadata.tsv';inputsorted=False
