@@ -1,3 +1,4 @@
+#!/usr/bin/pypy3
 import sys,os
 from stuff import *
 from math import log
@@ -104,3 +105,4 @@ while len(chosen)<12:
   e0=best[0]
   chosen.append(best[1])
   pr(chosen);print()
+  sys.stdout.flush()
