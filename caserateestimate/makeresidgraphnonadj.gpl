@@ -4,4 +4,4 @@ set bmargin 7;set lmargin 13;set rmargin 13;set tmargin 5
 set output "residualnonadj.png"
 set title "Inferred BA.2 case counts in England, from overall case counts after removing the effect of BA.2.12.1, BA.4, BA.5\nData sources: COG-UK 2022-06-03, UK Covid-19 dashboard 2022-06-01"
 set xdata time;set format x "%Y-%m-%d";set timefmt "%Y-%m-%d"
-plot "resid" u 1:4 pt 5 title "log(residual case counts)"
+plot "residnonadj" u 1:4 pt 5 title "log(residual case counts)"

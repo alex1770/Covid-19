@@ -27,7 +27,6 @@ date0=min(data)
 assert [x-date0 for x in list(data)]==list(range(len(data)))
 
 counts0=list(data.values())
-#counts=counts0
 counts=weekdayadj(counts0)
 
 # Discard last entry as unreliable
@@ -52,13 +51,15 @@ for i in range(n+extrap):
   for (name,g,cross) in exps: s+=exp(g*(int(d)-cross))
   vf.append(s)
 
-with open('resid','w') as fp:
-  for i in range(n):
-    d=date0+i
-    c=counts[i]
-    s=vf[i]
-    print(d,"%7d %12g %7.3f"%(c,s,log(c/s)),file=fp)
+for (source,fn) in [(counts0,"residnonadj"), (counts,"resid")]:
+  with open(fn,'w') as fp:
+    for i in range(n):
+      d=date0+i
+      c=source[i]
+      s=vf[i]
+      print(d,"%7d %12g %7.3f"%(c,s,log(c/s)),file=fp)
 # gnuplot makeresidgraph.gpl
+# gnuplot makeresidgraphnonadj.gpl
 
 g0values=[-0.065,-0.053]
 intercept=(Date("2022-05-29"),7.75)
