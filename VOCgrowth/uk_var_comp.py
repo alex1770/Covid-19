@@ -16,20 +16,28 @@ if len(sys.argv)>1: Vnames=sys.argv[1].split(',')
 if len(sys.argv)>2: mindate=Date(sys.argv[2])
 if len(sys.argv)>3: maxdate=Date(sys.argv[3])
 
+# Valid lab locations are UK, England, Northern_Ireland, Scotland and Wales
+# NB lab location isn't necessarily the same as sample location
+location="UK"
+
+print("Labs:",location)
 print("Variants considered:",' '.join(Vnames))
 print("Initial date range:",mindate,"-",maxdate)
 zconf=norm.ppf((1+conf)/2)
 numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
 
-fn=os.path.join(cachedir,'_'.join(Vnames)+'__%s_%s_%s'%(mindate,maxdate,cogdate))
+fn=os.path.join(cachedir,location+'_'+'_'.join(Vnames)+'__%s_%s_%s'%(mindate,maxdate,cogdate))
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     data=pickle.load(fp)
 else:
   data={}
-  for (date,p2,lin,mutations) in csvrows(datafile,['sample_date','is_pillar_2','lineage','mutations']):
+  for (name,date,p2,lin,mutations) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
+    if location!="UK":
+      country=name.split('/')[0]
+      if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
     mutations='|'+mutations+'|'
     
@@ -65,7 +73,7 @@ mindate=max(mindate,mindate1)
 maxdate=min(maxdate,maxdate1)
 print("Reduced date range:",mindate,"-",maxdate)
 
-datafn='UK_%s'%('_'.join(Vnames))
+datafn=location+'_%s'%('_'.join(Vnames))
 VV=[]
 visthr=2;ymin=ymax=0#50;ymax=-50
 with open(datafn,'w') as fp:
