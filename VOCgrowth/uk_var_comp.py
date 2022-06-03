@@ -30,7 +30,8 @@ else:
   data={}
   for (date,p2,lin,mutations) in csvrows(datafile,['sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
-    if len(date)!=10: continue
+    if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
+    mutations='|'+mutations+'|'
     
     # Various simple classifications for those waiting to be assigned
     if lin=="Unassigned":
@@ -39,13 +40,13 @@ else:
         if '|N:P151S|' in mutations: lin="BA.4"
         else: lin="BA.5"
     # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
-    if lin=="BA.2.12" and '|S:S704L|' in mutations and '|S:L452Q|' in mutations: lin="BA.2.12.1"
+    if lin=="BA.2.12":
+      if '|S:S704L|' in mutations and '|S:L452Q|' in mutations: lin="BA.2.12.1"
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     longest=-1;ind=-1
     for (i,vn) in enumerate(Vnames):
       if lin==vn or (vn[-1]=='*' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
-    mutations='|'+mutations+'|'
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
