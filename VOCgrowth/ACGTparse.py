@@ -1,5 +1,7 @@
 from stuff import *
 
+# From Theo Sanderson
+# Counting from 1, inclusive notation
 genes={
   'ORF1a': [266, 13467],
   'ORF1b': [13468, 21556],
