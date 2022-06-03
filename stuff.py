@@ -167,7 +167,7 @@ def weekdayadj(nn,eps=0.5):
   adjusted=[nn[d]*weekadj[d%7] for d in range(n)]
   s=sum(nn)/sum(adjusted)
   return np.array([s*x for x in adjusted])
-    
+
 # Slower weekday adjustment (n parameters)
 def weekdayadj_slow(nn,alpha=0.1):
   # Find w0,...,w6 and Poisson parameters lambda_i to maximise
@@ -207,8 +207,8 @@ class Date(int):
   def __le__(self,other): return int(self)<=int(Date(other))
   def __gt__(self,other): return int(self)>int(Date(other))
   def __lt__(self,other): return int(self)<int(Date(other))
-  # Date + int = Date
-  # Date + str = str
+  # Date + int = Date (arithmetic on days)
+  # Date + str = str (string concatenation)
   def __add__(self, other):
     if type(other)==str: return daytodate(int(self))+other
     # Can't remember why we don't just return Date(int(self)+int(other)) here
@@ -241,7 +241,7 @@ def gettopdir():
       break
   return os.path.dirname(f)
 
-def getapidata(req):
+def getapidata(req,failsoft=False):
   import requests
   url='https://api.coronavirus.data.gov.uk/v2/data?'
   for t in range(5):
@@ -251,7 +251,9 @@ def getapidata(req):
       error=response.text
     except BaseException as err:
       error=str(err)
-  else: raise RuntimeError('Request failed: '+error)
+  else:
+    if failsoft: return None
+    raise RuntimeError('Request failed: '+error)
   return response.json()['body'][::-1]
 
 # Convert (eg) string ages '15_19', '15_to_19', '60+' to (15,20), (15,20), (60,150) respectively
@@ -299,7 +301,35 @@ def getcasesbyage_raw(pubday,location):
           if a in origages:
             td[sexname][specdate]["%d_%d"%a]=y['value']
     with open(fn,'w') as fp: json.dump(td,fp,indent=2)
-    print("Retrieved api data at",date,"for",location)
+    print("Retrieved (fe)maleCases api data at",date,"for",location)
+  return td
+
+def getcases_raw(pubday,location="England"):
+  # Target save format is
+  # filename=publishdate, td[specimendate] = new cases,
+  cachedir=os.path.join(gettopdir(),'apidata_allcases')
+  if location=='England':
+    areatype='nation'
+  else:
+    areatype='region'
+    cachedir+='_'+location
+  date=str(Date(pubday))
+  fn=os.path.join(cachedir,date)
+  os.makedirs(cachedir,exist_ok=True)
+  if os.path.isfile(fn):
+    with open(fn,'r') as fp: td=json.load(fp)
+  else:
+    data=getapidata('areaType='+areatype+'&areaName='+location+'&metric=newCasesBySpecimenDate&release='+date,failsoft=True)
+    if data==None:
+      td={"Bad":True}
+      print("Data not available from api at",date,": newCasesBySpecimenDate for",location)
+      if pubday>=apiday(): return td# Don't permanently save this unavailability if it might become available later
+    else:
+      td={}
+      for item in data:
+        td[item["date"]]=int(item["newCasesBySpecimenDate"])
+      print("Retrieved newCasesBySpecimenDate api data at",date,"for",location)
+    with open(fn,'w') as fp: json.dump(td,fp,indent=2)
   return td
 
 # Returns numpy arrays:
