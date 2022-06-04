@@ -83,7 +83,8 @@ with open("extrap","w") as fp:
     print(file=fp)
 # gnuplot makeextrapgraphs.gpl
 
-print("     Variant    Daily growth     Doub/Half-time       Approx R (*)   (* using gen time = 4 days)")
+gentime=3
+print("     Variant    Daily growth     Doub/Half-time       Approx R (*)   (* using gen time = %g days)"%gentime)
 print("     =======  ==============     ==============      =============")
 for (name,g,cross) in exps:
   print("%12s"%name,end="")
@@ -94,6 +95,6 @@ for (name,g,cross) in exps:
     print("  %6.1f"%(log(2)/(g0+g)),end="")
   print("   ",end="")
   for g0 in g0values:
-    print("  %6.2f"%(exp(4*(g0+g))),end="")
+    print("  %6.2f"%(exp(gentime*(g0+g))),end="")
   print()
-  
+
