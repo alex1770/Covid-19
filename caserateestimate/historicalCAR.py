@@ -7,19 +7,6 @@ mindate="2021-01-01"
 if len(sys.argv)>1: mindate=sys.argv[1]
 print("Mindate =",mindate)
 
-def get_data(req):
-  url='https://api.coronavirus.data.gov.uk/v2/data?'
-  for t in range(10):
-    try:
-      response = requests.get(url+req, timeout=5)
-      if response.ok: break
-      error=response.text
-    except BaseException as err:
-      error=str(err)
-  else: raise RuntimeError('Request failed: '+error)
-  return response.json()['body'][::-1]
-
-
 population=55.98e6
 c=loadcsv("2022-05-27-CIS-weeklyprev-England-edited.csv")
 
@@ -30,10 +17,17 @@ for (daterange,percent) in zip(c["Time period"],c["PercentPrevalence"]):
   dr=daterange.split(" to ")
   onsprev.append((Date(dr[0]),Date(dr[1]),percent/100*population))
 
-key="newCasesBySpecimenDate"
-data=get_data("areaType=nation&areaName=England&metric="+key)
-date0=Date(data[0]["date"])
-cases=[item[key] for item in data]
+data0=getcases_raw("2022-05-25",location="England")
+data=getcases_raw("2022-06-01",location="England")
+data0={Date(d):c for (d,c) in data0.items()}
+data={Date(d):c for (d,c) in data.items()}
+date0=Date(min(data))
+last=max(data)
+# Correct recent incomplete entries, based on previous week
+for d in Daterange(last-6,last+1):
+  data[d]=round(data[d]*data[d-7]/data0[d-7])
+cases=list(data.values())
+
 cumcases=np.cumsum(cases)
 # cumcases[i] = cases up to and including date0+i
 cum2cases=np.cumsum(cumcases)
@@ -49,14 +43,6 @@ cum2cases=np.cumsum(cumcases)
 #                                    = 1/(Y-X+1)*(cum2cases(Y-offset)-cum2cases(X-1-offset) - cum2cases(Y-offset-duration) + cum2cases(X-1-offset-duration))
 # Y=X ==>
 # CAR(around X) * onsprev(on day X)  = cumcases(X-offset) - cumcases(X-offset-duration)
-
-def pr(offset,duration):
-  for item in onsprev:
-    X,Y,c=item
-    if X<mindate: continue
-    onsest=c
-    est=(cum2cases[Y-date0-offset]-cum2cases[X-date0-1-offset] - cum2cases[Y-date0-offset-duration] + cum2cases[X-date0-1-offset-duration])/(Y-X+1)
-    print(X,Y,est/c)
 
 def score(offset,duration):
   sc=0
@@ -87,4 +73,24 @@ while 1:
   offset=o;duration=d
   print("Change to offset, duration =",offset,duration,", score =",s)
 
-pr(offset,duration)
+carlist=[]
+for item in onsprev:
+  X,Y,c=item
+  if X<mindate: continue
+  onsest=c
+  est=(cum2cases[Y-date0-offset]-cum2cases[X-date0-1-offset] - cum2cases[Y-date0-offset-duration] + cum2cases[X-date0-1-offset-duration])/(Y-X+1)
+  print(X,Y,est/c)
+  carlist.append(((X+Y)/2,est/c))
+carlist.append((int(last)+1,est/c))
+
+with open('estdailyinfectionsEngland','w') as fp:
+  date1=Date(int(carlist[0][0]+.999))
+  adjcases=weekdayadj(cases[date1-date0:])
+  i=0
+  for date in Daterange(date1,last+1):
+    if date>=carlist[i+1][0]: i+=1
+    # carlist[i][0] <= date < carlist[i+1][0]
+    (d0,c0)=carlist[i]
+    (d1,c1)=carlist[i+1]
+    c=((date-d0)*c1+(d1-date)*c0)/(d1-d0)
+    print(date,"%8.1f"%(adjcases[date-date1]/c),file=fp)
