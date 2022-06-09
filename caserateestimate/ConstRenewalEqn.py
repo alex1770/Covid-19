@@ -13,18 +13,18 @@
 #
 #   Here we look at the special case where gen time T=constant (=1 for convenience)
 #   s(t)=S(t)/N, j(t)=J(t)/N
-#   s(t) = C.exp(R0.s(t-1))
+#   s(t) = C.exp(R0.s(t-1)) = exp(R0.(s(t-1)-D))
 #   j(t) = -s'(t) = R0.s(t).j(t-1)
 #   C=s(1)exp(-R0.s(0)) = s*.exp(-R0.s*), where s* is the upper susceptibility fixed point.
 #   
-#   s_{r+1} = C.exp(R0.s_r)
+#   s_{r+1} = C.exp(R0.s_r) = exp(R0.(s_r-D))
 #   j_{r+1} = s_{r+1}.R0.j_r
 #
 #   You could choose s(t) = anything on [0,1) and then extend to [n,n+1), but I'm assuming we want
 #   the real-analytic solution which is monotone decreasing. (Is that unique?)
 #
 #   Issues:
-#   1) Ideally you'd parameterise by s(0), s'(0), but then calculating C isn't trivial (though it's easy to get a good approximation).
+#   1) Ideally you'd parameterise by s(0), s'(0), but then calculating C (D) isn't trivial (though it's easy to get a good approximation).
 #   2) You'd like to know the intermediate values at every time step, not just at multiples of generation time (integers here).
 #
 #   These two issues are solved below, first to various approximations ("temp1" should be quick, and pretty accurate, apart from
@@ -36,11 +36,9 @@
 #   s'(t0)  = -(s*-s(t0))*log(R0.s*)
 #   then can use iteration map to project the derivative s'(t0) forwards in time back to the present, where s=s0,
 #   and compare the mapped derivative s'(t0) with desired s1.
-#   This whole procedure was a function of C, so can choose C to match the derivative at s1.
-#   If use n steps, and if f() is the inverse iteration map, implicitly depending on C and R0, then f(s)=log(s/C)/R0, and
+#   This whole procedure was a function of D, so can choose D so that the procedure outputs s1.
+#   If use n steps, and if f() is the inverse iteration map, implicitly depending on D and R0, then f(s)=log(s)/R0+D, and
 #   the mapped derivative in the present is R0^n.s0.f(s0).f^2(s0).....f^{n-1}(s0).(s*-f^n(s0)).
-#
-#   Alternative to C: D=-log(C)/R0
 
 from math import exp,log,sqrt
 
