@@ -46,13 +46,14 @@ from math import exp,log,sqrt
 
 # Time is in units of generation time
 s0=0.6# Initial number of susceptibles
-s1=0.01# Initial new infection rate (rate of decline of susceptibles)
+s1=10# Initial new infection rate (rate of decline of susceptibles)
 R0=1.1/s0
 
 def F(C,s): return C*exp(R0*s)
 def Fi(C,s): return log(s/C)/R0
 def f(C,s): return C*R0*exp(R0*s)# dF(C,s)/ds
 def G(D,s): return exp(R0*(s-D))
+def Gi(D,s): return log(s)/R0+D
 def g(D,s): return R0*exp(R0*(s-D))# dG(D,s)/ds
 
 M=100# Subdivision of generation time
@@ -137,67 +138,66 @@ with open('temp2','w') as fp:
     k+=1
 print(tj,s0-s)
 
-# Renewal G, hopefully actually correct, though probably need to robustify
-# Should probably be using log(C) instead of C, because if s1 is large then C can get too small.
+# Renewal G, exact (in limit where take small epilsons to 0), though may need to robustify
+# Using D=-log(C)/R0 instead of C, because if s1 is large then C can get too small.
 
-def upperfixedpoint(C):
+def upperfixedpoint(D):
   st=1
   while 1:
     prev=st
-    st=Fi(C,st)
+    st=Gi(D,st)
     if abs(st-prev)<1e-12: break
   return st  
 
 # Go back to early time when everything is linear, calculate the derivative s'(t) there, and the project forward to the present
-def sl(C):
-  st=upperfixedpoint(C)
+def sl(D):
+  st=upperfixedpoint(D)
   pr=log(R0*st);s=s0
   while 1:
     pr*=R0*s
-    s=Fi(C,s)
+    s=Gi(D,s)
     #print(s,st-s,pr*(st-s))
     if st-s<1e-5: break
   return pr*(st-s)
 
-maxC=1/(R0*exp(1))*(1-1e-8)
+minD=(log(R0)+1-1e-8)/R0
 
-# First approximation to C
-# C=(s0-s1/2)*exp(-R0*(s0+s1/2))
-C=(s0*exp(-s1/s0/2))*exp(-R0*s0*exp(s1/s0/2))
-C=min(C,maxC)
-# C=maxC
+# First approximation to D
+D=(-log(s0)+s1/s0/2+R0*s0*exp(s1/s0/2))/R0
+D=max(D,minD)
+# D=minD
 
-# Find some values of C bracketing the desired one (though it's not actually necessary to bracket)
-C0=C1=C
-sl0=sl1=sl(C)
+# Find some values of D bracketing the desired one (though it's not actually necessary to bracket)
+D0=D1=D
+sl0=sl1=sl(D)
 while (sl1<s1)==(sl0<s1):
-  if sl1<s1: C1/=1.1
-  else: C1=min(1.1*C1,maxC)
-  sl1=sl(C1)
+  if sl1<s1: D1+=0.1
+  else: D1=max(D1-0.1,minD)
+  sl1=sl(D1)
 
-# Find C solving sl(C)=s1 by a Newton-type method
+# Find D solving sl(D)=s1 by a Newton-type method
 while 1:
-  C=(s1-sl0)/(sl1-sl0)*(C1-C0)+C0
-  if abs(C1-C0)<1e-6: break
-  sl2=sl(C)
-  if abs(sl0-s1)<abs(sl1-s1): C1=C;sl1=sl2
-  else: C0=C;sl0=sl2
+  D=(s1-sl0)/(sl1-sl0)*(D1-D0)+D0
+  if abs(D1-D0)<1e-6: break
+  sl2=sl(D)
+  if abs(sl0-s1)<abs(sl1-s1): D1=D;sl1=sl2
+  else: D0=D;sl0=sl2
 
 # Go back to early time near the fixed point
-st=upperfixedpoint(C)
+st=upperfixedpoint(D)
 s=s0;it=0
 while 1:
-  s=Fi(C,s)
+  s=Gi(D,s)
   it+=1
   if st-s<1e-5: break
 
 # Use iterated exponential expansion near the fixed point
 # lam is chosen such that
-# F(C,st-(st-s)*exp(-lam/2))=st-(st-s)*exp(lam/2)
+# G(D,st-(st-s)*exp(-lam/2))=st-(st-s)*exp(lam/2)
 # Expect lam~=log(R0*st)
 lam=log(R0*st)
-err=F(C,st-(st-s)*exp(-lam/2))-(st-(st-s)*exp(lam/2))
-err1=f(C,st-(st-s)*exp(-lam/2))*(st-s)*exp(-lam/2)/2-(-(st-s)*exp(lam/2)/2)
+err=G(D,st-(st-s)*exp(-lam/2))-(st-(st-s)*exp(lam/2))
+err1=g(D,st-(st-s)*exp(-lam/2))*(st-s)*exp(-lam/2)/2-(-(st-s)*exp(lam/2)/2)
 lam-=err/err1
 s_=[]
 for k in range(M+1):
@@ -207,7 +207,7 @@ for k in range(M+1):
 
 # Project forward to the present
 for j in range(it):
-  s_=[F(C,s) for s in s_]
+  s_=[G(D,s) for s in s_]
 
 # Print out results
 srecent=s_[M//2-1],s_[M//2],s_[M//2+1]
@@ -223,7 +223,7 @@ with open('temp3','w') as fp:
     k+=1
     if k==M:
       k=0
-      s_=[F(C,s) for s in s_]
+      s_=[G(D,s) for s in s_]
     s=s_[k]
     srecent=(srecent[1],srecent[2],s)
     t+=1/M
