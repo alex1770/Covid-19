@@ -46,7 +46,7 @@ from math import exp,log,sqrt
 
 # Time is in units of generation time
 s0=0.6# Initial number of susceptibles
-s1=10# Initial new infection rate (rate of decline of susceptibles)
+s1=0.1# Initial new infection rate (rate of decline of susceptibles)
 R0=1.1/s0
 
 def F(C,s): return C*exp(R0*s)
