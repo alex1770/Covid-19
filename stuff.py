@@ -92,7 +92,10 @@ def api_v2(req):
 def apiday():
   import pytz
   now=datetime.datetime.now(tz=pytz.timezone('Europe/London'))
-  return datetoday(now.strftime('%Y-%m-%d'))-(now.hour<16)
+  # Dashboard is updated at 4pm UK time, so go back a day if time in London < 4pm
+  w=(now.weekday()-int(now.hour<16))%7
+  # Dashboard is now not updated at weekends, so go back to previously updated weekday
+  return Date(now.strftime('%Y-%m-%d'))-int(now.hour<16)-max(w-4,0)
 
 def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[], interval=604800, ranges=''):
   po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE);p=po.stdin
