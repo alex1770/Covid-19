@@ -46,7 +46,7 @@ from math import exp,log,sqrt
 
 # Time is in units of generation time
 s0=0.6# Initial number of susceptibles
-s1=0.1# Initial new infection rate (rate of decline of susceptibles)
+s1=1e-6# Initial new infection rate (rate of decline of susceptibles)
 R0=1.1/s0
 
 def F(C,s): return C*exp(R0*s)
@@ -160,7 +160,7 @@ def sl(D):
     if st-s<1e-5: break
   return pr*(st-s)
 
-minD=(log(R0)+1-1e-8)/R0
+minD=(log(R0)+1+1e-9)/R0
 
 # First approximation to D
 D=(-log(s0)+s1/s0/2+R0*s0*exp(s1/s0/2))/R0
