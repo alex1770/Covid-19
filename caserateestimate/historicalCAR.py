@@ -8,7 +8,9 @@ if len(sys.argv)>1: mindate=sys.argv[1]
 print("Mindate =",mindate)
 
 population=55.98e6
-c=loadcsv("2022-05-27-CIS-weeklyprev-England-edited.csv")
+# https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/conditionsanddiseases/datasets/coronaviruscovid19infectionsurveydata
+# Either tab "UK summary - positivity" or "1a"
+c=loadcsv("2022-06-10-CIS-weeklyprev-England-edited.csv")
 
 onsprev=[]
 for (daterange,percent) in zip(c["Time period"],c["PercentPrevalence"]):
