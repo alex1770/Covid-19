@@ -3,29 +3,38 @@ import numpy as np
 from math import log
 from stuff import *
 
-mindate="2021-01-01"
+mindate="2022-01-01"
 if len(sys.argv)>1: mindate=sys.argv[1]
 print("Mindate =",mindate)
 
 population=55.98e6
 c=loadcsv("2022-05-27-CIS-weeklyprev-England-edited.csv")
 
-now=Date(datetime.datetime.now().strftime("%Y-%m-%d"))
-
 onsprev=[]
 for (daterange,percent) in zip(c["Time period"],c["PercentPrevalence"]):
   dr=daterange.split(" to ")
   onsprev.append((Date(dr[0]),Date(dr[1]),percent/100*population))
 
-data0=getcases_raw("2022-05-25",location="England")
-data=getcases_raw("2022-06-01",location="England")
+now=apiday()
+while 1:
+  data=getcases_raw(now,location="England")
+  if 'Bad' not in data: break
+  print("Can't get api data for %s. Backtracking to most recent usable date."%now)
+  now-=1
+back=0
+while 1:
+  back+=7
+  data0=getcases_raw(now-back,location="England")
+  if 'Bad' not in data0: break
+print("Using api data as of",now,"and comparing to",now-back)
 data0={Date(d):c for (d,c) in data0.items()}
 data={Date(d):c for (d,c) in data.items()}
+
 date0=Date(min(data))
 last=max(data)
 # Correct recent incomplete entries, based on previous week
 for d in Daterange(last-6,last+1):
-  data[d]=round(data[d]*data[d-7]/data0[d-7])
+  data[d]=round(data[d]*data[d-back]/data0[d-back])
 cases=list(data.values())
 
 cumcases=np.cumsum(cases)
@@ -83,7 +92,8 @@ for item in onsprev:
   carlist.append(((X+Y)/2,est/c))
 carlist.append((int(last)+1,est/c))
 
-with open('estdailyinfectionsEngland','w') as fp:
+fn='estdailyinfectionsEngland'
+with open(fn,'w') as fp:
   date1=Date(int(carlist[0][0]+.999))
   adjcases=weekdayadj(cases[date1-date0:])
   i=0
@@ -94,3 +104,4 @@ with open('estdailyinfectionsEngland','w') as fp:
     (d1,c1)=carlist[i+1]
     c=((date-d0)*c1+(d1-date)*c0)/(d1-d0)
     print(date,"%8.1f"%(adjcases[date-date1]/c),file=fp)
+print("Wrote estimated daily infections to file:",fn)
