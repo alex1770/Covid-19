@@ -50,6 +50,9 @@ else:
     # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
     if lin=="BA.2.12":
       if '|S:S704L|' in mutations and '|S:L452Q|' in mutations: lin="BA.2.12.1"
+    # Promote BA.5 -> BA.5.1 if not fully classified yet:
+    if lin=="BA.5":
+      if '|ORF10:L37F|' in mutations: lin="BA.5.1"
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     longest=-1;ind=-1
