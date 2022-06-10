@@ -46,7 +46,7 @@ cum2cases=np.cumsum(cumcases)
 
 # An onsprev item runs from dates X to Y inclusive. Here Y-X+1 = 7 or 14 (latterly 7)
 # Hypothesis: is that 
-# CAR(around X,Y) * onsprev(a random day between X and Y)
+# CAR(around (X+Y-duration)/2) * onsprev(a random day between X and Y)
 #                                   ~= averagecaseprev(X-offset to Y-offset)                                                                                               
 #                                    = 1/(Y-X+1)*sum_{t=X}^Y caseprev(t-offset)
 #                                    = 1/(Y-X+1)*sum_{t=X}^Y sum_{u=t-offset-duration+1}^{t-offset} cases(u)
@@ -55,7 +55,7 @@ cum2cases=np.cumsum(cumcases)
 # Y=X ==>
 # CAR(around X) * onsprev(on day X)  = cumcases(X-offset) - cumcases(X-offset-duration)
 
-def score(offset,duration):
+def score(offset,duration,mult):
   sc=0
   prev=None
   n=0
@@ -64,7 +64,7 @@ def score(offset,duration):
     if X<mindate: continue
     if X-date0-1-offset-duration<0 or Y-date0-offset>=len(cum2cases): continue
     onsest=c
-    est=(cum2cases[Y-date0-offset]-cum2cases[X-date0-1-offset] - cum2cases[Y-date0-offset-duration] + cum2cases[X-date0-1-offset-duration])/(Y-X+1)
+    est=mult*(cum2cases[Y-date0-offset]-cum2cases[X-date0-1-offset] - cum2cases[Y-date0-offset-duration] + cum2cases[X-date0-1-offset-duration])/(Y-X+1)
     cur=log(est/c)
     if prev!=None: sc+=(cur-prev)**2;n+=1
     prev=cur
@@ -72,26 +72,28 @@ def score(offset,duration):
 
 offset=-1
 duration=14
-print("Original  offset, duration =",offset,duration,", score =",score(offset,duration))
+mult=1
+print("Original  offset, duration, mult =",offset,duration,mult,", score =",score(offset,duration,mult))
 while 1:
   best=(1e9,)
   for o in range(offset-2,offset+3):
     for d in range(duration,duration+1):# Fixing duration FTM
-      s=score(o,d)
-      if s<best[0]: best=(s,o,d)
-  (s,o,d)=best
-  if o==offset and d==duration: break
-  offset=o;duration=d
-  print("Change to offset, duration =",offset,duration,", score =",s)
+      m=mult
+      s=score(o,d,m)
+      if s<best[0]: best=(s,o,d,m)
+  (s,o,d,m)=best
+  if o==offset and d==duration and m==mult: break
+  offset=o;duration=d;mult=m
+  print("Change to offset, duration, mult =",offset,duration,mult,", score =",s)
 
 carlist=[]
 for item in onsprev:
   X,Y,c=item
   if X<mindate: continue
   onsest=c
-  est=(cum2cases[Y-date0-offset]-cum2cases[X-date0-1-offset] - cum2cases[Y-date0-offset-duration] + cum2cases[X-date0-1-offset-duration])/(Y-X+1)
-  print(X,Y,est/c)
-  carlist.append(((X+Y)/2,est/c))
+  est=mult*(cum2cases[Y-date0-offset]-cum2cases[X-date0-1-offset] - cum2cases[Y-date0-offset-duration] + cum2cases[X-date0-1-offset-duration])/(Y-X+1)
+  print(Date((X+Y-duration)/2),est/c)
+  carlist.append(((X+Y-duration)/2,est/c))
 carlist.append((int(last)+1,est/c))
 
 fn='estdailyinfectionsEngland'
