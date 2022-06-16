@@ -1,6 +1,6 @@
 import requests,sys
 import numpy as np
-from math import log,exp
+from math import log,exp,sqrt
 from stuff import *
 from scipy.optimize import minimize
 
@@ -15,6 +15,13 @@ monday=Date("2022-01-03")
 
 minback=1
 maxback=10
+odp=7
+# Order=1 if you think the prior for xx[] (CAR) is Brownian motion-like (in particular, Markov)
+# Order=2 if you think the prior for xx[] is more like the integral of Brownian motion.
+# I think xx[] does actually have "momentum" sometimes - there is a downwards (or upwards) trend that is predictive, so perhaps order=2 is better?
+# Though it can dart around sometimes for random reasons, like Christmas.
+order=2
+fixediv=None
 date0_inc=startdate-maxback
 ok=False
 incidence=[];varinc=[]
@@ -37,6 +44,9 @@ while 1:
   data0=getcases_raw(now-completionhistory,location="England")
   if 'Bad' not in data0: break
 print("Using api data as of",now,"and comparing to",now-completionhistory)
+print("Variance multiplier for incidence and case counts",odp)
+print("Order",order)
+print()
 data0={Date(d):c for (d,c) in data0.items()}
 data={Date(d):c for (d,c) in data.items()}
 last=max(data)
@@ -60,53 +70,118 @@ with open("incidence_vs_adjcases","w") as fp:
     else: print("  %7s"%"-",end="",file=fp)
     print(file=fp)
 
+def diffmat(n,order):
+  A=np.zeros([n,n])
+  if order==1:
+    for i in range(n-1):
+      A[i,i]+=1
+      A[i,i+1]+=-1
+      A[i+1,i]+=-1
+      A[i+1,i+1]+=1
+  elif order==2:
+    for i in range(n-2):
+      A[i,i]+=1
+      A[i,i+1]+=-2
+      A[i,i+2]+=1
+      A[i+1,i]+=-2
+      A[i+1,i+1]+=4
+      A[i+1,i+2]+=-2
+      A[i+2,i]+=1
+      A[i+2,i+1]+=-2
+      A[i+2,i+2]+=1
+  else:
+    raise RuntimeError("Unrecognised order %d"%order)
+  return A
+
+def getbackparams(back):
+  d0_i=d0_c-back
+  incdata=np.array(incidence[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
+  vardata=np.array(varinc[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
+  assert len(incdata)==n and len(vardata)==n
+  var=((casedata/incdata)**2*vardata+casedata)*odp
+  al=incdata*incdata/var
+  b=incdata*casedata/var
+  c=(casedata*casedata/var).sum()
+      
+# var[i] = (x[i]**2*V[incdata[i]]+V[casedata[i]])*odp
+#       ~= ((case[i]/inc[i])**2*V[incdata[i]]+casedata[i])*odp
+#
+# First order version (CARs are similar over time):
+#
+# Q(x[], al[], iv) = sum_i (x[i]*incdata[i]-casedata[i])^2/var[i] + iv*sum_i (x[i+1]-x[i])^2
+#                  = sum_i al[i].(x[i]-t[i])^2 + iv*sum_i (x[i+1]-x[i])^2, where t[i]=case[i]/inc[i], al[i]=inc[i]^2/var[i]
+#                  = sum_{i,j} A_{i,j}x[i]x[j] - 2.sum_i b[i]x[i] + c
+# Find iv by maximising \int_{x[]} exp(-(1/2)Q(x[], al[], iv)) / lim_{eps[]->0} (sum(eps[]))^{1/2}.\int_{x[]} exp(-(1/2)Q(x[], eps[], iv))
+#                     = \int_{x[]} exp(-(1/2)Q(x[], al[], iv)) / iv^{-(1/2)(n-1)}
+#
+#
+# Second order version (rate of change of CARs are similar over time):
+#
+# Q(x[], al[], iv) = sum_i (x[i]*incdata[i]-casedata[i])^2/var[i] + iv*sum_i (x[i+2]-2*x[i+1]+x[i])^2
+#                  = sum_i al[i].(x[i]-t[i])^2 + iv*sum_i (x[i+2]-2*x[i+1]+x[i])^2, where t[i]=case[i]/inc[i], al[i]=inc[i]^2/var[i]
+# Find iv by maximising \int_{x[]} exp(-(1/2)Q(x[], al[], iv)) / lim_{eps[]->0} (thing2(eps[])^{1/2}.\int_{x[]} exp(-(1/2)Q(x[], eps[], iv))
+#                     = \int_{x[]} exp(-(1/2)Q(x[], al[], iv)) / iv^{-(1/2)(n-2)}
+# 
+# 
+# (See gaussianrenormalisationcheck.py)
+# Then use this iv to find x[] by minimising Q(x[], al[], iv)
+def MLE_and_integrate(iv,al,b,c,order):
+  n=len(b)
+  A=iv*diffmat(n,order)
+  for i in range(n): A[i,i]+=al[i]
+  xx=np.linalg.solve(A,b)
+  LL=(1/2)*(b@xx)-(1/2)*np.linalg.slogdet(A)[1]-(1/2)*c+(1/2)*(n-order)*log(iv)
+  return xx,LL
+
+def getcoeffs(back):
+  d0_i=d0_c-back
+  incdata=np.array(incidence[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
+  vardata=np.array(varinc[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
+  assert len(incdata)==n and len(vardata)==n
+  var=((casedata/incdata)**2*vardata+casedata)*odp
+  al=incdata*incdata/var
+  b=incdata*casedata/var
+  c=(casedata*casedata/var).sum()
+  tt=casedata/incdata
+  return al,b,c,tt
+
 # To make comparison fair, ensure same case days are predicted, regardless of back
 # For all minback<=back<=maxback, ncasedays-back<=len(incidence)-(startdate-date0_inc)
 ncasedays=len(incidence)-(startdate-date0_inc)+minback
 date1_cases=date0_inc+len(incidence)+minback
+totresid0=totresid1=totLL=0
 for day in range(7):
   d0_c=startdate+(monday+day-startdate)%7
   casedata=np.array(cases[d0_c-date0_cases:date1_cases-date0_cases:7])
   n=len(casedata);assert n>=2
-  best=(1e30,)
+  best=(-1e30,)
   for back in range(minback,maxback+1):
-    d0_i=d0_c-back
-    incdata=np.array(incidence[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
-    vardata=np.array(varinc[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
-    assert len(incdata)==n and len(vardata)==n
-    var=(casedata/incdata)**2*vardata+casedata
-    al=incdata*incdata/var
-    b=incdata*casedata/var
-    c=(casedata*casedata/var).sum()
+    al,b,c,tt=getcoeffs(back)
     def NLL(logiv):
-      # Perhaps add overdispersion parameter
-      # var[i] = x[i]**2*V[incdata[i]]+V[casedata[i]]
-      #       ~= (case[i]/inc[i])**2*V[incdata[i]]+casedata[i]
-      # Q(x[], al[], iv) = sum_i { (x[i]*incdata[i]-casedata[i])^2/var[i] + iv*sum_i (x[i+1]-x[i])^2 }
-      #                  = sum_i { inc[i]^2/var[i]*(x[i]-case[i]/inc[i])^2 + iv*sum_i (x[i+1]-x[i])^2 }
-      #                  = sum_i { al[i].(x[i]-t[i])^2 + iv*sum_i (x[i+1]-x[i])^2 }, where t[i]=case[i]/inc[i], al[i]=inc[i]^2/var[i]
-      # Find iv by maximising \int_{x[]} exp(-(1/2)Q(x[], al[], iv)) / lim_{eps[]->0} (sum(eps[]))^{1/2}.\int_{x[]} exp(-(1/2)Q(x[], eps[], iv))
-      #                     = \int_{x[]} exp(-(1/2)Q(x[], al[], iv)) / iv^{-(1/2)(n-1)}
-      # (See gaussianrenormalisationcheck.py)
-      # Then use this iv to find x[] by minimising Q(x[], al[], iv)
-      iv=exp(logiv)
-      A=np.zeros([n,n])
-      for i in range(n):
-        A[i,i]+=al[i]
-      for i in range(n-1):
-        A[i,i]+=iv
-        A[i+1,i+1]+=iv
-        A[i,i+1]-=iv
-        A[i+1,i]-=iv
-      xx=np.linalg.solve(A,b)
-      LL=(1/2)*(b@xx)-(1/2)*np.linalg.slogdet(A)[1]-(1/2)*c+(1/2)*(n-1)*log(iv)
+      xx,LL=MLE_and_integrate(exp(logiv),al,b,c,order)
       return -LL
-    
-    res=minimize(NLL,[0],bounds=[(-10,15)],method="SLSQP")#,options=minopts)
-    if not res.success: raise RuntimeError(res.message)
-    iv=exp(res.x)
-    print("%d %2d %8.3f %9.3f"%(day,back,iv,res.fun))
-    if res.fun<best[0]: best=[res.fun,back]
-  print(day,best[1])
-  print()
-  
+    if fixediv==None:
+      bounds=(-10,15)
+      res=minimize(NLL,[0],bounds=[bounds],method="SLSQP")
+      if not res.success: raise RuntimeError(res.message)
+      if res.x<bounds[0]+1e-6 or res.x>bounds[1]-1e-6: print("Warning:",res.x,"touching bound")
+      iv=exp(res.x)
+      LL=-res.fun
+    else:
+      iv=fixediv
+      xx,LL=MLE_and_integrate(iv,al,b,c,order)
+    if LL>best[0]: best=[LL,back,iv]
+  back=best[1]
+  iv=best[2]
+  al,b,c,tt=getcoeffs(back)
+  xx,LL=MLE_and_integrate(iv,al,b,c,order)
+  resid=sqrt((al*(xx-tt)**2).sum()/n)
+  print("Day %d    back %d    iv %7.1f    average_CAR %6.3f    average_resid(sd units) %5.3f"%(day,back,iv,xx.sum()/n,resid))
+  with open('temp.%d.%d.%d'%(order,day,odp),'w') as fp:
+    for i in range(n): print(d0_c+i*7,xx[i],tt[i],file=fp)
+  totresid0+=n
+  totresid1+=(al*(xx-tt)**2).sum()
+  totLL+=LL
+
+print("Overall average residual (in sd units)",sqrt(totresid1/totresid0))
+print("Total log likelihood = %.1f"%totLL)
