@@ -7,10 +7,17 @@ from random import normalvariate as normal,random,seed,randrange
 
 # Comparing epiforecast incidence with case rates
 
-startdate=Date("2021-01-01")
+startdate=Date("2020-06-01")
 if len(sys.argv)>1: startdate=Date(sys.argv[1])
 print("Start date =",startdate)
 
+ignore={"2020-12-25","2020-12-26","2020-12-27","2020-12-28",
+        "2021-12-25","2021-12-26","2021-12-27","2021-12-28",
+        "2022-12-25","2022-12-26","2022-12-27"}
+
+#ignore={"2020-12-25","2020-12-28","2021-12-25","2021-12-26","2021-12-27","2021-12-28","2022-12-25","2022-12-26","2022-12-27"}
+#ignore={}
+  
 # population=55.98e6
 monday=Date("2022-01-03")
 
@@ -173,14 +180,19 @@ def MLE_and_integrate(iv,al,b,c,order):
 
 def getcoeffs(back):
   d0_i=d0_c-back
+  n=len(casedata)
   incdata=np.array(incidence[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
   vardata=np.array(varinc[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
   assert len(incdata)==n and len(vardata)==n
-  var=((casedata/incdata)**2*vardata+casedata)*odp
-  al=incdata*incdata/var
-  b=incdata*casedata/var
-  c=(casedata*casedata/var).sum()
   tt=casedata/incdata
+  ivar=1/((tt**2*vardata+casedata)*odp)
+  for date in ignore:
+    if (date-d0_c)%7==0:
+      i=(date-d0_c)//7
+      if i>=0 and i<n: ivar[i]=0
+  al=incdata*incdata*ivar
+  b=incdata*casedata*ivar
+  c=(casedata*casedata*ivar).sum()
   return al,b,c,tt
 
 # To make comparison fair, ensure same case days are predicted, regardless of back
