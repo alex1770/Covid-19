@@ -3,6 +3,7 @@ import numpy as np
 from math import log,exp,sqrt
 from stuff import *
 from scipy.optimize import minimize
+from random import normalvariate as normal,random,seed,randrange
 
 # Comparing epiforecast incidence with case rates
 
@@ -44,7 +45,7 @@ while 1:
   data0=getcases_raw(now-completionhistory,location="England")
   if 'Bad' not in data0: break
 print("Using api data as of",now,"and comparing to",now-completionhistory)
-print("Variance multiplier for incidence and case counts",odp)
+print("Variance multiplier for incidence and case counts =",odp)
 print("Order",order)
 print()
 data0={Date(d):c for (d,c) in data0.items()}
@@ -58,6 +59,43 @@ for d in Daterange(last-6,last+1):
 date0_cases=Date(min(data))
 if date0_cases>startdate: raise RuntimeError("Date %s not found in case data"%startdate)
 cases=list(data.values())
+
+# Make synthetic data
+if 0:
+  s=randrange(1000000000)
+  #s=714180712
+  #s=161012188
+  s=798489798
+  print("Seed",s)
+  seed(s)
+  date0=min(date0_inc,date0_cases)
+  date1=max(date0_inc+len(incidence),date0_cases+len(cases))
+  N=date1-date0
+  infections=np.zeros(N)
+  lmean=10
+  v=lmean
+  for i in range(N):
+    infections[i]=exp(v)
+    v+=-0.001*(v-lmean)+0.1*normal(0,1)
+  for i in range(len(incidence)):
+    incidence[i]=infections[date0_inc+i-date0]
+    varinc[i]=incidence[i]/odp
+  mincar=0.025
+  maxcar=0.9
+  for day in range(7):
+    day0=(monday-date0_cases+day)%7
+    prev=np.zeros(order+1)
+    prev[-1]=0.5# Initial CAR
+    sd=0.05
+    with open("tempsyncar.%d.%d.%d"%(order,day,odp),'w') as fp:
+      for i in range(day0,len(cases),7):
+        prev[0]=sd*normal(0,1)
+        for j in range(order): prev[j+1]+=prev[j]
+        car=min(max(prev[-1],mincar),maxcar)
+        ni=infections[date0_cases+i-date0]
+        c=car*(ni+sqrt(ni/odp)*normal(0,1))
+        cases[i]=max(c+sqrt(c/odp)*normal(0,1),1)
+        print(date0_cases+i,car,cases[i],file=fp)
 
 with open("incidence_vs_adjcases","w") as fp:
   adjcases=weekdayadj(cases)
@@ -178,7 +216,7 @@ for day in range(7):
   resid=sqrt((al*(xx-tt)**2).sum()/n)
   print("Day %d    back %d    iv %7.1f    average_CAR %6.3f    average_resid(sd units) %5.3f"%(day,back,iv,xx.sum()/n,resid))
   with open('temp.%d.%d.%d'%(order,day,odp),'w') as fp:
-    for i in range(n): print(d0_c+i*7,xx[i],tt[i],file=fp)
+    for i in range(n): print(d0_c+i*7,xx[i],tt[i],sqrt(al[i])*(xx[i]-tt[i]),al[i],file=fp)
   totresid0+=n
   totresid1+=(al*(xx-tt)**2).sum()
   totLL+=LL
