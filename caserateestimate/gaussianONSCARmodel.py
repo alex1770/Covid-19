@@ -16,7 +16,7 @@ ignore={"2020-12-25","2020-12-26","2020-12-27","2020-12-28",
 
 #ignore={"2020-12-25","2020-12-28","2021-12-25","2021-12-26","2021-12-27","2021-12-28","2022-12-25","2022-12-26","2022-12-27"}
 #ignore={}
-  
+
 # population=55.98e6
 monday=Date("2022-01-03")
 scale=1e5# Units of this number of people
@@ -33,7 +33,6 @@ odp=4
 order=1
 fixediv=None
 date0_inc=startdate-maxback
-ok=False
 
 onsprev,onsinc=getonsprevinc()
 
@@ -67,27 +66,19 @@ enddate=max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
 
 n=enddate-startdate
 
+# Returns matrix that calculates 'order' order differences
+# E.g., for order=1, QF(x)=sum_i (x_i-x_{i+1})^2
+# [  1 -1  0  0 ... ]
+# [ -1  2 -1  0 ... ]
+# [  0 -1  2 -1 ... ]
+# [  0  0 -1  2 ... ]
+# ...
 def diffmat(n,order):
   A=np.zeros([n,n])
-  if order==1:
-    for i in range(n-1):
-      A[i,i]+=1
-      A[i,i+1]+=-1
-      A[i+1,i]+=-1
-      A[i+1,i+1]+=1
-  elif order==2:
-    for i in range(n-2):
-      A[i,i]+=1
-      A[i,i+1]+=-2
-      A[i,i+2]+=1
-      A[i+1,i]+=-2
-      A[i+1,i+1]+=4
-      A[i+1,i+2]+=-2
-      A[i+2,i]+=1
-      A[i+2,i+1]+=-2
-      A[i+2,i+2]+=1
-  else:
-    raise RuntimeError("Unrecognised order %d"%order)
+  v=[1]
+  for i in range(order): v=np.pad(v,(0,1),mode="constant")-np.pad(v,(1,0),mode="constant")
+  vv=np.outer(v,v)
+  for i in range(n-order): A[i:i+order+1,i:i+order+1]+=vv
   return A
 
 iv=10
@@ -107,8 +98,9 @@ for date0,date1,targ,low,high in onsinc:
     b[i0:i1]+=targ/((i1-i0)*var)
     c+=targ**2/var
 
-# Positivity kernel. Set to something simple pro tem
-poskern=np.array([1]*9)
+# Positivity kernel. https://bmcmedicine.biomedcentral.com/articles/10.1186/s12916-021-01982-x, Fig 3b
+# P(PCR detection at x days after infection)
+poskern=np.array([x*exp(-x/5)*0.45 for x in range(20)])
 posback=7
 k=len(poskern)
 for date0,date1,targ,low,high in onsprev:
@@ -119,7 +111,7 @@ for date0,date1,targ,low,high in onsprev:
   j0=date0-startdate
   j1=date1-startdate
   if i0>=0 and i1+k-1<=n:
-    print(i0,i1,targ,sqrt(var))
+    #print(i0,i1,targ,sqrt(var))
     h=i1-i0
     poskern2=np.zeros(k+h-1)
     # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
@@ -129,7 +121,7 @@ for date0,date1,targ,low,high in onsprev:
     b[i0:i1+k-1]+=poskern2*targ/var
     c+=targ**2/var
 
-    
+
 xx=np.linalg.solve(A,b)
 with open('temp%d'%order,'w') as fp:
   for (i,x) in enumerate(xx):
