@@ -22,6 +22,7 @@ def saveonscsv(name,data):
   print("Wrote ONS data to",fn)
 
 def readsheet(sheet,keys,denom):
+  population=56e6
   cols=[None]*len(keys)
   data=[]
   for row in sheet.iterrows():
@@ -56,7 +57,6 @@ def getonsprevinc():
   fn=os.path.join(onsdir,latest)
   xl=pd.ExcelFile(fn)
   
-  population=56e6
   prev=xl.parse('UK summary - positivity')
   inc=xl.parse('UK summary - incidence')
   
