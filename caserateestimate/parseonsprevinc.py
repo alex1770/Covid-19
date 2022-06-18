@@ -1,7 +1,7 @@
 from stuff import *
 
 onsdir="ONSsurvey"
-  
+
 def loadonscsv(name):
   fn=os.path.join(onsdir,name+".csv")
   if not os.path.exists(fn): return None
