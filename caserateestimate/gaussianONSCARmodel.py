@@ -25,12 +25,10 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 
 minback=1
 maxback=10
-odp=4
-# Order=1 if you think the prior for xx[] (CAR) is Brownian motion-like (in particular, Markov)
+odp=4# Overdispersion parameter. Corrects ONS variance estimates which I think are significantly too low.
+# Order=1 if you think the prior for xx[] is Brownian motion-like (in particular, Markov)
 # Order=2 if you think the prior for xx[] is more like the integral of Brownian motion.
-# I think xx[] does actually have "momentum" sometimes - there is a downwards (or upwards) trend that is predictive, so perhaps order=2 is better?
-# Though it can dart around sometimes for random reasons, like Christmas.
-order=1
+order=2
 fixediv=None
 date0_inc=startdate-maxback
 
@@ -81,49 +79,86 @@ def diffmat(n,order):
   for i in range(n-order): A[i:i+order+1,i:i+order+1]+=vv
   return A
 
-iv=10
-A=iv*diffmat(n,order)
-b=np.zeros(n)
-c=0
-# minimising quadratic form x^t.A.x-2b^t.x+c
-# prob is proportional to exp(-(1/2)QF(x))
-
-for date0,date1,targ,low,high in onsinc:
-  targ/=scale
-  var=((high-low)/scale/(2*1.96))**2*odp
-  i0=date0-startdate
-  i1=date1-startdate
-  if i0>=0:
-    A[i0:i1,i0:i1]+=1/((i1-i0)**2*var)
-    b[i0:i1]+=targ/((i1-i0)*var)
-    c+=targ**2/var
 
 # Positivity kernel. https://bmcmedicine.biomedcentral.com/articles/10.1186/s12916-021-01982-x, Fig 3b
 # P(PCR detection at x days after infection)
-poskern=np.array([x*exp(-x/5)*0.45 for x in range(20)])
-posback=7
-k=len(poskern)
+# Was going to adjust this by a self-determined slowly-moving constant factor, but after looking at it,
+# I believe there isn't good evidence for the constant being different from 1.
+
+poskern=np.array([x*exp(-x/5)*0.45 for x in range(19,0,-1)])
+numk=len(poskern)
+
+# Use ONS incidence as a one-off to calibrate use of ONS prevalence, in particular
+# poskern. The ratio of (ONSincidence convolved with poskernel) to ONSprevalence varies
+# somewhat around 1, though not in an obvious pattern that depends on variants. Therefore
+# it seems most likely (or at least, no evidence against the idea) that this variation is
+# part of ONS incidence being messed up, which is a known thing, which mean we discard ONS
+# incidence for the next stage, and anchor to (calibrated) ONS prevalence.
+
+if 0:
+  iv=100
+  A=iv*diffmat(n,order)
+  b=np.zeros(n)
+  c=0
+  # minimising quadratic form x^t.A.x-2b^t.x+c
+  # prob is proportional to exp(-(1/2)QF(x))
+  adjinc=0
+  for date0,date1,targ,low,high in onsinc:
+    targ/=scale
+    var=((high-low)/scale/(2*1.96))**2*odp
+    i0=date0-adjinc-startdate
+    i1=date1-adjinc-startdate
+    if i0>=0 and i1<=n:
+      A[i0:i1,i0:i1]+=1/((i1-i0)**2*var)
+      b[i0:i1]+=targ/((i1-i0)*var)
+      c+=targ**2/var
+  
+  inc_v0=np.linalg.solve(A,b)
+  for adjinc in range(-10,21):
+    s0=s1=s2=0
+    for date0,date1,targ,low,high in onsprev:
+      targ/=scale
+      var=((high-low)/scale/(2*1.96))**2*odp
+      i0=date0-numk+adjinc-startdate
+      i1=date1-numk+adjinc-startdate
+      if i0>=0 and i1+numk-1<=n:
+        h=i1-i0
+        poskern2=np.zeros(numk+h-1)
+        # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
+        # (As opposed to, for example, the probability that a random person would test positive on some date within that range.)
+        for i in range(h): poskern2[i:i+numk]+=poskern/h
+        pprev=inc_v0[i0:i1+numk-1]@poskern2
+        x=log(targ/pprev)
+        s0+=1;s1+=x;s2+=x*x
+        #print(date0,pprev,targ,x)
+    sd=sqrt((s2-s1**2/s0)/(s0-1))
+    print(adjinc,sd)
+  qwe
+
+iv=100
+A=iv*diffmat(n,order)
+b=np.zeros(n)
+c=0
+
 for date0,date1,targ,low,high in onsprev:
   targ/=scale
   var=((high-low)/scale/(2*1.96))**2*odp
-  i0=date0-posback-startdate
-  i1=date1-posback-startdate
-  j0=date0-startdate
-  j1=date1-startdate
-  if i0>=0 and i1+k-1<=n:
+  i0=date0-numk-startdate
+  i1=date1-numk-startdate
+  if i0>=0 and i1+numk-1<=n:
     #print(i0,i1,targ,sqrt(var))
     h=i1-i0
-    poskern2=np.zeros(k+h-1)
+    poskern2=np.zeros(numk+h-1)
     # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
     # (As opposed to, for example, the probability that a random person would test positive on some date within that range.)
-    for i in range(h): poskern2[i:i+k]+=poskern/h
-    A[i0:i1+k-1,i0:i1+k-1]+=np.outer(poskern2,poskern2)/var
-    b[i0:i1+k-1]+=poskern2*targ/var
+    for i in range(h): poskern2[i:i+numk]+=poskern/h
+    A[i0:i1+numk-1,i0:i1+numk-1]+=np.outer(poskern2,poskern2)/var
+    b[i0:i1+numk-1]+=poskern2*targ/var
     c+=targ**2/var
 
 
 xx=np.linalg.solve(A,b)
-with open('temp%d'%order,'w') as fp:
+with open("temp",'w') as fp:
   for (i,x) in enumerate(xx):
     print(startdate+i,x,file=fp)
 
