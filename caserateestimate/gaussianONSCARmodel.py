@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 from random import normalvariate as normal,random,seed,randrange
 from parseonsprevinc import getonsprevinc
 
-startdate=Date("2022-03-01")
+startdate=Date("2021-06-01")
 if len(sys.argv)>1: startdate=Date(sys.argv[1])
 print("Start date =",startdate)
 
@@ -27,7 +27,7 @@ minback=1
 maxback=10
 # odp_ons is an overdispersion parameter. Corrects ONS variance estimates which I think are significantly too low.
 odp_ons=4         # Inverse coupling of incidence to ONS prevalence
-odp_casedata=1e-0 # Inverse coupling of incidence to case data
+odp_casedata=1e-1 # Inverse coupling of incidence to case data
 iv_inc=10         # Coupling of incidence to iteself
 iv_car=10         # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
@@ -94,7 +94,7 @@ def difflogmat(n,order,xx0):
     w=v*invxx0[i:i+order+1]
     l=v@logxx0[i:i+order+1]
     A[i:i+order+1,i:i+order+1]+=np.outer(w,w)
-    b[i:i+order+1]+=w*l
+    b[i:i+order+1]+=-w*l
     c+=l*l
   return A,b,c
 
@@ -226,7 +226,7 @@ def initialguess():
 xx0=initialguess()
 #savevars(xx0)
 
-for it in range(2):
+for it in range(5):
   A=np.zeros([N*2,N*2])
   b=np.zeros(N*2)
   c=0
@@ -284,4 +284,4 @@ for it in range(2):
   xx=np.linalg.solve(A,b)
   xx0=xx
 
-savevars(xx)
+savevars(xx0)
