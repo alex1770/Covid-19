@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 from random import normalvariate as normal,random,seed,randrange
 from parseonsprevinc import getonsprevinc
 
-startdate=Date("2021-06-01")
+startdate=Date("2021-05-31")
 if len(sys.argv)>1: startdate=Date(sys.argv[1])
 print("Start date =",startdate)
 
@@ -26,12 +26,14 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 minback=1
 maxback=10
 odp=4# Overdispersion parameter. Corrects ONS variance estimates which I think are significantly too low.
-odp_casedata=4
+odp_casedata=1
 # Order=1 if you think the prior for xx[] is Brownian motion-like (in particular, Markov)
 # Order=2 if you think the prior for xx[] is more like the integral of Brownian motion.
 order=2
 fixediv=None
 date0_inc=startdate-maxback
+iv_inc=100
+iv_car=0.01
 
 onsprev,onsinc=getonsprevinc()
 
@@ -98,8 +100,8 @@ numk=len(poskern)
 # incidence for the next stage, and anchor to (calibrated) ONS prevalence.
 
 if 0:
-  iv=100
-  A=iv*diffmat(N,order)
+  iv_inc=100
+  A=iv_inc*diffmat(N,order)
   b=np.zeros(N)
   c=0
   # minimising quadratic form x^t.A.x-2b^t.x+c
@@ -137,8 +139,7 @@ if 0:
     print(adjinc,sd)
   qwe
 
-iv=100
-A=iv*diffmat(N,order)
+A=iv_inc*diffmat(N,order)
 b=np.zeros(N)
 c=0
 
@@ -173,7 +174,6 @@ b=np.pad(b,(0,ncases),mode="constant")
 
 # Add in diff constraints for CAR variables which relate same days of week to each other
 # (d isn't necessarily equal to the day of the week)
-iv_car=100
 for d in range(7):
   n=(enddate-(startdate+d)+6)//7
   a=diffmat(n,order)
@@ -198,11 +198,17 @@ for j in range(ncases):
       A[N+j,i]-=al[i]*casedata[j]
       A[N+j,N+j]+=al[i]*casedata[j]**2
     
-  
+
 xx=np.linalg.solve(A,b)
 with open("temp2",'w') as fp:
   for i in range(N):
-    print(startdate+i,xx[i],xx[N+i],file=fp)
+    print(startdate+i,xx[i],file=fp)
+with open("temp3",'w') as fp:
+  for j in range(N):
+    day=(startdate+j-monday)%7
+    i=j-back[day]
+    if i>=0:
+      print(startdate+i,xx[N+j],xx[N+j]*casedata[j],file=fp)
 asd
 
 
