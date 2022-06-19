@@ -26,6 +26,7 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 minback=1
 maxback=10
 odp=4# Overdispersion parameter. Corrects ONS variance estimates which I think are significantly too low.
+odp_casedata=4
 # Order=1 if you think the prior for xx[] is Brownian motion-like (in particular, Markov)
 # Order=2 if you think the prior for xx[] is more like the integral of Brownian motion.
 order=2
@@ -62,7 +63,8 @@ cases=list(data.values())
 
 enddate=max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
 
-n=enddate-startdate
+# Possibly extend this to extrapolate
+N=enddate-startdate
 
 # Returns matrix that calculates 'order' order differences
 # E.g., for order=1, QF(x)=sum_i (x_i-x_{i+1})^2
@@ -97,8 +99,8 @@ numk=len(poskern)
 
 if 0:
   iv=100
-  A=iv*diffmat(n,order)
-  b=np.zeros(n)
+  A=iv*diffmat(N,order)
+  b=np.zeros(N)
   c=0
   # minimising quadratic form x^t.A.x-2b^t.x+c
   # prob is proportional to exp(-(1/2)QF(x))
@@ -108,7 +110,7 @@ if 0:
     var=((high-low)/scale/(2*1.96))**2*odp
     i0=date0-adjinc-startdate
     i1=date1-adjinc-startdate
-    if i0>=0 and i1<=n:
+    if i0>=0 and i1<=N:
       A[i0:i1,i0:i1]+=1/((i1-i0)**2*var)
       b[i0:i1]+=targ/((i1-i0)*var)
       c+=targ**2/var
@@ -121,7 +123,7 @@ if 0:
       var=((high-low)/scale/(2*1.96))**2*odp
       i0=date0-numk+adjinc-startdate
       i1=date1-numk+adjinc-startdate
-      if i0>=0 and i1+numk-1<=n:
+      if i0>=0 and i1+numk-1<=N:
         h=i1-i0
         poskern2=np.zeros(numk+h-1)
         # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
@@ -136,8 +138,8 @@ if 0:
   qwe
 
 iv=100
-A=iv*diffmat(n,order)
-b=np.zeros(n)
+A=iv*diffmat(N,order)
+b=np.zeros(N)
 c=0
 
 for date0,date1,targ,low,high in onsprev:
@@ -145,7 +147,7 @@ for date0,date1,targ,low,high in onsprev:
   var=((high-low)/scale/(2*1.96))**2*odp
   i0=date0-numk-startdate
   i1=date1-numk-startdate
-  if i0>=0 and i1+numk-1<=n:
+  if i0>=0 and i1+numk-1<=N:
     #print(i0,i1,targ,sqrt(var))
     h=i1-i0
     poskern2=np.zeros(numk+h-1)
@@ -156,23 +158,67 @@ for date0,date1,targ,low,high in onsprev:
     b[i0:i1+numk-1]+=poskern2*targ/var
     c+=targ**2/var
 
-
-xx=np.linalg.solve(A,b)
+inc0=np.linalg.solve(A,b)
 with open("temp",'w') as fp:
-  for (i,x) in enumerate(xx):
+  for (i,x) in enumerate(inc0):
     print(startdate+i,x,file=fp)
 
-sa
+casedata=np.array(cases[startdate-date0_cases:])/scale
+ncases=len(casedata);assert ncases<=N
+# Pad to incorporate variables c(t) rerpesenting 1/CAR(t)
+# In comments, denote i       I[i] = incidence variable 0<=i<N
+#                     N+i  c[i] = CAR variable       0<=i<ncases
+A=np.pad(A,(0,ncases),mode="constant")
+b=np.pad(b,(0,ncases),mode="constant")
 
-def getbackparams(back):
-  d0_i=d0_c-back
-  incdata=np.array(incidence[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
-  vardata=np.array(varinc[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
-  assert len(incdata)==n and len(vardata)==n
-  var=((casedata/incdata)**2*vardata+casedata)*odp
-  al=incdata*incdata/var
-  b=incdata*casedata/var
-  c=(casedata*casedata/var).sum()
+# Add in diff constraints for CAR variables which relate same days of week to each other
+# (d isn't necessarily equal to the day of the week)
+iv_car=100
+for d in range(7):
+  n=(enddate-(startdate+d)+6)//7
+  a=diffmat(n,order)
+  for i in range(n):
+    for j in range(n):
+      A[N+d+i*7,N+d+j*7]+=iv_car*a[i,j]
+
+# Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
+#       al[i]=V[I[i]-c[i'].casedata[i']]^{-1}
+#           ~=(odp_casedata*I0[i]^2/casedata[i'])^{-1}
+#             where I0[i] is some approximation to the incidence
+back=[5]*7# Pro tem
+al=np.zeros(N)
+for j in range(ncases):
+  if startdate+j not in ignore:
+    day=(startdate+j-monday)%7
+    i=j-back[day]
+    if i>=0:
+      al[i]=casedata[j]/(odp_casedata*inc0[i]**2)
+      A[i,i]+=al[i]
+      A[i,N+j]-=al[i]*casedata[j]
+      A[N+j,i]-=al[i]*casedata[j]
+      A[N+j,N+j]+=al[i]*casedata[j]**2
+    
+  
+xx=np.linalg.solve(A,b)
+with open("temp2",'w') as fp:
+  for i in range(N):
+    print(startdate+i,xx[i],xx[N+i],file=fp)
+asd
+
+
+# Q(x[], al[], iv) = sum_i (x[i]*incdata[i]-casedata[i])^2/var[i] + iv*sum_i (x[i+1]-x[i])^2
+#                  = sum_i al[i].(x[i]-t[i])^2 + iv*sum_i (x[i+1]-x[i])^2, where t[i]=case[i]/inc[i], al[i]=inc[i]^2/var[i]
+#                  = sum_{i,j} A_{i,j}x[i]x[j] - 2.sum_i b[i]x[i] + c
+
+
+d0_i=d0_c-back
+incdata=np.array(incidence[d0_i-date0_inc:d0_i-date0_inc+7*N:7])
+vardata=np.array(varinc[d0_i-date0_inc:d0_i-date0_inc+7*n:7])
+assert len(incdata)==n and len(vardata)==n
+var=((casedata/incdata)**2*vardata+casedata)*odp
+al=incdata*incdata/var
+b=incdata*casedata/var
+c=(casedata*casedata/var).sum()
   
 # var[i] = (x[i]**2*V[incdata[i]]+V[casedata[i]])*odp
 #       ~= ((case[i]/inc[i])**2*V[incdata[i]]+casedata[i])*odp
