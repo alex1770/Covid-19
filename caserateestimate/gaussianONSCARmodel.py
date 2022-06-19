@@ -27,12 +27,12 @@ minback=1
 maxback=10
 # odp_ons is an overdispersion parameter. Corrects ONS variance estimates which I think are significantly too low.
 odp_ons=4         # Inverse coupling of incidence to ONS prevalence
-odp_casedata=1e-1 # Inverse coupling of incidence to case data
-iv_inc=10         # Coupling of incidence to iteself
-iv_car=10         # Coupling of inverse-CAR to itself
+odp_casedata=1    # Inverse coupling of incidence to case data
+iv_inc=100        # Coupling of incidence to iteself
+iv_car=30         # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
-order=1
+order=2
 
 onsprev,onsinc=getonsprevinc()
 
@@ -213,7 +213,7 @@ def initialguess():
         al=casedata[j]/(odp_casedata*inc0[i]**2)
         A[j,j]+=al*casedata[j]**2
         b[j]+=al*casedata[j]*inc0[i]
-        print(startdate+j,inc0[i]/casedata[j])
+        #print(startdate+j,inc0[i]/casedata[j])
   
   # Initial inverse-CAR guess
   c0=np.linalg.solve(A,b)
@@ -223,15 +223,16 @@ def initialguess():
   xx[N:]=c0
   return xx
 
-xx0=initialguess()
-#savevars(xx0)
+xx=initialguess()
+#savevars(xx)
 
-for it in range(5):
+for it in range(3):
+  print("Iteration",it)
   A=np.zeros([N*2,N*2])
   b=np.zeros(N*2)
   c=0
 
-  A_i,b_i,c_i=difflogmat(N,order,xx0[:N])
+  A_i,b_i,c_i=difflogmat(N,order,xx[:N])
   A[:N,:N]+=iv_inc*A_i
   b[:N]+=iv_inc*b_i
   c+=iv_inc*c_i
@@ -258,7 +259,7 @@ for it in range(5):
   # (d isn't necessarily equal to the day of the week)
   for d in range(7):
     n=(enddate-(startdate+d)+6)//7
-    A_c,b_c,c_c=difflogmat(n,order,xx0[N+d::7])
+    A_c,b_c,c_c=difflogmat(n,order,xx[N+d::7])
     c+=iv_car*c_c
     for i in range(n):
       b[N+d+i*7]+=iv_car*b_c[i]
@@ -275,13 +276,12 @@ for it in range(5):
       day=(startdate+j-monday)%7
       i=j-back[day]
       if i>=0:
-        al[i]=casedata[j]/(odp_casedata*xx0[i]**2)
+        al[i]=casedata[j]/(odp_casedata*xx[i]**2)
         A[i,i]+=al[i]
         A[i,N+j]-=al[i]*casedata[j]
         A[N+j,i]-=al[i]*casedata[j]
         A[N+j,N+j]+=al[i]*casedata[j]**2
   
   xx=np.linalg.solve(A,b)
-  xx0=xx
 
-savevars(xx0)
+savevars(xx)
