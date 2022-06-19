@@ -14,8 +14,7 @@ ignore={"2020-12-25","2020-12-26","2020-12-27","2020-12-28",
         "2021-12-25","2021-12-26","2021-12-27","2021-12-28",
         "2022-12-25","2022-12-26","2022-12-27"}
 
-#ignore={"2020-12-25","2020-12-28","2021-12-25","2021-12-26","2021-12-27","2021-12-28","2022-12-25","2022-12-26","2022-12-27"}
-#ignore={}
+ignore={Date(date) for date in ignore}
 
 # population=55.98e6
 monday=Date("2022-01-03")
@@ -28,7 +27,7 @@ maxback=10
 # odp_ons is an overdispersion parameter. Corrects ONS variance estimates which I think are significantly too low.
 odp_ons=4         # Inverse coupling of incidence to ONS prevalence
 odp_casedata=1    # Inverse coupling of incidence to case data
-iv_inc=100        # Coupling of incidence to iteself
+iv_inc=10         # Coupling of incidence to iteself
 iv_car=30         # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
@@ -115,16 +114,18 @@ back=[5]*7# Pro tem
 #    i       I[i] = incidence variable 0<=i<N
 #  N+i       c[i] = CAR variable       0<=i<N
 
-def savevars(xx):
-  with open("temp2",'w') as fp:
+def savevars(xx,name="temp"):
+  with open(name+"_inc",'w') as fp:
     for i in range(N):
       print(startdate+i,xx[i],file=fp)
-  with open("temp3",'w') as fp:
+  with open(name+"_CARcases",'w') as fp:
     for j in range(N):
-      day=(startdate+j-monday)%7
-      i=j-back[day]
-      if i>=0:
-        print(startdate+i,xx[N+j],xx[N+j]*casedata[j],file=fp)
+      if startdate+j not in ignore:
+        day=(startdate+j-monday)%7
+        i=j-back[day]
+        if i>=0:
+          print(startdate+i,1/xx[N+j],xx[N+j]*casedata[j],file=fp)
+        
   
 
 def calibrateprevalencetoincidence():
@@ -178,7 +179,7 @@ def initialguess():
   A=iv_inc*diffmat(N,order)
   b=np.zeros(N)
   c=0
-
+  
   for date0,date1,targ,low,high in onsprev:
     targ/=scale
     var=((high-low)/scale/(2*1.96))**2*odp_ons
@@ -195,7 +196,7 @@ def initialguess():
       c+=targ**2/var
   
   # Initial incidence guess
-  inc0=np.linalg.solve(A,b)
+  inc0=np.maximum(np.linalg.solve(A,b),0.01)
   
   A=iv_car*diffmat(N,order)
   b=np.zeros(N)
@@ -224,9 +225,9 @@ def initialguess():
   return xx
 
 xx=initialguess()
-#savevars(xx)
+savevars(xx,"tempinit")
 
-for it in range(3):
+for it in range(100):
   print("Iteration",it)
   A=np.zeros([N*2,N*2])
   b=np.zeros(N*2)
@@ -281,7 +282,9 @@ for it in range(3):
         A[i,N+j]-=al[i]*casedata[j]
         A[N+j,i]-=al[i]*casedata[j]
         A[N+j,N+j]+=al[i]*casedata[j]**2
-  
+
+  xx0=xx
   xx=np.linalg.solve(A,b)
+  if np.abs(xx/xx0-1).max()<1e-6: break
 
 savevars(xx)
