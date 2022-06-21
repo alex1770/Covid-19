@@ -97,6 +97,9 @@ if VV==[]: print("No data points found");sys.exit(0)
 VV=np.transpose(VV)
 
 def bestfit(V0,V1):
+  # X   = i (day)
+  # Y   = log(V1(i)/V0(i))
+  # w_i = 1/(1/V0(i)+1/V1(i))
   # Y ~ a+b*X
   # L(a,b) = -(1/2)sum_i w_i(a+bx_i-y_i)^2
   #      c = (a,b); can write L(c)
