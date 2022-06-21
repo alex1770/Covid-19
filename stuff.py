@@ -171,6 +171,61 @@ def weekdayadj(nn,eps=0.5):
   s=sum(nn)/sum(adjusted)
   return np.array([s*x for x in adjusted])
 
+# Weekday adjustment incorportaing holidays
+# Not ready - may be deleted
+def weekdayadj2(nn,date0=None,eps=0.5):
+  # y_{day} = log(nn(day)+eps) + w_{day%7}
+  # error = sum_{day} (y_{day+1}-y_{day})^2
+  # Choose w0, ..., w5 to minimise this error (w6 = 0, gauge fix)
+  monday=Date("2022-01-03")
+  holidays={
+    "2020-01-01","2020-04-10","2020-04-13","2020-05-08","2020-05-25",             "2020-08-31","2020-12-25","2020-12-28",
+    "2021-01-01","2021-04-02","2021-04-05","2021-05-03","2021-05-31",             "2021-08-30","2021-12-27","2021-12-28",
+    "2022-01-03","2022-04-15","2022-04-18","2022-05-02","2022-06-02","2022-06-03","2022-08-29","2022-12-26","2022-12-27",
+    "2023-01-02","2023-04-07","2023-04-10","2023-05-01","2023-05-29",             "2023-08-28","2023-12-25","2023-12-26"
+  }
+  from math import log,exp
+  import numpy as np
+
+  for holiday_day_of_week in range(8):
+    if holiday_day_of_week==7: date0=None
+    n=len(nn)
+    targ=[log(x+eps) for x in nn]
+    if date0 is None:
+      day=[i%7 for i in range(n)]
+    else:
+      day=[]
+      date0=Date(date0)
+      for i in range(n):
+        date=date0+i
+        if str(date) in holidays: day.append(holiday_day_of_week)
+        else: day.append((date-monday)%7)
+    A=np.zeros([6,6])
+    b=np.zeros(6)
+    for i in range(n-1):
+      diff=targ[i+1]-targ[i]
+      i0=day[i]
+      i1=day[i+1]
+      if i1<6: A[i1,i1]+=1
+      if i0<6: A[i0,i0]+=1
+      if i0<6 and i1<6: A[i0,i1]-=1;A[i1,i0]-=1
+      if i1<6: b[i1]-=diff
+      if i0<6: b[i0]+=diff
+    if np.__version__<'1.14':
+      ww=np.linalg.lstsq(A,b)[0]
+    else:
+      ww=np.linalg.lstsq(A,b,rcond=None)[0]
+    ww7=list(ww)+[0]
+    err0=err1=0
+    for i in range(n-1):
+      err0+=(targ[i+1]-targ[i])**2
+      err1+=(targ[i+1]+ww7[day[i+1]]-(targ[i]+ww7[day[i]]))**2
+    print("Errors",holiday_day_of_week,err0,err1)
+  weekadj=[exp(x) for x in ww7]
+  adjusted=[nn[i]*weekadj[day[i]] for i in range(n)]
+  s=sum(nn)/sum(adjusted)
+  return np.array([s*x for x in adjusted])
+
 # Slower weekday adjustment (n parameters)
 def weekdayadj_slow(nn,alpha=0.1):
   # Find w0,...,w6 and Poisson parameters lambda_i to maximise
@@ -326,14 +381,52 @@ def getcases_raw(pubday,location="England"):
     if data==None:
       td={"Bad":True}
       print("Data not available from api at",date,": newCasesBySpecimenDate for",location)
-      if pubday>=apiday(): return td# Don't permanently save this unavailability if it might become available later
+      if pubday>=apiday(): return {Date(d):c for (d,c) in td.items()}# Don't permanently save this unavailability if it might become available later
     else:
       td={}
       for item in data:
         td[item["date"]]=int(item["newCasesBySpecimenDate"])
+        td["Comment"]="newCasesBySpecimenDate"
       print("Retrieved newCasesBySpecimenDate api data at",date,"for",location)
     with open(fn,'w') as fp: json.dump(td,fp,indent=2)
+  if "Comment" in td: del td["Comment"]
+  return {Date(d):c for (d,c) in td.items()}
+
+def getvirustests_raw(pubday,location="England"):
+  def myint(x):
+    try:
+      return int(x)
+    except:
+      return None
+  # Target save format is
+  # filename=publishdate, td[specimendate] = tests
+  cachedir=os.path.join(gettopdir(),'apidata_tests')
+  if location=='England':
+    areatype='nation'
+  else:
+    areatype='region'
+    cachedir+='_'+location
+  date=str(Date(pubday))
+  fn=os.path.join(cachedir,date)
+  os.makedirs(cachedir,exist_ok=True)
+  if os.path.isfile(fn):
+    with open(fn,'r') as fp: td=json.load(fp)
+  else:
+    data=getapidata('areaType='+areatype+'&areaName='+location+'&metric=newVirusTestsByPublishDate&metric=newVirusTestsBySpecimenDate&release='+date,failsoft=True)
+    if data==None:
+      td={"Bad":True}
+      print("Data not available from api at",date,": newVirusTestsBy<Publish/Specimen>Date for",location)
+      if pubday>=apiday(): return td# Don't permanently save this unavailability if it might become available later
+    else:
+      td={}
+      for item in data:
+        td[item["date"]]=[myint(item["newVirusTestsByPublishDate"]),myint(item["newVirusTestsBySpecimenDate"])]
+        td["Comment"]=["newVirusTestsByPublishDate","newVirusTestsBySpecimenDate"]
+      print("Retrieved newVirusTestsBy<Publish/Specimen>Date api data at",date,"for",location)
+    with open(fn,'w') as fp: json.dump(td,fp,indent=2)
+  if "Comment" in td: del td["Comment"]
   return td
+
 
 # Returns numpy arrays:
 #
