@@ -10,7 +10,7 @@ startdate=Date("2020-06-01")
 if len(sys.argv)>1: startdate=Date(sys.argv[1])
 print("Start date =",startdate)
 
-ignore={"2020-06-11", "2020-06-28", "2020-07-12", "2020-07-19", "2020-07-31", "2020-08-02", "2020-08-09", "2020-08-10", "2020-08-11", "2020-08-15",
+ignore={"2020-06-11", "2020-06-28", "2020-07-04", "2020-07-12", "2020-07-19", "2020-07-31", "2020-08-02", "2020-08-09", "2020-08-10", "2020-08-11", "2020-08-15",
         "2020-08-16", "2020-08-17", "2020-08-31", "2020-09-01", "2020-09-13", "2020-09-21", "2020-11-02", "2020-12-19", "2020-12-25", "2020-12-26",
         "2020-12-27", "2020-12-28", "2020-12-31", "2021-01-01", "2021-01-23", "2021-01-24", "2021-03-21", "2021-03-28", "2021-04-02", "2021-04-05",
         "2021-04-18", "2021-05-09", "2021-05-31", "2021-08-30", "2021-08-31", "2021-12-25", "2021-12-29", "2022-01-01", "2022-01-04", "2022-02-18",
@@ -28,7 +28,7 @@ minback=1
 maxback=10
 inc_ons=1/4    # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
 inc_case=1     # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-inc_inc=30     # Coupling of incidence to iteself
+inc_inc=100    # Coupling of incidence to iteself
 car_car=30     # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
@@ -36,31 +36,39 @@ order=2
 
 onsprev,onsinc=getonsprevinc()
 
+def meanvar(sample):
+  mu=sum(sample)/len(sample)
+  var=sum((x-mu)**2 for x in sample)/(len(sample)-1)
+  return mu,var
+
 now=apiday()
 while 1:
   data=getcases_raw(now,location="England")
   if 'Bad' not in data: break
   print("Can't get api data for %s. Backtracking to most recent usable date."%now)
   now-=1
+ncompsamples=6
+completionlist=[]
 completionhistory=0
-# Change this to sampling completionhistory, to account for errors in doing this extrapolation
-while 1:
+while len(completionlist)<ncompsamples:
   completionhistory+=7
   data0=getcases_raw(now-completionhistory,location="England")
-  if 'Bad' not in data0: break
-print("Using api data as of",now,"and comparing to",now-completionhistory)
+  if 'Bad' not in data0: completionlist.append((completionhistory,data0))
+print("Using api data as of",now,"and comparing to",' '.join(str(now-ch) for (ch,data0) in completionlist))
 print("Order",order)
 print()
-data0={Date(d):c for (d,c) in data0.items()}
-data={Date(d):c for (d,c) in data.items()}
 last=max(data)
-# Correct recent incomplete entries, based on previous week
+# Correct recent incomplete entries, based on the same day in previous weeks
 for d in Daterange(last-6,last+1):
-  data[d]=round(data[d]*data[d-completionhistory]/data0[d-completionhistory])
+  sample=[log(data[d-ch]/data0[d-ch]) for (ch,data0) in completionlist]
+  mu,var=meanvar(sample)
+  print(d,"%7.3f %7.3f"%(mu,sqrt(var)))
+  data[d]=round(data[d]*exp(mu))
 
 date0_cases=Date(min(data))
 if date0_cases>startdate: raise RuntimeError("Date %s not found in case data"%startdate)
 cases=list(data.values())
+#for i in range(14): cases[i-14]*=exp(-i*0.05)
 
 enddate=max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
 # Possibly extend this to extrapolate
@@ -118,16 +126,16 @@ back=[5]*7# Pro tem
 #  N+i       c[i] = CAR variable       0<=i<N
 
 def savevars(xx,name="temp"):
-  with open(name+"_inc",'w') as fp:
+  with open(name+"_incidence",'w') as fp:
     for i in range(N):
-      print(startdate+i,xx[i],file=fp)
+      print(startdate+i,"%9.1f"%(xx[i]*scale),file=fp)
   with open(name+"_CARcases",'w') as fp:
     for j in range(N):
       if startdate+j not in ignore:
         day=(startdate+j-monday)%7
         i=j-back[day]
         if i>=0:
-          print(startdate+i,1/xx[N+j],xx[N+j]*casedata[j],file=fp)
+          print(startdate+i,"%7.4f %9.1f"%(1/xx[N+j],xx[N+j]*casedata[j]*scale),file=fp)
 
 
 
@@ -289,7 +297,7 @@ for it in range(100):
   xx=np.linalg.solve(A,b)
   if np.abs(xx/xx0-1).max()<1e-6: break
 
-savevars(xx)
+savevars(xx,"England")
 
 #print("Case outliers not already ignored (sample days shown)")
 scd=np.log(xx[N:]*casedata)
