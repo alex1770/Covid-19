@@ -376,6 +376,7 @@ def getcases_raw(pubday,location="England"):
   os.makedirs(cachedir,exist_ok=True)
   if os.path.isfile(fn):
     with open(fn,'r') as fp: td=json.load(fp)
+    if "Bad" in td: return td
   else:
     data=getapidata('areaType='+areatype+'&areaName='+location+'&metric=newCasesBySpecimenDate&release='+date,failsoft=True)
     if data==None:
