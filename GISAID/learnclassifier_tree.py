@@ -15,13 +15,21 @@ if len(sys.argv)>2:
     lineages=sys.argv[2].split(',')
 if len(sys.argv)>3: mincount=int(sys.argv[3])
 
-infile='metadata.tsv';inputsorted=False
-t0=os.path.getmtime(infile)
+try:
+  t0=os.path.getmtime('metadata.tsv')
+except FileNotFoundError:
+  t0=-1e30
+
 try:
   t1=os.path.getmtime('metadata_sorted.tsv')
-  if t1>=t0: infile='metadata_sorted.tsv';inputsorted=True
-except:
-  pass
+except FileNotFoundError:
+  t1=-1e30
+
+if t0<0 and t1<0: raise FileNotFoundError("Could not find GISAID files metadata.tsv or metadata_sorted.tsv")
+if t1>=t0:
+  infile='metadata_sorted.tsv';inputsorted=True
+else:
+  infile='metadata.tsv';inputsorted=False
 
 print('#Using input file',infile)
 print("#From:",mindate)
