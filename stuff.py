@@ -73,6 +73,8 @@ def datetoday(x):
       format='%Y-%m-%d';# E.g., 2021-06-05
     elif y[1].isalpha() and len(y[2])==2:
       format='%d-%b-%y';# E.g., 29-Oct-20
+  elif len(x)==8 and x.isdigit():
+    format="%Y%m%d"
   if format==None: raise RuntimeError('Unrecognised date format: '+x)
   t=time.strptime(x+'UTC',format+'%Z')
   return calendar.timegm(t)//86400
