@@ -40,13 +40,22 @@ else:
       if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
     mutations='|'+mutations+'|'
-    
-    # Various simple classifications for those waiting to be assigned
-    if lin=="Unassigned":
+
+    # Simple classifier for recent unassigned lineages
+    if lin=="Unassigned" and date>="2022-04-01":
       if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: lin="XE"
       if '|S:F486V|' in mutations:
         if '|N:P151S|' in mutations: lin="BA.4"
-        else: lin="BA.5"
+        else:
+          if '|ORF10:L37F|' in mutations: lin="BA.5.1"
+          else: lin="BA.5"
+      else:
+        if '|S:L452Q|' in mutations: lin="BA.2.12.1"
+        else:
+          # Identifying pure BA.2 is messy due to a proliferation of BA.2.*.
+          # This rule is around 99% correct in the period 2022-04-01 - 2022-07-01, and won't matter after that period as BA.2 is dying out:
+          if '|ORF3a:H78Y|' not in mutations and '|S:K417T|' not in mutations and '|orf1ab:S135R|' in mutations and '|ORF3a:L140F|' not in mutations and '|S:I68T|' not in mutations and '|orf1ab:T4175I|' not in mutations and '|S:S704L|' not in mutations and '|ORF3a:A31T|' not in mutations and '|orf1ab:S5360P|' not in mutations and '|S:F186S|' not in mutations: lin="BA.2"
+    
     # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
     if lin=="BA.2.12":
       if '|S:S704L|' in mutations and '|S:L452Q|' in mutations: lin="BA.2.12.1"
