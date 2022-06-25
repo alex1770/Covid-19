@@ -384,7 +384,7 @@ def getcases_raw(pubday,location="England"):
     if data==None:
       td={"Bad":True}
       print("Data not available from api at",date,": newCasesBySpecimenDate for",location)
-      if pubday>=apiday(): return {Date(d):c for (d,c) in td.items()}# Don't permanently save this unavailability if it might become available later
+      if pubday>=apiday(): return td# Don't permanently save this unavailability if it might become available later
     else:
       td={}
       for item in data:
@@ -393,6 +393,7 @@ def getcases_raw(pubday,location="England"):
       print("Retrieved newCasesBySpecimenDate api data at",date,"for",location)
     with open(fn,'w') as fp: json.dump(td,fp,indent=2)
   if "Comment" in td: del td["Comment"]
+  if "Bad" in td: return td
   return {Date(d):c for (d,c) in td.items()}
 
 def getvirustests_raw(pubday,location="England"):
