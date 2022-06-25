@@ -53,8 +53,8 @@ else:
         if '|S:L452Q|' in mutations: lin="BA.2.12.1"
         else:
           # Identifying pure BA.2 is messy due to a proliferation of BA.2.*.
-          # This rule is around 99% correct in the period 2022-04-01 - 2022-07-01, and won't matter after that period as BA.2 is dying out:
-          if '|ORF3a:H78Y|' not in mutations and '|S:K417T|' not in mutations and '|orf1ab:S135R|' in mutations and '|ORF3a:L140F|' not in mutations and '|S:I68T|' not in mutations and '|orf1ab:T4175I|' not in mutations and '|S:S704L|' not in mutations and '|ORF3a:A31T|' not in mutations and '|orf1ab:S5360P|' not in mutations and '|S:F186S|' not in mutations: lin="BA.2"
+          # This rule is around 99% correct in the period 2022-04-01 - 2022-07-01, and its accuracy won't matter much after that period as BA.2 is dying out:
+          if '|orf1ab:S135R|' in mutations and '|ORF3a:H78Y|' not in mutations and '|S:K417T|' not in mutations and '|ORF3a:L140F|' not in mutations and '|S:I68T|' not in mutations and '|orf1ab:T4175I|' not in mutations and '|S:S704L|' not in mutations and '|ORF3a:A31T|' not in mutations and '|orf1ab:S5360P|' not in mutations and '|S:F186S|' not in mutations: lin="BA.2"
     
     # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
     if lin=="BA.2.12":
