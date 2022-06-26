@@ -34,8 +34,6 @@ car_car=3000     # Coupling of inverse-CAR to itself
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
 order=2
 
-onsprev,onsinc=getonsprevinc()
-
 def meanvar(sample):
   mu=sum(sample)/len(sample)
   var=sum((x-mu)**2 for x in sample)/(len(sample)-1)
@@ -88,7 +86,7 @@ numk=len(poskern)
 #    i       I[i] = incidence variable 0<=i<N
 #  N+i       c[i] = CAR variable       0<=i<N
 
-def savevars(xx,name="temp"):
+def savevars(N,casedata,back,xx,name="temp"):
   with open(name+"_incidence",'w') as fp:
     for i in range(N):
       print(startdate+i,"%9.1f"%(xx[i]*scale),file=fp)
@@ -162,45 +160,7 @@ def getcaseoutliers():
           if first: print("Case outliers not already ignored (sample days shown):");first=0
           print("Case outlier:",startdate+j,"%6.3f"%o)
 
-
-now=apiday()
-while 1:
-  data=getcases_raw(now,location="England")
-  if 'Bad' not in data: break
-  print("Can't get api data for %s. Backtracking to most recent usable date."%now)
-  now-=1
-ncompsamples=6
-completionlist=[]
-completionhistory=0
-while len(completionlist)<ncompsamples:
-  completionhistory+=7
-  data0=getcases_raw(now-completionhistory,location="England")
-  if 'Bad' not in data0: completionlist.append((completionhistory,data0))
-print("Using api data as of",now,"and comparing to",' '.join(str(now-ch) for (ch,data0) in completionlist))
-print("Order",order)
-print()
-last=max(data)
-# Correct recent incomplete entries, based on the same day in previous weeks
-for d in Daterange(last-6,last+1):
-  sample=[log(data[d-ch]/data0[d-ch]) for (ch,data0) in completionlist]
-  mu,var=meanvar(sample)
-  #print(d,"%7.3f %7.3f"%(mu,sqrt(var)))
-  data[d]=round(data[d]*exp(mu))
-
-date0_cases=Date(min(data))
-if date0_cases>startdate: raise RuntimeError("Date %s not found in case data"%startdate)
-cases=list(data.values())
-#for i in range(14): cases[i-14]*=exp(-i*0.05)
-
-enddate=max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
-# Possibly extend this to extrapolate
-N=enddate-startdate
-
-casedata=np.array(cases[startdate-date0_cases:])/scale
-ncases=len(casedata);assert ncases<=N
-back=[5]*7# Pro tem
-
-def initialguess():
+def initialguess(N,onsprev,casedata,back):
   
   A=inc_inc*diffmat(N,order)
   b=np.zeros(N)
@@ -232,7 +192,7 @@ def initialguess():
   #                               al[i]=(c[i']^2.V[casedata[i']])^{-1}
   #                                   ~=((I[i]/casedata[i'])^2.(casedata[i'].inc_case))^{-1}
   #                                    =(I[i']^2/(casedata[i'].inc_case))^{-1}
-  for j in range(ncases):
+  for j in range(len(casedata)):
     if startdate+j not in ignore:
       day=(startdate+j-monday)%7
       i=j-back[day]
@@ -243,75 +203,149 @@ def initialguess():
         #print(startdate+j,inc0[i]/casedata[j])
   
   # Initial inverse-CAR guess
-  c0=np.linalg.solve(A,b)
+  c0=np.maximum(np.linalg.solve(A,b),0.01)
   
   xx=np.zeros(N*2)
   xx[:N]=inc0
   xx[N:]=c0
   return xx
 
-xx=initialguess()
-savevars(xx,"tempinit")
-
-for it in range(100):
-  print("Iteration",it)
-  A=np.zeros([N*2,N*2])
-  b=np.zeros(N*2)
-  c=0
-
-  A_i,b_i,c_i=difflogmat(N,order,xx[:N])
-  A[:N,:N]+=inc_inc*A_i
-  b[:N]+=inc_inc*b_i
-  c+=inc_inc*c_i
+def getest(now=apiday(),prlev=0):
+  now=Date(now)
+  onsprev,onsinc=getonsprevinc(maxdate=now)
+  while 1:
+    data=getcases_raw(now,location="England")
+    if 'Bad' not in data: break
+    if prlev>=2: print("Can't get api data for %s. Backtracking to most recent usable date."%now)
+    now-=1
+  ncompsamples=6
+  completionlist=[]
+  completionhistory=0
+  while len(completionlist)<ncompsamples:
+    completionhistory+=7
+    data0=getcases_raw(now-completionhistory,location="England")
+    if 'Bad' not in data0: completionlist.append((completionhistory,data0))
+  if prlev>=2:
+    print("Using api data as of",now,"and comparing to",' '.join(str(now-ch) for (ch,data0) in completionlist))
+    print("Order",order)
+    print()
+  last=max(data)
+  # Correct recent incomplete entries, based on the same day in previous weeks
+  for d in Daterange(last-6,last+1):
+    sample=[log(data[d-ch]/data0[d-ch]) for (ch,data0) in completionlist]
+    mu,var=meanvar(sample)
+    #print(d,"%7.3f %7.3f"%(mu,sqrt(var)))
+    data[d]=round(data[d]*exp(mu))
   
-  # Link incidence to ONSprevalence
-  for date0,date1,targ,low,high in onsprev:
-    targ/=scale
-    var=((high-low)/scale/(2*1.96))**2/inc_ons
-    i0=date0-numk-startdate
-    i1=date1-numk-startdate
-    if i0>=0 and i1+numk-1<=N:
-      h=i1-i0
-      poskern2=np.zeros(numk+h-1)
-      # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
-      # (As opposed to, for example, the probability that a random person would test positive on some date within that range.)
-      for i in range(h): poskern2[i:i+numk]+=poskern/h
-      A[i0:i1+numk-1,i0:i1+numk-1]+=np.outer(poskern2,poskern2)/var
-      b[i0:i1+numk-1]+=poskern2*targ/var
-      c+=targ**2/var
+  date0_cases=Date(min(data))
+  if date0_cases>startdate: raise RuntimeError("Date %s not found in case data"%startdate)
+  cases=list(data.values())
+  #for i in range(14): cases[i-14]*=exp(-i*0.05)
+
+  enddate=max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
+  # Possibly extend this to extrapolate
+  N=enddate-startdate
+  
+  casedata=np.array(cases[startdate-date0_cases:])/scale
+  assert len(casedata)<=N
+  back=[5]*7# Pro tem
   
   
-  # Add in diff constraints for CAR variables which relate same days of week to each other
-  # (d isn't necessarily equal to the day of the week)
-  for d in range(7):
-    n=(N-d+6)//7
-    A_c,b_c,c_c=difflogmat(n,order,xx[N+d::7])
-    c+=car_car*c_c
-    for i in range(n):
-      b[N+d+i*7]+=car_car*b_c[i]
-      for j in range(n):
-        A[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
+  xx=initialguess(N,onsprev,casedata,back)
+  savevars(N,casedata,back,xx,"tempinit")
   
-  # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
-  #       al[i]=(V[I[i]-c[i'].casedata[i']])^{-1}
-  #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
-  #             where I0[i] is some approximation to the incidence
-  al=np.zeros(N)
-  for j in range(ncases):
-    if startdate+j not in ignore:
-      day=(startdate+j-monday)%7
-      i=j-back[day]
-      if i>=0:
-        al[i]=casedata[j]*inc_case/xx[i]**2
-        A[i,i]+=al[i]
-        A[i,N+j]-=al[i]*casedata[j]
-        A[N+j,i]-=al[i]*casedata[j]
-        A[N+j,N+j]+=al[i]*casedata[j]**2
+  for it in range(20):
+    if prlev>=2: print("Iteration",it)
+    A=np.zeros([N*2,N*2])
+    b=np.zeros(N*2)
+    c=0
+  
+    A_i,b_i,c_i=difflogmat(N,order,xx[:N])
+    A[:N,:N]+=inc_inc*A_i
+    b[:N]+=inc_inc*b_i
+    c+=inc_inc*c_i
+    
+    # Link incidence to ONSprevalence
+    for date0,date1,targ,low,high in onsprev:
+      targ/=scale
+      var=((high-low)/scale/(2*1.96))**2/inc_ons
+      i0=date0-numk-startdate
+      i1=date1-numk-startdate
+      if i0>=0 and i1+numk-1<=N:
+        h=i1-i0
+        poskern2=np.zeros(numk+h-1)
+        # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
+        # (As opposed to, for example, the probability that a random person would test positive on some date within that range.)
+        for i in range(h): poskern2[i:i+numk]+=poskern/h
+        A[i0:i1+numk-1,i0:i1+numk-1]+=np.outer(poskern2,poskern2)/var
+        b[i0:i1+numk-1]+=poskern2*targ/var
+        c+=targ**2/var
+    
+    
+    # Add in diff constraints for CAR variables which relate same days of week to each other
+    # (d isn't necessarily equal to the day of the week)
+    for d in range(7):
+      n=(N-d+6)//7
+      A_c,b_c,c_c=difflogmat(n,order,xx[N+d::7])
+      c+=car_car*c_c
+      for i in range(n):
+        b[N+d+i*7]+=car_car*b_c[i]
+        for j in range(n):
+          A[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
+    
+    # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
+    #       al[i]=(V[I[i]-c[i'].casedata[i']])^{-1}
+    #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
+    #             where I0[i] is some approximation to the incidence
+    al=np.zeros(N)
+    for j in range(len(casedata)):
+      if startdate+j not in ignore:
+        day=(startdate+j-monday)%7
+        i=j-back[day]
+        if i>=0:
+          al[i]=casedata[j]*inc_case/xx[i]**2
+          A[i,i]+=al[i]
+          A[i,N+j]-=al[i]*casedata[j]
+          A[N+j,i]-=al[i]*casedata[j]
+          A[N+j,N+j]+=al[i]*casedata[j]**2
+  
+    xx0=xx
+    xx=np.maximum(np.linalg.solve(A,b),0.01)
+    if np.abs(xx/xx0-1).max()<1e-3: break
 
-  xx0=xx
-  xx=np.linalg.solve(A,b)
-  if np.abs(xx/xx0-1).max()<1e-6: break
-
-savevars(xx,"England")
-
+  savevars(N,casedata,back,xx,"England")
+  return casedata,xx
+  
+  
+  
+casedata0,xx0=getest()
 #getcaseoutliers()
+N=xx0.shape[0]//2
+
+
+while 1:
+  t=random()*2-1
+  u=random()*2-1
+  v=random()*2-1
+  w=random()*2-1
+  inc_inc=exp(t)*135
+  car_car=exp(u)*41
+  inc_ons=exp(v)*0.2
+  inc_case=exp(w)*1.0
+    
+  now=apiday()
+  numcheck=30
+  chrange=7
+  err=0
+  for ch in range(numcheck):
+    casedata,xx=getest(now-(ch+1)*chrange,prlev=0)
+    i0,i1=N-(ch+2)*chrange,N-(ch+1)*chrange
+    #print(xx0[i0:i1])
+    #print(xx[i0:i1])
+    #print()
+    err+=(np.log(xx[i0:i1]/xx0[i0:i1])**2).sum()
+    xx=xx0
+  
+  print("%12g %12g %12g %12g     %7.3f"%(inc_ons,inc_case,inc_inc,car_car,sqrt(err/(numcheck*chrange))))
+  sys.stdout.flush()
+        
