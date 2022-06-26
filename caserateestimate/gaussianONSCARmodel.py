@@ -2,7 +2,7 @@ import requests,sys
 import numpy as np
 from math import log,exp,sqrt
 from stuff import *
-from scipy.optimize import minimize
+from scipy.stats import multivariate_normal as mvn
 from random import normalvariate as normal,random,seed,randrange
 from parseonsprevinc import getonsprevinc
 
@@ -26,10 +26,15 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 
 minback=1
 maxback=10
-inc_ons=1/4    # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
-inc_case=1     # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-inc_inc=10000    # Coupling of incidence to iteself
-car_car=3000     # Coupling of inverse-CAR to itself
+back=[5]*7# Pro tem
+inc_ons=exp(-3.2)
+inc_case=exp(0.8)
+inc_inc=exp(6.2)
+car_car=exp(3.7)
+# inc_ons=1/4    # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
+# inc_case=1     # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+# inc_inc=10000    # Coupling of incidence to iteself
+# car_car=3000     # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
 order=2
@@ -86,17 +91,32 @@ numk=len(poskern)
 #    i       I[i] = incidence variable 0<=i<N
 #  N+i       c[i] = CAR variable       0<=i<N
 
-def savevars(N,casedata,back,xx,name="temp"):
+def savevars(N,casedata,back,xx,low=None,high=None,name="temp"):
   with open(name+"_incidence",'w') as fp:
     for i in range(N):
-      print(startdate+i,"%9.1f"%(xx[i]*scale),file=fp)
+      print(startdate+i,"%9.1f"%(xx[i]*scale),end="",file=fp)
+      if low is not None: print("  %9.1f"%(low[i]*scale),end="",file=fp)
+      else: print("          -",end="",file=fp)
+      if high is not None: print("  %9.1f"%(high[i]*scale),end="",file=fp)
+      else: print("          -",end="",file=fp)
+      print(file=fp)
   with open(name+"_CARcases",'w') as fp:
     for j in range(N):
       if startdate+j not in ignore:
         day=(startdate+j-monday)%7
         i=j-back[day]
         if i>=0:
-          print(startdate+i,"%7.4f %9.1f"%(1/xx[N+j],xx[N+j]*casedata[j]*scale),file=fp)
+          print(startdate+i,"%7.4f"%(1/xx[N+j]),end="",file=fp)
+          if high is not None: print("  %7.4f"%(1/high[N+j]),end="",file=fp)
+          else: print("        -",end="",file=fp)
+          if low is not None: print("  %7.4f"%(1/low[N+j]),end="",file=fp)
+          else: print("        -",end="",file=fp)
+          print("  %9.1f"%(xx[N+j]*casedata[j]*scale),end="",file=fp)
+          if low is not None: print("  %7.4f"%(low[N+j]*casedata[j]*scale),end="",file=fp)
+          else: print("        -",end="",file=fp)
+          if high is not None: print("  %7.4f"%(high[N+j]*casedata[j]*scale),end="",file=fp)
+          else: print("        -",end="",file=fp)
+          print(file=fp)
 
 
 
@@ -142,11 +162,11 @@ def calibrateprevalencetoincidence():
         pprev=inc_v0[i0:i1+numk-1]@poskern2
         x=log(targ/pprev)
         s0+=1;s1+=x;s2+=x*x
-        #print(date0,pprev,targ,x)
+        #print(date0,pprev,trg,x)
     sd=sqrt((s2-s1**2/s0)/(s0-1))
     print(adjinc,sd)
 
-def getcaseoutliers():
+def getcaseoutliers(casedata,N):
   first=1
   scd=np.log(xx[N:]*casedata)
   for j in range(1,N-1):
@@ -248,11 +268,10 @@ def getest(now=apiday(),prlev=0):
   
   casedata=np.array(cases[startdate-date0_cases:])/scale
   assert len(casedata)<=N
-  back=[5]*7# Pro tem
   
   
   xx=initialguess(N,onsprev,casedata,back)
-  savevars(N,casedata,back,xx,"tempinit")
+  savevars(N,casedata,back,xx,name="tempinit")
   
   for it in range(20):
     if prlev>=2: print("Iteration",it)
@@ -313,39 +332,51 @@ def getest(now=apiday(),prlev=0):
     xx=np.maximum(np.linalg.solve(A,b),0.01)
     if np.abs(xx/xx0-1).max()<1e-3: break
 
-  savevars(N,casedata,back,xx,"England")
-  return casedata,xx
+  savevars(N,casedata,back,xx,name="England")
+  return casedata,xx,A,b
   
   
+if 0:
+  # Optimising coupling parameters for consistency
   
-casedata0,xx0=getest()
-#getcaseoutliers()
-N=xx0.shape[0]//2
-
-
-while 1:
-  t=random()*2-1
-  u=random()*2-1
-  v=random()*2-1
-  w=random()*2-1
-  inc_inc=exp(t)*135
-  car_car=exp(u)*41
-  inc_ons=exp(v)*0.2
-  inc_case=exp(w)*1.0
+  def rnd(): return random()*2-1
+  seed(42)
+  
+  while 1:
+    inc_ons=exp(-3.2+rnd()*0.5)
+    inc_case=exp(0.8+rnd()*1)
+    inc_inc=exp(6.2+rnd()*0.8)
+    car_car=exp(3.7+rnd()*1)
+  
+    casedata0,xx0,A0,b0=getest()
+    N=xx0.shape[0]//2
+  
+    now=apiday()
+    numcheck=30
+    chrange=7
+    err=0
+    for ch in range(numcheck):
+      casedata,xx,A,b=getest(now-(ch+1)*chrange,prlev=0)
+      i0,i1=N-(ch+2)*chrange,N-(ch+1)*chrange
+      #print(xx0[i0:i1])
+      #print(xx[i0:i1])
+      #print()
+      err+=(np.log(xx[i0:i1]/xx0[i0:i1])**2).sum()
+      #xx0=xx
     
-  now=apiday()
-  numcheck=30
-  chrange=7
-  err=0
-  for ch in range(numcheck):
-    casedata,xx=getest(now-(ch+1)*chrange,prlev=0)
-    i0,i1=N-(ch+2)*chrange,N-(ch+1)*chrange
-    #print(xx0[i0:i1])
-    #print(xx[i0:i1])
-    #print()
-    err+=(np.log(xx[i0:i1]/xx0[i0:i1])**2).sum()
-    xx=xx0
+    print("%12g %12g %12g %12g     %10.6f"%(inc_ons,inc_case,inc_inc,car_car,sqrt(err/(numcheck*chrange))))
+    sys.stdout.flush()
   
-  print("%12g %12g %12g %12g     %7.3f"%(inc_ons,inc_case,inc_inc,car_car,sqrt(err/(numcheck*chrange))))
-  sys.stdout.flush()
-        
+casedata,xx0,A,b=getest(prlev=2)
+N=xx0.shape[0]//2
+# getcaseoutliers(casedata,N)
+conf=0.95
+C=np.linalg.inv(A)
+nsamp=10000
+l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
+np.ndarray.sort(l,axis=0)
+i0=int(nsamp*(1-conf)/2)
+i1=int(nsamp*(1+conf)/2)
+low=l[i0,:]
+high=l[i1,:]
+savevars(N,casedata,back,xx0,low=low,high=high,name="England")
