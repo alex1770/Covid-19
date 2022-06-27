@@ -27,14 +27,10 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 minback=1
 maxback=10
 back=[5]*7# Pro tem
-inc_ons=exp(-3.2)
-inc_case=exp(0.8)
-inc_inc=exp(6.2)
-car_car=exp(3.7)
-# inc_ons=1/4    # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
-# inc_case=1     # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-# inc_inc=10000    # Coupling of incidence to iteself
-# car_car=3000     # Coupling of inverse-CAR to itself
+inc_ons=exp(-3.2)   # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
+inc_case=exp(0.8)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+inc_inc=exp(6.2)    # Coupling of incidence to iteself
+car_car=exp(3.7)    # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
 order=2
@@ -111,10 +107,11 @@ def savevars(N,casedata,back,xx,low=None,high=None,name="temp"):
           else: print("        -",end="",file=fp)
           if low is not None: print("  %7.4f"%(1/low[N+j]),end="",file=fp)
           else: print("        -",end="",file=fp)
-          print("  %9.1f"%(xx[N+j]*casedata[j]*scale),end="",file=fp)
-          if low is not None: print("  %7.4f"%(low[N+j]*casedata[j]*scale),end="",file=fp)
+          if j<len(casedata): print("  %9.1f"%(xx[N+j]*casedata[j]*scale),end="",file=fp)
+          else: print("          -",end="",file=fp)
+          if j<len(casedata) and low is not None: print("  %7.4f"%(low[N+j]*casedata[j]*scale),end="",file=fp)
           else: print("        -",end="",file=fp)
-          if high is not None: print("  %7.4f"%(high[N+j]*casedata[j]*scale),end="",file=fp)
+          if j<len(casedata) and high is not None: print("  %7.4f"%(high[N+j]*casedata[j]*scale),end="",file=fp)
           else: print("        -",end="",file=fp)
           print(file=fp)
 
@@ -230,23 +227,24 @@ def initialguess(N,onsprev,casedata,back):
   xx[N:]=c0
   return xx
 
-def getest(now=apiday(),prlev=0):
-  now=Date(now)
-  onsprev,onsinc=getonsprevinc(maxdate=now)
+def getest(cutoff=apiday(),prlev=0,eps=1e-3):
+  cutoff=Date(cutoff)
+  onsprev,onsinc=getonsprevinc(maxdate=cutoff)
+  apireq=cutoff
   while 1:
-    data=getcases_raw(now,location="England")
+    data=getcases_raw(apireq,location="England")
     if 'Bad' not in data: break
-    if prlev>=2: print("Can't get api data for %s. Backtracking to most recent usable date."%now)
-    now-=1
+    if prlev>=2: print("Can't get api data for %s. Backtracking to most recent usable date."%apireq)
+    apireq-=1
   ncompsamples=6
   completionlist=[]
   completionhistory=0
   while len(completionlist)<ncompsamples:
     completionhistory+=7
-    data0=getcases_raw(now-completionhistory,location="England")
+    data0=getcases_raw(apireq-completionhistory,location="England")
     if 'Bad' not in data0: completionlist.append((completionhistory,data0))
   if prlev>=2:
-    print("Using api data as of",now,"and comparing to",' '.join(str(now-ch) for (ch,data0) in completionlist))
+    print("Using api data as of",apireq,"and comparing to",' '.join(str(apireq-ch) for (ch,data0) in completionlist))
     print("Order",order)
     print()
   last=max(data)
@@ -254,6 +252,7 @@ def getest(now=apiday(),prlev=0):
   for d in Daterange(last-6,last+1):
     sample=[log(data[d-ch]/data0[d-ch]) for (ch,data0) in completionlist]
     mu,var=meanvar(sample)
+    # To do: use var
     #print(d,"%7.3f %7.3f"%(mu,sqrt(var)))
     data[d]=round(data[d]*exp(mu))
   
@@ -262,7 +261,7 @@ def getest(now=apiday(),prlev=0):
   cases=list(data.values())
   #for i in range(14): cases[i-14]*=exp(-i*0.05)
 
-  enddate=max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
+  enddate=cutoff#max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
   # Possibly extend this to extrapolate
   N=enddate-startdate
   
@@ -313,7 +312,7 @@ def getest(now=apiday(),prlev=0):
           A[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
     
     # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
-    #       al[i]=(V[I[i]-c[i'].casedata[i']])^{-1}
+    #       al[i]=( V[ I[i]-c[i'].casedata[i'] ] )^{-1}
     #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
     #             where I0[i] is some approximation to the incidence
     al=np.zeros(N)
@@ -330,10 +329,10 @@ def getest(now=apiday(),prlev=0):
   
     xx0=xx
     xx=np.maximum(np.linalg.solve(A,b),0.01)
-    if np.abs(xx/xx0-1).max()<1e-3: break
+    if np.abs(xx/xx0-1).max()<eps: break
 
   savevars(N,casedata,back,xx,name="England")
-  return casedata,xx,A,b
+  return casedata,xx,A,b,c
   
   
 if 0:
@@ -348,7 +347,7 @@ if 0:
     inc_inc=exp(6.2+rnd()*0.8)
     car_car=exp(3.7+rnd()*1)
   
-    casedata0,xx0,A0,b0=getest()
+    casedata0,xx0,A0,b0,c0=getest()
     N=xx0.shape[0]//2
   
     now=apiday()
@@ -356,7 +355,7 @@ if 0:
     chrange=7
     err=0
     for ch in range(numcheck):
-      casedata,xx,A,b=getest(now-(ch+1)*chrange,prlev=0)
+      casedata,xx,A,b,c=getest(now-(ch+1)*chrange,prlev=0)
       i0,i1=N-(ch+2)*chrange,N-(ch+1)*chrange
       #print(xx0[i0:i1])
       #print(xx[i0:i1])
@@ -366,17 +365,149 @@ if 0:
     
     print("%12g %12g %12g %12g     %10.6f"%(inc_ons,inc_case,inc_inc,car_car,sqrt(err/(numcheck*chrange))))
     sys.stdout.flush()
+
+if 1:
+  # Optimising coupling parameters for consistency - other version with natural model
   
-casedata,xx0,A,b=getest(prlev=2)
-N=xx0.shape[0]//2
-# getcaseoutliers(casedata,N)
-conf=0.95
-C=np.linalg.inv(A)
-nsamp=10000
-l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
-np.ndarray.sort(l,axis=0)
-i0=int(nsamp*(1-conf)/2)
-i1=int(nsamp*(1+conf)/2)
-low=l[i0,:]
-high=l[i1,:]
-savevars(N,casedata,back,xx0,low=low,high=high,name="England")
+  def rnd(): return random()*2-1
+  seed(42)
+  
+  while 1:
+    inc_ons=exp(-3.2+rnd()*0.5)
+    inc_case=exp(0.8+rnd()*1)
+    inc_inc=exp(6.2+rnd()*0.8)
+    car_car=exp(3.7+rnd()*1)
+  
+    casedata0,xx0,A0,b0,c0=getest()
+    N0=xx0.shape[0]//2
+    # Interleave to combine incidence and CAR variables so that indices are in date order
+    xx0i=np.zeros(2*N0)
+    xx0i[0::2]=xx0[:N0]
+    xx0i[1::2]=xx0[N0:]
+  
+    now=apiday()
+    numcheck=30
+    chrange=7
+    dof=LL0=LL1=0
+    sys.stdout.flush()
+    for ch in range(numcheck):
+      casedata,xx,A,b,c=getest(now-(ch+1)*chrange,prlev=0)
+      N=N0-(ch+1)*chrange
+      assert N==xx.shape[0]//2
+      
+      # Interleave to combine incidence and CAR variables so that indices are in date order
+      xxi=np.zeros(2*N)
+      xxi[0::2]=xx[:N]
+      xxi[1::2]=xx[N:]
+      Ai=np.zeros([2*N,2*N])
+      Ai[0::2,0::2]=A[:N,:N]
+      Ai[1::2,0::2]=A[N:,:N]
+      Ai[0::2,1::2]=A[:N,N:]
+      Ai[1::2,1::2]=A[N:,N:]
+  
+      yyi=xx0i[:2*N]-xxi
+      # yy is an observation from the centred normal distribution with precision matrix A
+      # but we're only going to look at the bits 2*(N-chrange):2*N, marginalising over the rest.
+      # The split is like this:
+      # Ai  = [ A_00 A_01 ]
+      #       [ A_10 A_11 ]
+      # yyi = [ y_0 y_1]
+  
+      m=2*(N-chrange)
+      y_0=yyi[:m]# Not used
+      y_1=yyi[m:]
+      A_00=Ai[:m,:m]
+      A_01=Ai[:m,m:]
+      A_10=Ai[m:,:m]
+      A_11=Ai[m:,m:]
+
+      # Calculate the marginal precision matrix of the variables indexed from m onwards.
+      # Could do C=np.linalg.inv(Ai);B_11=np.linalg.inv(C[m:,m:]), but the following is faster:
+      B_11=A_11-A_10@np.linalg.solve(A_00,A_01)
+      
+      resid=y_1@(B_11@y_1)
+      #LL+=(1/2)*np.linalg.slogdet(B_11)[1]-(1/2)*resid
+      LL0+=(1/2)*np.linalg.slogdet(B_11)[1]
+      LL1+=-(1/2)*resid
+      dof+=(1/2)*2*chrange
+
+    lam=-dof/LL1
+    inc_ons*=lam
+    inc_case*=lam
+    inc_inc*=lam
+    car_car*=lam
+    LL1*=lam
+    LL0+=dof*log(lam)
+    print("%12g %12g %12g %12g     %10.6f"%(inc_ons,inc_case,inc_inc,car_car,LL0+LL1))
+    sys.stdout.flush()
+
+if 0:
+  # Finding overall coupling so as to get a probability distribution over outcomes
+  
+  casedata0,xx0,A0,b0,c0=getest()
+  N0=xx0.shape[0]//2
+  # Interleave to combine incidence and CAR variables so that indices are in date order
+  xx0i=np.zeros(2*N0)
+  xx0i[0::2]=xx0[:N0]
+  xx0i[1::2]=xx0[N0:]
+
+  now=apiday()
+  numcheck=30
+  chrange=7
+  tresid=dof=0
+  for ch in range(numcheck):
+    casedata,xx,A,b,c=getest(now-(ch+1)*chrange,prlev=0)
+    N=N0-(ch+1)*chrange
+    assert N==xx.shape[0]//2
+    # Interleave to combine incidence and CAR variables so that indices are in date order
+    xxi=np.zeros(2*N)
+    xxi[0::2]=xx[:N]
+    xxi[1::2]=xx[N:]
+    Ai=np.zeros([2*N,2*N])
+    Ai[0::2,0::2]=A[:N,:N]
+    Ai[1::2,0::2]=A[N:,:N]
+    Ai[0::2,1::2]=A[:N,N:]
+    Ai[1::2,1::2]=A[N:,N:]
+
+    yyi=xx0i[:2*N]-xxi
+    # yy is an observation from the centred normal distribution with precision matrix A
+    # but we're only going to look at the bits 2*(N-chrange):2*N, marginalising over the rest.
+    # The split is like this:
+    # Ai  = [ A_00 A_01 ]
+    #       [ A_10 A_11 ]
+    # yyi = [ y_0 y_1]
+
+    m=2*(N-chrange)
+    y_0=yyi[:m]# Not used
+    y_1=yyi[m:]
+    A_00=Ai[:m,:m]
+    A_01=Ai[:m,m:]
+    A_10=Ai[m:,:m]
+    A_11=Ai[m:,m:]
+
+    # Faster version of C=np.linalg.inv(Ai);resid=y_1@(np.linalg.solve(C[m:,m:],y_1)), because don't have to invert the whole matrix:
+    resid=y_1@(A_11@y_1)-(y_1@A_10)@np.linalg.solve(A_00,(A_01@y_1))
+    print("Resid =",resid/(2*chrange))
+    tresid+=resid
+    dof+=2*chrange
+  lam=tresid/dof
+  print("Overall residual factor =",lam)
+else:
+  lam=0.0492
+    
+if 1:
+  casedata,xx0,A,b,c=getest(prlev=2)
+  N=xx0.shape[0]//2
+  # getcaseoutliers(casedata,N)
+  A/=lam;b/=lam
+  conf=0.95
+  C=np.linalg.inv(A)
+  nsamp=10000
+  l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
+  np.ndarray.sort(l,axis=0)
+  i0=int(nsamp*(1-conf)/2)
+  i1=int(nsamp*(1+conf)/2)
+  low=l[i0,:]
+  high=l[i1,:]
+  savevars(N,casedata,back,xx0,low=low,high=high,name="England")
+  
