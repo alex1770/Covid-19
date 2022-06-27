@@ -27,10 +27,10 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 minback=1
 maxback=10
 back=[5]*7# Pro tem
-inc_ons=exp(-3.2)   # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
-inc_case=exp(0.8)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-inc_inc=exp(6.2)    # Coupling of incidence to iteself
-car_car=exp(3.7)    # Coupling of inverse-CAR to itself
+inc_ons=exp(-1.0)   # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
+inc_case=exp(3.4)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+inc_inc=exp(9.8)    # Coupling of incidence to iteself
+car_car=exp(7.5)    # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
 order=2
@@ -370,13 +370,13 @@ if 1:
   # Optimising coupling parameters for consistency - other version with natural model
   
   def rnd(): return random()*2-1
-  seed(42)
+  #seed(42)
   
   while 1:
-    inc_ons=exp(-3.2+rnd()*0.5)
-    inc_case=exp(0.8+rnd()*1)
-    inc_inc=exp(6.2+rnd()*0.8)
-    car_car=exp(3.7+rnd()*1)
+    inc_ons=exp(-1.5+rnd()*1.0)
+    inc_case=exp(3.4+rnd()*0.3)
+    inc_inc=exp(10.3+rnd()*0.5)
+    car_car=exp(7+rnd()*0.5)
   
     casedata0,xx0,A0,b0,c0=getest()
     N0=xx0.shape[0]//2
@@ -492,14 +492,12 @@ if 0:
     dof+=2*chrange
   lam=tresid/dof
   print("Overall residual factor =",lam)
-else:
-  lam=0.0492
     
-if 1:
+if 0:
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
-  A/=lam;b/=lam
+  #A/=lam;b/=lam
   conf=0.95
   C=np.linalg.inv(A)
   nsamp=10000
