@@ -163,8 +163,7 @@ def ONSconsistencycheck(mindate=Date("2022-01-01"),maxdate=Date("9999-12-31")):
 
 def getdailyprevalence(maxdate=Date("9999-12-31"),correctionfactor=3.69):
   import os
-  from itertools import chain
-
+  
   population=56e6
   
   (latestdate,latestfn)=getspreadsheetname(maxdate)
@@ -177,16 +176,23 @@ def getdailyprevalence(maxdate=Date("9999-12-31"),correctionfactor=3.69):
   fn=os.path.join(onsdir,latestfn)
   xl=pd.ExcelFile(fn)
   
-  dpl=xl.parse(sheetname(xl,'1b'))# Latest daily prevalence
-  dph=xl.parse(sheetname(xl,'1l'))# Historic daily prevalence
+  if latestdate>="2022-06-17": histsheet="1l"
+  elif latestdate>="2022-04-08": histsheet="1p"
+  elif latestdate>="2022-04-01": histsheet="1q"
+  else: histsheet="1p"
+  dpl=list(xl.parse('1b').iterrows())     # Latest daily prevalence
+  dph=list(xl.parse(histsheet).iterrows())# Historic daily prevalence
   
   data={}
-  for row in chain(dpl.iterrows(),dph.iterrows()):
+  ok=0
+  for row in dpl+dph:
     l=list(row[1])
+    if type(l[0])==str and "odelled daily rates" in l[0] and "testing positive" in l[0]: ok+=1
     if len(l)>=4 and type(l[0])==datetime.datetime and all(type(x)==float for x in l[1:4]):
       d=Date(l[0])
       if d not in data: data[d]=(l[1]/100*population,(l[3]-l[2])/(2*1.96)*correctionfactor/100*population)
-
+  if ok!=2: raise RuntimeError("Looks like we're using the wrong sheets for date %s"%latestdate)
+  
   dailyprev=[(d,data[d][0],data[d][1]) for d in sorted(list(data))]
 
   savedailycsv(latestdate+"_dailyprev",dailyprev)
