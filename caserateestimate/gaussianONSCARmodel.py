@@ -218,17 +218,17 @@ def initialguess(N,onsprev,casedata,back):
         #print(startdate+j,inc0[i]/casedata[j])
   
   # Initial inverse-CAR guess
-  c0=np.maximum(np.linalg.solve(A,b),0.01)
+  c0=np.maximum(np.linalg.solve(A,b),1)
   
   xx=np.zeros(N*2)
   xx[:N]=inc0
   xx[N:]=c0
   return xx
 
-def getest(cutoff=apiday(),prlev=0,eps=1e-3):
-  cutoff=Date(cutoff)
-  onsprev=getdailyprevalence(maxdate=cutoff)
-  apireq=cutoff
+def getest(enddate=apiday(),prlev=0,eps=1e-3):
+  enddate=Date(enddate)
+  onsprev=getdailyprevalence(maxdate=enddate)
+  apireq=enddate
   while 1:
     data=getcases_raw(apireq,location="England")
     if 'Bad' not in data: break
@@ -262,8 +262,6 @@ def getest(cutoff=apiday(),prlev=0,eps=1e-3):
   #  pr=onsprev[i-14]
   #  onsprev[i-14]=(pr[0],pr[1]*exp(-i*0.05),pr[2])
 
-  enddate=cutoff#max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
-  # Possibly extend this to extrapolate
   N=enddate-startdate
   
   casedata=np.array(cases[startdate-date0_cases:])/scale
@@ -329,7 +327,50 @@ def getest(cutoff=apiday(),prlev=0,eps=1e-3):
 
   savevars(N,casedata,back,xx,name="England")
   return casedata,xx,A,b,c
+
+def directeval(xx,casedata,enddate=apiday(),prlev=0):
+  enddate=Date(enddate)
+  onsprev=getdailyprevalence(maxdate=enddate)
+  N=enddate-startdate
+  assert len(casedata)<=N
+
+  tx=np.log(xx[:N])
+  for o in range(order): tx=tx[:-1]-tx[1:]
+  t_II=inc_inc*(tx**2).sum()
   
+  # Link incidence to ONSprevalence
+  t_IO=0
+  for date,targ,sd in onsprev:
+    targ/=scale
+    sd/=scale
+    var=sd**2/inc_ons
+    i=date-numk-startdate
+    if i>=0 and i+numk<=N:
+      t_IO+=((poskern*xx[i:i+numk]).sum()-targ)**2/var
+  
+  # Add in diff constraints for CAR variables which relate same days of week to each other
+  # (d isn't necessarily equal to the day of the week)
+  t_CC=0
+  for d in range(7):
+    n=(N-d+6)//7
+    tx=np.log(xx[N+d::7])
+    for o in range(order): tx=tx[:-1]-tx[1:]
+    t_CC+=car_car*(tx**2).sum()
+  
+  # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
+  #       al[i]=( V[ I[i]-c[i'].casedata[i'] ] )^{-1}
+  #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
+  #             where I0[i] is some approximation to the incidence
+  t_IC=0
+  for j in range(len(casedata)):
+    if startdate+j not in ignore:
+      day=(startdate+j-monday)%7
+      i=j-back[day]
+      if i>=0:
+        al=casedata[j]*inc_case/xx[i]**2
+        t_IC+=al*(xx[N+j]*casedata[j]-xx[i])**2
+  
+  print("%10.2f %10.2f %10.2f %10.2f       %10.2f"%(t_II,t_IO,t_CC,t_IC,t_II+t_IO+t_CC+t_IC))
   
 if 0:
   # Optimising coupling parameters for consistency
@@ -490,7 +531,7 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 1:
+if 0:
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -498,6 +539,8 @@ if 1:
   C=np.linalg.inv(A)
   nsamp=10000
   l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
+  l[:,:N]=np.maximum(l[:,:N],0.01)
+  l[:,N:]=np.maximum(l[:,N:],1)
   np.ndarray.sort(l,axis=0)
   i0=int(nsamp*(1-conf)/2)
   i1=int(nsamp*(1+conf)/2)
@@ -505,3 +548,19 @@ if 1:
   high=l[i1,:]
   savevars(N,casedata,back,xx0,low=low,high=high,name="England")
   
+if 0:
+  casedata,xx0,A,b,c=getest(prlev=2)
+  N=xx0.shape[0]//2
+  # getcaseoutliers(casedata,N)
+  C=np.linalg.inv(A)
+  nsamp=20
+  l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
+  l[:,:N]=np.maximum(l[:,:N],0.01)
+  l[:,N:]=np.maximum(l[:,N:],1)
+  print(xx0[N-7:N],xx0[-7:],end="")
+  directeval(xx0,casedata)
+  print()
+  for i in range(nsamp):
+    print(l[i][N-7:N],l[i][-7:],end="")
+    directeval(l[i],casedata)
+    
