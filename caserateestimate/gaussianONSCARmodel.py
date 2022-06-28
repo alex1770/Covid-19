@@ -4,7 +4,7 @@ from math import log,exp,sqrt
 from stuff import *
 from scipy.stats import multivariate_normal as mvn
 from random import normalvariate as normal,random,seed,randrange
-from parseonsprevinc import getonsprevinc
+from parseonsprevinc import getonsprevinc,getdailyprevalence
 
 startdate=Date("2020-06-01")
 if len(sys.argv)>1: startdate=Date(sys.argv[1])
@@ -27,12 +27,13 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 minback=1
 maxback=10
 back=[5]*7# Pro tem
-inc_ons=exp(-1.0)   # Coupling of incidence to ONS prevalence (less than 1 means we think ONS confidence intervals are too narrow)
+inc_ons=exp(0)      # Coupling of incidence to ONS prevalence (now fixed at 1, because ONS confidence intervals have been adjusted to be sensible)
 inc_case=exp(3.4)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
 inc_inc=exp(9.8)    # Coupling of incidence to iteself
 car_car=exp(7.5)    # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
+# etc
 order=2
 
 def meanvar(sample):
@@ -118,6 +119,8 @@ def savevars(N,casedata,back,xx,low=None,high=None,name="temp"):
 
 
 def calibrateprevalencetoincidence():
+  # Not currently used, and not been updated since we went over to using daily ONS prevalence
+  # 
   # Use ONS incidence as a one-off to calibrate use of ONS prevalence, in particular
   # poskern. The ratio of (ONSincidence convolved with poskernel) to ONSprevalence varies
   # somewhat around 1, though not in an obvious pattern that depends on variants. Therefore
@@ -183,19 +186,14 @@ def initialguess(N,onsprev,casedata,back):
   b=np.zeros(N)
   c=0
   
-  for date0,date1,targ,low,high in onsprev:
+  for date,targ,sd in onsprev:
     targ/=scale
-    var=((high-low)/scale/(2*1.96))**2/inc_ons
-    i0=date0-numk-startdate
-    i1=date1-numk-startdate
-    if i0>=0 and i1+numk-1<=N:
-      h=i1-i0
-      poskern2=np.zeros(numk+h-1)
-      # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
-      # (As opposed to, for example, the probability that a random person would test positive on some date within that range.)
-      for i in range(h): poskern2[i:i+numk]+=poskern/h
-      A[i0:i1+numk-1,i0:i1+numk-1]+=np.outer(poskern2,poskern2)/var
-      b[i0:i1+numk-1]+=poskern2*targ/var
+    sd/=scale
+    var=sd**2/inc_ons
+    i=date-numk-startdate
+    if i>=0 and i+numk<=N:
+      A[i:i+numk,i:i+numk]+=np.outer(poskern,poskern)/var
+      b[i:i+numk]+=poskern*targ/var
       c+=targ**2/var
   
   # Initial incidence guess
@@ -229,7 +227,7 @@ def initialguess(N,onsprev,casedata,back):
 
 def getest(cutoff=apiday(),prlev=0,eps=1e-3):
   cutoff=Date(cutoff)
-  onsprev,onsinc=getonsprevinc(maxdate=cutoff)
+  onsprev=getdailyprevalence(maxdate=cutoff)
   apireq=cutoff
   while 1:
     data=getcases_raw(apireq,location="England")
@@ -284,19 +282,14 @@ def getest(cutoff=apiday(),prlev=0,eps=1e-3):
     c+=inc_inc*c_i
     
     # Link incidence to ONSprevalence
-    for date0,date1,targ,low,high in onsprev:
+    for date,targ,sd in onsprev:
       targ/=scale
-      var=((high-low)/scale/(2*1.96))**2/inc_ons
-      i0=date0-numk-startdate
-      i1=date1-numk-startdate
-      if i0>=0 and i1+numk-1<=N:
-        h=i1-i0
-        poskern2=np.zeros(numk+h-1)
-        # We're assuming ONS positivity for a date range refers to the probabilty that a random person _on a random date within that range_ would test positive
-        # (As opposed to, for example, the probability that a random person would test positive on some date within that range.)
-        for i in range(h): poskern2[i:i+numk]+=poskern/h
-        A[i0:i1+numk-1,i0:i1+numk-1]+=np.outer(poskern2,poskern2)/var
-        b[i0:i1+numk-1]+=poskern2*targ/var
+      sd/=scale
+      var=sd**2/inc_ons
+      i=date-numk-startdate
+      if i>=0 and i+numk<=N:
+        A[i:i+numk,i:i+numk]+=np.outer(poskern,poskern)/var
+        b[i:i+numk]+=poskern*targ/var
         c+=targ**2/var
     
     
@@ -373,10 +366,10 @@ if 1:
   #seed(42)
   
   while 1:
-    inc_ons=exp(-1.5+rnd()*1.0)
-    inc_case=exp(3.4+rnd()*0.3)
-    inc_inc=exp(10.3+rnd()*0.5)
-    car_car=exp(7+rnd()*0.5)
+    inc_ons=exp(0)
+    inc_case=exp(3+rnd()*1)
+    inc_inc=exp(9+rnd()*1)
+    car_car=exp(6+rnd()*1)
   
     casedata0,xx0,A0,b0,c0=getest()
     N0=xx0.shape[0]//2
@@ -431,7 +424,8 @@ if 1:
       LL1+=-(1/2)*resid
       dof+=(1/2)*2*chrange
 
-    lam=-dof/LL1
+    #lam=-dof/LL1
+    lam=1
     inc_ons*=lam
     inc_case*=lam
     inc_inc*=lam
@@ -493,11 +487,10 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 0:
+if 1:
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
-  #A/=lam;b/=lam
   conf=0.95
   C=np.linalg.inv(A)
   nsamp=10000

@@ -260,6 +260,7 @@ def weekdayadj_slow(nn,alpha=0.1):
 class Date(int):
   def __new__(cls, daydate):
     if type(daydate)==str: return super(cls,cls).__new__(cls,datetoday(daydate))
+    elif type(daydate)==datetime.datetime: return super(cls,cls).__new__(cls,datetoday(daydate.strftime("%Y-%m-%d")))
     else: return super(cls,cls).__new__(cls,daydate)
   def __eq__(self,other): return int(self)==int(Date(other))
   def __hash__(self): return hash(int(Date(self)))
