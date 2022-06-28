@@ -27,10 +27,10 @@ np.set_printoptions(precision=3,suppress=True,linewidth=200)
 minback=1
 maxback=10
 back=[5]*7# Pro tem
-inc_ons=exp(0)      # Coupling of incidence to ONS prevalence (now fixed at 1, because ONS confidence intervals have been adjusted to be sensible)
-inc_case=exp(3.4)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-inc_inc=exp(9.8)    # Coupling of incidence to iteself
-car_car=exp(7.5)    # Coupling of inverse-CAR to itself
+inc_ons=exp(-3)     # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
+inc_case=exp(3.0)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+inc_inc=exp(10.9)   # Coupling of incidence to iteself
+car_car=exp(6.0)    # Coupling of inverse-CAR to itself
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion).
 # etc
@@ -258,6 +258,9 @@ def getest(cutoff=apiday(),prlev=0,eps=1e-3):
   if date0_cases>startdate: raise RuntimeError("Date %s not found in case data"%startdate)
   cases=list(data.values())
   #for i in range(14): cases[i-14]*=exp(-i*0.05)
+  #for i in range(14):
+  #  pr=onsprev[i-14]
+  #  onsprev[i-14]=(pr[0],pr[1]*exp(-i*0.05),pr[2])
 
   enddate=cutoff#max(onsprev[-1][1],onsinc[-1][1],date0_cases+len(cases))
   # Possibly extend this to extrapolate
@@ -359,17 +362,17 @@ if 0:
     print("%12g %12g %12g %12g     %10.6f"%(inc_ons,inc_case,inc_inc,car_car,sqrt(err/(numcheck*chrange))))
     sys.stdout.flush()
 
-if 1:
-  # Optimising coupling parameters for consistency - other version with natural model
+if 0:
+  # Optimising coupling parameters for consistency - version with natural model
   
   def rnd(): return random()*2-1
   #seed(42)
   
   while 1:
-    inc_ons=exp(0)
-    inc_case=exp(3+rnd()*1)
-    inc_inc=exp(9+rnd()*1)
-    car_car=exp(6+rnd()*1)
+    inc_ons=exp(-3)
+    inc_case=exp(3+rnd()*0.2)
+    inc_inc=exp(10.9+rnd()*0.2)
+    car_car=exp(6+rnd()*0.5)
   
     casedata0,xx0,A0,b0,c0=getest()
     N0=xx0.shape[0]//2
