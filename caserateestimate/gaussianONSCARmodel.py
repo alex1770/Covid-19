@@ -226,7 +226,7 @@ def initialguess(N,onsprev,casedata,back):
   xx[N:]=c0
   return xx
 
-def getest(enddate=apiday(),prlev=0,eps=1e-3):
+def getextdata(enddate=apiday(),prlev=0):
   enddate=Date(enddate)
   onsprev=getdailyprevalence(maxdate=enddate)
   apireq=enddate
@@ -268,72 +268,91 @@ def getest(enddate=apiday(),prlev=0,eps=1e-3):
   casedata=np.array(cases[startdate-date0_cases:])/scale
   assert len(casedata)<=N
   
+  return N,casedata,onsprev
+
+# Returns two quadratic(etc) forms:
+#   A0,b0,c0 <-> Prior distribution on internal variables x_i (incidence), a_i (inverse CAR)
+#   A1,b1,c1 <-> Distribution of data (casecounts, ONS prevalence) given internal variables
+def getqform(N,casedata,onsprev,xx):
+  
+  A0=np.zeros([N*2,N*2])
+  b0=np.zeros(N*2)
+  c0=0
+  A1=np.zeros([N*2,N*2])
+  b1=np.zeros(N*2)
+  c1=0
+
+  A_i,b_i,c_i=difflogmat(N,order,xx[:N])
+  A0[:N,:N]+=inc_inc*A_i
+  b0[:N]+=inc_inc*b_i
+  c0+=inc_inc*c_i
+  
+  # Link incidence to ONSprevalence
+  for date,targ,sd in onsprev:
+    targ/=scale
+    sd/=scale
+    var=sd**2/inc_ons
+    i=date-numk-startdate
+    if i>=0 and i+numk<=N:
+      A1[i:i+numk,i:i+numk]+=np.outer(poskern,poskern)/var
+      b1[i:i+numk]+=poskern*targ/var
+      c1+=targ**2/var
+  
+  # Add in diff constraints for CAR variables which relate same days of week to each other
+  # (d isn't necessarily equal to the day of the week)
+  for d in range(7):
+    n=(N-d+6)//7
+    A_c,b_c,c_c=difflogmat(n,order,xx[N+d::7])
+    c0+=car_car*c_c
+    for i in range(n):
+      b0[N+d+i*7]+=car_car*b_c[i]
+      for j in range(n):
+        A0[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
+  
+  # Add in diff constraints for CAR variables which relate adjacent days to each other
+  A_c,b_c,c_c=difflogmat(N,order,xx[N:])
+  A0[N:,N:]+=car_car_d*A_c
+  b0[N:]+=car_car_d*b_c
+  c0+=car_car_d*c_c
+  
+  # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
+  #       al[i]=( V[ I[i]-c[i'].casedata[i'] ] )^{-1}
+  #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
+  #             where I0[i] is some approximation to the incidence
+  al=np.zeros(N)
+  for j in range(len(casedata)):
+    if startdate+j not in ignore:
+      day=(startdate+j-monday)%7
+      i=j-back[day]
+      if i>=0:
+        al[i]=casedata[j]*inc_case/xx[i]**2
+        A1[i,i]+=al[i]
+        A1[i,N+j]-=al[i]*casedata[j]
+        A1[N+j,i]-=al[i]*casedata[j]
+        A1[N+j,N+j]+=al[i]*casedata[j]**2
+
+  return A0,b0,c0,A1,b1,c1
+
+def getest(enddate=apiday(),prlev=0,eps=1e-3):
+  
+  N,casedata,onsprev=getextdata(enddate,prlev)
   
   xx=initialguess(N,onsprev,casedata,back)
   savevars(N,casedata,back,xx,name="tempinit")
   
   for it in range(20):
     if prlev>=2: print("Iteration",it)
-    A=np.zeros([N*2,N*2])
-    b=np.zeros(N*2)
-    c=0
-  
-    A_i,b_i,c_i=difflogmat(N,order,xx[:N])
-    A[:N,:N]+=inc_inc*A_i
-    b[:N]+=inc_inc*b_i
-    c+=inc_inc*c_i
-    
-    # Link incidence to ONSprevalence
-    for date,targ,sd in onsprev:
-      targ/=scale
-      sd/=scale
-      var=sd**2/inc_ons
-      i=date-numk-startdate
-      if i>=0 and i+numk<=N:
-        A[i:i+numk,i:i+numk]+=np.outer(poskern,poskern)/var
-        b[i:i+numk]+=poskern*targ/var
-        c+=targ**2/var
-    
-    # Add in diff constraints for CAR variables which relate same days of week to each other
-    # (d isn't necessarily equal to the day of the week)
-    for d in range(7):
-      n=(N-d+6)//7
-      A_c,b_c,c_c=difflogmat(n,order,xx[N+d::7])
-      c+=car_car*c_c
-      for i in range(n):
-        b[N+d+i*7]+=car_car*b_c[i]
-        for j in range(n):
-          A[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
-    
-    # Add in diff constraints for CAR variables which relate adjacent days to each other
-    A_c,b_c,c_c=difflogmat(N,order,xx[N:])
-    A[N:,N:]+=car_car_d*A_c
-    b[N:]+=car_car_d*b_c
-    c+=car_car_d*c_c
-    
-    # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
-    #       al[i]=( V[ I[i]-c[i'].casedata[i'] ] )^{-1}
-    #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
-    #             where I0[i] is some approximation to the incidence
-    al=np.zeros(N)
-    for j in range(len(casedata)):
-      if startdate+j not in ignore:
-        day=(startdate+j-monday)%7
-        i=j-back[day]
-        if i>=0:
-          al[i]=casedata[j]*inc_case/xx[i]**2
-          A[i,i]+=al[i]
-          A[i,N+j]-=al[i]*casedata[j]
-          A[N+j,i]-=al[i]*casedata[j]
-          A[N+j,N+j]+=al[i]*casedata[j]**2
+
+    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
   
     xx0=xx
-    xx=np.maximum(np.linalg.solve(A,b),0.01)
+    xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
     if np.abs(xx/xx0-1).max()<eps: break
 
   savevars(N,casedata,back,xx,name="England")
-  return casedata,xx,A,b,c
+  return casedata,xx,A0+A1,b0+b1,c0+c1
 
+# Not done daily CAR-CAR interactions yet
 def directeval(xx,casedata,enddate=apiday(),prlev=0):
   enddate=Date(enddate)
   onsprev=getdailyprevalence(maxdate=enddate)
@@ -420,7 +439,7 @@ if 0:
     inc_case=exp(3+rnd()*0.2)
     inc_inc=exp(10.9+rnd()*0.2)
     car_car=exp(6+rnd()*0.5)
-    car_car_d=exp(12+rnd()*2)
+    car_car_d=exp(2+rnd()*2)
   
     casedata0,xx0,A0,b0,c0=getest(prlev=0)
     N0=xx0.shape[0]//2
@@ -540,6 +559,8 @@ if 0:
   print("Overall residual factor =",lam)
     
 if 1:
+  seed(42)
+  np.random.seed(42)
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -557,7 +578,7 @@ if 1:
   savevars(N,casedata,back,xx0,low=low,high=high,name="England")
   poi
   
-if 1:
+if 0:
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
