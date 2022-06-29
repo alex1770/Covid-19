@@ -30,9 +30,10 @@ back=[5]*7# Pro tem
 inc_ons=exp(-3)     # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
 inc_case=exp(3.0)   # Coupling of incidence to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
 inc_inc=exp(10.9)   # Coupling of incidence to iteself
-car_car=exp(6.0)    # Coupling of inverse-CAR to itself
+car_car=exp(6.0)    # Coupling of inverse-CAR to itself week-by-week
+car_car_d=exp(0.0)  # Coupling of inverse-CAR to itself day-by-day
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
-# Order=2 if you think the prior is more like exp(integral of Brownian motion).
+# Order=2 if you think the prior is more like exp(integral of Brownian motion) (has "momentum")
 # etc
 order=2
 
@@ -293,7 +294,6 @@ def getest(enddate=apiday(),prlev=0,eps=1e-3):
         b[i:i+numk]+=poskern*targ/var
         c+=targ**2/var
     
-    
     # Add in diff constraints for CAR variables which relate same days of week to each other
     # (d isn't necessarily equal to the day of the week)
     for d in range(7):
@@ -304,6 +304,12 @@ def getest(enddate=apiday(),prlev=0,eps=1e-3):
         b[N+d+i*7]+=car_car*b_c[i]
         for j in range(n):
           A[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
+    
+    # Add in diff constraints for CAR variables which relate adjacent days to each other
+    A_c,b_c,c_c=difflogmat(N,order,xx[N:])
+    A[N:,N:]+=car_car_d*A_c
+    b[N:]+=car_car_d*b_c
+    c+=car_car_d*c_c
     
     # Terms al[i].(I[i]-c[i'].casedata[i'])^2 correspond to CAR error at incidence i (casedata i')
     #       al[i]=( V[ I[i]-c[i'].casedata[i'] ] )^{-1}
@@ -414,8 +420,9 @@ if 0:
     inc_case=exp(3+rnd()*0.2)
     inc_inc=exp(10.9+rnd()*0.2)
     car_car=exp(6+rnd()*0.5)
+    car_car_d=exp(12+rnd()*2)
   
-    casedata0,xx0,A0,b0,c0=getest()
+    casedata0,xx0,A0,b0,c0=getest(prlev=0)
     N0=xx0.shape[0]//2
     # Interleave to combine incidence and CAR variables so that indices are in date order
     xx0i=np.zeros(2*N0)
@@ -476,11 +483,12 @@ if 0:
     car_car*=lam
     LL1*=lam
     LL0+=dof*log(lam)
-    print("%12g %12g %12g %12g     %10.6f"%(inc_ons,inc_case,inc_inc,car_car,LL0+LL1))
+    print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL0+LL1))
     sys.stdout.flush()
 
 if 0:
   # Finding overall coupling so as to get a probability distribution over outcomes
+  # Deprecated, because now believe we need to fix ONS prevalence coupling externally, not just make self-consistent
   
   casedata0,xx0,A0,b0,c0=getest()
   N0=xx0.shape[0]//2
@@ -531,7 +539,7 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 0:
+if 1:
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -547,8 +555,9 @@ if 0:
   low=l[i0,:]
   high=l[i1,:]
   savevars(N,casedata,back,xx0,low=low,high=high,name="England")
+  poi
   
-if 0:
+if 1:
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -557,10 +566,10 @@ if 0:
   l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
   l[:,:N]=np.maximum(l[:,:N],0.01)
   l[:,N:]=np.maximum(l[:,N:],1)
-  print(xx0[N-7:N],xx0[-7:],end="")
+  print(xx0[N-14:N],xx0[-14:],end="")
   directeval(xx0,casedata)
   print()
   for i in range(nsamp):
-    print(l[i][N-7:N],l[i][-7:],end="")
+    print(l[i][N-14:N],l[i][-14:],end="")
     directeval(l[i],casedata)
     
