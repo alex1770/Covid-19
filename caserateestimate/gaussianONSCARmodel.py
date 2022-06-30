@@ -275,7 +275,7 @@ def getextdata(enddate=apiday(),prlev=0):
 # Returns two quadratic(etc) forms:
 #   A0,b0,c0 <-> Prior distribution on internal variables x_i (incidence), a_i (inverse CAR)
 #   A1,b1,c1 <-> Distribution of data (casecounts, ONS prevalence) given internal variables
-def getqform(N,casedata,onsprev,xx):
+def getqform(N,casedata,onsprev,xx0):
   
   A0=np.zeros([N*2,N*2])
   b0=np.zeros(N*2)
@@ -285,7 +285,7 @@ def getqform(N,casedata,onsprev,xx):
   c1=0
   numprev=numcases=0
 
-  A_i,b_i,c_i=difflogmat(N,order,xx[:N])
+  A_i,b_i,c_i=difflogmat(N,order,xx0[:N])
   A0[:N,:N]+=inc_inc*A_i
   b0[:N]+=inc_inc*b_i
   c0+=inc_inc*c_i
@@ -301,12 +301,13 @@ def getqform(N,casedata,onsprev,xx):
       b1[i:i+numk]+=poskern*targ/var
       c1+=targ**2/var
       numprev+=1
+  c1-=numprev*log(inc_ons)
   
   # Add in diff constraints for CAR variables which relate same days of week to each other
   # (d isn't necessarily equal to the day of the week)
   for d in range(7):
     n=(N-d+6)//7
-    A_c,b_c,c_c=difflogmat(n,order,xx[N+d::7])
+    A_c,b_c,c_c=difflogmat(n,order,xx0[N+d::7])
     c0+=car_car*c_c
     for i in range(n):
       b0[N+d+i*7]+=car_car*b_c[i]
@@ -314,7 +315,7 @@ def getqform(N,casedata,onsprev,xx):
         A0[N+d+i*7,N+d+j*7]+=car_car*A_c[i,j]
   
   # Add in diff constraints for CAR variables which relate adjacent days to each other
-  A_c,b_c,c_c=difflogmat(N,order,xx[N:])
+  A_c,b_c,c_c=difflogmat(N,order,xx0[N:])
   A0[N:,N:]+=car_car_d*A_c
   b0[N:]+=car_car_d*b_c
   c0+=car_car_d*c_c
@@ -323,20 +324,32 @@ def getqform(N,casedata,onsprev,xx):
   #       al[i]=( V[ I[i]-c[i'].casedata[i'] ] )^{-1}
   #           ~=(I0[i]^2/(casedata[i'].inc_case))^{-1}
   #             where I0[i] is some approximation to the incidence
+  # Also add in normalisation for P(casedata|internal variables xx = incidence, CAR)
+  # which means multiplying by prod(xx[N+j]/xx[i])*inc_case^(numcases/2)
+  # log(xx[N+j]/xx[i]) = log(xx0[N+j]/xx0[i]) + 2*(xx[N+j]/xx0[N+j]) - (1/2)*(xx[N+j]/xx0[N+j])^2
+  #                                           - 2*(xx[i]/xx0[i])     + (1/2)*(xx[i]/xx0[i])^2 + (third order)
+  #                   cf -1/2(Ax^2-2bx+c)
   al=np.zeros(N)
   for j in range(len(casedata)):
     if startdate+j not in ignore:
       day=(startdate+j-monday)%7
       i=j-back[day]
       if i>=0:
-        al[i]=casedata[j]*inc_case/xx[i]**2
+        al[i]=casedata[j]*inc_case/xx0[i]**2
         A1[i,i]+=al[i]
         A1[i,N+j]-=al[i]*casedata[j]
         A1[N+j,i]-=al[i]*casedata[j]
         A1[N+j,N+j]+=al[i]*casedata[j]**2
+        
+        A1[N+j,N+j]+=1/xx0[N+j]**2
+        A1[i,i]-=1/xx0[i]**2
+        b1[N+j]+=2/xx0[N+j]
+        b1[i]-=2/xx0[i]
+        c1-=2*log(xx0[N+j]/xx0[i])
         numcases+=1
+  c1-=numcases*log(inc_case)
 
-  return A0,b0,c0,A1,b1,c1,numprev,numcases
+  return A0,b0,c0,A1,b1,c1
 
 def getest(enddate=apiday(),prlev=0,eps=1e-3):
   
@@ -347,14 +360,14 @@ def getest(enddate=apiday(),prlev=0,eps=1e-3):
   for it in range(20):
     if prlev>=2: print("Iteration",it)
     
-    A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
     
     xx0=xx
     xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
     if np.abs(xx/xx0-1).max()<eps: break
   
   #savevars(N,casedata,back,xx,name="England")
-  A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+  A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
   A,b,c=A0+A1,b0+b1,c0+c1
   return casedata,xx,A,b,c
   
@@ -365,31 +378,30 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   #savevars(N,casedata,back,xx,name="tempinit")
   
   for it in range(20):
-    if prlev>=2: print("Iteration",it)
+    if prlev>=2: print("Iteration(numerator)",it)
     
-    A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
     
     xx0=xx
     xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
     if np.abs(xx/xx0-1).max()<eps: break
   
+  num=(-1/2)*np.linalg.slogdet(A0+A1)[1]+(1/2)*(b0+b1)@xx-(1/2)*(c0+c1)
+  
   #savevars(N,casedata,back,xx,name="England")
-  A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
-  A,b,c=A0+A1,b0+b1,c0+c1
-  
-  num=(-1/2)*np.linalg.slogdet(A)[1]+(1/2)*b@xx-(1/2)*c
-  
+
   eta=0.01
-  A0e=A0+eta*np.identity(2*N)
-  xx1=np.maximum(np.linalg.solve(A0e,b0),0.01)
-  denom=(-1/2)*np.linalg.slogdet(A0e)[1]+(1/2)*b0@xx1-(1/2)*c0
-  denom+=-numprev/2*log(inc_ons)-numcases/2*log(inc_case)
-  for j in range(len(casedata)):
-    if startdate+j not in ignore:
-      day=(startdate+j-monday)%7
-      i=j-back[day]
-      if i>=0:
-        denom+=log(xx[i]/xx[N+j])
+  for it in range(20):
+    if prlev>=2: print("Iteration(denominator)",it)
+    
+    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
+    A0e=A0+eta*np.identity(2*N)
+    
+    xx0=xx
+    xx=np.maximum(np.linalg.solve(A0e,b0),0.01)
+    if np.abs(xx/xx0-1).max()<eps: break
+  
+  denom=(-1/2)*np.linalg.slogdet(A0e)[1]+(1/2)*b0@xx-(1/2)*c0
 
   return num-denom
 
@@ -659,12 +671,6 @@ if 0:
 if 1:
   while 1:
     inc_ons=exp(-3+rnd()*0)
-    inc_case=exp(9+rnd()*1.5)
-    inc_inc=exp(6.5+rnd()*1)
-    car_car=exp(8+rnd()*2)
-    car_car_d=exp(0.+rnd()*2)
-    
-    inc_ons=exp(-3+rnd()*0)
     inc_case=exp(0+rnd()*0)
     inc_inc=exp(8.5+rnd()*1)
     car_car=exp(-0.5+rnd()*2)
@@ -681,6 +687,19 @@ if 1:
     inc_inc=exp(8.9+rnd()*0.0)
     car_car=exp(-0.5+rnd()*0.0)
     car_car_d=exp(3+rnd()*0.0)
+    
+    inc_ons=exp(3.5+rnd()*1.5)# 13.5
+    inc_case=exp(4+rnd()*2)
+    inc_inc=exp(7.5+rnd()*2)
+    car_car=exp(5.5+rnd()*2)
+    car_car_d=exp(2+rnd()*2)
+    #2.54905e+06      38.2607      3753.01      1164.38      3.61769    11721398.574450
+
+    inc_ons=exp(13.5+rnd())# 13.5
+    inc_case=exp(4+rnd()*0)
+    inc_inc=exp(7.5+rnd()*0)
+    car_car=exp(5.5+rnd()*0)
+    car_car_d=exp(2+rnd()*0)
     
     LL=getprob(prlev=0)
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
