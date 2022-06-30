@@ -37,6 +37,8 @@ car_car_d=exp(0.0)  # Coupling of inverse-CAR to itself day-by-day
 # etc
 order=2
 
+def rnd(): return random()*2-1
+
 def meanvar(sample):
   mu=sum(sample)/len(sample)
   var=sum((x-mu)**2 for x in sample)/(len(sample)-1)
@@ -281,6 +283,7 @@ def getqform(N,casedata,onsprev,xx):
   A1=np.zeros([N*2,N*2])
   b1=np.zeros(N*2)
   c1=0
+  numprev=numcases=0
 
   A_i,b_i,c_i=difflogmat(N,order,xx[:N])
   A0[:N,:N]+=inc_inc*A_i
@@ -297,6 +300,7 @@ def getqform(N,casedata,onsprev,xx):
       A1[i:i+numk,i:i+numk]+=np.outer(poskern,poskern)/var
       b1[i:i+numk]+=poskern*targ/var
       c1+=targ**2/var
+      numprev+=1
   
   # Add in diff constraints for CAR variables which relate same days of week to each other
   # (d isn't necessarily equal to the day of the week)
@@ -330,27 +334,64 @@ def getqform(N,casedata,onsprev,xx):
         A1[i,N+j]-=al[i]*casedata[j]
         A1[N+j,i]-=al[i]*casedata[j]
         A1[N+j,N+j]+=al[i]*casedata[j]**2
+        numcases+=1
 
-  return A0,b0,c0,A1,b1,c1
+  return A0,b0,c0,A1,b1,c1,numprev,numcases
 
 def getest(enddate=apiday(),prlev=0,eps=1e-3):
   
   N,casedata,onsprev=getextdata(enddate,prlev)
-  
   xx=initialguess(N,onsprev,casedata,back)
-  savevars(N,casedata,back,xx,name="tempinit")
+  #savevars(N,casedata,back,xx,name="tempinit")
   
   for it in range(20):
     if prlev>=2: print("Iteration",it)
-
-    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
-  
+    
+    A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+    
     xx0=xx
     xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
     if np.abs(xx/xx0-1).max()<eps: break
+  
+  #savevars(N,casedata,back,xx,name="England")
+  A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+  A,b,c=A0+A1,b0+b1,c0+c1
+  return casedata,xx,A,b,c
+  
+def getprob(enddate=apiday(),prlev=0,eps=1e-3):
+  
+  N,casedata,onsprev=getextdata(enddate,prlev)
+  xx=initialguess(N,onsprev,casedata,back)
+  #savevars(N,casedata,back,xx,name="tempinit")
+  
+  for it in range(20):
+    if prlev>=2: print("Iteration",it)
+    
+    A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+    
+    xx0=xx
+    xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
+    if np.abs(xx/xx0-1).max()<eps: break
+  
+  #savevars(N,casedata,back,xx,name="England")
+  A0,b0,c0,A1,b1,c1,numprev,numcases=getqform(N,casedata,onsprev,xx)
+  A,b,c=A0+A1,b0+b1,c0+c1
+  
+  num=(-1/2)*np.linalg.slogdet(A)[1]+(1/2)*b@xx-(1/2)*c
+  
+  eta=0.01
+  A0e=A0+eta*np.identity(2*N)
+  xx1=np.maximum(np.linalg.solve(A0e,b0),0.01)
+  denom=(-1/2)*np.linalg.slogdet(A0e)[1]+(1/2)*b0@xx1-(1/2)*c0
+  denom+=-numprev/2*log(inc_ons)-numcases/2*log(inc_case)
+  for j in range(len(casedata)):
+    if startdate+j not in ignore:
+      day=(startdate+j-monday)%7
+      i=j-back[day]
+      if i>=0:
+        denom+=log(xx[i]/xx[N+j])
 
-  savevars(N,casedata,back,xx,name="England")
-  return casedata,xx,A0+A1,b0+b1,c0+c1
+  return num-denom
 
 # Not done daily CAR-CAR interactions yet
 def directeval(xx,casedata,enddate=apiday(),prlev=0):
@@ -558,7 +599,7 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 1:
+if 0:
   seed(42)
   np.random.seed(42)
   casedata,xx0,A,b,c=getest(prlev=2)
@@ -579,6 +620,24 @@ if 1:
   poi
   
 if 0:
+  inc_ons=exp(5.0)
+  inc_case=exp(20)
+  inc_inc=exp(8.9)
+  car_car=exp(-0.5)
+  car_car_d=exp(3)
+  
+  inc_ons=exp(-3+rnd()*0)
+  inc_case=exp(9+rnd()*1.5)
+  inc_inc=exp(6.5+rnd()*1)
+  car_car=exp(8+rnd()*2)
+  car_car_d=exp(0.+rnd()*2)
+  
+  inc_ons=exp(-3+rnd()*0)
+  inc_case=exp(0+rnd()*0)
+  inc_inc=exp(8.5)
+  car_car=exp(-0.5)
+  car_car_d=exp(-0.5)
+    
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -593,4 +652,37 @@ if 0:
   for i in range(nsamp):
     print(l[i][N-14:N],l[i][-14:],end="")
     directeval(l[i],casedata)
+  print()
+  print(xx0[:N-5]/xx0[N+5:]/casedata[5:])
+  poi
+
+if 1:
+  while 1:
+    inc_ons=exp(-3+rnd()*0)
+    inc_case=exp(9+rnd()*1.5)
+    inc_inc=exp(6.5+rnd()*1)
+    car_car=exp(8+rnd()*2)
+    car_car_d=exp(0.+rnd()*2)
+    
+    inc_ons=exp(-3+rnd()*0)
+    inc_case=exp(0+rnd()*0)
+    inc_inc=exp(8.5+rnd()*1)
+    car_car=exp(-0.5+rnd()*2)
+    car_car_d=exp(-0.5+rnd()*2)
+    
+    inc_ons=exp(-3+rnd()*0)
+    inc_case=exp(0+rnd()*0)
+    inc_inc=exp(8.5+rnd()*0)
+    car_car=exp(-0.5+rnd()*0)
+    car_car_d=exp(-0.5+rnd()*0)
+    
+    inc_ons=exp(5.0+rnd()*0.)
+    inc_case=exp(10+rnd()*0)
+    inc_inc=exp(8.9+rnd()*0.0)
+    car_car=exp(-0.5+rnd()*0.0)
+    car_car_d=exp(3+rnd()*0.0)
+    
+    LL=getprob(prlev=0)
+    print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
+    sys.stdout.flush()
     
