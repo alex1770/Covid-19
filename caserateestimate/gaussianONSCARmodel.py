@@ -275,7 +275,7 @@ def getextdata(enddate=apiday(),prlev=0):
 # Returns two quadratic(etc) forms:
 #   A0,b0,c0 <-> Prior distribution on internal variables x_i (incidence), a_i (inverse CAR)
 #   A1,b1,c1 <-> Distribution of data (casecounts, ONS prevalence) given internal variables
-def getqform(N,casedata,onsprev,xx0):
+def getqform(N,casedata,onsprev,xx0,special=0):
   
   A0=np.zeros([N*2,N*2])
   b0=np.zeros(N*2)
@@ -340,12 +340,18 @@ def getqform(N,casedata,onsprev,xx0):
         A1[i,N+j]-=al[i]*casedata[j]
         A1[N+j,i]-=al[i]*casedata[j]
         A1[N+j,N+j]+=al[i]*casedata[j]**2
-        
-        A1[N+j,N+j]+=1/xx0[N+j]**2
-        A1[i,i]-=1/xx0[i]**2
-        b1[N+j]+=2/xx0[N+j]
-        b1[i]-=2/xx0[i]
-        c1-=2*log(xx0[N+j]/xx0[i])
+
+        if special==1:
+          A1[N+j,N+j]+=1/xx0[N+j]**2
+          A1[i,i]-=1/xx0[i]**2
+          b1[N+j]+=2/xx0[N+j]
+          b1[i]-=2/xx0[i]
+          c1-=2*log(xx0[N+j]/xx0[i])
+        elif special==2:
+          ff=0.5
+          b1[N+j]+=ff*1/xx0[N+j]
+          b1[i]-=ff*1/xx0[i]
+          c1-=ff*2*log(xx0[N+j]/xx0[i])
         numcases+=1
   c1-=numcases*log(inc_case)
 
@@ -376,17 +382,22 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   N,casedata,onsprev=getextdata(enddate,prlev)
   xx=initialguess(N,onsprev,casedata,back)
   #savevars(N,casedata,back,xx,name="tempinit")
-  
+
+  print(xx[N-10:N],xx[2*N-10:])
   for it in range(20):
     if prlev>=2: print("Iteration(numerator)",it)
     
-    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
+    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx,special=0*(it>=4))
     
     xx0=xx
-    xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
+    xx=np.linalg.solve(A0+A1,b0+b1)
+    xx[:N]=np.maximum(xx[:N],0.01)
+    xx[N:]=np.maximum(xx[N:],1)
+    print(xx[N-10:N],xx[2*N-10:])
     if np.abs(xx/xx0-1).max()<eps: break
   
   num=(-1/2)*np.linalg.slogdet(A0+A1)[1]+(1/2)*(b0+b1)@xx-(1/2)*(c0+c1)
+  print((-1/2)*np.linalg.slogdet(A0+A1)[1],(1/2)*b0@xx,(1/2)*b1@xx,-(1/2)*c0,-(1/2)*c1)
   
   #savevars(N,casedata,back,xx,name="England")
 
@@ -398,10 +409,14 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
     A0e=A0+eta*np.identity(2*N)
     
     xx0=xx
-    xx=np.maximum(np.linalg.solve(A0e,b0),0.01)
+    xx=np.linalg.solve(A0e,b0)
+    xx[:N]=np.maximum(xx[:N],0.01)
+    xx[N:]=np.maximum(xx[N:],1)
+    print(xx[N-10:N],xx[2*N-10:])
     if np.abs(xx/xx0-1).max()<eps: break
   
   denom=(-1/2)*np.linalg.slogdet(A0e)[1]+(1/2)*b0@xx-(1/2)*c0
+  print((-1/2)*np.linalg.slogdet(A0e)[1],(1/2)*b0@xx,-(1/2)*c0)
 
   return num-denom
 
@@ -639,17 +654,17 @@ if 0:
   car_car_d=exp(3)
   
   inc_ons=exp(-3+rnd()*0)
-  inc_case=exp(9+rnd()*1.5)
-  inc_inc=exp(6.5+rnd()*1)
-  car_car=exp(8+rnd()*2)
-  car_car_d=exp(0.+rnd()*2)
-  
-  inc_ons=exp(-3+rnd()*0)
   inc_case=exp(0+rnd()*0)
   inc_inc=exp(8.5)
   car_car=exp(-0.5)
   car_car_d=exp(-0.5)
     
+  inc_ons=exp(-3+rnd()*0)
+  inc_case=exp(9+rnd()*1.5)
+  inc_inc=exp(6.5+rnd()*1)
+  car_car=exp(8+rnd()*2)
+  car_car_d=exp(0.+rnd()*2)
+  
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -695,13 +710,13 @@ if 1:
     car_car_d=exp(2+rnd()*2)
     #2.54905e+06      38.2607      3753.01      1164.38      3.61769    11721398.574450
 
-    inc_ons=exp(13.5+rnd())# 13.5
-    inc_case=exp(4+rnd()*0)
+    inc_ons=exp(-3)# 13.5
+    inc_case=exp(1+rnd()*0)
     inc_inc=exp(7.5+rnd()*0)
-    car_car=exp(5.5+rnd()*0)
-    car_car_d=exp(2+rnd()*0)
+    car_car=exp(-5.5+rnd()*0)
+    car_car_d=exp(-2+rnd()*0)
     
-    LL=getprob(prlev=0)
+    LL=getprob(prlev=2)
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
     
