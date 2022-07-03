@@ -277,25 +277,24 @@ def directeval(xx,casedata,onsprev,prlev=0):
   N=xx.shape[0]//2
 
   t_II=t_CC=t_CCd=0
-  if 1:#alter
-    # Diff constraints for incidence-incidence
-    tx=xx[:N]
+  # Diff constraints for incidence-incidence
+  tx=xx[:N]
+  for o in range(order): tx=tx[:-1]-tx[1:]
+  t_II=inc_inc*(tx@tx)
+  
+  # Add in diff constraints for CAR variables which relate same days of week to each other
+  # (d isn't necessarily equal to the day of the week)
+  t_CC=0
+  for d in range(7):
+    n=(N-d+6)//7
+    tx=xx[N+d::7]
     for o in range(order): tx=tx[:-1]-tx[1:]
-    t_II=inc_inc*(tx@tx)
-    
-    # Add in diff constraints for CAR variables which relate same days of week to each other
-    # (d isn't necessarily equal to the day of the week)
-    t_CC=0
-    for d in range(7):
-      n=(N-d+6)//7
-      tx=xx[N+d::7]
-      for o in range(order): tx=tx[:-1]-tx[1:]
-      t_CC+=car_car*(tx@tx)
-    
-    # Add in diff constraints for CAR variables which relate adjacent days to each other
-    tx=xx[N:]
-    for o in range(order): tx=tx[:-1]-tx[1:]
-    t_CCd=car_car_d*(tx@tx)
+    t_CC+=car_car*(tx@tx)
+  
+  # Add in diff constraints for CAR variables which relate adjacent days to each other
+  tx=xx[N:]
+  for o in range(order): tx=tx[:-1]-tx[1:]
+  t_CCd=car_car_d*(tx@tx)
   
   if onsprev is not None or casedata is not None:
     ex=np.exp(xx)
@@ -347,22 +346,23 @@ def getqform(N,xx0,casedata,onsprev):
   C=0
   numprev=0
 
-  if 1:#alter
-    # alter: add in normalisation for inc_inc etc, and remove it from getprob
-    A_i=diffmat(N,order)
-    A1[:N,:N]+=inc_inc*A_i
-  
-    # Add in diff constraints for CAR variables which relate same days of week to each other
-    # (d isn't necessarily equal to the day of the week)
-    for d in range(7):
-      n=(N-d+6)//7
-      A_c=diffmat(n,order)
-      A1[N+d::7,N+d::7]+=car_car*A_c
-    
-    # Add in diff constraints for CAR variables which relate adjacent days to each other
-    A_c=diffmat(N,order)
-    A1[N:,N:]+=car_car_d*A_c
+  A_i=diffmat(N,order)
+  A1[:N,:N]+=inc_inc*A_i
 
+  # Add in diff constraints for CAR variables which relate same days of week to each other
+  # (d isn't necessarily equal to the day of the week)
+  for d in range(7):
+    n=(N-d+6)//7
+    A_c=diffmat(n,order)
+    A1[N+d::7,N+d::7]+=car_car*A_c
+  
+  # Add in diff constraints for CAR variables which relate adjacent days to each other
+  A_c=diffmat(N,order)
+  A1[N:,N:]+=car_car_d*A_c
+
+  eta=1e-3
+  A1+=eta*np.identity(2*N)
+  
   if onsprev is not None or casedata is not None:
     ex0=np.exp(xx0)
 
@@ -431,7 +431,9 @@ def getqform(N,xx0,casedata,onsprev):
   #                         = (dx^t.A0.dx - 2B0^t.dx) + ((xx0+dx)^t.A1.(xx0+dx) - 2B1^t.(xx0+dx)) + C
   #                         = dx^t.(A0+A1).dx - 2(B0+B1-A1.xx0)^t.dx) + (xx0^t.A1.xx0-2B1^t.xx0+C)
   yy=A1@xx0
-  return A0+A1, B0+B1-yy, xx0@yy-2*B1@xx0+C
+  A=A0+A1
+  C+=np.linalg.slogdet(A)[1]
+  return A, B0+B1-yy, xx0@yy-2*B1@xx0+C
 
 def getest(enddate=apiday(),prlev=0,eps=1e-3):
   
@@ -475,16 +477,16 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
     if np.abs(xx-xx0).max()<eps: break
   
   dx=np.linalg.solve(A,B)
-  num=(-1/2)*np.linalg.slogdet(A)[1]+(1/2)*B@dx-(1/2)*C
+  num=(1/2)*B@dx-(1/2)*C
   # Could compare num with QF including A
-  print((-1/2)*np.linalg.slogdet(A)[1],(1/2)*B@dx,-(1/2)*C)
+  print((1/2)*B@dx,-(1/2)*C)
   
   #savevars(N,casedata,back,xx,name="England")
 
   A,B,C=getqform(N,xx,None,None)
   dx=np.linalg.solve(A,B)
-  denom=(-1/2)*np.linalg.slogdet(A)[1]+(1/2)*B@dx-(1/2)*C
-  print((-1/2)*np.linalg.slogdet(A)[1],(1/2)*B@dx,-(1/2)*C)
+  denom=(1/2)*B@dx-(1/2)*C
+  print((1/2)*B@dx,-(1/2)*C)
 
   return num-denom
 
@@ -706,7 +708,7 @@ if 0:
   print(xx0[:N-5]/xx0[N+5:]/casedata[5:])
   poi
 
-if 0:
+if 1:
   while 1:
     inc_ons=exp(-3+rnd()*0)
     inc_case=exp(0+rnd()*0)
@@ -743,7 +745,7 @@ if 0:
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
-if 1:
+if 0:
   inc_ons=exp(-3)
   inc_case=exp(4)
   inc_inc=exp(2.5)
