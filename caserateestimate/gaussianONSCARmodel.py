@@ -462,9 +462,9 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   xx=np.log(ex)
   #savevars(N,casedata,back,xx,name="tempinit")
 
-  print(ex[N-10:N],ex[2*N-10:])
+  if prlev>=1: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
   for it in range(20):
-    if prlev>=2: print("Iteration(numerator)",it)
+    if prlev>=1: print("Iteration(numerator)",it)
     
     A,B,C=getqform(N,xx,casedata,onsprev)
     
@@ -473,20 +473,21 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
     xx[:N]=np.maximum(xx[:N],log(0.01))
     xx[N:]=np.maximum(xx[N:],0)
     ex=np.exp(xx)
-    print(ex[N-10:N],ex[2*N-10:])
+    if prlev>=1: print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
     if np.abs(xx-xx0).max()<eps: break
+  else: print("Didn't converge in time")
   
   dx=np.linalg.solve(A,B)
   num=(1/2)*B@dx-(1/2)*C
   # Could compare num with QF including A
-  print((1/2)*B@dx,-(1/2)*C)
+  #print((1/2)*B@dx,-(1/2)*C)
   
   #savevars(N,casedata,back,xx,name="England")
 
   A,B,C=getqform(N,xx,None,None)
   dx=np.linalg.solve(A,B)
   denom=(1/2)*B@dx-(1/2)*C
-  print((1/2)*B@dx,-(1/2)*C)
+  #print((1/2)*B@dx,-(1/2)*C)
 
   return num-denom
 
@@ -690,6 +691,12 @@ if 0:
   car_car=exp(8+rnd()*2)
   car_car_d=exp(0.+rnd()*2)
   
+  inc_ons=exp(5)
+  inc_case=exp(8)
+  inc_inc=exp(8.5)
+  car_car=exp(1.5)
+  car_car_d=exp(2.25)
+
   casedata,xx0,A,b,c=getest(prlev=2)
   N=xx0.shape[0]//2
   # getcaseoutliers(casedata,N)
@@ -710,6 +717,12 @@ if 0:
 
 if 1:
   while 1:
+    inc_ons=exp(0)
+    inc_case=exp(3+rnd()*0)
+    inc_inc=exp(3+rnd()*0)
+    car_car=exp(10+rnd()*0)
+    car_car_d=exp(10+rnd()*0)
+    
     inc_ons=exp(-3+rnd()*0)
     inc_case=exp(0+rnd()*0)
     inc_inc=exp(8.5+rnd()*1)
@@ -728,20 +741,27 @@ if 1:
     car_car=exp(-0.5+rnd()*0.0)
     car_car_d=exp(3+rnd()*0.0)
     
-    inc_ons=exp(3.5+rnd()*1.5)# 13.5
-    inc_case=exp(4+rnd()*2)
-    inc_inc=exp(7.5+rnd()*2)
-    car_car=exp(5.5+rnd()*2)
-    car_car_d=exp(2+rnd()*2)
-    #2.54905e+06      38.2607      3753.01      1164.38      3.61769    11721398.574450
+    inc_ons=exp(5+rnd()*0.5)
+    inc_case=exp(10)
+    inc_inc=exp(8.5+rnd()*1)
+    car_car=exp(1.5+rnd()*1)
+    car_car_d=exp(2.25+rnd()*1.25)
 
-    inc_ons=exp(-3)# 13.5
-    inc_case=exp(1+rnd()*0)
-    inc_inc=exp(7.5+rnd()*0)
-    car_car=exp(-5.5+rnd()*0)
-    car_car_d=exp(-2+rnd()*0)
-    
-    LL=getprob(prlev=2)
+    # This (wants inc_case -> infinity)
+    inc_ons=exp(5+rnd()*0)
+    inc_case=exp(10+rnd()*10)
+    inc_inc=exp(8.5+rnd()*0)
+    car_car=exp(1.5+rnd()*0)
+    car_car_d=exp(2.25+rnd()*0)
+
+    # cf this (wants inc_case ~= 6)
+    inc_ons=exp(5+rnd()*0)
+    inc_case=exp(10+rnd()*10)
+    inc_inc=exp(8.5+rnd()*0)
+    car_car=exp(4.5+rnd()*0)
+    car_car_d=exp(4.25+rnd()*0)
+
+    LL=getprob(prlev=0)
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
