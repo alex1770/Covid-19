@@ -272,6 +272,64 @@ def getextdata(enddate=apiday(),prlev=0):
   
   return N,casedata,onsprev
 
+def directeval(xx,casedata,onsprev,prlev=0):
+  
+  N=xx.shape[0]//2
+
+  t_II=t_CC=t_CCd=0
+  if 1:#alter
+    # Diff constraints for incidence-incidence
+    tx=xx[:N]
+    for o in range(order): tx=tx[:-1]-tx[1:]
+    t_II=inc_inc*(tx@tx)
+    
+    # Add in diff constraints for CAR variables which relate same days of week to each other
+    # (d isn't necessarily equal to the day of the week)
+    t_CC=0
+    for d in range(7):
+      n=(N-d+6)//7
+      tx=xx[N+d::7]
+      for o in range(order): tx=tx[:-1]-tx[1:]
+      t_CC+=car_car*(tx@tx)
+    
+    # Add in diff constraints for CAR variables which relate adjacent days to each other
+    tx=xx[N:]
+    for o in range(order): tx=tx[:-1]-tx[1:]
+    t_CCd=car_car_d*(tx@tx)
+  
+  if onsprev is not None or casedata is not None:
+    ex=np.exp(xx)
+  
+  t_IO=0
+  if onsprev is not None:
+    # Link incidence to ONSprevalence
+    lio=log(inc_ons)
+    for date,targ,sd in onsprev:
+      i=date-numk-startdate
+      if i>=0 and i+numk<=N:
+        targ/=scale
+        sd/=scale
+        prec=inc_ons/sd**2
+        t_IO+=prec*(poskern@ex[i:i+numk]-targ)**2-lio
+  
+  t_IC=0
+  if casedata is not None:
+    # Incidence-CAR-casedata interaction
+    # See getqform() for details
+    assert len(casedata)<=N
+    lic=log(inc_case)
+    for j in range(len(casedata)):
+      if startdate+j not in ignore:
+        day=(startdate+j-monday)%7
+        i=j-back[day]
+        if i>=0:
+          gam=ex[i]/ex[N+j]
+          t_IC+=inc_case*(casedata[j]-gam)**2/gam-(xx[N+j]-xx[i]+lic)
+
+  Qtot=t_II+t_CC+t_CCd+t_IO+t_IC
+  print("%10.2f %10.2f %10.2f %10.2f %10.2f      %10.2f"%(t_II,t_CC,t_CCd,t_IO,t_IC,Qtot))
+  return Qtot
+  
 # Returns quadratic+linear+constant form in dx (which is in log space), where xx = xx0 + dx.
 # I.e., returns A, B, c such that
 # Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + c
@@ -289,19 +347,21 @@ def getqform(N,xx0,casedata,onsprev):
   C=0
   numprev=0
 
-  A_i=diffmat(N,order)
-  A1[:N,:N]+=inc_inc*A_i
+  if 1:#alter
+    # alter: add in normalisation for inc_inc etc, and remove it from getprob
+    A_i=diffmat(N,order)
+    A1[:N,:N]+=inc_inc*A_i
   
-  # Add in diff constraints for CAR variables which relate same days of week to each other
-  # (d isn't necessarily equal to the day of the week)
-  for d in range(7):
-    n=(N-d+6)//7
-    A_c=diffmat(n,order)
-    A1[N+d::7,N+d::7]+=car_car*A_c
-  
-  # Add in diff constraints for CAR variables which relate adjacent days to each other
-  A_c=diffmat(N,order)
-  A1[N:,N:]+=car_car_d*A_c
+    # Add in diff constraints for CAR variables which relate same days of week to each other
+    # (d isn't necessarily equal to the day of the week)
+    for d in range(7):
+      n=(N-d+6)//7
+      A_c=diffmat(n,order)
+      A1[N+d::7,N+d::7]+=car_car*A_c
+    
+    # Add in diff constraints for CAR variables which relate adjacent days to each other
+    A_c=diffmat(N,order)
+    A1[N:,N:]+=car_car_d*A_c
 
   if onsprev is not None or casedata is not None:
     ex0=np.exp(xx0)
@@ -316,8 +376,8 @@ def getqform(N,xx0,casedata,onsprev):
         sd/=scale
         prec=inc_ons/sd**2
         vv=ex0[i:i+numk]*poskern
-        res=vv.sum()-targ
-        # prec*( vv@(dx_i,...,dx_{i+n-1}) - res )^2
+        res=targ-vv.sum()
+        # prec*( res - vv@(dx_i,...,dx_{i+n-1}) )^2
         A0[i:i+numk,i:i+numk]+=np.outer(vv,vv)*prec
         B0[i:i+numk]+=vv*res*prec
         C+=res**2*prec-lio
@@ -357,13 +417,13 @@ def getqform(N,xx0,casedata,onsprev):
           c=casedata[j]
           lam=inc_case/(I*a)
           t=lam*(I+c*a)**2/4
-          A1[i,i]+=t
-          A1[i,N+j]-=t
-          A1[N+j,i]-=t
-          A1[N+j,N+j]+=t
+          A0[i,i]+=t
+          A0[i,N+j]-=t
+          A0[N+j,i]-=t
+          A0[N+j,N+j]+=t
           t=lam*(I**2-(c*a)**2)/2+1/2
-          B1[i]-=t
-          B1[N+j]+=t
+          B0[i]-=t
+          B0[N+j]+=t
           t=lam*(I-c*a)**2
           C+=t-(xx0[N+j]-xx0[i]+lic)
 
@@ -428,63 +488,6 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
 
   return num-denom
 
-def directeval(xx,casedata,enddate=apiday(),prlev=0):
-  enddate=Date(enddate)
-  onsprev=getdailyprevalence(maxdate=enddate)
-  N=enddate-startdate
-  assert len(casedata)<=N
-
-  # Diff constraints for incidence-incidence
-  tx=xx[:N]
-  for o in range(order): tx=tx[:-1]-tx[1:]
-  t_II=inc_inc*(tx@tx)
-  
-  # Add in diff constraints for CAR variables which relate same days of week to each other
-  # (d isn't necessarily equal to the day of the week)
-  t_CC=0
-  for d in range(7):
-    n=(N-d+6)//7
-    tx=xx[N+d::7]
-    for o in range(order): tx=tx[:-1]-tx[1:]
-    t_CC+=car_car*(tx@tx)
-  
-  # Add in diff constraints for CAR variables which relate adjacent days to each other
-  tx=xx[N:]
-  for o in range(order): tx=tx[:-1]-tx[1:]
-  t_CCd=car_car_d*(tx@tx)
-
-  if onsprev is not None or casedata is not None:
-    ex=np.exp(xx)
-  
-  if onsprev is not None:
-    # Link incidence to ONSprevalence
-    t_IO=0
-    lio=log(inc_ons)
-    for date,targ,sd in onsprev:
-      i=date-numk-startdate
-      if i>=0 and i+numk<=N:
-        targ/=scale
-        sd/=scale
-        prec=inc_ons/sd**2
-        t_IO+=prec*(poskern@ex[i:i+numk]-targ)**2-lio
-
-  if casedata is not None:
-    # Incidence-CAR-casedata interaction
-    # See getqform() for details
-    t_IC=0
-    lic=log(inc_case)
-    for j in range(len(casedata)):
-      if startdate+j not in ignore:
-        day=(startdate+j-monday)%7
-        i=j-back[day]
-        if i>=0:
-          gam=ex[i]/ex[N+j]
-          t_IC+=inc_case*(casedata[j]-gam)**2/gam-(xx[N+j]-xx[i]+lic)
-
-  Qtot=t_II+t_CC+t_CCd+t_IO+t_IC
-  print("%10.2f %10.2f %10.2f %10.2f %10.2f      %10.2f"%(t_II,t_CC,t_CCd,t_IO,t_IC,Qtot))
-  return Qtot
-  
 if 0:
   # Optimising coupling parameters for consistency
   
@@ -703,7 +706,7 @@ if 0:
   print(xx0[:N-5]/xx0[N+5:]/casedata[5:])
   poi
 
-if 1:
+if 0:
   while 1:
     inc_ons=exp(-3+rnd()*0)
     inc_case=exp(0+rnd()*0)
@@ -739,4 +742,42 @@ if 1:
     LL=getprob(prlev=2)
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
-    
+
+if 1:
+  inc_ons=exp(-3)
+  inc_case=exp(4)
+  inc_inc=exp(2.5)
+  car_car=exp(1.5)
+  car_car_d=exp(2)
+
+  enddate=apiday()
+  N,casedata,onsprev=getextdata(enddate)
+  ex=initialguess(N,onsprev,casedata,back)
+  xx=np.log(ex)
+
+  casedata=None
+  onsprev=None
+  A,B,C=getqform(N,xx,casedata,onsprev)
+  
+  dx0=np.zeros(2*N)
+  seed(42)
+  for i in range(2*N): dx0[i]=random()*2-1
+  for p in range(0,16,2):
+    eps=1/2**p
+    dx=eps*dx0
+    if 0:
+      a=directeval(xx,casedata,onsprev)
+      b=C
+      print(p,a,b,a,b)
+      print()
+    if 1:
+      a=(directeval(xx+dx,casedata,onsprev)-directeval(xx-dx,casedata,onsprev))/2
+      b=-2*B@dx
+      print(p,a,b,a/eps,b/eps)
+      print()
+    if 0:
+      # Note these are not meant to be the same because the A-matrix for casedata and onsprev don't contain all 2nd order terms
+      a=(directeval(xx+dx,casedata,onsprev)-2*directeval(xx,casedata,onsprev)+directeval(xx-dx,casedata,onsprev))/2
+      b=dx@(A@dx)
+      print(p,a,b,a/eps**2,b/eps**2)
+      print()
