@@ -27,17 +27,34 @@ np.set_printoptions(precision=6,suppress=True,linewidth=200)
 minback=1
 maxback=10
 back=[5]*7# Pro tem
-inc_ons=exp(5.02633)   # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
-inc_case=exp(12)       # Coupling of incidence and CAR to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-inc_inc=exp(7.6893)    # Coupling of incidence to iteself
-car_car=exp(1.76775)   # Coupling of inverse-CAR to itself week-by-week
-car_car_d=exp(2.21931) # Coupling of inverse-CAR to itself day-by-day
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion) (has "momentum")
 # etc
 order=2
 eta=1e-6
 
+if order==1:
+  inc_ons=exp(5.44148)
+  inc_case=exp(12)
+  inc_inc=exp(4.96216)
+  car_car=exp(2.17592)
+  car_car_d=exp(2.89592)
+
+if order==2:
+  inc_ons=exp(5.02633)   # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
+  inc_case=exp(12)       # Coupling of incidence and CAR to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+  inc_inc=exp(7.6893)    # Coupling of incidence to iteself
+  car_car=exp(1.76775)   # Coupling of inverse-CAR to itself week-by-week
+  car_car_d=exp(2.21931) # Coupling of inverse-CAR to itself day-by-day
+
+if order==3:
+  inc_ons=exp(5.14238)
+  inc_case=exp(9.49759)
+  inc_inc=exp(7.9619)
+  car_car=exp(0.583743)
+  car_car_d=exp(1.46843)
+
+  
 def rnd(): return random()*2-1
 
 def meanvar(sample):
@@ -669,8 +686,8 @@ if 1:
   Cov=np.linalg.inv(A)
   Mean=xx0+Cov@B
   # getcaseoutliers(casedata,N)
-  conf=0.75
-  print("Using %g%% credible interval"%((2*conf-1)*100))
+  conf=0.5
+  print("Using %g%% credible interval"%(conf*100))
   nsamp=10000
   l=mvn.rvs(mean=Mean,cov=Cov,size=nsamp)
   l[:,:N]=np.maximum(l[:,:N],log(0.01))
@@ -681,6 +698,7 @@ if 1:
   low=l[i0,:]
   high=l[i1,:]
   savevars(N,casedata,back,Mean,low=low,high=high,name="England")
+  sqwe
   
 if 0:
   inc_ons=exp(5.0)
@@ -753,7 +771,7 @@ if 0:
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
-if 0:
+if 1:
   from scipy.optimize import minimize
   
   def NLL(params):
@@ -765,7 +783,7 @@ if 0:
     return -LL
 
   bounds=[(-2,10),(-2,12),(-2,10),(-2,10),(-2,10)]
-  params0=[5,5,7.5,4,2]
+  params0=[5,11.5,7.5,2,2.5]
   res=minimize(NLL,params0,bounds=bounds,method="SLSQP")
   if not res.success: raise RuntimeError(res.message)
   print("LL =",-res.fun)
