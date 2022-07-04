@@ -334,7 +334,7 @@ def directeval(xx,casedata,onsprev,prlev=0):
 # Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + c
 #
 # casedata and onsprev can be null, which means it won't use the "external" terms.
-def getqform(N,xx0,casedata,onsprev):
+def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
   
   # We're going to use two different origins before combining them into A, B, C
   # So dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
@@ -363,55 +363,56 @@ def getqform(N,xx0,casedata,onsprev):
   eta=1e-3
   A1+=eta*np.identity(2*N)
   
-  if onsprev is not None or casedata is not None:
+  if not integratecaseandprev:
     ex0=np.exp(xx0)
 
-  if onsprev is not None:
-    # Link incidence to ONSprevalence
-    lio=log(inc_ons)
-    for date,targ,sd in onsprev:
-      i=date-numk-startdate
-      if i>=0 and i+numk<=N:
-        targ/=scale
-        sd/=scale
-        prec=inc_ons/sd**2
+  # Link incidence to ONSprevalence
+  for date,targ,sd in onsprev:
+    i=date-numk-startdate
+    if i>=0 and i+numk<=N:
+      targ/=scale
+      sd/=scale
+      prec=inc_ons/sd**2
+      if not integratecaseandprev:
         vv=ex0[i:i+numk]*poskern
         res=targ-vv.sum()
         # prec*( res - vv@(dx_i,...,dx_{i+n-1}) )^2
         A0[i:i+numk,i:i+numk]+=np.outer(vv,vv)*prec
         B0[i:i+numk]+=vv*res*prec
-        C+=res**2*prec-lio
+        C+=res**2*prec
+      else:
+        C+=log(prec)
+    
 
-  if casedata is not None:
-    # a[j] is inverse CAR
-    # Terms -(1/2).al[i].(I[i]-a[j].casedata[j])^2 correspond to CAR error at incidence i, casedata j  (i->j)
-    # Let "something" be a constant of order 1, and I0[i] be some approximation to the incidence, c0[j] some approx to invese CAR.
-    #       al[i]^{-1} = V[ I[i]-a[j].casedata[j] ]
-    #                 ~= something.V[I[i]] or something.a[j]^2.V[casedata[j]]
-    #                 ~= something.I0[i] or something.c0[j]^2.V[casedata[j]]
-    #                                    or something.c0[j].I0[i]/casedata[j].V[casedata[j]]
-    #                                    or something.(I0[i]/casedata[j])^2.V[casedata[j]]
-    #                 ~= {something.I0[i] or} something.I0[i]^2/casedata[j] or something.c0[j].I0[i] or something.c0[j]^2.casedata[j]
-    # Settle on something.c0[j].I0[i], where something=1/inc_case, because that's nicely independent of casedata[j]
-    # Arrive at QF = -2LL = inc_case.(c-gamma)^2/gamma, where gamma=I[i]/a[j], c=casedata[j]
-    # Let lI=log(I[i])=xx[i], la=log(a[j])=xx[N+j], I=I[i], a=a[j]
-    # Adding in normalisation for P(casedata|internal variables, xx)  (xx = incidence, CAR)
-    # means multiplying by sqrt(gamma/inc_case), which comes to exp((la-lI)/2)*inc_case^(1/2)
-    # or in log terms: (la-lI)/2+(1/2)*log(inc_case), or in QF=-2LL terms, lI-la-log(inc_case)
-    # Let d = change in la-lI, so la-lI = la0-lI0+d, and we want to write QF in terms of d.
-    # (d can be thought of as small, but we're careful to arrange things so that everything bounded in terms of d, so QF is always pos def and global min is OK)
-    # Total QF is inc_case.(I-c.a)^2/(I.a) + lI-la-log(inc_case)
-    #           = inc_case.(1/rho-c.rho)^2 + lI-la-log(inc_case), where rho=sqrt(a/I)
-    # Expand rho to first order in d: rho = sqrt(a0[j]/I0[i])(1+d/2) = rho0.(1+d/2), so
-    #       QF = inc_case.(1/rho0-c.rho0 - (c.rho0+1/rho0).d/2)^2 - (la-lI) - log(inc_case)
-    #          = inc_case/(I.a).{ (I-c.a)^2 - (I^2-(c.a)^2).d + (I+c.a)^2/4.d^2 } - (la0-lI0+log(inc_case)) - d
-    #       cf Ax^2-2Bx+C
-    lic=log(inc_case)
-    for j in range(len(casedata)):
-      if startdate+j not in ignore:
-        day=(startdate+j-monday)%7
-        i=j-back[day]
-        if i>=0:
+  # a[j] is inverse CAR
+  # Terms -(1/2).al[i].(I[i]-a[j].casedata[j])^2 correspond to CAR error at incidence i, casedata j  (i->j)
+  # Let "something" be a constant of order 1, and I0[i] be some approximation to the incidence, c0[j] some approx to invese CAR.
+  #       al[i]^{-1} = V[ I[i]-a[j].casedata[j] ]
+  #                 ~= something.V[I[i]] or something.a[j]^2.V[casedata[j]]
+  #                 ~= something.I0[i] or something.c0[j]^2.V[casedata[j]]
+  #                                    or something.c0[j].I0[i]/casedata[j].V[casedata[j]]
+  #                                    or something.(I0[i]/casedata[j])^2.V[casedata[j]]
+  #                 ~= {something.I0[i] or} something.I0[i]^2/casedata[j] or something.c0[j].I0[i] or something.c0[j]^2.casedata[j]
+  # Settle on something.c0[j].I0[i], where something=1/inc_case, because that's nicely independent of casedata[j], and the contribution to QF=-2LL is convex
+  # Arrive at QF = -2LL = inc_case.(c-gamma)^2/gamma, where gamma=I[i]/a[j], c=casedata[j]
+  # Let lI=log(I[i])=xx[i], la=log(a[j])=xx[N+j], I=I[i], a=a[j]
+  # Adding in normalisation for P(casedata|internal variables, xx)  (xx = incidence, CAR)
+  # means multiplying by sqrt(gamma/inc_case), which comes to exp((la-lI)/2)*inc_case^(1/2)
+  # or in log terms: (la-lI)/2+(1/2)*log(inc_case), or in QF=-2LL terms, lI-la-log(inc_case)
+  # Let d = change in la-lI, so la-lI = la0-lI0+d, and we want to write QF in terms of d.
+  # (d can be thought of as small, but we're careful to arrange things so that everything bounded in terms of d, so QF is always pos def and global min is OK)
+  # Total QF is inc_case.(I-c.a)^2/(I.a) + lI-la-log(inc_case)
+  #           = inc_case.(1/rho-c.rho)^2 + lI-la-log(inc_case), where rho=sqrt(a/I)
+  # Expand rho to first order in d: rho = sqrt(a0[j]/I0[i])(1+d/2) = rho0.(1+d/2), so
+  #       QF = inc_case.(1/rho0-c.rho0 - (c.rho0+1/rho0).d/2)^2 - (la-lI) - log(inc_case)
+  #          = inc_case/(I.a).{ (I-c.a)^2 - (I^2-(c.a)^2).d + (I+c.a)^2/4.d^2 } - (la0-lI0+log(inc_case)) - d
+  #       cf Ax^2-2Bx+C
+  for j in range(len(casedata)):
+    if startdate+j not in ignore:
+      day=(startdate+j-monday)%7
+      i=j-back[day]
+      if i>=0:
+        if not integratecaseandprev:
           I=ex0[i]
           a=ex0[N+j]
           c=casedata[j]
@@ -425,7 +426,11 @@ def getqform(N,xx0,casedata,onsprev):
           B0[i]-=t
           B0[N+j]+=t
           t=lam*(I-c*a)**2
-          C+=t-(xx0[N+j]-xx0[i]+lic)
+          C+=t
+        else:
+          B1[N+j]+=-1/2
+          B1[i]+=1/2
+          C+=log(inc_case)+xx0[N+j]-xx0[i]
 
   # dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
   #                         = (dx^t.A0.dx - 2B0^t.dx) + ((xx0+dx)^t.A1.(xx0+dx) - 2B1^t.(xx0+dx)) + C
@@ -433,6 +438,10 @@ def getqform(N,xx0,casedata,onsprev):
   yy=A1@xx0
   A=A0+A1
   C+=np.linalg.slogdet(A)[1]
+  #print("AAA B0",B0[-20:])
+  #print("AAA B1",B1[-20:])
+  #print("AAA yy",yy[-20:])
+  #print("AAA")
   return A, B0+B1-yy, xx0@yy-2*B1@xx0+C
 
 def getest(enddate=apiday(),prlev=0,eps=1e-3):
@@ -463,19 +472,18 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   #savevars(N,casedata,back,xx,name="tempinit")
 
   if prlev>=1: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
-  for it in range(20):
+  nits=20
+  for it in range(nits):
     if prlev>=1: print("Iteration(numerator)",it)
-    
-    A,B,C=getqform(N,xx,casedata,onsprev)
-    
     xx0=xx
+    A,B,C=getqform(N,xx0,casedata,onsprev,False)
     xx=xx0+np.linalg.solve(A,B)
     xx[:N]=np.maximum(xx[:N],log(0.01))
     xx[N:]=np.maximum(xx[N:],0)
     ex=np.exp(xx)
     if prlev>=1: print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
     if np.abs(xx-xx0).max()<eps: break
-  else: print("Didn't converge in time")
+  else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
   
   dx=np.linalg.solve(A,B)
   num=(1/2)*B@dx-(1/2)*C
@@ -484,8 +492,14 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   
   #savevars(N,casedata,back,xx,name="England")
 
-  A,B,C=getqform(N,xx,None,None)
+  xx0=xx
+  xx0[:]=0#alter
+  A,B,C=getqform(N,xx0,casedata,onsprev,True)
   dx=np.linalg.solve(A,B)
+  #print("BBB      B",B[-20:])
+  #print("BBB     dx",dx[-20:])
+  #print("BBB    xx0",xx0[-20:])
+  #print("BBB xx0+dx",(xx0+dx)[-20:])
   denom=(1/2)*B@dx-(1/2)*C
   #print((1/2)*B@dx,-(1/2)*C)
 
@@ -716,6 +730,7 @@ if 0:
   poi
 
 if 1:
+  seed(42)
   while 1:
     inc_ons=exp(0)
     inc_case=exp(3+rnd()*0)
@@ -747,19 +762,19 @@ if 1:
     car_car=exp(1.5+rnd()*1)
     car_car_d=exp(2.25+rnd()*1.25)
 
-    # This (wants inc_case -> infinity)
-    inc_ons=exp(5+rnd()*0)
-    inc_case=exp(10+rnd()*10)
-    inc_inc=exp(8.5+rnd()*0)
-    car_car=exp(1.5+rnd()*0)
-    car_car_d=exp(2.25+rnd()*0)
-
     # cf this (wants inc_case ~= 6)
     inc_ons=exp(5+rnd()*0)
     inc_case=exp(10+rnd()*10)
     inc_inc=exp(8.5+rnd()*0)
     car_car=exp(4.5+rnd()*0)
     car_car_d=exp(4.25+rnd()*0)
+
+    # This (wants inc_case -> infinity)
+    inc_ons=exp(5+rnd()*0)
+    inc_case=exp(15+rnd()*15)
+    inc_inc=exp(8.5+rnd()*0)
+    car_car=exp(1.5+rnd()*0)
+    car_car_d=exp(2.25+rnd()*0)
 
     LL=getprob(prlev=0)
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
