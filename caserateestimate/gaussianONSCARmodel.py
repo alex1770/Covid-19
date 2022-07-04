@@ -36,6 +36,7 @@ car_car_d=exp(0.0)  # Coupling of inverse-CAR to itself day-by-day
 # Order=2 if you think the prior is more like exp(integral of Brownian motion) (has "momentum")
 # etc
 order=2
+eta=1e-6
 
 def rnd(): return random()*2-1
 
@@ -276,6 +277,8 @@ def directeval(xx,casedata,onsprev,prlev=0):
   
   N=xx.shape[0]//2
 
+  t_REG=eta*xx@xx
+  
   t_II=t_CC=t_CCd=0
   # Diff constraints for incidence-incidence
   tx=xx[:N]
@@ -302,15 +305,16 @@ def directeval(xx,casedata,onsprev,prlev=0):
   t_IO=0
   if onsprev is not None:
     # Link incidence to ONSprevalence
-    lio=log(inc_ons)
     for date,targ,sd in onsprev:
       i=date-numk-startdate
       if i>=0 and i+numk<=N:
         targ/=scale
         sd/=scale
         prec=inc_ons/sd**2
-        t_IO+=prec*(poskern@ex[i:i+numk]-targ)**2#-lio
-  
+        t_IO+=prec*(poskern@ex[i:i+numk]-targ)**2-log(prec)
+  else:
+    t_REG-=order*log(eta)
+        
   t_IC=0
   if casedata is not None:
     # Incidence-CAR-casedata interaction
@@ -324,9 +328,11 @@ def directeval(xx,casedata,onsprev,prlev=0):
         if i>=0:
           gam=ex[i]/ex[N+j]
           t_IC+=inc_case*(casedata[j]-gam)**2/gam-(xx[N+j]-xx[i]+lic)
+  else:
+    t_REG-=order*log(eta)
 
-  Qtot=t_II+t_CC+t_CCd+t_IO+t_IC
-  print("%10.2f %10.2f %10.2f %10.2f %10.2f      %10.2f"%(t_II,t_CC,t_CCd,t_IO,t_IC,Qtot))
+  Qtot=t_REG+t_II+t_CC+t_CCd+t_IO+t_IC
+  print("%10.2f %10.2f %10.2f %10.2f %10.2f %10.2f      %10.2f"%(t_REG,t_II,t_CC,t_CCd,t_IO,t_IC,Qtot))
   return Qtot
   
 # Returns quadratic+linear+constant form in dx (which is in log space), where xx = xx0 + dx.
@@ -334,10 +340,12 @@ def directeval(xx,casedata,onsprev,prlev=0):
 # Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + c
 #
 # casedata and onsprev can be null, which means it won't use the "external" terms.
-def getqform(N,xx0,casedata,onsprev,fullhessian=False):
+def getqform(N,xx0,casedata,onsprev,usedet=False):
   
   # We're going to use two different origins before combining them into A, B, C
   # So dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
+
+  fullhessian=True
   
   A0=np.zeros([N*2,N*2])
   B0=np.zeros(N*2)
@@ -360,7 +368,7 @@ def getqform(N,xx0,casedata,onsprev,fullhessian=False):
   A_c=diffmat(N,order)
   A1[N:,N:]+=car_car_d*A_c
 
-  eta=1e-6
+  # Regularise out degrees of freedom orthogonal to diffmats
   A1+=eta*np.identity(2*N)
   
   if casedata is not None or onsprev is not None:
@@ -380,9 +388,8 @@ def getqform(N,xx0,casedata,onsprev,fullhessian=False):
         A0[i:i+numk,i:i+numk]+=np.outer(vv,vv)*prec
         B0[i:i+numk]+=vv*res*prec
         C+=res**2*prec
-        #
+        C-=log(prec)
         if fullhessian:
-          C-=log(prec)
           A0[i:i+numk,i:i+numk]+=-prec*res*np.diag(vv)
   else:
     C-=order*log(eta)
@@ -449,12 +456,10 @@ def getqform(N,xx0,casedata,onsprev,fullhessian=False):
   #                         = dx^t.(A0+A1).dx - 2(B0+B1-A1.xx0)^t.dx) + (xx0^t.A1.xx0-2B1^t.xx0+C)
   yy=A1@xx0
   A=A0+A1
-  if fullhessian:
+  if usedet:
     sld=np.linalg.slogdet(A)
     if sld[0]<1: print("Error: not positive definite")
-    #ev=sorted(list(np.linalg.eig(A)[0]));print(ev)
     C+=sld[1]
-    #print("Det =",sld[1],"C =",C)
   #print("AAA B0",B0[-20:])
   #print("AAA B1",B1[-20:])
   #print("AAA yy",yy[-20:])
@@ -493,7 +498,7 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   for it in range(nits):
     if prlev>=1: print("Iteration(numerator)",it)
     xx0=xx
-    A,B,C=getqform(N,xx0,casedata,onsprev,fullhessian=False)
+    A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
     xx=xx0+np.linalg.solve(A,B)
     xx[:N]=np.maximum(xx[:N],log(0.01))
     xx[N:]=np.maximum(xx[N:],0)
@@ -502,7 +507,7 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
   
   xx0=xx
-  A,B,C=getqform(N,xx0,casedata,onsprev,fullhessian=True)
+  A,B,C=getqform(N,xx0,casedata,onsprev,usedet=True)
   dx=np.linalg.solve(A,B)
   num=(1/2)*B@dx-(1/2)*C
   #print((1/2)*B@dx,-(1/2)*C)
@@ -510,7 +515,7 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   #savevars(N,casedata,back,xx,name="England")
 
   xx0=xx
-  A,B,C=getqform(N,xx0,None,None,fullhessian=True)
+  A,B,C=getqform(N,xx0,None,None,usedet=True)
   dx=np.linalg.solve(A,B)
   #print("BBB      B",B[-20:])
   #print("BBB     dx",dx[-20:])
@@ -745,7 +750,7 @@ if 0:
   print(xx0[:N-5]/xx0[N+5:]/casedata[5:])
   poi
 
-if 1:
+if 0:
   seed(42)
   for it in range(4):
     inc_ons=exp(0)
@@ -796,7 +801,7 @@ if 1:
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
-if 0:
+if 1:
   inc_ons=exp(2)
   inc_case=exp(4)
   inc_inc=exp(2.5)
@@ -810,7 +815,7 @@ if 0:
 
   #casedata=None
   #onsprev=None
-  A,B,C=getqform(N,xx,casedata,onsprev,fullhessian=True)
+  A,B,C=getqform(N,xx,casedata,onsprev,usedet=False)
   
   dx0=np.zeros(2*N)
   seed(42)
