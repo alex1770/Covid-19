@@ -20,18 +20,18 @@ ignore={Date(date) for date in ignore}
 
 # population=55.98e6
 monday=Date("2022-01-03")
-scale=1e5# Units of this number of people to keep things nicely conditioned
+scale=1e5# Units of this number of people to keep things better conditioned
 
-np.set_printoptions(precision=3,suppress=True,linewidth=200)
+np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
 minback=1
 maxback=10
 back=[5]*7# Pro tem
-inc_ons=exp(-3)     # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
-inc_case=exp(3.0)   # Coupling of incidence and CAR to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-inc_inc=exp(10.9)   # Coupling of incidence to iteself
-car_car=exp(6.0)    # Coupling of inverse-CAR to itself week-by-week
-car_car_d=exp(0.0)  # Coupling of inverse-CAR to itself day-by-day
+inc_ons=exp(5.02633)   # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
+inc_case=exp(12)       # Coupling of incidence and CAR to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+inc_inc=exp(7.6893)    # Coupling of incidence to iteself
+car_car=exp(1.76775)   # Coupling of inverse-CAR to itself week-by-week
+car_car_d=exp(2.21931) # Coupling of inverse-CAR to itself day-by-day
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion) (has "momentum")
 # etc
@@ -93,6 +93,9 @@ numk=len(poskern)
 #  N+i       c[i] = CAR variable       0<=i<N
 
 def savevars(N,casedata,back,xx,low=None,high=None,name="temp"):
+  xx=np.exp(xx)
+  if low is not None: low=np.exp(low)
+  if high is not None: high=np.exp(high)
   with open(name+"_incidence",'w') as fp:
     for i in range(N):
       print(startdate+i,"%9.1f"%(xx[i]*scale),end="",file=fp)
@@ -458,7 +461,7 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
   A=A0+A1
   if usedet:
     sld=np.linalg.slogdet(A)
-    if sld[0]<1: print("Error: not positive definite")
+    if sld[0]<1: print("Error: Hessian not positive definite",file=sys.stderr)
     C+=sld[1]
   #print("AAA B0",B0[-20:])
   #print("AAA B1",B1[-20:])
@@ -466,26 +469,6 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
   #print("AAA")
   return A, B0+B1-yy, xx0@yy-2*B1@xx0+C
 
-def getest(enddate=apiday(),prlev=0,eps=1e-3):
-  
-  N,casedata,onsprev=getextdata(enddate,prlev)
-  xx=initialguess(N,onsprev,casedata,back)
-  #savevars(N,casedata,back,xx,name="tempinit")
-  
-  for it in range(20):
-    if prlev>=2: print("Iteration",it)
-    
-    A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
-    
-    xx0=xx
-    xx=np.maximum(np.linalg.solve(A0+A1,b0+b1),0.01)
-    if np.abs(xx/xx0-1).max()<eps: break
-  
-  #savevars(N,casedata,back,xx,name="England")
-  A0,b0,c0,A1,b1,c1=getqform(N,casedata,onsprev,xx)
-  A,b,c=A0+A1,b0+b1,c0+c1
-  return casedata,xx,A,b,c
-  
 def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   
   N,casedata,onsprev=getextdata(enddate,prlev)
@@ -525,37 +508,6 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   #print((1/2)*B@dx,-(1/2)*C)
 
   return num-denom
-
-if 0:
-  # Optimising coupling parameters for consistency
-  
-  def rnd(): return random()*2-1
-  seed(42)
-  
-  while 1:
-    inc_ons=exp(-3.2+rnd()*0.5)
-    inc_case=exp(0.8+rnd()*1)
-    inc_inc=exp(6.2+rnd()*0.8)
-    car_car=exp(3.7+rnd()*1)
-  
-    casedata0,xx0,A0,b0,c0=getest()
-    N=xx0.shape[0]//2
-  
-    now=apiday()
-    numcheck=30
-    chrange=7
-    err=0
-    for ch in range(numcheck):
-      casedata,xx,A,b,c=getest(now-(ch+1)*chrange,prlev=0)
-      i0,i1=N-(ch+2)*chrange,N-(ch+1)*chrange
-      #print(xx0[i0:i1])
-      #print(xx[i0:i1])
-      #print()
-      err+=(np.log(xx[i0:i1]/xx0[i0:i1])**2).sum()
-      #xx0=xx
-    
-    print("%12g %12g %12g %12g     %10.6f"%(inc_ons,inc_case,inc_inc,car_car,sqrt(err/(numcheck*chrange))))
-    sys.stdout.flush()
 
 if 0:
   # Optimising coupling parameters for consistency - version with natural model
@@ -687,25 +639,48 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 0:
+if 1:
   seed(42)
   np.random.seed(42)
-  casedata,xx0,A,b,c=getest(prlev=2)
-  N=xx0.shape[0]//2
+  enddate=apiday()
+  prlev=2
+  eps=1e-3
+  
+  N,casedata,onsprev=getextdata(enddate,prlev)
+  ex=initialguess(N,onsprev,casedata,back)
+  xx=np.log(ex)
+  #savevars(N,casedata,back,xx,name="tempinit")
+
+  if prlev>=2: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
+  nits=20
+  for it in range(nits):
+    if prlev>=1: print("Iteration(numerator)",it)
+    xx0=xx
+    A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
+    xx=xx0+np.linalg.solve(A,B)
+    xx[:N]=np.maximum(xx[:N],log(0.01))
+    xx[N:]=np.maximum(xx[N:],0)
+    if prlev>=2: ex=np.exp(xx);print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
+    if np.abs(xx-xx0).max()<eps: break
+  else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
+  
+  xx0=xx
+  A,B,C=getqform(N,xx0,casedata,onsprev,usedet=True)
+  Cov=np.linalg.inv(A)
+  Mean=xx0+Cov@B
   # getcaseoutliers(casedata,N)
-  conf=0.95
-  C=np.linalg.inv(A)
+  conf=0.75
+  print("Using %g%% credible interval"%((2*conf-1)*100))
   nsamp=10000
-  l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
-  l[:,:N]=np.maximum(l[:,:N],0.01)
-  l[:,N:]=np.maximum(l[:,N:],1)
+  l=mvn.rvs(mean=Mean,cov=Cov,size=nsamp)
+  l[:,:N]=np.maximum(l[:,:N],log(0.01))
+  l[:,N:]=np.maximum(l[:,N:],log(1))
   np.ndarray.sort(l,axis=0)
   i0=int(nsamp*(1-conf)/2)
   i1=int(nsamp*(1+conf)/2)
   low=l[i0,:]
   high=l[i1,:]
-  savevars(N,casedata,back,xx0,low=low,high=high,name="England")
-  poi
+  savevars(N,casedata,back,Mean,low=low,high=high,name="England")
   
 if 0:
   inc_ons=exp(5.0)
@@ -752,56 +727,56 @@ if 0:
 
 if 0:
   seed(42)
-  for it in range(4):
-    inc_ons=exp(0)
-    inc_case=exp(3+rnd()*0)
-    inc_inc=exp(3+rnd()*0)
-    car_car=exp(10+rnd()*0)
-    car_car_d=exp(10+rnd()*0)
-    
-    inc_ons=exp(-3+rnd()*0)
-    inc_case=exp(0+rnd()*0)
-    inc_inc=exp(8.5+rnd()*1)
-    car_car=exp(-0.5+rnd()*2)
-    car_car_d=exp(-0.5+rnd()*2)
-    
-    inc_ons=exp(-3+rnd()*0)
-    inc_case=exp(0+rnd()*0)
-    inc_inc=exp(8.5+rnd()*0)
-    car_car=exp(-0.5+rnd()*0)
-    car_car_d=exp(-0.5+rnd()*0)
-    
-    inc_ons=exp(5.0+rnd()*0.)
-    inc_case=exp(10+rnd()*0)
-    inc_inc=exp(8.9+rnd()*0.0)
-    car_car=exp(-0.5+rnd()*0.0)
-    car_car_d=exp(3+rnd()*0.0)
-    
-    inc_ons=exp(5+rnd()*0.5)
-    inc_case=exp(10)
-    inc_inc=exp(8.5+rnd()*1)
-    car_car=exp(1.5+rnd()*1)
-    car_car_d=exp(2.25+rnd()*1.25)
-
-    # cf this (wants inc_case ~= 6)
-    inc_ons=exp(5+rnd()*0)
-    inc_case=exp(10+rnd()*10)
-    inc_inc=exp(8.5+rnd()*0)
-    car_car=exp(4.5+rnd()*0)
-    car_car_d=exp(4.25+rnd()*0)
-
-    # This (wants inc_case -> infinity)
+  while 1:
+    # These settings want inc_case -> infinity
     inc_ons=exp(5+rnd()*0)
     inc_case=exp(15+rnd()*15)
     inc_inc=exp(8.5+rnd()*0)
     car_car=exp(1.5+rnd()*0)
     car_car_d=exp(2.25+rnd()*0)
 
+    # cf these which wants inc_case ~= 6
+    inc_ons=exp(5+rnd()*0)
+    inc_case=exp(10+rnd()*10)
+    inc_inc=exp(8.5+rnd()*0)
+    car_car=exp(4.5+rnd()*0)
+    car_car_d=exp(4.25+rnd()*0)
+
+    # Optimum values given inc_case=exp(5)
+    inc_ons=exp(5.18+rnd()*0.05)
+    inc_case=exp(5)
+    inc_inc=exp(7.6+rnd()*0.15)
+    car_car=exp(3.95+rnd()*0.2)
+    car_car_d=exp(2.2+rnd()*0.3)
+
     LL=getprob(prlev=0)
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
-if 1:
+if 0:
+  from scipy.optimize import minimize
+  
+  def NLL(params):
+    global inc_ons,inc_case,inc_inc,car_car,car_car_d
+    print("Trying","".join("%12g"%x for x in params),end="");sys.stdout.flush()
+    inc_ons,inc_case,inc_inc,car_car,car_car_d=np.exp(params)
+    LL=getprob()
+    print("  -> ",LL)
+    return -LL
+
+  bounds=[(-2,10),(-2,12),(-2,10),(-2,10),(-2,10)]
+  params0=[5,5,7.5,4,2]
+  res=minimize(NLL,params0,bounds=bounds,method="SLSQP")
+  if not res.success: raise RuntimeError(res.message)
+  print("LL =",-res.fun)
+  for i in range(len(res.x)):
+    print("Parameter %d = %g"%(i,res.x[i]))
+  for i in range(len(bounds)):
+    if res.x[i]<bounds[i][0]+1e-6 or res.x[i]>bounds[i][1]-1e-6: print("Warning: parameter %d = %g is touching bound"%(i,res.x[i]))
+  for i in range(len(res.x)):
+    print("%s=exp(%g)"%(["inc_ons", "inc_case", "inc_inc", "car_car", "car_car_d"][i],res.x[i]))
+
+if 0:
   inc_ons=exp(2)
   inc_case=exp(4)
   inc_inc=exp(2.5)
@@ -839,3 +814,4 @@ if 1:
       b=dx@(A@dx)
       print(p,a,b,a/eps**2,b/eps**2)
       print()
+
