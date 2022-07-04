@@ -309,7 +309,7 @@ def directeval(xx,casedata,onsprev,prlev=0):
         targ/=scale
         sd/=scale
         prec=inc_ons/sd**2
-        t_IO+=prec*(poskern@ex[i:i+numk]-targ)**2-lio
+        t_IO+=prec*(poskern@ex[i:i+numk]-targ)**2#-lio
   
   t_IC=0
   if casedata is not None:
@@ -334,7 +334,7 @@ def directeval(xx,casedata,onsprev,prlev=0):
 # Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + c
 #
 # casedata and onsprev can be null, which means it won't use the "external" terms.
-def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
+def getqform(N,xx0,casedata,onsprev,fullhessian=False):
   
   # We're going to use two different origins before combining them into A, B, C
   # So dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
@@ -360,20 +360,20 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
   A_c=diffmat(N,order)
   A1[N:,N:]+=car_car_d*A_c
 
-  eta=1e-3
+  eta=1e-6
   A1+=eta*np.identity(2*N)
   
-  if not integratecaseandprev:
+  if casedata is not None or onsprev is not None:
     ex0=np.exp(xx0)
 
   # Link incidence to ONSprevalence
-  for date,targ,sd in onsprev:
-    i=date-numk-startdate
-    if i>=0 and i+numk<=N:
-      targ/=scale
-      sd/=scale
-      prec=inc_ons/sd**2
-      if not integratecaseandprev:
+  if onsprev is not None:
+    for date,targ,sd in onsprev:
+      i=date-numk-startdate
+      if i>=0 and i+numk<=N:
+        targ/=scale
+        sd/=scale
+        prec=inc_ons/sd**2
         vv=ex0[i:i+numk]*poskern
         res=targ-vv.sum()
         # prec*( res - vv@(dx_i,...,dx_{i+n-1}) )^2
@@ -381,7 +381,11 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
         B0[i:i+numk]+=vv*res*prec
         C+=res**2*prec
         #
-        C-=log(prec)
+        if fullhessian:
+          C-=log(prec)
+          A0[i:i+numk,i:i+numk]+=-prec*res*np.diag(vv)
+  else:
+    C-=order*log(eta)
 
   # a[j] is inverse CAR
   # Terms -(1/2).al[i].(I[i]-a[j].casedata[j])^2 correspond to CAR error at incidence i, casedata j  (i->j)
@@ -398,7 +402,7 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
   # Adding in normalisation for P(casedata|internal variables, xx)  (xx = incidence, CAR)
   # means multiplying by sqrt(gamma/inc_case), which comes to exp((la-lI)/2)*inc_case^(1/2)
   # or in log terms: (la-lI)/2+(1/2)*log(inc_case), or in QF=-2LL terms, lI-la-log(inc_case)
-  # Let d = change in la-lI, so la-lI = la0-lI0+d, and we want to write QF in terms of d.
+  # Let d = change in la-lI, so la-lI = la0-lI0+d, and we want to write QF in terms of d (which ends up as a covector for dla,dlI).
   # (d can be thought of as small, but we're careful to arrange things so that everything bounded in terms of d, so QF is always pos def and global min is OK)
   # Total QF is inc_case.(I-c.a)^2/(I.a) + lI-la-log(inc_case)
   #           = inc_case.(1/rho-c.rho)^2 + lI-la-log(inc_case), where rho=sqrt(a/I)
@@ -406,12 +410,13 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
   #       QF = inc_case.(1/rho0-c.rho0 - (c.rho0+1/rho0).d/2)^2 - (la-lI) - log(inc_case)
   #          = inc_case/(I.a).{ (I-c.a)^2 - (I^2-(c.a)^2).d + (I+c.a)^2/4.d^2 } - (la0-lI0+log(inc_case)) - d
   #       cf Ax^2-2Bx+C
-  for j in range(len(casedata)):
-    if startdate+j not in ignore:
-      day=(startdate+j-monday)%7
-      i=j-back[day]
-      if i>=0:
-        if not integratecaseandprev:
+  # Second order in d: rho = rho0.(1+d/2+d^2/8), 1/rho = 1/rho0.(1-d/2+d^2/8)
+  if casedata is not None:
+    for j in range(len(casedata)):
+      if startdate+j not in ignore:
+        day=(startdate+j-monday)%7
+        i=j-back[day]
+        if i>=0:
           I=ex0[i]
           a=ex0[N+j]
           c=casedata[j]
@@ -421,7 +426,7 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
           A0[i,N+j]-=t
           A0[N+j,i]-=t
           A0[N+j,N+j]+=t
-          t=lam*(I**2-(c*a)**2)/2+1/2
+          t=lam*(I**2-(c*a)**2)/2
           B0[i]-=t
           B0[N+j]+=t
           t=lam*(I-c*a)**2
@@ -429,14 +434,27 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
           #
           B1[N+j]+=1/2
           B1[i]+=+-1/2
-          C-=log(inc_case)+xx0[N+j]-xx0[i]
+          C-=log(inc_case)
+          if fullhessian:
+            t=lam*(I-c*a)**2/4
+            A0[i,i]+=t
+            A0[i,N+j]-=t
+            A0[N+j,i]-=t
+            A0[N+j,N+j]+=t
+  else:
+    C-=order*log(eta)
 
   # dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
   #                         = (dx^t.A0.dx - 2B0^t.dx) + ((xx0+dx)^t.A1.(xx0+dx) - 2B1^t.(xx0+dx)) + C
   #                         = dx^t.(A0+A1).dx - 2(B0+B1-A1.xx0)^t.dx) + (xx0^t.A1.xx0-2B1^t.xx0+C)
   yy=A1@xx0
   A=A0+A1
-  C+=np.linalg.slogdet(A)[1]
+  if fullhessian:
+    sld=np.linalg.slogdet(A)
+    if sld[0]<1: print("Error: not positive definite")
+    #ev=sorted(list(np.linalg.eig(A)[0]));print(ev)
+    C+=sld[1]
+    #print("Det =",sld[1],"C =",C)
   #print("AAA B0",B0[-20:])
   #print("AAA B1",B1[-20:])
   #print("AAA yy",yy[-20:])
@@ -470,29 +488,29 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   xx=np.log(ex)
   #savevars(N,casedata,back,xx,name="tempinit")
 
-  if prlev>=1: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
+  if prlev>=2: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
   nits=20
   for it in range(nits):
     if prlev>=1: print("Iteration(numerator)",it)
     xx0=xx
-    A,B,C=getqform(N,xx0,casedata,onsprev,False)
+    A,B,C=getqform(N,xx0,casedata,onsprev,fullhessian=False)
     xx=xx0+np.linalg.solve(A,B)
     xx[:N]=np.maximum(xx[:N],log(0.01))
     xx[N:]=np.maximum(xx[N:],0)
-    ex=np.exp(xx)
-    if prlev>=1: print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
+    if prlev>=2: ex=np.exp(xx);print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
     if np.abs(xx-xx0).max()<eps: break
   else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
   
+  xx0=xx
+  A,B,C=getqform(N,xx0,casedata,onsprev,fullhessian=True)
   dx=np.linalg.solve(A,B)
   num=(1/2)*B@dx-(1/2)*C
-  # Could compare num with QF including A
   #print((1/2)*B@dx,-(1/2)*C)
   
   #savevars(N,casedata,back,xx,name="England")
 
   xx0=xx
-  A,B,C=getqform(N,xx0,casedata,onsprev,True)
+  A,B,C=getqform(N,xx0,None,None,fullhessian=True)
   dx=np.linalg.solve(A,B)
   #print("BBB      B",B[-20:])
   #print("BBB     dx",dx[-20:])
@@ -729,7 +747,7 @@ if 0:
 
 if 1:
   seed(42)
-  while 1:
+  for it in range(4):
     inc_ons=exp(0)
     inc_case=exp(3+rnd()*0)
     inc_inc=exp(3+rnd()*0)
@@ -779,7 +797,7 @@ if 1:
     sys.stdout.flush()
 
 if 0:
-  inc_ons=exp(-3)
+  inc_ons=exp(2)
   inc_case=exp(4)
   inc_inc=exp(2.5)
   car_car=exp(1.5)
@@ -790,9 +808,9 @@ if 0:
   ex=initialguess(N,onsprev,casedata,back)
   xx=np.log(ex)
 
-  casedata=None
-  onsprev=None
-  A,B,C=getqform(N,xx,casedata,onsprev)
+  #casedata=None
+  #onsprev=None
+  A,B,C=getqform(N,xx,casedata,onsprev,fullhessian=True)
   
   dx0=np.zeros(2*N)
   seed(42)
@@ -805,12 +823,12 @@ if 0:
       b=C
       print(p,a,b,a,b)
       print()
-    if 1:
+    if 0:
       a=(directeval(xx+dx,casedata,onsprev)-directeval(xx-dx,casedata,onsprev))/2
       b=-2*B@dx
       print(p,a,b,a/eps,b/eps)
       print()
-    if 0:
+    if 1:
       # Note these are not meant to be the same because the A-matrix for casedata and onsprev don't contain all 2nd order terms
       a=(directeval(xx+dx,casedata,onsprev)-2*directeval(xx,casedata,onsprev)+directeval(xx-dx,casedata,onsprev))/2
       b=dx@(A@dx)
