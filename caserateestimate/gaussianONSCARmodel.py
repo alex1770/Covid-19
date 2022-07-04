@@ -380,9 +380,8 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
         A0[i:i+numk,i:i+numk]+=np.outer(vv,vv)*prec
         B0[i:i+numk]+=vv*res*prec
         C+=res**2*prec
-      else:
-        C+=log(prec)
-    
+        #
+        C-=log(prec)
 
   # a[j] is inverse CAR
   # Terms -(1/2).al[i].(I[i]-a[j].casedata[j])^2 correspond to CAR error at incidence i, casedata j  (i->j)
@@ -427,10 +426,10 @@ def getqform(N,xx0,casedata,onsprev,integratecaseandprev,fullhessian=False):
           B0[N+j]+=t
           t=lam*(I-c*a)**2
           C+=t
-        else:
-          B1[N+j]+=-1/2
-          B1[i]+=1/2
-          C+=log(inc_case)+xx0[N+j]-xx0[i]
+          #
+          B1[N+j]+=1/2
+          B1[i]+=+-1/2
+          C-=log(inc_case)+xx0[N+j]-xx0[i]
 
   # dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
   #                         = (dx^t.A0.dx - 2B0^t.dx) + ((xx0+dx)^t.A1.(xx0+dx) - 2B1^t.(xx0+dx)) + C
@@ -493,7 +492,6 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   #savevars(N,casedata,back,xx,name="England")
 
   xx0=xx
-  xx0[:]=0#alter
   A,B,C=getqform(N,xx0,casedata,onsprev,True)
   dx=np.linalg.solve(A,B)
   #print("BBB      B",B[-20:])
