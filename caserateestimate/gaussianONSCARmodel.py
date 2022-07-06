@@ -26,7 +26,7 @@ np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
 minback=1
 maxback=10
-back=[5]*7# Pro tem
+back=[6]*7# Pro tem
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion) (has "momentum")
 # etc
@@ -41,11 +41,27 @@ if order==1:
   car_car_d=exp(2.89592)
 
 if order==2:
-  inc_ons=exp(5.02633)   # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
-  inc_case=exp(12)       # Coupling of incidence and CAR to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
-  inc_inc=exp(7.6893)    # Coupling of incidence to iteself
-  car_car=exp(1.76775)   # Coupling of inverse-CAR to itself week-by-week
-  car_car_d=exp(2.21931) # Coupling of inverse-CAR to itself day-by-day
+  if back[0]==6:
+    inc_ons=exp(5.02441)
+    inc_case=exp(12)
+    inc_inc=exp(7.66887)
+    car_car=exp(1.79717)
+    car_car_d=exp(2.22421)
+
+  if back[0]==5:
+    inc_ons=exp(5.02633)   # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
+    inc_case=exp(12)       # Coupling of incidence and CAR to case data (less than 1 means we think case data is "overdispersed" with a variance bigger than the count)
+    inc_inc=exp(7.6893)    # Coupling of incidence to iteself
+    car_car=exp(1.76775)   # Coupling of inverse-CAR to itself week-by-week
+    car_car_d=exp(2.21931) # Coupling of inverse-CAR to itself day-by-day
+
+  if back[0]==4:
+    # LL = 3998.237735112078
+    inc_ons=exp(5.04619)
+    inc_case=exp(12)
+    inc_inc=exp(7.62539)
+    car_car=exp(1.70608)
+    car_car_d=exp(2.23309)
 
 if order==3:
   inc_ons=exp(5.14238)
@@ -109,7 +125,7 @@ numk=len(poskern)
 #    i       I[i] = incidence variable 0<=i<N
 #  N+i       c[i] = CAR variable       0<=i<N
 
-def savevars(N,casedata,back,xx,low=None,high=None,name="temp"):
+def savevars(N,casedata,back,xx,low=None,high=None,growth=None,lowgrowth=None,highgrowth=None,name="temp"):
   xx=np.exp(xx)
   if low is not None: low=np.exp(low)
   if high is not None: high=np.exp(high)
@@ -120,25 +136,29 @@ def savevars(N,casedata,back,xx,low=None,high=None,name="temp"):
       else: print("          -",end="",file=fp)
       if high is not None: print("  %9.1f"%(high[i]*scale),end="",file=fp)
       else: print("          -",end="",file=fp)
+      if growth is not None and i<N-1: print("  %9.4f"%growth[i],end="",file=fp)
+      else: print("          -",end="",file=fp)
+      if lowgrowth is not None and i<N-1: print("  %9.4f"%lowgrowth[i],end="",file=fp)
+      else: print("          -",end="",file=fp)
+      if highgrowth is not None and i<N-1: print("  %9.4f"%highgrowth[i],end="",file=fp)
+      else: print("          -",end="",file=fp)
       print(file=fp)
   with open(name+"_CARcases",'w') as fp:
     for j in range(N):
       if startdate+j not in ignore:
         day=(startdate+j-monday)%7
-        i=j-back[day]
-        if i>=0:
-          print(startdate+i,"%7.4f"%(1/xx[N+j]),end="",file=fp)
-          if high is not None: print("  %7.4f"%(1/high[N+j]),end="",file=fp)
-          else: print("        -",end="",file=fp)
-          if low is not None: print("  %7.4f"%(1/low[N+j]),end="",file=fp)
-          else: print("        -",end="",file=fp)
-          if j<len(casedata): print("  %9.1f"%(xx[N+j]*casedata[j]*scale),end="",file=fp)
-          else: print("          -",end="",file=fp)
-          if j<len(casedata) and low is not None: print("  %7.4f"%(low[N+j]*casedata[j]*scale),end="",file=fp)
-          else: print("        -",end="",file=fp)
-          if j<len(casedata) and high is not None: print("  %7.4f"%(high[N+j]*casedata[j]*scale),end="",file=fp)
-          else: print("        -",end="",file=fp)
-          print(file=fp)
+        print(startdate+j,"%7.4f"%(1/xx[N+j]),end="",file=fp)
+        if high is not None: print("  %7.4f"%(1/high[N+j]),end="",file=fp)
+        else: print("        -",end="",file=fp)
+        if low is not None: print("  %7.4f"%(1/low[N+j]),end="",file=fp)
+        else: print("        -",end="",file=fp)
+        if j<len(casedata): print("  %9.1f"%(xx[N+j]*casedata[j]*scale),end="",file=fp)
+        else: print("          -",end="",file=fp)
+        if j<len(casedata) and low is not None: print("  %7.4f"%(low[N+j]*casedata[j]*scale),end="",file=fp)
+        else: print("        -",end="",file=fp)
+        if j<len(casedata) and high is not None: print("  %7.4f"%(high[N+j]*casedata[j]*scale),end="",file=fp)
+        else: print("        -",end="",file=fp)
+        print(file=fp)
 
 
 
@@ -685,11 +705,19 @@ if 1:
   A,B,C=getqform(N,xx0,casedata,onsprev,usedet=True)
   Cov=np.linalg.inv(A)
   Mean=xx0+Cov@B
+  Growth=Mean[1:N]-Mean[:N-1]
   # getcaseoutliers(casedata,N)
-  conf=0.5
+  conf=0.95
   print("Using %g%% credible interval"%(conf*100))
   nsamp=10000
   l=mvn.rvs(mean=Mean,cov=Cov,size=nsamp)
+  with open('tempsamples','w') as fp:
+    for i in range(N):
+      print(startdate+i,end="",file=fp)
+      for j in range(20):
+        print(" %9.1f"%(l[j][i]*scale),end="",file=fp)
+      print(file=fp)
+  growth_sample=l[:,1:N]-l[:,:N-1]
   l[:,:N]=np.maximum(l[:,:N],log(0.01))
   l[:,N:]=np.maximum(l[:,N:],log(1))
   np.ndarray.sort(l,axis=0)
@@ -697,8 +725,9 @@ if 1:
   i1=int(nsamp*(1+conf)/2)
   low=l[i0,:]
   high=l[i1,:]
-  savevars(N,casedata,back,Mean,low=low,high=high,name="England")
-  sqwe
+  np.ndarray.sort(growth_sample,axis=0)
+  savevars(N,casedata,back,Mean,low=l[i0,:],high=l[i1,:],growth=Growth,lowgrowth=growth_sample[i0,:],highgrowth=growth_sample[i1,:],name="England")
+  sys.exit(0)
   
 if 0:
   inc_ons=exp(5.0)
@@ -771,7 +800,7 @@ if 0:
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
-if 1:
+if 0:
   from scipy.optimize import minimize
   
   def NLL(params):
