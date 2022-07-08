@@ -91,17 +91,22 @@ def api_v2(req):
     raise RuntimeError('Request failed: '+response.text)
   return response
 
-def apiday():
+def UKdatetime():
   import pytz
   now=datetime.datetime.now(tz=pytz.timezone('Europe/London'))
-  # Dashboard is updated at 4pm UK time, so go back a day if time in London < 4pm
-  date=Date(now.strftime('%Y-%m-%d'))-int(now.hour<16)
+  return Date(now.strftime('%Y-%m-%d')),now
+
+def apiday():
+  import pytz
+  nowdate,nowtime=UKdatetime()
+  # Dashboard is updated at 4pm UK time, so go back a day if time in UK < 4pm
+  date=nowdate-int(nowtime.hour<16)
   
   # Intermediate case: return the final Friday update of 2022-07-01
   if date>="2022-07-01" and date<"2022-07-06": return Date("2022-07-01")
   
   # From 2022-07-04, dashboard is now only updated on Wednesdays, so after 2022-07-06, go back to previous Wednesday:
-  w=(now.weekday()-int(now.hour<16)-2)%7# Weekday relative to Wednesday=0
+  w=(nowtime.weekday()-int(nowtime.hour<16)-2)%7# Weekday relative to Wednesday=0
   return date-w
 
 def makegraph(title='A graph', data=[], mindate='0000-00-00', ylabel='', outfn='temp.png', extra=[], interval=604800, ranges=''):

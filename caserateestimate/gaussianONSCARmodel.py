@@ -269,10 +269,10 @@ def initialguess(N,onsprev,casedata,back):
   xx[N:]=c0
   return xx
 
-def getextdata(enddate=apiday(),prlev=0):
+def getextdata(enddate=UKdatetime()[0],prlev=0):
   enddate=Date(enddate)
   onsprev=getdailyprevalence(maxdate=enddate)
-  apireq=enddate
+  apireq=min(enddate,apiday())# Avoid excess api server requests by not trying to load api data beyond the official schedule (encoded in apiday())
   while 1:
     data=getcases_raw(apireq,location="England")
     if 'Bad' not in data: break
@@ -287,6 +287,7 @@ def getextdata(enddate=apiday(),prlev=0):
     if 'Bad' not in data0: completionlist.append((completionhistory,data0))
   if prlev>=2:
     print("Using api data as of",apireq,"and comparing to",' '.join(str(apireq-ch) for (ch,data0) in completionlist))
+    print("ONS prevalence data goes up to",onsprev[-1][0])
     print("Order",order)
     print()
   last=max(data)
@@ -679,7 +680,8 @@ if 0:
 if 1:
   seed(42)
   np.random.seed(42)
-  enddate=apiday()
+  #enddate=apiday()
+  enddate,nowtime=UKdatetime()
   prlev=2
   eps=1e-3
   
