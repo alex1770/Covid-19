@@ -4,6 +4,8 @@ from scipy.stats import norm, multivariate_normal as mvn
 import numpy as np
 from math import sqrt,floor,log
 
+np.set_printoptions(precision=6,suppress=True,linewidth=200)
+
 cachedir="cogukcachedir"
 datafile='cog_metadata.csv'
 Vnames=["BA.1","BA.1.1*","BA.2*"]# A name ending in '*' is considered as a prefix/ancestor, so BA.1* includes BA.1 and BA.1.17 though not BA.12
@@ -16,7 +18,7 @@ if len(sys.argv)>1: Vnames=sys.argv[1].split(',')
 if len(sys.argv)>2: mindate=Date(sys.argv[2])
 if len(sys.argv)>3: maxdate=Date(sys.argv[3])
 
-# Valid lab locations are UK, England, Northern_Ireland, Scotland and Wales
+# Valid lab locations here are UK, England, Northern_Ireland, Scotland and Wales
 # NB lab location isn't necessarily the same as sample location
 location="UK"
 
@@ -103,66 +105,71 @@ with open(datafn,'w') as fp:
     print(file=fp)
 print("Written data to",datafn)
 if VV==[]: print("No data points found");sys.exit(0)
-VV=np.transpose(VV)
+VV=np.array(VV)
 
-def bestfit(V0,V1):
-  # X   = i (day)
-  # Y   = log(V1(i)/V0(i))
-  # w_i = 1/(1/V0(i)+1/V1(i))
-  # Y ~ a+b*X
-  # L(a,b) = -(1/2)sum_i w_i(a+bx_i-y_i)^2
-  #      c = (a,b); can write L(c)
-  # L is quadratic in a,b so
-  # L'(c) = L'(0) + L''(0).c = r - M.c, where M and r are as below (known and constant, i.e. independent of a,b).
-  # If c* is defined by L'(c*)=0 then c*=M^{-1}r and L(x) = L(c*) - (1/2)(x-c*)^t.M.(x-c*). (BTW, writing C for M^{-1})
-  # To correct for dependence, we're going to deem the average residual to be equal to 1, which we're going to achieve by rescaling V0, V1.
-  # So if mult is the average residual, imagine doing: V0/=mult, V1/=mult, W/=mult, M/=mult, r/=mult, C*=mult, X, Y, a, b, c unchanged.
-  # Then M/mult is the corrected precision (inverse covariance) matrix = observed Fisher information,
-  # and (M/mult)^{-1} is the corrected "observed covariance" matrix, and bottom right of this is est variance of b, the gradient.
-  # Effectively our posterior is (a,b) ~ MVN(c*,C_new)
-  # We're interested in b (growth) and a/b (essentially the crossover point)
+off=0
+# Only start when variants get going (not used; mindate already does most of this, and the estimation should be robust for low or zero counts)
+# while off<len(VV) and (VV[off,:]<mincount).any(): off+=1
+NN=VV[off:,:]+1e-30
+n=len(NN)
+if n<2: raise RuntimeError("Can't find enough samples")
+# NN[timestep up to n][variant up to numv] = count
 
-  # Only start when variants get going
-  ok0=ok1=off=0
-  while off<len(V0):
-    if V0[off]>=mincount: ok0=1
-    if V1[off]>=mincount: ok1=1
-    if ok0 and ok1: break
-    off+=1
-  V0=np.array(V0[off:])+1e-30
-  V1=np.array(V1[off:])+1e-30
-  n=len(V0)
-  if n<2: return None
-  W=V0*V1/(V0+V1)
-  X=np.arange(n)
-  Y=np.log(V1/V0)
-  M=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
-  r=np.array([sum(W*Y),sum(W*X*Y)])
-  C=np.linalg.inv(M)
-  c=C@r
-  res=c[0]+c[1]*X-Y
-  mult=(W*res*res).sum()/n
-  mult=max(mult,1)
-  print("Residual multiplier = %.3f"%mult)
-  
-  yoff=c[0]-off*c[1]
-  
-  grad=c[1]
-  graderr=sqrt(mult*C[1,1])*zconf
+# Expand multinomial log probability about maximum:
+# log(prod_r p_r ^ n_r) = constant - (1/2)*[ sum_r n_r.x_r^2 - (sum_r n_r.x_r)^2/(sum_r n_r) ] + O(x_^3)
 
-  N=100000
-  test=mvn.rvs(mean=c,cov=C*mult,size=N)
-  t=sorted(-test[:,0]/test[:,1])
-  cross=off+t[int(N/2)]
-  crosslow,crosshigh=t[int(N*(1-conf)/2)],t[int(N*(1+conf)/2)]
-  crosserr=(crosshigh-crosslow)/2
+# Let t = timestep, r = variant number
+# Calculate, for each t, the quadratic form QF(x) = sum_r n_{t,r}x_{t,r}^2 - 1/(sum_r n_{t,r})*(sum_r n_{t,r}x_{t,r})^2
+# I.e., find coefficients Q_{t,r,s} such that QF(x) = sum_{r,s} Q_{t,r,s}x_{t,r.x_{t,s}
+Q=np.zeros([n,numv,numv])
+Q[:,np.arange(numv),np.arange(numv)]=NN
+Q-=NN[:,None,:]*NN[:,:,None]/NN.sum(axis=1)[:,None,None]
 
-  return grad,graderr,yoff,cross,crosserr
+# We're looking for p_{t,r} = exp(a_r+t*b_r)/(constant independent of r), where b_r is the growth of variant r, so 
+# substitute x_{t,r} = a_r + t*b_r - log(n_{t,r}), and sum over t.
+# Amalgamate indexes corresponding to a_r and b_s as one single k index of size 2*numv.
+# So (c_k) = (a_0,...,a_{numv-1},b_0,...,b_{numv-1}), and the quadratic (+linear) form is
+#    sum_{k,l} M_{k,l}.c_k.c_l - 2*sum_k R_k.c_k + constant, i.e. c^t.M.c - 2*R.c, with MLE(c) = M^{-1}R
+M=np.zeros([numv*2,numv*2])
+M[:numv,:numv]=Q.sum(axis=0)
+M[numv:,:numv]=M[:numv,numv:]=(Q*np.arange(n)[:,None,None]).sum(axis=0)
+M[numv:,numv:]=(Q*(np.arange(n)**2)[:,None,None]).sum(axis=0)
+
+# Add gauge-fixing terms to M, requiring the sum of a_r and sum of b_r both to be 0. (Other gauges are available.)
+scale=sqrt(NN.sum())# Some kind of size scale - result doesn't depend on this unless we change it by many orders of magnitude
+M[:numv,:numv]+=scale*np.ones([numv,numv])
+M[numv:,numv:]+=scale*np.ones([numv,numv])
+
+# Calculate linear term, R
+LN=np.log(NN)
+R=np.zeros(numv*2)
+R[:numv]=(Q*LN[:,:,None]).sum(axis=(0,1))
+R[numv:]=(Q*np.arange(n)[:,None,None]*LN[:,:,None]).sum(axis=(0,1))
+
+# Calculate provisional covariance matrix and MLE
+C=np.linalg.inv(M)
+c=C@R
+
+# Calculate residuals (res), and overdispersion factor (mult), given n*(numv-1) degrees of freedom
+# Effective covariance matrix, corrected for overdispersion, is then mult*C
+res=c[None,:numv]+np.arange(n)[:,None]*c[None,numv:]-LN
+mult=(Q*res[:,:,None]*res[:,None,:]).sum()/(n*(numv-1))
+print("Residual multiplier = %.3f"%mult)
+
+# Sampling is most convenient way of getting CrIs for crossover points
+numsamp=100000
+test=mvn.rvs(mean=c,cov=C*mult,size=numsamp)
 
 out=[None]
 for i in range(1,numv):
   print()
-  grad,graderr,yoff,cross,crosserr=bestfit(VV[0],VV[i])
+  grad=c[numv+i]-c[numv]
+  graderr=sqrt(mult*(C[numv+i,numv+i]+C[numv,numv]-C[numv,numv+i]-C[numv+i,numv]))*zconf
+  yoff=c[i]-c[0]-off*grad
+  t=sorted(-(test[:,i]-test[:,0])/(test[:,numv+i]-test[:,numv]))
+  cross=off+t[int(numsamp/2)]
+  crosslow,crosshigh=t[int(numsamp*(1-conf)/2)],t[int(numsamp*(1+conf)/2)]
+  crosserr=(crosshigh-crosslow)/2
   growthstr=f"Relative growth in {Vnames[i]} vs {Vnames[0]} of {grad:.3f} ({grad-graderr:.3f} - {grad+graderr:.3f}) per day"
   doubstr=f"Doubling of ratio {Vnames[i]}/{Vnames[0]} every {log(2)/grad:.1f} ({log(2)/(grad+graderr):.1f} - {log(2)/(grad-graderr):.1f}) days"
   print(growthstr)
