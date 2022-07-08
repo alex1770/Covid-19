@@ -7,7 +7,7 @@ from math import log
 mindate="2022-05-01"
 mincount=50
 allowsyn=False# Allow synonymous mutations
-maxleaves=20
+maxleaves=50
 
 lineages=None;numtoplin=None
 if len(sys.argv)>1: mindate=sys.argv[1]
@@ -122,23 +122,34 @@ class tree:
     if self.mutation==None: yield self;return
     for leaf in self.left.getleaves(): yield leaf
     for leaf in self.right.getleaves(): yield leaf
+  # Merge leaf into the tree self, returning a new allocated tree
   def merge(self,leaf):
     if self.mutation==None:
       tr=tree(self.indexlist+leaf.indexlist,self.parent)
-      return tr,tr.ent
+      return tr
     else:
-      l,ent_l=self.left.merge(leaf)
-      r,ent_r=self.right.merge(leaf)
+      l=self.left.merge(leaf)
+      r=self.right.merge(leaf)
       p=tree(l.indexlist+r.indexlist,self.parent)
       p.mutation=self.mutation
       p.left=l
       p.right=r
       l.parent=p
       r.parent=p
-      return p,ent_l+ent_r
+      return p
+  def check(self):
+    count,ent=getstats(self.indexlist)
+    if count!=self.count or abs(ent-self.ent)>1e-6: return False
+    if self.mutation==None:
+      return self.left==None and self.right==None
+    if self.left==None or self.right==None: return False
+    if self.left.parent!=self or self.right.parent!=self: return False
+    return self.left.check() and self.right.check()
+  def leafent(self):
+    return sum(leaf.ent for leaf in self.getleaves())
 
 tr=tree()
-print("Total ent %.1f"%sum(leaf.ent for leaf in tr.getleaves()))
+print("Total ent %.1f"%tr.leafent())
 tr.pr2();print()
 leaves=1
 while leaves<maxleaves:
@@ -155,13 +166,15 @@ while leaves<maxleaves:
   if best[1]==None: print("Couldn't improve worst node");break
   worst.split(best[1])
   leaves+=1
-  print("Total ent %.1f"%sum(leaf.ent for leaf in tr.getleaves()))
+  print("Total ent %.1f"%tr.leafent())
   tr.pr2();print();sys.stdout.flush()
 print()
 
 print("# Pruning")
+print()
 while leaves>1:
   best=(-1e10,)
+  if not tr.check(): raise RuntimeError("A")
   for leaf in tr.getleaves():
     par=leaf.parent
     assert par!=None
@@ -171,16 +184,18 @@ while leaves>1:
     else:
       go=par.right
       keep=par.left
-    ent0=sum(leaf.ent for leaf in par.getleaves())
-    mer,ent=keep.merge(go)
-    entchg=ent-ent0
-    if ent>best[0]: best=(ent,par,mer)
-    #print(ent,ent0,ent-ent0)
+    mer=keep.merge(go)
+    if not mer.check(): raise RuntimeError("B")
+    entchg=mer.leafent()-par.leafent()
+    if entchg>best[0]: best=(entchg,par,mer)
+  entchg,par,mer=best
   par.left=mer.left
   par.right=mer.right
   par.mutation=mer.mutation
   par.count=mer.count
   par.indexlist=mer.indexlist
+  if not par.check(): raise RuntimeError("C")
+  if not tr.check(): raise RuntimeError("D")
   leaves-=1
-  print("Total ent %.1f"%sum(leaf.ent for leaf in tr.getleaves()))
+  print("Total ent %.1f"%tr.leafent())
   tr.pr2();print();sys.stdout.flush()
