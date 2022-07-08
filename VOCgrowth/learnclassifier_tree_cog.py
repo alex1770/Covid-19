@@ -80,7 +80,7 @@ class tree:
     self.count,self.ent=getstats(self.indexlist)
   def pr(self,level=0,label="Top"):
     step=4
-    maxcol=16
+    maxcol=30
     nl=len(lineages)
     if label=="Top":
       for j in range(min(nl,maxcol)): print(" %9s"%lineages[j],end="")
@@ -96,7 +96,7 @@ class tree:
       self.left.pr(level+1,"+"+self.mutation)
       self.right.pr(level+1,"-"+self.mutation)
   def pr2(self,mlist=[]):
-    maxcol=16
+    maxcol=30
     nl=len(lineages)
     if mlist==[]:
       for j in range(min(nl,maxcol)): print(" %9s"%lineages[j],end="")
@@ -122,14 +122,15 @@ class tree:
     if self.mutation==None: yield self;return
     for leaf in self.left.getleaves(): yield leaf
     for leaf in self.right.getleaves(): yield leaf
-  # Merge leaf into the tree self, returning a new allocated tree
-  def merge(self,leaf):
+  # Merge indexlist into the tree self, returning a new allocated tree
+  def merge(self,indexlist):
     if self.mutation==None:
-      tr=tree(self.indexlist+leaf.indexlist,self.parent)
+      tr=tree(self.indexlist+indexlist,self.parent)
       return tr
     else:
-      l=self.left.merge(leaf)
-      r=self.right.merge(leaf)
+      left,right=splitindexlist(indexlist,self.mutation)
+      l=self.left.merge(left)
+      r=self.right.merge(right)
       p=tree(l.indexlist+r.indexlist,self.parent)
       p.mutation=self.mutation
       p.left=l
@@ -184,7 +185,7 @@ while leaves>1:
     else:
       go=par.right
       keep=par.left
-    mer=keep.merge(go)
+    mer=keep.merge(go.indexlist)
     if not mer.check(): raise RuntimeError("B")
     entchg=mer.leafent()-par.leafent()
     if entchg>best[0]: best=(entchg,par,mer)
@@ -192,6 +193,9 @@ while leaves>1:
   par.left=mer.left
   par.right=mer.right
   par.mutation=mer.mutation
+  if par.mutation is not None:
+    par.left.parent=par
+    par.right.parent=par
   par.count=mer.count
   par.indexlist=mer.indexlist
   if not par.check(): raise RuntimeError("C")
