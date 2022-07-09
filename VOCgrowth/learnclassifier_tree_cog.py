@@ -1,36 +1,50 @@
-from __future__ import print_function,division
 #!/usr/bin/pypy3
-import sys,os
+
+from __future__ import print_function,division
+# ^ To enable use of pypy when pypy3 isn't available
+
+import sys,os,argparse
 from stuff import *
 from math import log
 
-mindate="2022-05-01"
-mincount=50
-allowsyn=False# Allow synonymous mutations
-maxleaves=50
 
-lineages=None;numtoplin=None
-if len(sys.argv)>1: mindate=sys.argv[1]
-if len(sys.argv)>2:
-  try:
-    numtoplin=int(sys.argv[2])
-  except:
-    lineages=sys.argv[2].split(',')
-if len(sys.argv)>3: mincount=int(sys.argv[3])
-if len(sys.argv)>4: maxleaves=int(sys.argv[4])
+parser=argparse.ArgumentParser()
+parser.add_argument('-f', '--mindate',     default="2019-01-01", help='Min sample date of sequence')
+parser.add_argument('-t', '--maxdate',     default="9999-12-31", help='Max sample date of sequence')
+parser.add_argument('-m', '--mincount',    type=int, default=50, help="Min count of mutation: only consider mutations which have occurred at least this many times")
+parser.add_argument('-M', '--maxleaves',   type=int, default=50, help="Maximum number of leaves in the tree")
+parser.add_argument('-l', '--lineages',                          help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
+parser.add_argument('-n', '--numtoplin',   type=int, default=5,  help="Classify the most prevalent 'n' lineages (alternative to --lineages)")
+parser.add_argument('-s', '--synperm',     type=int, default=1,  help="0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonumous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
+args=parser.parse_args()
 
 infile='cog_metadata_sorted.csv';inputsorted=True
 
-print('# Using input file',infile)
-print("# From:",mindate)
-print("# Maxleaves:",maxleaves)
+print("Using input file",infile)
+print("From:",args.mindate)
+print("To:",args.maxdate)
+print("Mincount:",args.mincount)
+print("Maxleaves:",args.maxleaves)
+print("synSNP permissiveness:",args.synperm)
 
+# List of overlapping ORFs for which there is evidence that they encode
+# https://www.sciencedirect.com/science/article/pii/S0042682221000532
+# https://virological.org/t/sars-cov-2-dont-ignore-non-canonical-genes/740/2
+# 
+accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
+def oksyn(m,perm):
+  if perm==2 or m[:6]!="synSNP": return True
+  if perm==0: return False
+  loc=int(m[8:-1])
+  return loc in accessorygenes
+
+print("Reading sequence metadata")
 allm={}
 ml=[]
 numl={}
 for (date,lineage,mutations) in csvrows(infile,['sample_date','lineage',"mutations"]):
   if len(date)<10: continue
-  if date<mindate:
+  if date<args.mindate:
     if inputsorted: break
     continue
   if lineage=="" or lineage=="Unassigned": continue
@@ -38,19 +52,24 @@ for (date,lineage,mutations) in csvrows(infile,['sample_date','lineage',"mutatio
   ml.append((lineage,mutations))
   numl[lineage]=numl.get(lineage,0)+1
   
-print("Found",len(ml),"relevant entries since",mindate)
-okm=set(m for m in allm if m!="" and allm[m]>=mincount and (allowsyn or m[:3]!="syn"))
-print("Found",len(allm),"mutations, of which",len(okm),"are non-synonymous and "*(1-allowsyn)+"have occurred at least",mincount,"times")
-if lineages==None: lineages=list(set(lineage for (lineage,mutations) in ml))
-lineages.sort(key=lambda l: -numl[l])
-if numtoplin!=None: lineages=lineages[:numtoplin]
+print("Found",len(ml),"relevant entries since",args.mindate)
+okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and oksyn(m,args.synperm))
+print("Found",len(allm),"mutations, of which",len(okm),"pass synSNP permissiveness",args.synperm,"and have occurred at least",args.mincount,"times")
+if args.lineages==None:
+  lineages=list(set(lineage for (lineage,mutations) in ml))
+  lineages.sort(key=lambda l: -numl[l])
+  lineages=lineages[:args.numtoplin]
+else:
+  lineages=args.lineages.split(',')
+print("Classifying lineages:",lineages)
+print()
+
 mml=[]
 for (lineage,mutations) in ml:
   if lineage in lineages: i=lineages.index(lineage)
   else: i=len(lineages)
   mml.append((i,set(mutations.split('|')).intersection(okm)))
 lineages.append("Others")
-print("Made reduced list")
 
 def getstats(indexlist):
   nl=len(lineages)
@@ -153,7 +172,7 @@ tr=tree()
 print("Total ent %.1f"%tr.leafent())
 tr.pr2();print()
 leaves=1
-while leaves<maxleaves:
+while leaves<args.maxleaves:
   worst=None
   for leaf in tr.getleaves():
     if worst==None or leaf.ent<worst.ent: worst=leaf
@@ -171,7 +190,7 @@ while leaves<maxleaves:
   tr.pr2();print();sys.stdout.flush()
 print()
 
-print("# Pruning")
+print("Pruning")
 print()
 while leaves>1:
   best=(-1e10,)
