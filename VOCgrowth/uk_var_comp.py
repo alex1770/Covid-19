@@ -88,6 +88,7 @@ if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     data=pickle.load(fp)
 else:
+  Vnames_e=[expandlin(lin) for lin in Vnames]
   data={}
   for (name,date,p2,lin,mutations) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
@@ -96,21 +97,19 @@ else:
       if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
     mutations='|'+mutations+'|'
+    lin_e=expandlin(lin)
 
     # If the COG-UK lineage is Unassigned or a prefix of tree-rule lineage, then replace it with tree-rule lineage
     if date>="2022-01-01":
       mylin=treeclassify(mutations)
-      lin0=lin
-      lin_e=expandlin(lin)
       mylin_e=expandlin(mylin)
       if lin=="Unassigned" or lin_e==mylin_e[:len(lin_e)]: lin_e=mylin_e
-      lin=contractlin(lin_e)
-      #if lin!=lin0: print("XXX",lin0,mylin,"->",lin)
+      if mylin=="BA.2.75": lin_e=mylin_e# Special case pro tem, as COG-UK and GISAID wrongly classify this as BA.2.73
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     longest=-1;ind=-1
-    for (i,vn) in enumerate(Vnames):
-      if lin==vn or (vn[-1]=='*' and (lin+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
+    for (i,vn) in enumerate(Vnames_e):
+      if lin_e==vn or (vn[-1]=='*' and (lin_e+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
@@ -274,7 +273,7 @@ for i in range(numv):
 stats=np.array(stats)
 stats[:,4]=stats[:,4]/stats[:,4].sum()
 orders=stats.argsort(axis=0)
-types=[("Given order",0),("Growth rate relative to %s"%Vnames[0],1),("Relative prevalence over last %d days"%last,3),("Relative prevalence projected forward %d days"%proj,4)]
+types=[("original given order",0),("growth rate relative to %s"%Vnames[0],1),("relative prevalence over last %d days"%last,3),("relative prevalence projected forward %d days"%proj,4)]
 for desc,col in types:
   print("Ordered by",desc)
   print("        Lineage ---------Growth---------  Last%02ddays Proj%02ddays"%(last,proj))
