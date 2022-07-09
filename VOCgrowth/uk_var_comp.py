@@ -2,7 +2,8 @@ import sys,pickle,os
 from stuff import *
 from scipy.stats import norm, multivariate_normal as mvn
 import numpy as np
-from math import sqrt,floor,log
+from math import sqrt,floor,log,exp
+from aliases import aliases
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
@@ -29,7 +30,60 @@ zconf=norm.ppf((1+conf)/2)
 numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
 
-fn=os.path.join(cachedir,location+'_'+'_'.join(Vnames)+'__%s_%s_%s'%(mindate,maxdate,cogdate))
+def treeclassify(mutations):
+  if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: return "XE"
+  if '|S:F486V|' in mutations:
+    if '|N:P151S|' in mutations:
+      if '|S:V3G|' in mutations:
+        if '|S:I670V|' in mutations: return "BA.4.1.1"
+        else: return "BA.4.1"
+      else: return "BA.4"
+    else:
+      if '|synSNP:A28330G|' in mutations:
+        if '|orf1ab:T5451N|' in mutations:
+          return "BA.5.2"
+        else:
+          if '|orf1ab:V7086F|' in mutations: return "BF.1"
+          else: return "BA.5.2.1"
+      else:
+        if '|ORF10:L37F|' in mutations: return "BA.5.1"
+        else:
+          if '|orf1ab:M5557I|' in mutations: return "BE.1"
+          else:
+            if '|S:T76I|' in mutations: return "BA.5.5"
+            else:
+              if '|N:E136D|' in mutations: return "BA.5.3.1"
+              else:
+                if '|orf1ab:R119H|' in mutations: return "BA.5.3.2"
+                else: return "BA.5"
+  else:
+    if '|S:L452Q|' in mutations: return "BA.2.12.1"
+    elif '|orf1ab:N4060S|' in mutations: return "BA.2.75"
+    else:
+      # Identifying "pure" BA.2 is messy due to a proliferation of BA.2.*. This rule isn't perfect, but it won't much matter as the BA.2 bit is right and it will likely get extended by COG-UK classification.
+      if '|orf1ab:S135R|' in mutations and '|ORF3a:H78Y|' not in mutations and '|S:K417T|' not in mutations and '|ORF3a:L140F|' not in mutations and '|S:I68T|' not in mutations and '|orf1ab:T4175I|' not in mutations and '|S:S704L|' not in mutations and '|ORF3a:A31T|' not in mutations and '|orf1ab:S5360P|' not in mutations and '|S:F186S|' not in mutations: return "BA.2"
+  return "Unassigned"
+
+ecache={}
+def expandlin(lin):
+  if lin in ecache: return ecache[lin]
+  for (short,long) in aliases:
+    s=len(short)
+    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
+  ecache[lin]=lin
+  return lin
+
+ccache={}
+def contractlin(lin):
+  if lin in ccache: return ccache[lin]
+  lin=expandlin(lin)
+  for (short,long) in aliases:
+    l=len(long)
+    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
+  ccache[lin]=lin
+  return lin
+
+fn=os.path.join(cachedir,location+'_'+'_'.join(Vnames)+'__%s'%cogdate)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     data=pickle.load(fp)
@@ -43,27 +97,15 @@ else:
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
     mutations='|'+mutations+'|'
 
-    # Simple classifier for recent unassigned lineages
-    if lin=="Unassigned" and date>="2022-04-01":
-      if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: lin="XE"
-      if '|S:F486V|' in mutations:
-        if '|N:P151S|' in mutations: lin="BA.4"
-        else:
-          if '|ORF10:L37F|' in mutations: lin="BA.5.1"
-          else: lin="BA.5"
-      else:
-        if '|S:L452Q|' in mutations: lin="BA.2.12.1"
-        else:
-          # Identifying pure BA.2 is messy due to a proliferation of BA.2.*.
-          # This rule is around 99% correct in the period 2022-04-01 - 2022-07-01, and its accuracy won't matter much after that period as BA.2 is dying out:
-          if '|orf1ab:S135R|' in mutations and '|ORF3a:H78Y|' not in mutations and '|S:K417T|' not in mutations and '|ORF3a:L140F|' not in mutations and '|S:I68T|' not in mutations and '|orf1ab:T4175I|' not in mutations and '|S:S704L|' not in mutations and '|ORF3a:A31T|' not in mutations and '|orf1ab:S5360P|' not in mutations and '|S:F186S|' not in mutations: lin="BA.2"
-    
-    # Promote BA.2.12 -> BA.2.12.1 if not fully classified yet:
-    if lin=="BA.2.12":
-      if '|S:S704L|' in mutations and '|S:L452Q|' in mutations: lin="BA.2.12.1"
-    # Promote BA.5 -> BA.5.1 if not fully classified yet:
-    if lin=="BA.5":
-      if '|ORF10:L37F|' in mutations: lin="BA.5.1"
+    # If the COG-UK lineage is Unassigned or a prefix of tree-rule lineage, then replace it with tree-rule lineage
+    if date>="2022-01-01":
+      mylin=treeclassify(mutations)
+      lin0=lin
+      lin_e=expandlin(lin)
+      mylin_e=expandlin(mylin)
+      if lin=="Unassigned" or lin_e==mylin_e[:len(lin_e)]: lin_e=mylin_e
+      lin=contractlin(lin_e)
+      #if lin!=lin0: print("XXX",lin0,mylin,"->",lin)
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     longest=-1;ind=-1
@@ -72,7 +114,7 @@ else:
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
-    #if date<mindate: break
+    #if date<mindate: break# If we don't abort early, then can store a cache file that works for any date range
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
     pickle.dump(data,fp)
@@ -117,6 +159,7 @@ if n<2: raise RuntimeError("Can't find enough samples")
 
 # Expand multinomial log probability about maximum:
 # log(prod_r p_r ^ n_r) = constant - (1/2)*[ sum_r n_r.x_r^2 - (sum_r n_r.x_r)^2/(sum_r n_r) ] + O(x_^3)
+# Note that this is invariant under x_r -> x_r + constant
 
 # Let t = timestep, r = variant number
 # Calculate, for each t, the quadratic form QF(x) = sum_r n_{t,r}x_{t,r}^2 - 1/(sum_r n_{t,r})*(sum_r n_{t,r}x_{t,r})^2
@@ -136,7 +179,7 @@ M[numv:,:numv]=M[:numv,numv:]=(Q*np.arange(n)[:,None,None]).sum(axis=0)
 M[numv:,numv:]=(Q*(np.arange(n)**2)[:,None,None]).sum(axis=0)
 
 # Add gauge-fixing terms to M, requiring the sum of a_r and sum of b_r both to be 0. (Other gauges are available.)
-scale=sqrt(NN.sum())# Some kind of size scale - result doesn't depend on this unless we change it by many orders of magnitude
+scale=sqrt(NN.sum())# Some kind of size scale - result doesn't depend on this unless we change it by many orders of magnitude.
 M[:numv,:numv]+=scale*np.ones([numv,numv])
 M[numv:,numv:]+=scale*np.ones([numv,numv])
 
@@ -217,3 +260,26 @@ p.close()
 po.wait()
 print()
 print("Written graph to",graphfn)
+print()
+
+last=14
+proj=28
+NR=NN[-last:,:].sum(axis=0)
+PR=NR/NR.sum()
+stats=[]
+for i in range(numv):
+  grad=c[numv+i]-c[numv]
+  graderr=sqrt(mult*(C[numv+i,numv+i]+C[numv,numv]-C[numv,numv+i]-C[numv+i,numv]))*zconf
+  stats.append([i,grad,graderr,PR[i],PR[i]*exp(grad*proj)])
+stats=np.array(stats)
+stats[:,4]=stats[:,4]/stats[:,4].sum()
+orders=stats.argsort(axis=0)
+types=[("Given order",0),("Growth rate relative to %s"%Vnames[0],1),("Relative prevalence over last %d days"%last,3),("Relative prevalence projected forward %d days"%proj,4)]
+for desc,col in types:
+  print("Ordered by",desc)
+  print("        Lineage ---------Growth---------  Last%02ddays Proj%02ddays"%(last,proj))
+  for i in range(numv):
+    row=stats[orders[i,col],:]
+    print("%15s %6.3f (%6.3f - %6.3f)      %5.1f%%     %5.1f%%"%(Vnames[int(row[0])],row[1],row[1]-row[2],row[1]+row[2],row[3]*100,row[4]*100))
+  print()
+  
