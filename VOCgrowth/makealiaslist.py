@@ -24,7 +24,7 @@ for x in soup.find_all('tr'):
 l=list(d)
 l.sort(key=lambda x:-len(d[x]))
 
-with open("aliases.py","w") as fp:
+with open("variantaliases.py","w") as fp:
   print("aliases=[",file=fp)
   for x in l:
     print('("%s","%s"),'%(x,d[x]),file=fp)
