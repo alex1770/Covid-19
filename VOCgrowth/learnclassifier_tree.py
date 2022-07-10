@@ -9,22 +9,27 @@ from math import log
 
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-f', '--mindate',     default="2019-01-01", help='Min sample date of sequence')
-parser.add_argument('-t', '--maxdate',     default="9999-12-31", help='Max sample date of sequence')
+parser.add_argument('-f', '--mindate',     default="2019-01-01", help="Min sample date of sequence")
+parser.add_argument('-g', '--gisaid',      action="store_true",  help="Use GISAID data instead of COG-UK data")
+parser.add_argument('-t', '--maxdate',     default="9999-12-31", help="Max sample date of sequence")
 parser.add_argument('-m', '--mincount',    type=int, default=50, help="Min count of mutation: only consider mutations which have occurred at least this many times")
 parser.add_argument('-M', '--maxleaves',   type=int, default=50, help="Maximum number of leaves in the tree")
 parser.add_argument('-l', '--lineages',                          help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
 parser.add_argument('-n', '--numtoplin',   type=int, default=5,  help="Classify the most prevalent 'n' lineages (alternative to --lineages)")
-parser.add_argument('-s', '--synperm',     type=int, default=1,  help="0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonumous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
+parser.add_argument('-s', '--synperm',     type=int, default=1,  help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonumous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
 
-infile='cog_metadata_sorted.csv';inputsorted=True
+if args.gisaid:
+  infile='metadata_sorted.tsv';inputsorted=True
+else:
+  infile='cog_metadata_sorted.csv';inputsorted=True
 
 print("Using input file",infile)
 print("From:",args.mindate)
 print("To:",args.maxdate)
 print("Mincount:",args.mincount)
 print("Maxleaves:",args.maxleaves)
+print("Database:","GISAID" if args.gisaid else "COG-UK")
 print("synSNP permissiveness:",args.synperm)
 
 # List of overlapping ORFs for which there is evidence that they encode
@@ -33,28 +38,34 @@ print("synSNP permissiveness:",args.synperm)
 # 
 accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
 def oksyn(m,perm):
-  if perm==2 or m[:6]!="synSNP": return True
+  if args.gisaid or perm==2 or m[:6]!="synSNP": return True
   if perm==0: return False
   loc=int(m[8:-1])
   return loc in accessorygenes
+
+def mutationlist(mutations):
+  if args.gisaid: return mutations[1:-1].split(',')
+  else: return mutations.split('|')
 
 print("Reading sequence metadata")
 allm={}
 ml=[]
 numl={}
-for (date,lineage,mutations) in csvrows(infile,['sample_date','lineage',"mutations"]):
+if args.gisaid: keys=['Collection date','Pango lineage',"AA Substitutions"];sep='\t'
+else: keys=['sample_date','lineage',"mutations"];sep=','
+for (date,lineage,mutations) in csvrows(infile,keys,sep=sep):
   if len(date)<10: continue
   if date<args.mindate:
     if inputsorted: break
     continue
   if lineage=="" or lineage=="Unassigned": continue
-  for m in mutations.split('|'): allm[m]=allm.get(m,0)+1
+  for m in mutationlist(mutations): allm[m]=allm.get(m,0)+1
   ml.append((lineage,mutations))
   numl[lineage]=numl.get(lineage,0)+1
   
 print("Found",len(ml),"relevant entries since",args.mindate)
 okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and oksyn(m,args.synperm))
-print("Found",len(allm),"mutations, of which",len(okm),"pass synSNP permissiveness",args.synperm,"and have occurred at least",args.mincount,"times")
+print("Found",len(allm),"mutations, of which",len(okm),("pass synSNP permissiveness %d and"%args.synperm if not args.gisaid else ""),"have occurred at least",args.mincount,"times")
 if args.lineages==None:
   lineages=list(set(lineage for (lineage,mutations) in ml))
   lineages.sort(key=lambda l: -numl[l])
@@ -68,7 +79,7 @@ mml=[]
 for (lineage,mutations) in ml:
   if lineage in lineages: i=lineages.index(lineage)
   else: i=len(lineages)
-  mml.append((i,set(mutations.split('|')).intersection(okm)))
+  mml.append((i,set(mutationlist(mutations)).intersection(okm)))
 lineages.append("Others")
 
 def getstats(indexlist):
