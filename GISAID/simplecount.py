@@ -39,8 +39,8 @@ print('#Using input file',infile)
 print("#Country/region:",c)
 print("#From:",mindate)
 
-print('#Date             All        ',end='')
-for v in VV: print(' %10s'%v,end='')
+print('#Date              All        ',end='')
+for v in VV: print(' %11s'%v,end='')
 print('     Others')
 d={}
 for (date,loc,lineage,mutations) in csvrows(infile,['Collection date','Location','Pango lineage','AA Substitutions'],sep='\t'):
@@ -63,14 +63,14 @@ l=sorted(list(d))
 for date in l:
   print(date,end='')
   s=sum(d[date])
-  print(" %10d        "%s,end='')
+  print(" %11d        "%s,end='')
   for n in d[date]:
-    print(" %10d"%n,end='')
+    print(" %11d"%n,end='')
   print("   ",end='')
   #for n in d[date]:
   #  print("  %6.1f%%"%(n/s*100),end='')
   print()
 
-print('#Date             All        ',end='')
-for v in VV: print(' %10s'%v,end='')
-print('     Others')
+print('#Date              All        ',end='')
+for v in VV: print(' %11s'%v,end='')
+print('      Others')
