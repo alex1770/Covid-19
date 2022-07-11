@@ -9,13 +9,21 @@ if len(sys.argv)>1: c=sys.argv[1]
 if len(sys.argv)>2: mindate=sys.argv[2]
 if len(sys.argv)>3: var=sys.argv[3]
 
-infile='metadata.tsv';inputsorted=False
-t0=os.path.getmtime(infile)
+try:
+  t0=os.path.getmtime('metadata.tsv')
+except FileNotFoundError:
+  t0=-1e30
+
 try:
   t1=os.path.getmtime('metadata_sorted.tsv')
-  if t1>=t0: infile='metadata_sorted.tsv';inputsorted=True
-except:
-  pass
+except FileNotFoundError:
+  t1=-1e30
+
+if t0<0 and t1<0: raise FileNotFoundError("Could not find GISAID files metadata.tsv or metadata_sorted.tsv")
+if t1>=t0:
+  infile='metadata_sorted.tsv';inputsorted=True
+else:
+  infile='metadata.tsv';inputsorted=False
 
 print('Using input file',infile,file=sys.stderr)
 print("Country/region:",c,file=sys.stderr)
