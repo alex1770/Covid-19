@@ -230,7 +230,7 @@ number="they are" if numv>2 else "it is"
 cmd=f"""
 set xdata time
 set key left Left reverse
-set key spacing 2.5
+set key spacing 3.5
 fmt="%Y-%m-%d"
 set timefmt fmt
 set format x fmt
@@ -243,14 +243,15 @@ set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
 set ylabel "log_2(New {oneother} per day / New {Vnames[0]} per day)"
 
 set output "{graphfn}"
-set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nDescription/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
+set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nLarger blobs indicate more certainty (more samples). Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
-plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+1.2*numv-0.8,1.8)/log(2)}]"""
+plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.6,1.8)/log(2)}]"""
+#plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  cmd+=f"""  "{datafn}" u 1:((${numv+2*i})/log(2)):(min(${numv+2*i+1},20)/{ndates/5}) pt 5 lc {i} ps variable title "log_2(Daily {Vnames[i]} / Daily {Vnames[0]}); larger blobs indicate more certainty (more samples)", ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}", """
-cmd+=f""" 0 lw 3 title "{Vnames[0]} baseline" """
+  cmd+=f"""  "{datafn}" u 1:((${numv+2*i})/log(2)):(min(${numv+2*i+1},20)/{ndates/8.}) pt 5 lc {i} ps variable title "", ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}", """
+cmd+=f""" 0 lc 8 lw 3 title "{Vnames[0]} baseline" """
 
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
 p=po.stdin
