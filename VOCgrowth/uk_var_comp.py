@@ -269,7 +269,9 @@ set style fill transparent solid 0.25
 set style fill noborder
 
 set output "{graphfn}"
-set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nLarger blobs indicate more certainty (more samples). Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
+set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"""
+if args.plotpoints: cmd+="Larger blobs indicate more certainty (more samples). "
+cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
 plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.6,1.8)/log(2)}]"""
 #plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
