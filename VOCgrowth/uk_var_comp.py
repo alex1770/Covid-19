@@ -3,7 +3,7 @@ from stuff import *
 from scipy.stats import norm, multivariate_normal as mvn
 import numpy as np
 from math import sqrt,floor,log,exp
-from aliases import aliases
+from variantaliases import aliases
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
