@@ -14,6 +14,8 @@ mindate=Date('2000-01-01')
 maxdate=Date('2099-12-31')
 mincount=5
 conf=0.95
+plotdots=True
+plotbands=False
 
 if len(sys.argv)>1: Vnames=sys.argv[1].split(',')
 if len(sys.argv)>2: mindate=Date(sys.argv[2])
@@ -128,30 +130,14 @@ mindate=max(mindate,mindate1)
 maxdate=min(maxdate,maxdate1)
 print("Reduced date range:",mindate,"-",maxdate)
 
-datafn=location+'_%s'%('_'.join(Vnames))
 VV=[]
-visthr=2;ymin=ymax=0#50;ymax=-50
-with open(datafn,'w') as fp:
-  for date in Daterange(mindate,maxdate+1):
-    v=data.get(str(date),[0]*numv)
-    VV.append(v)
-    print(date,' '.join("%6d"%x for x in v),end='',file=fp)
-    for i in range(1,numv):
-      a,b=v[0]+1e-30,v[i]+1e-30
-      y=log(b/a)
-      prec=sqrt(a*b/(a+b))
-      print(" %12g %12g"%(y,prec),end='',file=fp)
-      if prec>visthr: ymin=min(ymin,y);ymax=max(ymax,y)
-      #if v[0]>0 and v[i]>0: ymin=min(ymin,y);ymax=max(ymax,y)
-    print(file=fp)
-print("Written data to",datafn)
+for date in Daterange(mindate,maxdate+1):
+  v=data.get(str(date),[0]*numv)
+  VV.append(v)
 if VV==[]: print("No data points found");sys.exit(0)
 VV=np.array(VV)
 
-off=0
-# Only start when variants get going (not used; mindate already does most of this, and the estimation should be robust for low or zero counts)
-# while off<len(VV) and (VV[off,:]<mincount).any(): off+=1
-NN=VV[off:,:]+1e-30
+NN=VV+1e-30
 n=len(NN)
 if n<2: raise RuntimeError("Can't find enough samples")
 # NN[timestep up to n][variant up to numv] = count
@@ -202,14 +188,24 @@ print("Residual multiplier = %.3f"%mult)
 numsamp=100000
 test=mvn.rvs(mean=c,cov=C*mult,size=numsamp)
 
+# Move to gauge where baseline offset and growth are 0
+test[:,:numv]-=test[:,0][:,None]
+test[:,numv:]-=test[:,numv][:,None]
+c[:numv]=c[:numv]-c[0]
+c[numv:]=c[numv:]-c[numv]
+C[:numv,:numv]=C[:numv,:numv]-C[0,:numv][None,:]-C[:numv,0][:,None]+C[0,0][None,None]
+C[:numv,numv:]=C[:numv,numv:]-C[0,numv:][None,:]-C[:numv,numv][:,None]+C[0,numv][None,None]
+C[numv:,:numv]=C[numv:,:numv]-C[numv,:numv][None,:]-C[numv:,0][:,None]+C[numv,0][None,None]
+C[numv:,numv:]=C[numv:,numv:]-C[numv,numv:][None,:]-C[numv:,numv][:,None]+C[numv,numv][None,None]
+
 out=[None]
 for i in range(1,numv):
   print()
-  grad=c[numv+i]-c[numv]
-  graderr=sqrt(mult*(C[numv+i,numv+i]+C[numv,numv]-C[numv,numv+i]-C[numv+i,numv]))*zconf
-  yoff=c[i]-c[0]-off*grad
-  t=sorted(-(test[:,i]-test[:,0])/(test[:,numv+i]-test[:,numv]))
-  cross=off+t[int(numsamp/2)]
+  grad=c[numv+i]
+  graderr=sqrt(mult*C[numv+i,numv+i])*zconf
+  yoff=c[i]
+  t=sorted(-test[:,i]/test[:,numv+i])
+  cross=t[int(numsamp/2)]
   crosslow,crosshigh=t[int(numsamp*(1-conf)/2)],t[int(numsamp*(1+conf)/2)]
   crosserr=(crosshigh-crosslow)/2
   growthstr=f"Relative growth in {Vnames[i]} vs {Vnames[0]} of {grad:.3f} ({grad-graderr:.3f} - {grad+graderr:.3f}) per day"
@@ -221,16 +217,38 @@ for i in range(1,numv):
   print(crossstr)
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
+datafn=location+'_%s'%('_'.join(Vnames))
+visthr=2;ymin=ymax=0;ymax=-50
+with open(datafn,'w') as fp:
+  for date in Daterange(mindate,maxdate+1):
+    t=date-mindate
+    v=VV[t]
+    print(date,' '.join("%6d"%x for x in v),end='',file=fp)
+    mu=c[:numv]+t*c[numv:]
+    var=mult*np.array([C[i,i]+2*t*C[i,numv+i]+t**2*C[numv+i,numv+i] for i in range(numv)])
+    q0=mu-zconf*np.sqrt(var)
+    q1=mu+zconf*np.sqrt(var)
+    for i in range(numv):
+      a,b=v[0]+1e-30,v[i]+1e-30
+      y=log(b/a)
+      prec=sqrt(a*b/(a+b))
+      print(" %12g %12g"%(y,prec),end='',file=fp)
+      if prec>visthr: ymin=min(ymin,y);ymax=max(ymax,y)
+      #if v[0]>0 and v[i]>0: ymin=min(ymin,y);ymax=max(ymax,y)
+      print(" %12g %12g"%(q0[i],q1[i]),end='',file=fp)
+    print(file=fp)
+print("Written data to",datafn)
+  
 graphfn=datafn+'.png'
 ndates=maxdate-mindate+1
-allothers=' and '.join(Vnames[1:])
+allothers=', '.join(Vnames[1:])
 oneother=' or '.join(Vnames[1:])
 number="they are" if numv>2 else "it is"
 
 cmd=f"""
 set xdata time
 set key left Left reverse
-set key spacing 3.5
+set key spacing 2.5
 fmt="%Y-%m-%d"
 set timefmt fmt
 set format x fmt
@@ -241,6 +259,8 @@ set grid xtics ytics lc rgb "#dddddd" lt 1
 set terminal pngcairo font "sans,13" size 1728,1296
 set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
 set ylabel "log_2(New {oneother} per day / New {Vnames[0]} per day)"
+set style fill transparent solid 0.25
+set style fill noborder
 
 set output "{graphfn}"
 set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\nLarger blobs indicate more certainty (more samples). Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
@@ -250,7 +270,9 @@ plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  cmd+=f"""  "{datafn}" u 1:((${numv+2*i})/log(2)):(min(${numv+2*i+1},20)/{ndates/8.}) pt 5 lc {i} ps variable title "", ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{doubstr}\\n{crossstr}", """
+  if plotdots: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i})/log(2)):(min(${numv+2+4*i+1},20)/{ndates/8.}) pt 5 lc {i} ps variable title "","""
+  if plotbands: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i+2})/log(2)):((${numv+2+4*i+3})/log(2)) w filledcurves lc {i} title "","""
+  cmd+=f""" ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{crossstr}", """
 cmd+=f""" 0 lc 8 lw 3 title "{Vnames[0]} baseline" """
 
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
@@ -268,8 +290,8 @@ NR=NN[-last:,:].sum(axis=0)
 PR=NR/NR.sum()
 stats=[]
 for i in range(numv):
-  grad=c[numv+i]-c[numv]
-  graderr=sqrt(mult*(C[numv+i,numv+i]+C[numv,numv]-C[numv,numv+i]-C[numv+i,numv]))*zconf
+  grad=c[numv+i]
+  graderr=sqrt(mult*C[numv+i,numv+i])*zconf
   stats.append([i,grad,graderr,PR[i],PR[i]*exp(grad*proj)])
 stats=np.array(stats)
 stats[:,4]=stats[:,4]/stats[:,4].sum()
