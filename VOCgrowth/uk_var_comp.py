@@ -241,7 +241,7 @@ with open(datafn,'w') as fp:
       print(" %12g %12g"%(y,prec),end='',file=fp)
       if prec>visthr: ymin=min(ymin,y);ymax=max(ymax,y)
       #if v[0]>0 and v[i]>0: ymin=min(ymin,y);ymax=max(ymax,y)
-      print(" %12g %12g"%(q0[i],q1[i]),end='',file=fp)
+      print(" %12g %12g"%(q0[i],q1[i]),end='',file=fp)# Would be better as a formula in gnuplot, then it's continuous and can be extrapolated (though the code would be more cluttered)
     print(file=fp)
 print("Written data to",datafn)
   
