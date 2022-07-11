@@ -3,7 +3,7 @@ from stuff import *
 import numpy as np
 from math import log,sqrt,floor
 
-mindate='2021-07-01'
+mindate='2022-05-01'
 maxdate='9999-12-31'
 
 minday=datetoday(mindate)
@@ -11,7 +11,7 @@ minmutcount=50# Ignore mutations that have occurred less than this often
 cachedir='cogdatacachedir'
 datafile='cog_metadata.csv'
 
-tim0=time.clock()
+tim0=time.process_time()
 datamtime=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile)).strftime('%Y-%m-%d-%H-%M-%S')
 id=datamtime+'_'+mindate+'_'+maxdate+'_'+str(minmutcount)
 fn=os.path.join(cachedir,id)
@@ -35,7 +35,7 @@ else:
     if mutcounts[mut]>=minmutcount:
       name2num[mut]=len(num2name)
       num2name.append(mut)
-  print("Found %d mutations of which %d occur at least %d times, in %.3fs"%(len(mutcounts),len(num2name),minmutcount,time.clock()-tim0))
+  print("Found %d mutations of which %d occur at least %d times, in %.3fs"%(len(mutcounts),len(num2name),minmutcount,time.process_time()-tim0))
   nmut=len(num2name)
   linelist=[]
   mutcounts=[mutcounts[mut] for mut in num2name]
@@ -108,7 +108,7 @@ def getgrowth(daycounts,mutdaycount,invert=False):
   # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
   # return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
-print("GH0",time.clock()-tim0)
+print("GH0",time.process_time()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-07-01'),maxday1=datetoday('2021-10-01'))
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,given={name2num['S:Y145H']})
@@ -131,9 +131,12 @@ print("GH0",time.clock()-tim0)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-08-01'),notlineage='AY.4.2')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-12-25'),lineage='BA.1')
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-12-25'),lineage='BA.1',given={name2num['S:N440K']})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-17'),lineage='BA.1')
-daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2021-01-17'),lineage='BA.2')
-print("GH1",time.clock()-tim0)
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2022-01-17'),lineage='BA.1')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2022-01-17'),lineage='BA.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2022-03-01'),lineage='BA.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2022-03-01'))
+daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=datetoday('2022-06-01'),given={name2num['S:F486V']})
+print("GH1",time.process_time()-tim0)
 
 if 1:
   growth={};tv={}
