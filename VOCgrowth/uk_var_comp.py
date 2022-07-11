@@ -1,4 +1,4 @@
-import sys,pickle,os
+import sys,pickle,os,argparse
 from stuff import *
 from scipy.stats import norm, multivariate_normal as mvn
 import numpy as np
@@ -14,12 +14,18 @@ mindate=Date('2000-01-01')
 maxdate=Date('2099-12-31')
 mincount=5
 conf=0.95
-plotdots=True
-plotbands=False
 
-if len(sys.argv)>1: Vnames=sys.argv[1].split(',')
-if len(sys.argv)>2: mindate=Date(sys.argv[2])
-if len(sys.argv)>3: maxdate=Date(sys.argv[3])
+parser=argparse.ArgumentParser()
+parser.add_argument('-f', '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
+parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
+parser.add_argument('-l', '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
+parser.add_argument('-p', '--plotpoints',  action="store_true",   help="Whether to plot points corresponding to log(num(variant)/num(base variant))")
+parser.add_argument('-b', '--plotbands',   action="store_true",   help="Whether to plot confidence bands around best-fit lines")
+args=parser.parse_args()
+
+Vnames=args.lineages.split(',')
+mindate=Date(args.mindate)
+maxdate=Date(args.maxdate)
 
 # Valid lab locations here are UK, England, Northern_Ireland, Scotland and Wales
 # NB lab location isn't necessarily the same as sample location
@@ -270,8 +276,8 @@ plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  if plotdots: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i})/log(2)):(min(${numv+2+4*i+1},20)/{ndates/8.}) pt 5 lc {i} ps variable title "","""
-  if plotbands: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i+2})/log(2)):((${numv+2+4*i+3})/log(2)) w filledcurves lc {i} title "","""
+  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i})/log(2)):(min(${numv+2+4*i+1},20)/{ndates/8.}) pt 5 lc {i} ps variable title "","""
+  if args.plotbands: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i+2})/log(2)):((${numv+2+4*i+3})/log(2)) w filledcurves lc {i} title "","""
   cmd+=f""" ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{crossstr}", """
 cmd+=f""" 0 lc 8 lw 3 title "{Vnames[0]} baseline" """
 
