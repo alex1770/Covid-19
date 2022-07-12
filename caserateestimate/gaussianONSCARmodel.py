@@ -377,14 +377,14 @@ def directeval(xx,casedata,onsprev,prlev=0):
   return Qtot
   
 # Returns quadratic+linear+constant form in dx (which is in log space), where xx = xx0 + dx.
-# I.e., returns A, B, c such that
-# Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + c
+# I.e., returns A, B, C such that
+# Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + C
 #
 # casedata and onsprev can be null, which means it won't use the "external" terms.
 def getqform(N,xx0,casedata,onsprev,usedet=False):
   
   # We're going to use two different origins before combining them into A, B, C
-  # So dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C
+  # So dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C'
 
   fullhessian=True
   
@@ -507,8 +507,8 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
   #print("AAA")
   return A, B0+B1-yy, xx0@yy-2*B1@xx0+C
 
-def getprob(enddate=apiday(),prlev=0,eps=1e-3):
-  
+def getprob(enddate=UKdatetime()[0],prlev=0,eps=1e-3):
+
   N,casedata,onsprev=getextdata(enddate,prlev)
   ex=initialguess(N,onsprev,casedata,back)
   xx=np.log(ex)
@@ -538,10 +538,6 @@ def getprob(enddate=apiday(),prlev=0,eps=1e-3):
   xx0=xx
   A,B,C=getqform(N,xx0,None,None,usedet=True)
   dx=np.linalg.solve(A,B)
-  #print("BBB      B",B[-20:])
-  #print("BBB     dx",dx[-20:])
-  #print("BBB    xx0",xx0[-20:])
-  #print("BBB xx0+dx",(xx0+dx)[-20:])
   denom=(1/2)*B@dx-(1/2)*C
   #print((1/2)*B@dx,-(1/2)*C)
 
@@ -554,19 +550,19 @@ if 0:
   #seed(42)
   
   while 1:
-    inc_ons=exp(-3)
-    inc_case=exp(3+rnd()*0.2)
-    inc_inc=exp(10.9+rnd()*0.2)
-    car_car=exp(6+rnd()*0.5)
-    car_car_d=exp(2+rnd()*2)
-  
+    inc_ons=exp(5+2*rnd())
+    inc_case=exp(8+2*rnd())
+    inc_inc=exp(8+2*rnd())
+    car_car=exp(2+rnd())
+    car_car_d=exp(2+rnd())
+    
     casedata0,xx0,A0,b0,c0=getest(prlev=0)
     N0=xx0.shape[0]//2
     # Interleave to combine incidence and CAR variables so that indices are in date order
     xx0i=np.zeros(2*N0)
     xx0i[0::2]=xx0[:N0]
     xx0i[1::2]=xx0[N0:]
-  
+    
     now=apiday()
     numcheck=30
     chrange=7
@@ -677,10 +673,9 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 1:
+if 0:
   seed(42)
   np.random.seed(42)
-  #enddate=apiday()
   enddate,nowtime=UKdatetime()
   prlev=2
   eps=1e-3
@@ -689,7 +684,7 @@ if 1:
   ex=initialguess(N,onsprev,casedata,back)
   xx=np.log(ex)
   #savevars(N,casedata,back,xx,name="tempinit")
-
+  
   if prlev>=2: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
   nits=20
   for it in range(nits):
@@ -705,6 +700,7 @@ if 1:
   
   xx0=xx
   A,B,C=getqform(N,xx0,casedata,onsprev,usedet=True)
+  #A1,B1,C1,mean1,LL=getprob(enddate,prlev)
   Cov=np.linalg.inv(A)
   Mean=xx0+Cov@B
   Growth=Mean[1:N]-Mean[:N-1]
@@ -802,7 +798,7 @@ if 0:
     print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
     sys.stdout.flush()
 
-if 0:
+if 1:
   from scipy.optimize import minimize
   
   def NLL(params):
