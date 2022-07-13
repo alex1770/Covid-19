@@ -264,10 +264,10 @@ def initialguess(N,onsprev,casedata,back):
   # Initial inverse-CAR guess
   c0=np.maximum(np.linalg.solve(A,b),1)
   
-  xx=np.zeros(N*2)
-  xx[:N]=inc0
-  xx[N:]=c0
-  return xx
+  ex=np.zeros(N*2)
+  ex[:N]=inc0
+  ex[N:]=c0
+  return np.log(ex)
 
 def getextdata(enddate=UKdatetime()[0],prlev=0):
   enddate=Date(enddate)
@@ -497,21 +497,76 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
   #                         = dx^t.(A0+A1).dx - 2(B0+B1-A1.xx0)^t.dx) + (xx0^t.A1.xx0-2B1^t.xx0+C)
   yy=A1@xx0
   A=A0+A1
+  B=B0+B1-yy
+  C+=xx0@yy-2*B1@xx0
   if usedet:
     sld=np.linalg.slogdet(A)
     if sld[0]<1: print("Error: Hessian not positive definite",file=sys.stderr)
     C+=sld[1]
-  #print("AAA B0",B0[-20:])
-  #print("AAA B1",B1[-20:])
-  #print("AAA yy",yy[-20:])
-  #print("AAA")
-  return A, B0+B1-yy, xx0@yy-2*B1@xx0+C
+  return A,B,C
 
+# x=internal (variables which could be interpreted as infection rates and CAR)
+# y=external (case counts, ONS survey prevalence)
+#
+# For given y, find x0, quadratic form Q and constant C  (i.e., x0, Q, c will depend on y in a complicated way) such that
+# 
+# f(x)*g(x,y)*exp(L(x)) = exp(-(1/2)(Q(x-x0) + C) + O((x-x0)^3) )
+#
+# L(x) is linear+constant in x, with coefficients depending only on coupling constants (not on y).
+# Integral_y g(x,y)dy = exp(-L(x))
+# Integral_x f(x)dx = exp(-D/2), D exactly calculable.
+#
+# Then:
+# The integral over x of f(x)g(x,y)exp(L(x)) is approximated by exp(-C/2)det(Q)^{-1/2}
+# The integral over y of f(x)g(x,y)exp(L(x)) is equal to f(x)
+# The integral over x,y of f(x)g(x,y)exp(L(x)) is equal to exp(-D/2)
+# So exp((D-C)/2)det(Q)^{-1/2} is (approx) a pdf in y (integrates to 1 over y).
+#
+# Interpretation:
+# P(x)dx = f(x)exp(D/2)dx      is a prob density over the internal variables x (functions of infection rate, CAR)
+# P(y|x)dy = g(x,y)exp(L(x))dy is a prob density over external variables y (case counts, ONS prev)
+# P(y)dy = exp((D-C)/2)det(Q)^{-1/2}dy
+# P(x,y)dxdy = f(x)g(x,y)exp(D/2+L(x))dxdy ~= exp((-1/2)(Q(x-x0)+C-D)) is joint prob density over x, y.
+# P(x|y)dx = exp((-1/2)Q(x-x0))det(Q)^{1/2}dy
+# 
+# For a given y, the marginal distribution over x is approx f(x)g(x,y)exp(L(x)+(1/2)(C+logdet(Q)))dx
+#                                          which is approx exp(-(1/2)(Q(x-x0) - logdet(Q)))
+#                                          I.e., x ~ N(x0,Q^{-1})
+#
+def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,eps=1e-3):
+
+  if hint is not None and len(hint)>=N: xx=hint[:N]
+  else:
+    if onsprev is not None and casedata is not None:
+      xx=initialguess(N,onsprev,casedata,back)
+    else:
+      xx=np.zeros(N)
+  if prlev>=2: ex=np.exp(xx);print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
+  
+  if casedata is not None or onsprev is not None:
+    nits=20
+    for it in range(nits):
+      if prlev>=1: print("Iteration(numerator)",it)
+      xx0=xx
+      A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
+      xx=xx0+np.linalg.solve(A,B)
+      xx[:N]=np.maximum(xx[:N],log(0.01))
+      xx[N:]=np.maximum(xx[N:],0)
+      if prlev>=2: ex=np.exp(xx);print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
+      if np.abs(xx-xx0).max()<eps: break
+    else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
+    
+  # Only need one "iteration" required if casedata and onsprev not present, because then LL is exactly quadratic
+  xx0=xx
+  A,B,C=getqform(N,xx0,None,None,usedet=False)
+  dx=np.linalg.solve(A,B)
+  return xx0+dx,A,C-B@dx
+  
+  
 def getprob(enddate=UKdatetime()[0],prlev=0,eps=1e-3):
 
   N,casedata,onsprev=getextdata(enddate,prlev)
-  ex=initialguess(N,onsprev,casedata,back)
-  xx=np.log(ex)
+  xx=initialguess(N,onsprev,casedata,back)
   #savevars(N,casedata,back,xx,name="tempinit")
 
   if prlev>=2: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
@@ -535,6 +590,7 @@ def getprob(enddate=UKdatetime()[0],prlev=0,eps=1e-3):
   
   #savevars(N,casedata,back,xx,name="England")
 
+  # Only need one "iteration" for the denominator, because it is actually quadratic
   xx0=xx
   A,B,C=getqform(N,xx0,None,None,usedet=True)
   dx=np.linalg.solve(A,B)
@@ -681,11 +737,10 @@ if 0:
   eps=1e-3
   
   N,casedata,onsprev=getextdata(enddate,prlev)
-  ex=initialguess(N,onsprev,casedata,back)
-  xx=np.log(ex)
+  xx=initialguess(N,onsprev,casedata,back)
   #savevars(N,casedata,back,xx,name="tempinit")
   
-  if prlev>=2: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
+  if prlev>=2: ex=np.exp(xx);print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
   nits=20
   for it in range(nits):
     if prlev>=1: print("Iteration(numerator)",it)
@@ -830,8 +885,7 @@ if 0:
 
   enddate=apiday()
   N,casedata,onsprev=getextdata(enddate)
-  ex=initialguess(N,onsprev,casedata,back)
-  xx=np.log(ex)
+  xx=initialguess(N,onsprev,casedata,back)
 
   #casedata=None
   #onsprev=None
