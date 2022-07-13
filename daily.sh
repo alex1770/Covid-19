@@ -6,21 +6,16 @@ date
 
 set -e
 
-bash regionalcasesbyage.sh
+#bash regionalcasesbyage.sh
 
 (cd COG-UK; bash update.sh)
 (
     cd VOCgrowth
-    #python3 uk_var_comp.py BA.1+,BA.1.1+,BA.2+
-    #python3 uk_var_comp.py BA.1+,BA.2+
-    #python3 uk_var_comp.py BA.1.1+,BA.2+
-    #python3 uk_var_comp.py BA.1+,BA.1.1+
-    #python3 uk_var_comp.py BA.2,BA.2.1,BA.2.3
-    python3 uk_var_comp.py BA.2,BA.2.12.1
-    python3 uk_var_comp.py BA.2,BA.4,BA.5
-    python3 uk_var_comp.py BA.2,XE
-    python3 uk_var_comp.py BA.2,BA.2.18
-    python3 uk_var_comp.py BA.2,BA.2.23
+    #python3 uk_var_comp.py BA.2,BA.2.12.1
+    #python3 uk_var_comp.py BA.2,BA.4,BA.5,BA.5.1
+    #python3 uk_var_comp.py -f 2022-05-01 -p -l 'BA.2*,BA.2.12.1,BA.4*,BA.5*'
+    python3 uk_var_comp.py -f 2022-05-01 -p -l 'BA.5*,BA.2.12.1,BA.4*'
+    python3 uk_var_comp.py -f 2022-06-01 -b -l 'BA.5,BA.4,BE.1,BA.5.2,BA.5.2.1,BA.5.1'
 )
 
 make
@@ -31,13 +26,15 @@ python3 maketrend.py
 #(cd Traffic; python3 parsetraffic.py; python3 maketrafficgraph.py; convert trafficgraph.png -resize '1200x320!' trafficgraph.small.png)
 
 bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.2_BA.2.12.1.png VOCgrowth/UK_BA.2_XE.png VOCgrowth/UK_BA.2_BA.2.18.png VOCgrowth/UK_BA.2_BA.2.23.png VOCgrowth/UK_BA.2_BA.4_BA.5.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5*_BA.2.12.1_BA.4*.png VOCgrowth/UK_BA.5_BA.4_BE.1_BA.5.2_BA.5.2.1_BA.5.1.png'
+set -o noglob
 pics=$bigpics
 for x in $bigpics; do
     small=${x/.png/.small.png}
     pics="$pics $small"
-    convert $x -resize 47% $small
+    cat $x | convert - -resize 47% - > $small
 done
+set +o noglob
 
 rsync -pt worldometer.csv $pics sonorous@sonorouschocolate.com:public_html/covid19/extdata
 
