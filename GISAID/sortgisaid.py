@@ -2,7 +2,7 @@
 # Memory requirement: approx 2.9 * (input file size) for typical GISAID file as of 2022-04-07
 #
 # Example usage:
-# tar xf metadata_tsv_2022_07_07.tar.xz metadata.csv -O | python3 sortgisaid.py > metadata_sorted.tsv
+# tar xf metadata_tsv_2022_07_07.tar.xz metadata.tsv -O | python3 sortgisaid.py > metadata_sorted.tsv
 
 import csv,sys
 
