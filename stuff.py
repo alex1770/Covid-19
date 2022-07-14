@@ -401,7 +401,7 @@ def getcases_raw(pubday,location="England"):
       for item in data:
         td[item["date"]]=int(item["newCasesBySpecimenDate"])
         td["Comment"]="newCasesBySpecimenDate"
-      print("Retrieved newCasesBySpecimenDate api data at",date,"for",location)
+      print("Retrieved newCasesBySpecimenDate api data published on",date,"for",location)
     with open(fn,'w') as fp: json.dump(td,fp,indent=2)
   if "Comment" in td: del td["Comment"]
   if "Bad" in td: return td

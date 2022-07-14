@@ -505,16 +505,19 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
     C+=sld[1]
   return A,B,C
 
-# x=internal (variables which could be interpreted as infection rates and CAR)
+# For input y, return {x0, quadratic form Q, constant c} such that
+# P(x,y) = exp(-(1/2)(Q(x-x0) + c) + O((x-x0)^3) )
+#
+# x=internal (variables which could be interpreted as log infection rates and -log CAR)
 # y=external (case counts, ONS survey prevalence)
 #
-# For given y, find x0, quadratic form Q and constant C  (i.e., x0, Q, c will depend on y in a complicated way) such that
-# 
-# f(x)*g(x,y)*exp(L(x)) = exp(-(1/2)(Q(x-x0) + C) + O((x-x0)^3) )
+# Note that the returned function is not integrated wrt x, so to get integral, you need to do exp(-(1/2)c)*det(Q)^{-1/2}
+# Note that x0, Q, c will depend on y in a complicated way
 #
+# P(x,y) = f(x)*g(x,y)*exp(L(x))/(integral_x f(x)dx)
 # L(x) is linear+constant in x, with coefficients depending only on coupling constants (not on y).
 # Integral_y g(x,y)dy = exp(-L(x))
-# Integral_x f(x)dx = exp(-D/2), D exactly calculable.
+# Integral_x f(x)dx = exp(-D/2), D exactly calculable (depends on internal coupling constants).
 #
 # Then:
 # The integral over x of f(x)g(x,y)exp(L(x)) is approximated by exp(-C/2)det(Q)^{-1/2}
@@ -525,15 +528,18 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
 # Interpretation:
 # P(x)dx = f(x)exp(D/2)dx      is a prob density over the internal variables x (functions of infection rate, CAR)
 # P(y|x)dy = g(x,y)exp(L(x))dy is a prob density over external variables y (case counts, ONS prev)
-# P(y)dy = exp((D-C)/2)det(Q)^{-1/2}dy
-# P(x,y)dxdy = f(x)g(x,y)exp(D/2+L(x))dxdy ~= exp((-1/2)(Q(x-x0)+C-D)) is joint prob density over x, y.
-# P(x|y)dx = exp((-1/2)Q(x-x0))det(Q)^{1/2}dy
-# 
-# For a given y, the marginal distribution over x is approx f(x)g(x,y)exp(L(x)+(1/2)(C+logdet(Q)))dx
-#                                          which is approx exp(-(1/2)(Q(x-x0) - logdet(Q)))
-#                                          I.e., x ~ N(x0,Q^{-1})
+# P(x,y)dxdy = P(x)dxP(y|x)dy = f(x)g(x,y)exp(D/2+L(x))dxdy ~= exp((-1/2)(Q(x-x0)+C-D)) is joint prob density over x, y.
+# P(y)dy = integral_x P(x,y)dxdy ~= exp((-1/2)(C-D))det(Q)^{-1/2}dy
+# P(x|y)dx = exp((-1/2)Q(x-x0))det(Q)^{1/2}dy  (x~N(x0,Q^{-1}))
 #
-def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,eps=1e-3):
+# Note that functions of x are returned as (quadratic) functions, but functions of y are evaluated (returned as numbers)
+#
+#                                                          Requires
+# P(y) is used for (MLE training)                          Q, c
+# integral_{subset of x} P(x|y)dx (lookahead training)     Q, x0, c
+# P(x|y) is used for simulation                            Q, x0
+#
+def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,eps=1e-6):
 
   if hint is not None and len(hint)>=N: xx=hint[:N]
   else:
@@ -549,55 +555,34 @@ def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,ep
       if prlev>=1: print("Iteration(numerator)",it)
       xx0=xx
       A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
-      xx=xx0+np.linalg.solve(A,B)
+      dx=np.linalg.solve(A,B)
+      xx=xx0+dx
       xx[:N]=np.maximum(xx[:N],log(0.01))
       xx[N:]=np.maximum(xx[N:],0)
       if prlev>=2: ex=np.exp(xx);print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
       if np.abs(xx-xx0).max()<eps: break
     else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
+  C-=B@dx
+  # xx, A, 0, C
     
   # Only need one "iteration" required if casedata and onsprev not present, because then LL is exactly quadratic
-  xx0=xx
-  A,B,C=getqform(N,xx0,None,None,usedet=False)
-  dx=np.linalg.solve(A,B)
-  return xx0+dx,A,C-B@dx
+  A1,B1,C1=getqform(N,xx,None,None,usedet=False)
+  dx1=np.linalg.solve(A1,B1)
+  C1-=B1@dx1
+  sld=np.linalg.slogdet(A1)
+  if sld[0]<1: print("Error: Hessian not positive definite",file=sys.stderr)
+  C1+=sld[1]
+  # xx+dx1, A1, 0, C1
   
+  return xx,A,C-C1
   
-def getprob(enddate=UKdatetime()[0],prlev=0,eps=1e-3):
-
+def getprob(enddate=UKdatetime()[0],prlev=0,eps=1e-6):
   N,casedata,onsprev=getextdata(enddate,prlev)
-  xx=initialguess(N,onsprev,casedata,back)
-  #savevars(N,casedata,back,xx,name="tempinit")
-
-  if prlev>=2: print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
-  nits=20
-  for it in range(nits):
-    if prlev>=1: print("Iteration(numerator)",it)
-    xx0=xx
-    A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
-    xx=xx0+np.linalg.solve(A,B)
-    xx[:N]=np.maximum(xx[:N],log(0.01))
-    xx[N:]=np.maximum(xx[N:],0)
-    if prlev>=2: ex=np.exp(xx);print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
-    if np.abs(xx-xx0).max()<eps: break
-  else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
-  
-  xx0=xx
-  A,B,C=getqform(N,xx0,casedata,onsprev,usedet=True)
-  dx=np.linalg.solve(A,B)
-  num=(1/2)*B@dx-(1/2)*C
-  #print((1/2)*B@dx,-(1/2)*C)
-  
-  #savevars(N,casedata,back,xx,name="England")
-
-  # Only need one "iteration" for the denominator, because it is actually quadratic
-  xx0=xx
-  A,B,C=getqform(N,xx0,None,None,usedet=True)
-  dx=np.linalg.solve(A,B)
-  denom=(1/2)*B@dx-(1/2)*C
-  #print((1/2)*B@dx,-(1/2)*C)
-
-  return num-denom
+  xx0,A,C=getjointprob(N,casedata,onsprev,enddate,prlev=prlev,eps=eps)
+  sld=np.linalg.slogdet(A)
+  if sld[0]<1: print("Error: Hessian not positive definite",file=sys.stderr)
+  C+=sld[1]
+  return -C/2
 
 if 0:
   # Optimising coupling parameters for consistency - version with natural model
@@ -729,35 +714,17 @@ if 0:
   lam=tresid/dof
   print("Overall residual factor =",lam)
     
-if 0:
+if 1:
   seed(42)
   np.random.seed(42)
   enddate,nowtime=UKdatetime()
   prlev=2
-  eps=1e-3
   
   N,casedata,onsprev=getextdata(enddate,prlev)
-  xx=initialguess(N,onsprev,casedata,back)
-  #savevars(N,casedata,back,xx,name="tempinit")
-  
-  if prlev>=2: ex=np.exp(xx);print("%12s "%"-",ex[N-10:N],ex[2*N-10:])
-  nits=20
-  for it in range(nits):
-    if prlev>=1: print("Iteration(numerator)",it)
-    xx0=xx
-    A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
-    xx=xx0+np.linalg.solve(A,B)
-    xx[:N]=np.maximum(xx[:N],log(0.01))
-    xx[N:]=np.maximum(xx[N:],0)
-    if prlev>=2: ex=np.exp(xx);print("%12g "%(np.abs(xx-xx0).max()),ex[N-10:N],ex[2*N-10:])
-    if np.abs(xx-xx0).max()<eps: break
-  else: print("Didn't converge in time: error %g after %d iterations"%(np.abs(xx-xx0).max(),nits),file=sys.stderr)
-  
-  xx0=xx
-  A,B,C=getqform(N,xx0,casedata,onsprev,usedet=True)
-  #A1,B1,C1,mean1,LL=getprob(enddate,prlev)
+
+  Mean,A,C=getjointprob(N,casedata,onsprev,enddate,prlev=prlev)
   Cov=np.linalg.inv(A)
-  Mean=xx0+Cov@B
+  
   Growth=Mean[1:N]-Mean[:N-1]
   # getcaseoutliers(casedata,N)
   conf=0.95
