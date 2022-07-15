@@ -44,11 +44,11 @@ if order==1:
 
 if order==2:
   if back[0]==6:
-    inc_ons=exp(5.02441)
+    inc_ons=exp(5.357)
     inc_case=exp(12)
-    inc_inc=exp(7.66887)
-    car_car=exp(1.79717)
-    car_car_d=exp(2.22421)
+    inc_inc=exp(7.649)
+    car_car=exp(1.870)
+    car_car_d=exp(2.460)
 
   if back[0]==5:
     inc_ons=exp(5.02633)   # Coupling of incidence to ONS prevalence (fixed) (ONS confidence intervals have now been adjusted to be sensible, but they are not independent)
@@ -702,7 +702,7 @@ if 0:
     print("%12g %12g %12g %12g %12g      %10.6f"%(log(inc_ons),log(inc_case),log(inc_inc),log(car_car),log(car_car_d),LL0+LL1))
     sys.stdout.flush()
 
-if 1:
+if 0:
   # Auto optimising coupling parameters for consistency predicting some number of days ahead
   
   def rnd(): return random()*2-1
@@ -740,65 +740,14 @@ if 1:
   for i in range(len(res.x)):
     print("%s=exp(%g)"%(["inc_ons", "inc_case", "inc_inc", "car_car", "car_car_d"][i],res.x[i]))
 
-if 0:
-  # Finding overall coupling so as to get a probability distribution over outcomes
-  # Deprecated, because now believe we need to fix ONS prevalence coupling externally, not just make self-consistent
-  
-  casedata0,xx0,A0,b0,c0=getest()
-  N0=xx0.shape[0]//2
-  # Interleave to combine incidence and CAR variables so that indices are in date order
-  xx0i=np.zeros(2*N0)
-  xx0i[0::2]=xx0[:N0]
-  xx0i[1::2]=xx0[N0:]
-
-  now=apiday()
-  numcheck=30
-  chrange=7
-  tresid=dof=0
-  for ch in range(numcheck):
-    casedata,xx,A,b,c=getest(now-(ch+1)*chrange,prlev=0)
-    N=N0-(ch+1)*chrange
-    assert N==xx.shape[0]//2
-    # Interleave to combine incidence and CAR variables so that indices are in date order
-    xxi=np.zeros(2*N)
-    xxi[0::2]=xx[:N]
-    xxi[1::2]=xx[N:]
-    Ai=np.zeros([2*N,2*N])
-    Ai[0::2,0::2]=A[:N,:N]
-    Ai[1::2,0::2]=A[N:,:N]
-    Ai[0::2,1::2]=A[:N,N:]
-    Ai[1::2,1::2]=A[N:,N:]
-
-    yyi=xx0i[:2*N]-xxi
-    # yy is an observation from the centred normal distribution with precision matrix A
-    # but we're only going to look at the bits 2*(N-chrange):2*N, marginalising over the rest.
-    # The split is like this:
-    # Ai  = [ A_00 A_01 ]
-    #       [ A_10 A_11 ]
-    # yyi = [ y_0 y_1]
-
-    m=2*(N-chrange)
-    y_0=yyi[:m]# Not used
-    y_1=yyi[m:]
-    A_00=Ai[:m,:m]
-    A_01=Ai[:m,m:]
-    A_10=Ai[m:,:m]
-    A_11=Ai[m:,m:]
-
-    # Faster version of C=np.linalg.inv(Ai);resid=y_1@(np.linalg.solve(C[m:,m:],y_1)), because don't have to invert the whole matrix:
-    resid=y_1@(A_11@y_1)-(y_1@A_10)@np.linalg.solve(A_00,(A_01@y_1))
-    print("Resid =",resid/(2*chrange))
-    tresid+=resid
-    dof+=2*chrange
-  lam=tresid/dof
-  print("Overall residual factor =",lam)
-    
 if 1:
   seed(42)
   np.random.seed(42)
   enddate,nowtime=UKdatetime()
   prlev=2
   
+  #inc_ons,inc_case,inc_inc,car_car,car_car_d=np.exp([8.4,15,11.5,3.1,4.6])
+    
   N,casedata,onsprev=getextdata(enddate,prlev)
 
   Mean,A,C=getjointprob(N,casedata,onsprev,enddate,prlev=prlev)
@@ -829,77 +778,6 @@ if 1:
   sys.exit(0)
   
 if 0:
-  inc_ons=exp(5.0)
-  inc_case=exp(20)
-  inc_inc=exp(8.9)
-  car_car=exp(-0.5)
-  car_car_d=exp(3)
-  
-  inc_ons=exp(-3+rnd()*0)
-  inc_case=exp(0+rnd()*0)
-  inc_inc=exp(8.5)
-  car_car=exp(-0.5)
-  car_car_d=exp(-0.5)
-    
-  inc_ons=exp(-3+rnd()*0)
-  inc_case=exp(9+rnd()*1.5)
-  inc_inc=exp(6.5+rnd()*1)
-  car_car=exp(8+rnd()*2)
-  car_car_d=exp(0.+rnd()*2)
-  
-  inc_ons=exp(5)
-  inc_case=exp(8)
-  inc_inc=exp(8.5)
-  car_car=exp(1.5)
-  car_car_d=exp(2.25)
-
-  casedata,xx0,A,b,c=getest(prlev=2)
-  N=xx0.shape[0]//2
-  # getcaseoutliers(casedata,N)
-  C=np.linalg.inv(A)
-  nsamp=20
-  l=mvn.rvs(mean=xx0,cov=C,size=nsamp)
-  l[:,:N]=np.maximum(l[:,:N],0.01)
-  l[:,N:]=np.maximum(l[:,N:],1)
-  print(xx0[N-14:N],xx0[-14:],end="")
-  directeval(xx0,casedata)
-  print()
-  for i in range(nsamp):
-    print(l[i][N-14:N],l[i][-14:],end="")
-    directeval(l[i],casedata)
-  print()
-  print(xx0[:N-5]/xx0[N+5:]/casedata[5:])
-  poi
-
-if 0:
-  seed(42)
-  while 1:
-    # These settings want inc_case -> infinity
-    inc_ons=exp(5+rnd()*0)
-    inc_case=exp(15+rnd()*15)
-    inc_inc=exp(8.5+rnd()*0)
-    car_car=exp(1.5+rnd()*0)
-    car_car_d=exp(2.25+rnd()*0)
-
-    # cf these which wants inc_case ~= 6
-    inc_ons=exp(5+rnd()*0)
-    inc_case=exp(10+rnd()*10)
-    inc_inc=exp(8.5+rnd()*0)
-    car_car=exp(4.5+rnd()*0)
-    car_car_d=exp(4.25+rnd()*0)
-
-    # Optimum values given inc_case=exp(5)
-    inc_ons=exp(5.18+rnd()*0.05)
-    inc_case=exp(5)
-    inc_inc=exp(7.6+rnd()*0.15)
-    car_car=exp(3.95+rnd()*0.2)
-    car_car_d=exp(2.2+rnd()*0.3)
-
-    LL=getprob(prlev=0)
-    print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL))
-    sys.stdout.flush()
-
-if 1:
   from scipy.optimize import minimize
   
   def NLL(params):
