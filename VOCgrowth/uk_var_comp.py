@@ -12,10 +12,10 @@ datafile='cog_metadata.csv'
 Vnames=["BA.1","BA.1.1*","BA.2*"]# A name ending in '*' is considered as a prefix/ancestor, so BA.1* includes BA.1 and BA.1.17 though not BA.12
 mindate=Date('2000-01-01')
 maxdate=Date('2099-12-31')
-mincount=5
 conf=0.95
 
 parser=argparse.ArgumentParser()
+parser.add_argument('-c', '--mincount',    type=int,default=5,    help="Minimum variant count considered")
 parser.add_argument('-f', '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
 parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-l', '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
@@ -129,7 +129,7 @@ else:
 mindate1=Date('2099-12-31')
 maxdate1=Date('2000-01-01')
 for date in data:
-  if data[date][0]>=mincount and max(data[date][1:])>=mincount:
+  if data[date][0]>=args.mincount and max(data[date][1:])>=args.mincount:
     mindate1=min(mindate1,Date(date))
     maxdate1=max(maxdate1,Date(date))
 mindate=max(mindate,mindate1)
@@ -224,7 +224,8 @@ for i in range(1,numv):
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
 datafn=location+'_%s'%('_'.join(Vnames))
-visthr=2;ymin=ymax=0;ymax=-50
+visthr=1e-6
+ymin=50;ymax=-50
 with open(datafn,'w') as fp:
   for date in Daterange(mindate,maxdate+1):
     t=date-mindate
@@ -239,12 +240,16 @@ with open(datafn,'w') as fp:
       y=log(b/a)
       prec=sqrt(a*b/(a+b))
       print(" %12g %12g"%(y,prec),end='',file=fp)
-      if prec>visthr: ymin=min(ymin,y);ymax=max(ymax,y)
-      #if v[0]>0 and v[i]>0: ymin=min(ymin,y);ymax=max(ymax,y)
       print(" %12g %12g"%(q0[i],q1[i]),end='',file=fp)# Would be better as a formula in gnuplot, then it's continuous and can be extrapolated (though the code would be more cluttered)
+      if prec>visthr:
+        if args.plotpoints:
+          ymin=min(ymin,y);ymax=max(ymax,y)
+        if args.plotbands:
+          ymin=min(ymin,q0[i])
+          ymax=max(ymax,q1[i])
     print(file=fp)
 print("Written data to",datafn)
-  
+
 graphfn=datafn+'.png'
 ndates=maxdate-mindate+1
 allothers=', '.join(Vnames[1:])
@@ -273,7 +278,7 @@ set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\
 if args.plotpoints: cmd+="Larger blobs indicate more certainty (more samples). "
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
-plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.6,1.8)/log(2)}]"""
+plot [:] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*numv/15,1.8)/log(2)}]"""
 #plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
