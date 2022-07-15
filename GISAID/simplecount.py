@@ -12,7 +12,7 @@ mindate='2021-01-01'
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1.617.2','AY.*','BA.1','BA.1.1','BA.2','BA.3']
-Vv=['Spike_F486V', 'NSP8_N118S', 'BA.2*', 'BA.3', 'BA.4*', 'BA.5*', 'Unassigned']
+VV=['Spike_F486V', 'N_P151S', 'NSP8_N118S', 'BA.2*', 'BA.3', 'BA.4*', 'BA.5*', 'Unassigned']
 
 if len(sys.argv)>1: c=sys.argv[1]
 if len(sys.argv)>2: mindate=sys.argv[2]
@@ -41,7 +41,7 @@ print("#From:",mindate)
 
 print('#Date              All        ',end='')
 for v in VV: print(' %11s'%v,end='')
-print('     Others')
+print('      Others')
 d={}
 for (date,loc,lineage,mutations) in csvrows(infile,['Collection date','Location','Pango lineage','AA Substitutions'],sep='\t'):
   if loc[:len(c)]!=c: continue
