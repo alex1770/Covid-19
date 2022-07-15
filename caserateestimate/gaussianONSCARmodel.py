@@ -6,7 +6,7 @@ from scipy.stats import multivariate_normal as mvn
 from random import normalvariate as normal,random,seed,randrange
 from parseonsprevinc import getonsprevinc,getdailyprevalence
 
-startdate=Date("2020-06-01")
+startdate=Date("2021-01-01")
 if len(sys.argv)>1: startdate=Date(sys.argv[1])
 print("Start date =",startdate)
 
@@ -20,6 +20,8 @@ ignore={Date(date) for date in ignore}
 
 # population=55.98e6
 monday=Date("2022-01-03")
+wednesday=Date("2022-01-05")
+friday=Date("2022-01-07")
 scale=1e5# Units of this number of people to keep things better conditioned
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
@@ -70,13 +72,25 @@ if order==3:
   car_car=exp(0.583743)
   car_car_d=exp(1.46843)
 
-  
+
 def rnd(): return random()*2-1
 
 def meanvar(sample):
   mu=sum(sample)/len(sample)
   var=sum((x-mu)**2 for x in sample)/(len(sample)-1)
   return mu,var
+
+# Returns date of last entry in the most recent ONS infection survey published on or before 'date'
+# This is approximate - may be out by a day or two
+def lastsample_ons(date):
+  date-=(date-friday)%7# Go back to last Friday
+  return date-7
+
+# Returns date of last sample in the most recent api case data release published on or before 'date'
+# Assuming Wednesday release schedule, and ignoring the most recent (incomplete) day.
+def lastsample_api(date):
+  date-=(date-wednesday)%7# Go back to last Wednesday
+  return date-2
 
 # Returns matrix that calculates 'order' order differences
 # E.g., for order=1, QF(x)=sum_i (x_i-x_{i+1})^2
@@ -251,7 +265,7 @@ def initialguess(N,onsprev,casedata,back):
   #                               al[i]=(c[i']^2.V[casedata[i']])^{-1}
   #                                   ~=((I[i]/casedata[i'])^2.(casedata[i'].inc_case))^{-1}
   #                                    =(I[i']^2/(casedata[i'].inc_case))^{-1}
-  for j in range(len(casedata)):
+  for j in range(min(N,len(casedata))):
     if startdate+j not in ignore:
       day=(startdate+j-monday)%7
       i=j-back[day]
@@ -381,7 +395,7 @@ def directeval(xx,casedata,onsprev,prlev=0):
 # Desired function of xx0+dx (xx) is dx^t.A.dx - 2B^t.dx + C
 #
 # casedata and onsprev can be null, which means it won't use the "external" terms.
-def getqform(N,xx0,casedata,onsprev,usedet=False):
+def getqform(N,xx0,casedata,onsprev,enddate=UKdatetime()[0],usedet=False):
   
   # We're going to use two different origins before combining them into A, B, C
   # So dx^t.A.dx - 2B^t.dx + C = (dx^t.A0.dx - 2B0^t.dx) + (xx^t.A1.xx - 2B1^t.xx) + C'
@@ -417,9 +431,11 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
 
   # Link incidence to ONSprevalence
   if onsprev is not None:
+    last=lastsample_ons(enddate)
+    #print("ONS",enddate,last)
     for date,targ,sd in onsprev:
       i=date-numk-startdate
-      if i>=0 and i+numk<=N:
+      if date<=last and i>=0 and i+numk<=N:
         targ/=scale
         sd/=scale
         prec=inc_ons/sd**2
@@ -460,7 +476,9 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
   #       cf Ax^2-2Bx+C
   # Second order in d: rho = rho0.(1+d/2+d^2/8), 1/rho = 1/rho0.(1-d/2+d^2/8)
   if casedata is not None:
-    for j in range(len(casedata)):
+    last=lastsample_api(enddate)
+    #print("API",enddate,last)
+    for j in range(min(N,len(casedata),last+1-startdate)):
       if startdate+j not in ignore:
         day=(startdate+j-monday)%7
         i=j-back[day]
@@ -505,7 +523,7 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
     C+=sld[1]
   return A,B,C
 
-# For input y, return {x0, quadratic form Q, constant c} such that
+# For input y, return {vector x0, quadratic form Q, constant c} such that
 # P(x,y) = exp(-(1/2)(Q(x-x0) + c) + O((x-x0)^3) )
 #
 # x=internal (variables which could be interpreted as log infection rates and -log CAR)
@@ -514,6 +532,7 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
 # Note that the returned function is not integrated wrt x, so to get integral, you need to do exp(-(1/2)c)*det(Q)^{-1/2}
 # Note that x0, Q, c will depend on y in a complicated way
 #
+# c = C-D
 # P(x,y) = f(x)*g(x,y)*exp(L(x))/(integral_x f(x)dx)
 # L(x) is linear+constant in x, with coefficients depending only on coupling constants (not on y).
 # Integral_y g(x,y)dy = exp(-L(x))
@@ -528,16 +547,16 @@ def getqform(N,xx0,casedata,onsprev,usedet=False):
 # Interpretation:
 # P(x)dx = f(x)exp(D/2)dx      is a prob density over the internal variables x (functions of infection rate, CAR)
 # P(y|x)dy = g(x,y)exp(L(x))dy is a prob density over external variables y (case counts, ONS prev)
-# P(x,y)dxdy = P(x)dxP(y|x)dy = f(x)g(x,y)exp(D/2+L(x))dxdy ~= exp((-1/2)(Q(x-x0)+C-D)) is joint prob density over x, y.
-# P(y)dy = integral_x P(x,y)dxdy ~= exp((-1/2)(C-D))det(Q)^{-1/2}dy
+# P(x,y)dxdy = P(x)dxP(y|x)dy = f(x)g(x,y)exp(D/2+L(x))dxdy ~= exp((-1/2)(Q(x-x0)+c)) is joint prob density over x, y.
+# P(y)dy = integral_x P(x,y)dxdy ~= exp((-1/2)c)det(Q)^{-1/2}dy
 # P(x|y)dx = exp((-1/2)Q(x-x0))det(Q)^{1/2}dy  (x~N(x0,Q^{-1}))
 #
 # Note that functions of x are returned as (quadratic) functions, but functions of y are evaluated (returned as numbers)
 #
-#                                                          Requires
-# P(y) is used for (MLE training)                          Q, c
-# integral_{subset of x} P(x|y)dx (lookahead training)     Q, x0, c
-# P(x|y) is used for simulation                            Q, x0
+#                                                                Requires
+# P(y) is used for (MLE training)                                Q, c
+# P(recent x|y) = \int_{old x} P(x|y)dx (lookahead training)     Q, x0, c
+# P(x|y) is used for simulation                                  Q, x0
 #
 def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,eps=1e-6):
 
@@ -554,7 +573,7 @@ def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,ep
     for it in range(nits):
       if prlev>=1: print("Iteration(numerator)",it)
       xx0=xx
-      A,B,C=getqform(N,xx0,casedata,onsprev,usedet=False)
+      A,B,C=getqform(N,xx0,casedata,onsprev,enddate=enddate)
       dx=np.linalg.solve(A,B)
       xx=xx0+dx
       xx[:N]=np.maximum(xx[:N],log(0.01))
@@ -566,7 +585,7 @@ def getjointprob(N,casedata,onsprev,enddate=UKdatetime()[0],hint=None,prlev=0,ep
   # xx, A, 0, C
     
   # Only need one "iteration" required if casedata and onsprev not present, because then LL is exactly quadratic
-  A1,B1,C1=getqform(N,xx,None,None,usedet=False)
+  A1,B1,C1=getqform(N,xx,None,None,enddate=enddate)
   dx1=np.linalg.solve(A1,B1)
   C1-=B1@dx1
   sld=np.linalg.slogdet(A1)
@@ -584,82 +603,142 @@ def getprob(enddate=UKdatetime()[0],prlev=0,eps=1e-6):
   C+=sld[1]
   return -C/2
 
+def consistency(xxgtr,numcheck=5,chrange=7,recycle=False):
+
+  N0=xxgtr.shape[0]//2
+  
+  # Interleave to combine incidence and CAR variables so that indices are in date order
+  xxgtri=np.zeros(2*N0)
+  xxgtri[0::2]=xx0[:N0]
+  xxgtri[1::2]=xx0[N0:]
+  
+  dof=LL0=LL1=0
+  for ch in range(numcheck):
+    N=N0-(ch+1)*chrange
+    if N<=chrange: break
+    xx,A,c=getjointprob(N,casedata0,onsprev0,enddate=now-(ch+1)*chrange,prlev=0)
+    assert N==xx.shape[0]//2
+    
+    # Interleave to combine incidence and CAR variables so that indices are in date order
+    xxi=np.zeros(2*N)
+    xxi[0::2]=xx[:N]
+    xxi[1::2]=xx[N:]
+    Ai=np.zeros([2*N,2*N])
+    Ai[0::2,0::2]=A[:N,:N]
+    Ai[1::2,0::2]=A[N:,:N]
+    Ai[0::2,1::2]=A[:N,N:]
+    Ai[1::2,1::2]=A[N:,N:]
+
+    yyi=xxgtri[:2*N]-xxi
+    # yy is an observation from the centred normal distribution with precision matrix A
+    # but we're only going to look at the bits 2*(N-chrange):2*N, marginalising over the rest.
+    # The split is like this:
+    # Ai  = [ A_00 A_01 ]
+    #       [ A_10 A_11 ]
+    # yyi = [ y_0 y_1 ]
+
+    m=2*(N-chrange)
+    y_0=yyi[:m]# Not used
+    y_1=yyi[m:]
+    A_00=Ai[:m,:m]
+    A_01=Ai[:m,m:]
+    A_10=Ai[m:,:m]
+    A_11=Ai[m:,m:]
+
+    # Calculate the marginal precision matrix of the variables indexed from m onwards.
+    # Could do C=np.linalg.inv(Ai);B_11=np.linalg.inv(C[m:,m:]), but the following is faster:
+    B_11=A_11-A_10@np.linalg.solve(A_00,A_01)
+    
+    resid=y_1@(B_11@y_1)
+    #LL+=(1/2)*np.linalg.slogdet(B_11)[1]-(1/2)*resid
+    LL0+=(1/2)*np.linalg.slogdet(B_11)[1]
+    LL1+=-(1/2)*resid
+    dof+=(1/2)*2*chrange
+    #print("%12g %12g %12g %12g %12g      %10.6f + %10.6f = %10.6f"%(log(inc_ons),log(inc_case),log(inc_inc),log(car_car),log(car_car_d),LL0,LL1,LL0+LL1))
+    
+    if recycle: xxgtri=xxi
+
+  lam=-dof/LL1
+  #inc_ons*=lam
+  #inc_case*=lam
+  #inc_inc*=lam
+  #car_car*=lam
+  #car_car_d*=lam
+  #LL1*=lam
+  #LL0+=dof*log(lam)
+  
+  return LL0,LL1,dof,lam
+
 if 0:
-  # Optimising coupling parameters for consistency - version with natural model
+  # Investigating coupling parameters for consistency predicting some number of days ahead
   
   def rnd(): return random()*2-1
-  #seed(42)
+  seed(42)
+  np.random.seed(42)
+
+  now=UKdatetime()[0]
+
+  # Treat latest MLE as groundtruth for last period (or maybe all periods, depending on "recycling" flag)
+  N0,casedata0,onsprev0=getextdata(enddate=now)
+  xx0,A0,c0=getjointprob(N0,casedata0,onsprev0,enddate=now)
   
   while 1:
-    inc_ons=exp(5+2*rnd())
-    inc_case=exp(8+2*rnd())
-    inc_inc=exp(8+2*rnd())
-    car_car=exp(2+rnd())
-    car_car_d=exp(2+rnd())
-    
-    casedata0,xx0,A0,b0,c0=getest(prlev=0)
-    N0=xx0.shape[0]//2
-    # Interleave to combine incidence and CAR variables so that indices are in date order
-    xx0i=np.zeros(2*N0)
-    xx0i[0::2]=xx0[:N0]
-    xx0i[1::2]=xx0[N0:]
-    
-    now=apiday()
-    numcheck=30
-    chrange=7
-    dof=LL0=LL1=0
-    sys.stdout.flush()
-    for ch in range(numcheck):
-      casedata,xx,A,b,c=getest(now-(ch+1)*chrange,prlev=0)
-      N=N0-(ch+1)*chrange
-      assert N==xx.shape[0]//2
-      
-      # Interleave to combine incidence and CAR variables so that indices are in date order
-      xxi=np.zeros(2*N)
-      xxi[0::2]=xx[:N]
-      xxi[1::2]=xx[N:]
-      Ai=np.zeros([2*N,2*N])
-      Ai[0::2,0::2]=A[:N,:N]
-      Ai[1::2,0::2]=A[N:,:N]
-      Ai[0::2,1::2]=A[:N,N:]
-      Ai[1::2,1::2]=A[N:,N:]
-  
-      yyi=xx0i[:2*N]-xxi
-      # yy is an observation from the centred normal distribution with precision matrix A
-      # but we're only going to look at the bits 2*(N-chrange):2*N, marginalising over the rest.
-      # The split is like this:
-      # Ai  = [ A_00 A_01 ]
-      #       [ A_10 A_11 ]
-      # yyi = [ y_0 y_1]
-  
-      m=2*(N-chrange)
-      y_0=yyi[:m]# Not used
-      y_1=yyi[m:]
-      A_00=Ai[:m,:m]
-      A_01=Ai[:m,m:]
-      A_10=Ai[m:,:m]
-      A_11=Ai[m:,m:]
+    #inc_ons=exp(5+2*rnd())
+    #inc_case=exp(8+2*rnd())
+    #inc_inc=exp(8+2*rnd())
+    #car_car=exp(2+rnd())
+    #car_car_d=exp(2+rnd())
+    car_car_d*=exp(.5)
 
-      # Calculate the marginal precision matrix of the variables indexed from m onwards.
-      # Could do C=np.linalg.inv(Ai);B_11=np.linalg.inv(C[m:,m:]), but the following is faster:
-      B_11=A_11-A_10@np.linalg.solve(A_00,A_01)
-      
-      resid=y_1@(B_11@y_1)
-      #LL+=(1/2)*np.linalg.slogdet(B_11)[1]-(1/2)*resid
-      LL0+=(1/2)*np.linalg.slogdet(B_11)[1]
-      LL1+=-(1/2)*resid
-      dof+=(1/2)*2*chrange
-
-    #lam=-dof/LL1
-    lam=1
-    inc_ons*=lam
-    inc_case*=lam
-    inc_inc*=lam
-    car_car*=lam
-    LL1*=lam
-    LL0+=dof*log(lam)
-    print("%12g %12g %12g %12g %12g    %10.6f"%(inc_ons,inc_case,inc_inc,car_car,car_car_d,LL0+LL1))
+    LL0,LL1,dof,lam=consistency(xx0)
+    if 1:
+      inc_ons*=lam
+      inc_case*=lam
+      inc_inc*=lam
+      car_car*=lam
+      car_car_d*=lam
+      LL1*=lam
+      LL0+=dof*log(lam)
+    print("%12g %12g %12g %12g %12g      %10.6f"%(log(inc_ons),log(inc_case),log(inc_inc),log(car_car),log(car_car_d),LL0+LL1))
     sys.stdout.flush()
+
+if 1:
+  # Auto optimising coupling parameters for consistency predicting some number of days ahead
+  
+  def rnd(): return random()*2-1
+  seed(42)
+  np.random.seed(42)
+
+  now=UKdatetime()[0]
+  numcheck=5
+  print("numcheck =",numcheck)
+
+  # Treat latest MLE as groundtruth for last period (or maybe all periods, depending on "recycling" flag)
+  N0,casedata0,onsprev0=getextdata(enddate=now)
+  xx0,A0,c0=getjointprob(N0,casedata0,onsprev0,enddate=now)
+  
+  from scipy.optimize import minimize
+  
+  def NLL(params):
+    global inc_ons,inc_case,inc_inc,car_car,car_car_d
+    print("Trying","".join("%12g"%x for x in params),end="");sys.stdout.flush()
+    inc_ons,inc_case,inc_inc,car_car,car_car_d=np.exp(params)
+    LL0,LL1,dof,lam=consistency(xx0,numcheck=numcheck)
+    LL=LL0+LL1
+    print("  -> ",LL)
+    return -LL
+  
+  bounds=[(-2,10),(-2,12),(-2,10),(-2,10),(-2,10)]
+  params0=[5,11.5,7.5,2,2.5]
+  res=minimize(NLL,params0,bounds=bounds,method="SLSQP")
+  if not res.success: raise RuntimeError(res.message)
+  print("LL =",-res.fun)
+  for i in range(len(res.x)):
+    print("Parameter %d = %g"%(i,res.x[i]))
+  for i in range(len(bounds)):
+    if res.x[i]<bounds[i][0]+1e-6 or res.x[i]>bounds[i][1]-1e-6: print("Warning: parameter %d = %g is touching bound"%(i,res.x[i]))
+  for i in range(len(res.x)):
+    print("%s=exp(%g)"%(["inc_ons", "inc_case", "inc_inc", "car_car", "car_car_d"][i],res.x[i]))
 
 if 0:
   # Finding overall coupling so as to get a probability distribution over outcomes
