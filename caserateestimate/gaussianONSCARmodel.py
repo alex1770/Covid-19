@@ -32,7 +32,7 @@ back=[6]*7# Pro tem
 # Order=1 if you think the prior is exp(Brownian motion)-like (in particular, Markov)
 # Order=2 if you think the prior is more like exp(integral of Brownian motion) (has "momentum")
 # etc
-order=2
+order=3
 eta=1e-6
 
 if order==1:
@@ -66,11 +66,19 @@ if order==2:
     car_car_d=exp(2.23309)
 
 if order==3:
-  inc_ons=exp(5.14238)
-  inc_case=exp(9.49759)
-  inc_inc=exp(7.9619)
-  car_car=exp(0.583743)
-  car_car_d=exp(1.46843)
+  if back[0]==5:
+    inc_ons=exp(5.14238)
+    inc_case=exp(9.49759)
+    inc_inc=exp(7.9619)
+    car_car=exp(0.583743)
+    car_car_d=exp(1.46843)
+
+  if back[0]==6:
+    inc_ons=  exp(5.470)
+    inc_case= exp(9.169)
+    inc_inc=  exp(7.685)
+    car_car=  exp(0.685)
+    car_car_d=exp(1.753)
 
 
 def rnd(): return random()*2-1
@@ -746,10 +754,10 @@ if 1:
   enddate,nowtime=UKdatetime()
   prlev=2
   
-  #inc_ons,inc_case,inc_inc,car_car,car_car_d=np.exp([8.4,15,11.5,3.1,4.6])
-    
+  #inc_ons,inc_case,inc_inc,car_car,car_car_d=np.exp([3,9.169,7.685,10,3])
+  
   N,casedata,onsprev=getextdata(enddate,prlev)
-
+  
   Mean,A,C=getjointprob(N,casedata,onsprev,enddate,prlev=prlev)
   Cov=np.linalg.inv(A)
   
@@ -776,7 +784,7 @@ if 1:
   np.ndarray.sort(growth_sample,axis=0)
   savevars(N,casedata,back,Mean,low=l[i0,:],high=l[i1,:],growth=Growth,lowgrowth=growth_sample[i0,:],highgrowth=growth_sample[i1,:],name="England")
   sys.exit(0)
-  
+
 if 0:
   from scipy.optimize import minimize
   
