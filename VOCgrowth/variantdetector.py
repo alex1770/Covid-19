@@ -2,25 +2,51 @@ import sys,time,os,pickle,argparse
 from stuff import *
 import numpy as np
 from math import log,sqrt,floor
+from variantaliases import aliases
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-f', '--mindate',     default="2022-05-01", help="Min sample date of sequence")
-parser.add_argument('-t', '--maxdate',     default="9999-12-31", help="Max sample date of sequence")
-parser.add_argument('-g', '--gisaid',      action="store_true",  help="Use GISAID data instead of COG-UK data")
+parser.add_argument('-f', '--mindate',        default="2022-05-01", help="Min sample date of sequence")
+parser.add_argument('-t', '--maxdate',        default="9999-12-31", help="Max sample date of sequence")
+parser.add_argument('-g', '--gisaid',         action="store_true",  help="Use GISAID data instead of COG-UK data")
+parser.add_argument('-m', '--givenmutations', default="",           help="Condition on this set of mutations (use a comma-separated list)")
+parser.add_argument('-l', '--lineage',                              help="Condition on this lineage")
+parser.add_argument('-L', '--location',       default="",           help="Location prefix")
+parser.add_argument('-n', '--numdisp',        default=8,            help="Number of mutations to display horizontally")
 args=parser.parse_args()
 
-minday=datetoday(args.mindate)
+mindate0=Date('2022-05-01')# Hard-coded minday
 minmutcount=50# Ignore mutations that have occurred less than this often
 cachedir='seqdatacachedir'
+
+if args.mindate<mindate0: raise RuntimeError(f"Specfied mindate {args.mindate} is less that hard-coded mindate {mindate0}")
 
 if args.gisaid:
   source='GISAID';datafile='metadata_sorted.tsv';inputsorted=True
 else:
   source='COG';datafile='cog_metadata_sorted.csv';inputsorted=True
 
+ecache={}
+def expandlin(lin):
+  if lin in ecache: return ecache[lin]
+  for (short,long) in aliases:
+    s=len(short)
+    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
+  ecache[lin]=lin
+  return lin
+
+ccache={}
+def contractlin(lin):
+  if lin in ccache: return ccache[lin]
+  lin=expandlin(lin)
+  for (short,long) in aliases:
+    l=len(long)
+    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
+  ccache[lin]=lin
+  return lin
+
 tim0=time.process_time()
 datamtime=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile)).strftime('%Y-%m-%d-%H-%M-%S')
-id=source+'_'+datamtime+'_'+args.mindate+'_'+args.maxdate+'_'+str(minmutcount)
+id=source+'_'+datamtime+'_'+mindate0+'_'+str(minmutcount)
 fn=os.path.join(cachedir,id)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
@@ -33,8 +59,7 @@ else:
   mutcounts={}
   with open(datafile,'r') as fp:
     for (dt,loc,lin,var,mut) in csvrows_it(fp,keys,sep=sep):
-      if dt>args.maxdate: continue
-      if dt<args.mindate:
+      if dt<mindate0:
         if inputsorted: break
         continue
       day=datetoday(dt)
@@ -56,8 +81,7 @@ else:
   mutdaycounts=[{} for m in range(nmut)]
   with open(datafile,'r') as fp:
     for (dt,loc,lin,var,mut) in csvrows_it(fp,keys,sep=sep):
-      if dt>args.maxdate: continue
-      if dt<args.mindate:
+      if dt<mindate0:
         if inputsorted: break
         continue
       day=datetoday(dt)
@@ -67,7 +91,7 @@ else:
       l=[]
       for mut in muts:
         if mut in name2num: l.append(name2num[mut])
-      linelist.append([day,loc,lin,var,l])
+      linelist.append([day,loc,expandlin(lin),var,l])
       for m in l: mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
     if not inputsorted: linelist.sort(reverse=True)# Sort into reverse date order
   os.makedirs(cachedir,exist_ok=True)
@@ -76,18 +100,32 @@ else:
 
 print("Got linelist at time",time.process_time()-tim0)
 
-def getmutday(linelist,mindate1=None,maxdate1=None,given=set(),lineage=None,notlineage=None,location=None):# Might need a givennot argument too
+# Does 'lin' fit in with the (possibly wildcarded) 'lineage'?
+# Note that BA.1.2 is considered part of BA.1*, but
+#           BA.12 is not considered part of BA.1*,
+# so it's not just a prefix test.
+# Input is assumed to be in expanded form.
+def linin(lin,lineage):
+  if lin==lineage: return True
+  if lineage[-1]!='*': return False
+  if lin==lineage[:-1]: return True
+  return lin[:len(lineage)]==lineage[:-1]+'.'
+  
+
+def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notlineage=None,location=None):# Might need a givennot argument too
   daycounts={}
   mutdaycounts=[{} for m in range(nmut)]
   mutlincounts=[{} for m in range(nmut)]
   lincounts={}
-  given_num={name2num[x] for x in given}
-  if mindate1!=None: minday1=datetoday(mindate1)
-  else: minday1=0
-  if maxdate1!=None: maxday1=datetoday(maxdate1)
-  else: maxday1=1000000
+  if type(givenmuts)==str: givenmuts=(givenmuts.split(',') if givenmuts!="" else [])
+  givenmuts_num={name2num[x] for x in givenmuts}
+  if mindate!=None: minday=datetoday(mindate)
+  else: minday=0
+  if maxdate!=None: maxday=datetoday(maxdate)
+  else: maxday=1000000
+  if lineage!=None: lineage=expandlin(lineage)
   for (day,loc,lin,var,muts) in linelist:
-    if day>=minday1 and day<maxday1 and given_num.issubset(muts) and (lineage==None or lin==lineage) and (notlineage==None or lin!=notlineage) and (location==None or loc[:len(location)]==location):
+    if day>=minday and day<maxday and givenmuts_num.issubset(muts) and (lineage==None or linin(lin,lineage)) and (notlineage==None or not linin(lin,notlineage)) and (location==None or loc[:len(location)]==location):
       daycounts[day]=daycounts.get(day,0)+1
       lincounts[lin]=lincounts.get(lin,0)+1
       for m in muts:
@@ -102,7 +140,7 @@ def getgrowth(daycounts,mutdaycount,invert=False):
   s0=syy=0
   tv0=tv1=0
   for day in mutdaycount:
-    x=day-minday
+    x=day-mindate0
     v1=mutdaycount[day]
     v0=daycounts.get(day,0)-v1
     if invert: (v0,v1)=(v1,v0)
@@ -132,41 +170,41 @@ def getgrowth(daycounts,mutdaycount,invert=False):
 
   return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1])),(tv0,tv1)
   # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
-  # return (minday-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
+  # return (mindate0-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-07-01',maxdate1='2021-10-01')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,given={'S:Y145H'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-07-01',maxdate1='2021-08-16')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-07-01',maxdate1='2021-08-01',given={'S:G142D'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-01-01',maxdate1='2021-08-01',lineage='AY.4')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-01-01',maxdate1='2021-08-15',given={'S:T95I'},lineage='AY.4')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-07-01',maxdate1='2021-08-15',given={'S:T95I'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-01-01',maxdate1='2021-08-01',lineage='AY.4')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-09-01',maxdate1='2021-10-07',given={'S:Y145H'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-08-01',lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-10-14',lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-10-14',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-08-01',maxdate1='2021-10-10',lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-10-14',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-08-01',maxdate1='2021-10-10',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-10-18',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-08-01',notlineage='AY.4.2',maxdate1='2021-10-12')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-08-01',notlineage='AY.4.2',given={'N:Q9L'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-08-01',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-12-25',lineage='BA.1')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2021-12-25',lineage='BA.1',given={'S:N440K'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2022-01-17',lineage='BA.1')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2022-01-17',lineage='BA.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2022-03-01',lineage='BA.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate1='2022-03-01')
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-06-01',given={'S:F486V'})
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-06-01',given={'Spike_F486V'})
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-06-01',given={'Spike_F486V'},location="Europe / Denmark")
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-06-01',given={'Spike_F486V'},location="Europe / Austria / Vienna")
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-05-01')
-daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-05-01',location="Asia / India")
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate1='2022-05-01',location="Asia / India / Chhattisgarh")
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-10-01')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,givenmuts={'S:Y145H'})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-08-16')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-08-01',givenmuts={'S:G142D'})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-01-01',maxdate='2021-08-01',lineage='AY.4')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-01-01',maxdate='2021-08-15',givenmuts={'S:T95I'},lineage='AY.4')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-08-15',givenmuts={'S:T95I'})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-01-01',maxdate='2021-08-01',lineage='AY.4')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-09-01',maxdate='2021-10-07',givenmuts={'S:Y145H'})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-14',lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-14',notlineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',maxdate='2021-10-10',lineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-14',notlineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',maxdate='2021-10-10',notlineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-18',notlineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',notlineage='AY.4.2',maxdate='2021-10-12')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',notlineage='AY.4.2',givenmuts={'N:Q9L'})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',notlineage='AY.4.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-12-25',lineage='BA.1')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-12-25',lineage='BA.1',givenmuts={'S:N440K'})
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-01-17',lineage='BA.1')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-01-17',lineage='BA.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-03-01',lineage='BA.2')
+#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-03-01')
+#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'S:F486V'})
+#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'Spike_F486V'})
+#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'Spike_F486V'},location="Europe / Denmark")
+#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'Spike_F486V'},location="Europe / Austria / Vienna")
+#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-05-01')
+#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-05-01',location="Asia / India")
+daycounts,mutdaycounts,lincounts,mutlincounts = getmutday(linelist, mindate=args.mindate, maxdate=args.maxdate, givenmuts=args.givenmutations, lineage=args.lineage, location=args.location)
 
 print("Got all mutation-day counts at time",time.process_time()-tim0)
 
@@ -235,12 +273,12 @@ if 1:
       n=mutlincounts[mut][lin]
       if n0==None: n0=n
       elif n/n0<0.05: break
-      print("  %s:%d"%(lin,n),end="")
+      print("  %s:%d"%(contractlin(lin),n),end="")
     print()
     nm+=1
     if nm==30: break
   
-  nmd=min(nm,10)
+  nmd=min(nm,args.numdisp)
   print()
   days=set()
   for mut in l[:nmd]: days.update(mutdaycounts[mut])
@@ -258,56 +296,4 @@ if 1:
       else: print("              -",end='')
       print(" %5d"%vm,end='')
     print()
-  sys.exit(0)
 
-def pr(daycounts,mutdaycounts,muts):
-  print()
-  days=set()
-  for mut in muts: days.update(mutdaycounts[mut])
-  print("                All",end='')
-  for mut in muts: print(" %20s"%num2name[mut],end='')
-  print()
-  days=sorted(days)
-  for day in days:
-    v0=daycounts[day]
-    print(daytodate(day),"  %6d"%v0,end='')
-    for mut in muts:
-      vm=mutdaycounts[mut].get(day,0)
-      v1=v0-vm
-      if vm>0 and v1>0: print("         %6.3f"%(log(vm/v1)),end='')
-      else: print("              -",end='')
-      print(" %5d"%vm,end='')
-    print()
-
-window=60
-step=30
-mindate1='2021-09-01'
-prevmuts=set()
-currentmuts=set()
-sd=10
-prevdaycounts,prevmutdaycounts,prevlincounts=getmutday(linelist,mindate=mindate1,maxdate1=Date(mindate1)+window)
-
-while 1:
-  daycounts,mutdaycounts,lincounts=getmutday(linelist,minday1=minday1,maxday1=minday1+window+1000000,given=currentmuts)#alter
-  #l=list(lincounts);l.sort(key=lambda lin:-lincounts[lin])
-  #print(l[0],sum(lincounts.values()),lincounts[l[0]])
-  if daycounts=={}: break
-  growth={}
-  for mut in range(nmut):
-    if mut not in currentmuts:
-      growth[mut]=getgrowth(prevdaycounts,mutdaycounts[mut])[1]
-
-  l=[mut for mut in growth if growth[mut][0]>0]
-  l.sort(key=lambda x:-((growth[x][0]-0.00)/growth[x][1]))
-  #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
-
-  if len(l)>0:
-    mut=l[0]
-    if growth[mut][0]-sd*growth[mut][1]>0:
-      print("%s - %s: adding mutation %s with relative growth %.3f (%.3f - %.3f)"%(daytodate(minday1),daytodate(minday1+window),num2name[mut],growth[mut][0],growth[mut][0]-sd*growth[mut][1],growth[mut][0]+sd*growth[mut][1]))
-      currentmuts.add(mut)
-      continue
-  
-  print("No new mutations found at %s - %s"%(daytodate(minday1),daytodate(minday1+window)))
-  prevdaycounts=daycounts
-  minday1+=step
