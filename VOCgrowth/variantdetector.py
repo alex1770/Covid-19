@@ -4,8 +4,12 @@ import numpy as np
 from math import log,sqrt,floor
 from variantaliases import aliases
 
+mindate0=Date('2022-05-01')# Hard-coded minday
+minmutcount=50# Ignore mutations that have occurred less than this often
+cachedir='seqdatacachedir'
+
 parser=argparse.ArgumentParser()
-parser.add_argument('-f', '--mindate',        default="2022-05-01", help="Min sample date of sequence")
+parser.add_argument('-f', '--mindate',        default=mindate0,     help="Min sample date of sequence")
 parser.add_argument('-t', '--maxdate',        default="9999-12-31", help="Max sample date of sequence")
 parser.add_argument('-g', '--gisaid',         action="store_true",  help="Use GISAID data instead of COG-UK data")
 parser.add_argument('-m', '--givenmutations', default="",           help="Condition on this set of mutations (use a comma-separated list)")
@@ -13,10 +17,6 @@ parser.add_argument('-l', '--lineage',                              help="Condit
 parser.add_argument('-L', '--location',       default="",           help="Location prefix")
 parser.add_argument('-n', '--numdisp',        default=8,            help="Number of mutations to display horizontally")
 args=parser.parse_args()
-
-mindate0=Date('2022-05-01')# Hard-coded minday
-minmutcount=50# Ignore mutations that have occurred less than this often
-cachedir='seqdatacachedir'
 
 if args.mindate<mindate0: raise RuntimeError(f"Specfied mindate {args.mindate} is less that hard-coded mindate {mindate0}")
 
@@ -119,9 +119,9 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
   lincounts={}
   if type(givenmuts)==str: givenmuts=(givenmuts.split(',') if givenmuts!="" else [])
   givenmuts_num={name2num[x] for x in givenmuts}
-  if mindate!=None: minday=datetoday(mindate)
+  if mindate!=None: minday=int(Date(mindate))
   else: minday=0
-  if maxdate!=None: maxday=datetoday(maxdate)
+  if maxdate!=None: maxday=int(Date(maxdate))
   else: maxday=1000000
   if lineage!=None: lineage=expandlin(lineage)
   for (day,loc,lin,var,muts) in linelist:
@@ -232,9 +232,9 @@ if 1:
       if i<0: low+=1
       elif i<d: hist[i]+=1
       else: high+=1
+    print("# Low %d"%low,file=fp)
     for (i,k) in enumerate(hist):
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
-    print("# Low %d"%low,file=fp)
     print("# High %d"%high,file=fp)
 
   sd=8
@@ -252,7 +252,7 @@ if 1:
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-gval(x))
 
-  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif NumNonVar  NumVar")
+  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif NumNonVar  NumVar Examples")
   nm=0
   for mut in l:
     gr=growth[mut]
@@ -267,10 +267,14 @@ if 1:
     print("   %7.2f"%((ga-.5*(gha-gla))*100),end='')
     print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]),end='')
     ml=list(mutlincounts[mut])
-    ml.sort(key=lambda lin:-mutlincounts[mut][lin])
+    score={}# score = number of lineages with mutation if it's a growing mutation, or number without mutation if it's a falling mutation
+    for lin in ml:
+      if g>0: score[lin]=mutlincounts[mut][lin]
+      else: score[lin]=lincounts[lin]-mutlincounts[mut][lin]
+    ml.sort(key=lambda lin:-score[lin])
     n0=None
     for lin in ml[:3]:
-      n=mutlincounts[mut][lin]
+      n=score[lin]
       if n0==None: n0=n
       elif n/n0<0.05: break
       print("  %s:%d"%(contractlin(lin),n),end="")
