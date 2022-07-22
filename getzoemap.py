@@ -45,7 +45,7 @@ for r in res:
         e[k]=int(e[k])
       except:
         del e[k]
-  d[e["lad16nm"]]=e
+  d[e["utla19nm"]]=e
 with open(fn,'w') as fp:
   json.dump(d,fp,indent=2)
 #processdata(tdir)
