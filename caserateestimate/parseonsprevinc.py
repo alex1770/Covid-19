@@ -176,7 +176,8 @@ def getdailyprevalence(maxdate=Date("9999-12-31"),correctionfactor=3.69):
   fn=os.path.join(onsdir,latestfn)
   xl=pd.ExcelFile(fn)
   
-  if latestdate>="2022-06-17": histsheet="1l"
+  if latestdate>="2022-07-22": histsheet="1m"
+  elif latestdate>="2022-06-17": histsheet="1l"
   elif latestdate>="2022-04-08": histsheet="1p"
   elif latestdate>="2022-04-01": histsheet="1q"
   else: histsheet="1p"
