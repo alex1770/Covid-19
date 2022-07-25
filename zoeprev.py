@@ -28,7 +28,7 @@ for date in os.listdir('zoemapdata'):
       zm=json.load(fp)
       zdates[t]=1
       for d in zm.values():# Loop over locations
-        if d['country']==country: zvals[t]+=d['predicted_covid_positive_count']/d['respondent']*d['population']
+        if (d['country'] if 'country' in d else d['country_x'])==country: zvals[t]+=d['predicted_covid_positive_count']/d['respondent']*d['population']
 n=maxt+1
 # Interpolate missing dates
 for t in range(n):
