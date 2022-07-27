@@ -15,7 +15,7 @@ set -e
     #python3 uk_var_comp.py BA.2,BA.4,BA.5,BA.5.1
     #python3 uk_var_comp.py -f 2022-05-01 -p -l 'BA.2*,BA.2.12.1,BA.4*,BA.5*'
     python3 uk_var_comp.py -f 2022-05-01 -p -l 'BA.5*,BA.2.12.1,BA.4*'
-    python3 uk_var_comp.py -f 2022-06-01 -b -l 'BA.5,BA.4,BE.1,BA.5.2,BA.5.2.1,BA.5.1'
+    python3 uk_var_comp.py -f 2022-06-01 -b -l 'BA.5.1,BA.4,BE.1,BA.5.2,BA.5.2.1'
     python3 uk_var_comp.py -f 2022-06-01 -p -l 'BA.5*,BA.2.75' -c1
 )
 
@@ -27,7 +27,7 @@ python3 maketrend.py
 #(cd Traffic; python3 parsetraffic.py; python3 maketrafficgraph.py; convert trafficgraph.png -resize '1200x320!' trafficgraph.small.png)
 
 bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5*_BA.2.12.1_BA.4*.png VOCgrowth/UK_BA.5_BA.4_BE.1_BA.5.2_BA.5.2.1_BA.5.1.png VOCgrowth/UK_BA.5*_BA.2.75.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5*_BA.2.12.1_BA.4*.png VOCgrowth/UK_BA.5.1_BA.4_BE.1_BA.5.2_BA.5.2.1.png VOCgrowth/UK_BA.5*_BA.2.75.png'
 set -o noglob
 pics=$bigpics
 for x in $bigpics; do
