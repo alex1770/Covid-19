@@ -278,7 +278,7 @@ set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\
 if args.plotpoints: cmd+="Larger blobs indicate more certainty (more samples). "
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
-plot [:] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*numv/15,1.8)/log(2)}]"""
+plot [:] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
 #plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
