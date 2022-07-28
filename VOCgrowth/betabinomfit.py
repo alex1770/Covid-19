@@ -14,22 +14,22 @@
 
 from stuff import *
 import numpy as np
+import argparse
 from math import exp,log,sqrt
 from scipy.optimize import minimize
 from scipy.special import gammaln,betaln,digamma
 
-mindate='0000-00-00'
-maxdate='9999-99-99'
+parser=argparse.ArgumentParser()
+parser.add_argument('-c', '--col0',        type=int,default=1,    help="Column number of variant 0 (includes date column, count from 0)")
+parser.add_argument('-d', '--col1',        type=int,default=2,    help="Column number of variant 1 (includes date column, count from 0)")
+parser.add_argument('-f', '--mindate',     default="2019-01-01",  help="Min sample date of sequence")
+parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
+parser.add_argument('-p', '--prlevel',     type=int,default=1,    help="Print level")
+args=parser.parse_args()
+
 maxmult=20
-prlevel=1
-col0=1
-col1=2
-if len(sys.argv)>1: mindate=sys.argv[1]
-if len(sys.argv)>2: maxdate=sys.argv[2]
-if len(sys.argv)>3: col0=int(sys.argv[3])
-if len(sys.argv)>4: col1=int(sys.argv[4])
-if len(sys.argv)>5: prlevel=int(sys.argv[5])
-print("Using date range",mindate,"-",maxdate)
+prlevel=args.prlevel
+print("Using date range",args.mindate,"-",args.maxdate)
 
 # Variant0, Variant1 counts by day
 V0=[];V1=[];DT=[]
@@ -45,10 +45,10 @@ else:
 for x in fp:
   if x[0]=='#': continue
   y=x.strip().split()
-  if y[0]>=mindate and y[0]<=maxdate:
+  if y[0]>=args.mindate and y[0]<=args.maxdate:
     d=datetoday(y[0])
-    v0=int(y[col0])
-    v1=int(y[col1])
+    v0=int(y[args.col0])
+    v1=int(y[args.col1])
     if v0+v1>=2: V0.append(v0);V1.append(v1);DT.append(d)
 ndays=len(V0)
 
