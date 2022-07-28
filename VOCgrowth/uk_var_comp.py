@@ -188,7 +188,9 @@ c=C@R
 # Effective covariance matrix, corrected for overdispersion, is then mult*C
 res=c[None,:numv]+np.arange(n)[:,None]*c[None,numv:]-LN
 mult=(Q*res[:,:,None]*res[:,None,:]).sum()/(n*(numv-1))
-print("Residual multiplier = %.3f"%mult)
+print("Residual multiplier = %.3f"%mult,end="")
+if mult<1: print("    - adjusting to 1");mult=1
+else: print()
 
 # Sampling is most convenient way of getting CrIs for crossover points
 numsamp=100000
