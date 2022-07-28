@@ -34,20 +34,25 @@ if t1>=t0:
 else:
   infile='metadata.tsv';inputsorted=False
 
-CVV=[]# "Compiled" VV: separates out eg Spike_F486V-N_P151S into [(True,"Spike_F486V"),(False,"N_P151S")]
-for v in VV:
+# "Compile" expression with '+'s and '-'s into logical components
+# E.g., Spike_F486V-N_P151S goes to [(True,"Spike_F486V"),(False,"N_P151S")]
+def compile(expr):
   cv=[]
-  v='+'+v
-  while v!="":
-    f0=v.find('+',1)
-    f1=v.find('-',1)
-    n=len(v)
+  expr='+'+expr
+  while expr!="":
+    f0=expr.find('+',1)
+    f1=expr.find('-',1)
+    n=len(expr)
     if f0==-1: f0=n
     if f1==-1: f1=n
     f=min(f0,f1)
-    cv.append((v[0]=='+',v[1:f]))
-    v=v[f:]
-  CVV.append(cv)
+    cv.append((expr[0]=='+',expr[1:f]))
+    expr=expr[f:]
+  return cv
+
+
+CVV=[compile(v) for v in VV]
+CC=compile(c)
 
 VV.append("Others")
 numv=len(VV)
@@ -70,7 +75,10 @@ for (date,loc,lineage,mutations) in csvrows(infile,['Collection date','Location'
   if date<mindate:
     if inputsorted: break
     continue
-  if loc[:len(c)]!=c: continue
+  ok=1
+  for wanted,place in CC:
+    if (loc[:len(place)]==place)!=wanted: ok=0;break
+  if not ok: continue
   if date not in d: d[date]=[0]*numv
   lineage1=lineage+'.'
   for i,cv in enumerate(CVV):
