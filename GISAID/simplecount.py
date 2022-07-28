@@ -12,7 +12,7 @@ mindate='2021-01-01'
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1.617.2','AY.*','BA.1','BA.1.1','BA.2','BA.3']
-VV=['Spike_F486V', 'N_P151S', 'NSP8_N118S', 'BA.2*', 'BA.3', 'BA.4*', 'BA.5*', 'Unassigned']
+VV=['Spike_F486V-N_P151S', 'NSP8_N118S', 'BA.2*', 'BA.3', 'BA.4*', 'BA.5*', 'Unassigned']
 
 if len(sys.argv)>1: c=sys.argv[1]
 if len(sys.argv)>2: mindate=sys.argv[2]
@@ -34,43 +34,66 @@ if t1>=t0:
 else:
   infile='metadata.tsv';inputsorted=False
 
+CVV=[]# "Compiled" VV: separates out eg Spike_F486V-N_P151S into [(True,"Spike_F486V"),(False,"N_P151S")]
+for v in VV:
+  cv=[]
+  v='+'+v
+  while v!="":
+    f0=v.find('+',1)
+    f1=v.find('-',1)
+    n=len(v)
+    if f0==-1: f0=n
+    if f1==-1: f1=n
+    f=min(f0,f1)
+    cv.append((v[0]=='+',v[1:f]))
+    v=v[f:]
+  CVV.append(cv)
+
+VV.append("Others")
+numv=len(VV)
+
 print('#Using input file',infile)
 
 print("#Country/region:",c)
 print("#From:",mindate)
 
-print('#Date              All        ',end='')
-for v in VV: print(' %11s'%v,end='')
-print('      Others')
+print('#Date         All  ',end='')
+wid=[]
+for v in VV:
+  w=max(len(v)+1,6)
+  wid.append(w)
+  print(' %*s'%(w,v),end='')
+print()
 d={}
 for (date,loc,lineage,mutations) in csvrows(infile,['Collection date','Location','Pango lineage','AA Substitutions'],sep='\t'):
-  if loc[:len(c)]!=c: continue
   if len(date)!=10 or date[:2]!="20": continue
   if date<mindate:
     if inputsorted: break
     continue
-  if date not in d: d[date]=[0]*(len(VV)+1)
+  if loc[:len(c)]!=c: continue
+  if date not in d: d[date]=[0]*numv
   lineage1=lineage+'.'
-  for i,pat in enumerate(VV):
-    if lineage==pat: break
-    if pat[-1]=='*' and lineage1[:len(pat)-1]==pat[:-1]: break
-    if '_' in pat and pat in mutations: break
+  for i,cv in enumerate(CVV):
+    ok=1
+    for (wanted,pat) in cv:
+      if (lineage==pat or (pat[-1]=='*' and lineage1[:len(pat)]==pat[:-1]+'.') or ('_' in pat and pat in mutations))!=wanted: ok=0;break
+    if ok: break
   else:
-    i=len(VV)
+    i=numv-1
   d[date][i]+=1
 
 l=sorted(list(d))
 for date in l:
   print(date,end='')
   s=sum(d[date])
-  print(" %11d        "%s,end='')
-  for n in d[date]:
-    print(" %11d"%n,end='')
+  print(" %6d  "%s,end='')
+  for (w,n) in zip(wid,d[date]):
+    print(" %*d"%(w,n),end='')
   print("   ",end='')
   #for n in d[date]:
   #  print("  %6.1f%%"%(n/s*100),end='')
   print()
 
-print('#Date              All        ',end='')
-for v in VV: print(' %11s'%v,end='')
-print('      Others')
+print('#Date         All  ',end='')
+for w,v in zip(wid,VV): print(' %*s'%(w,v),end='')
+print()
