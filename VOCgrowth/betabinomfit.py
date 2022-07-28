@@ -27,6 +27,7 @@ parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max samp
 parser.add_argument('-p', '--prlevel',     type=int,default=1,    help="Print level")
 args=parser.parse_args()
 
+zconf=1.96
 maxmult=20
 prlevel=args.prlevel
 print("Using date range",args.mindate,"-",args.maxdate)
@@ -101,7 +102,6 @@ def Hessian(xx,eps):
   return H
 
 def Fisher(xx):
-  zconf=1.96
   eps=(5e-3,1e-4,1e-3)
   H=Hessian(xx,eps)
   HI=np.linalg.inv(H)
@@ -118,8 +118,8 @@ for i in range(ndays): revdict[DT[i]]=(V0[i],V1[i])
 
 # Do simple regression to get decent initial values for NB regression
 # V0s, V1s = smoothed V0, V1
-V0s=np.array(V0)
-V1s=np.array(V1)
+V0s=np.zeros(len(V0))
+V1s=np.zeros(len(V1))
 for i in range(ndays):
   for r in range(-smooth,smooth+1):
     dt=DT[i]+r
@@ -136,13 +136,10 @@ Y=np.log(V1sp/V0sp)
 m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
 r=np.array([sum(W*Y),sum(W*X*Y)])
 c=np.linalg.solve(m,r)
-mi=np.linalg.pinv(m)
+C=np.linalg.pinv(m)
+conf=zconf*sqrt(C[1,1])
+print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-conf,c[1]+conf))
 # dayoffset=day0-c[0]/c[1]
-# Could estimate overdispersion parameter, but it's not likely to be that close to what NB finds because NB
-# is quite insensitive to its exact value. Which actually suggests there is not much point in using NB instead
-# of Poisson. Ho hum.
-# R=c[0]+c[1]*X-Y
-# q0=(R*R*W).sum()/len(R)-1
 
 desc=["Intercept","Growth of V1 rel V0","Overdispersion multiplier"]
 ml=max(len(x) for x in desc)
