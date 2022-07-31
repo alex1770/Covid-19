@@ -84,6 +84,7 @@ else: keys=["sample_date","lineage","mutations","ambiguities"];sep=','
 t0=t1=0
 for (date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
   if len(date)<10: continue
+  if date>args.maxdate: continue
   if date<args.mindate:
     if inputsorted: break
     continue
