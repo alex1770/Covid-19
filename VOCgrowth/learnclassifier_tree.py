@@ -32,6 +32,8 @@ print("Mincount:",args.mincount)
 print("Maxleaves:",args.maxleaves)
 print("Database:","GISAID" if args.gisaid else "COG-UK")
 print("synSNP permissiveness:",args.synperm)
+print("Max N-content:",args.maxbad)
+print()
 
 # List of overlapping ORFs for which there is evidence that they encode
 # https://www.sciencedirect.com/science/article/pii/S0042682221000532
