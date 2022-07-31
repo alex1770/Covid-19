@@ -6,7 +6,7 @@ from __future__ import print_function,division
 import sys,os,argparse
 from stuff import *
 from math import log
-
+from variantaliases import aliases
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-f', '--mindate',     default="2019-01-01", help="Min sample date of sequence")
@@ -43,6 +43,25 @@ def oksyn(m,perm):
   loc=int(m[8:-1])
   return loc in accessorygenes
 
+ecache={}
+def expandlin(lin):
+  if lin in ecache: return ecache[lin]
+  for (short,long) in aliases:
+    s=len(short)
+    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
+  ecache[lin]=lin
+  return lin
+
+ccache={}
+def contractlin(lin):
+  if lin in ccache: return ccache[lin]
+  lin=expandlin(lin)
+  for (short,long) in aliases:
+    l=len(long)
+    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
+  ccache[lin]=lin
+  return lin
+
 def mutationlist(mutations):
   if args.gisaid: return mutations[1:-1].split(',')
   else: return mutations.split('|')
@@ -73,12 +92,28 @@ if args.lineages==None:
 else:
   lineages=args.lineages.split(',')
 print("Classifying lineages:",lineages)
+# Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
+# Note that BA.5* will match BA.5.1 and BA.5 but not BA.53
+#           BA.5.* will match BA.5.1 but not BA.5 or BA.53
+targlinsexact=[]
+targlinsprefix=[]
+for lin in lineages:
+  if lin[-2:]=='.*': exact="-";prefix=lin[:-1]
+  elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
+  else: exact=lin;prefix="-"
+  targlinsexact.append(expandlin(exact))
+  targlinsprefix.append(expandlin(prefix))
 print()
 
 mml=[]
 for (lineage,mutations) in ml:
-  if lineage in lineages: i=lineages.index(lineage)
+  dblin=expandlin(lineage)
+  for i in range(len(lineages)):
+    exact=targlinsexact[i]
+    prefix=targlinsprefix[i]
+    if dblin==exact or (dblin+'.')[:len(prefix)]==prefix: ind=i;break
   else: i=len(lineages)
+  #print("Assigning",lineage,"to",lineages[i] if i<len(lineages) else "Other")
   mml.append((i,set(mutationlist(mutations)).intersection(okm)))
 lineages.append("Others")
 
