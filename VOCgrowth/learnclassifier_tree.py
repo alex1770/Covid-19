@@ -142,7 +142,7 @@ for (lineage,mutations) in ml:
   else: i=len(lineages)
   #print("Assigning",lineage,"to",lineages[i] if i<len(lineages) else "Other")
   mml.append((i,set(mutationlist(mutations)).intersection(okm)))
-lineages.append("Others")
+lineages.append("Other")
 
 def getstats(indexlist):
   nl=len(lineages)
