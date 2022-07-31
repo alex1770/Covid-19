@@ -304,6 +304,11 @@ while leaves>1:
   tr.pr2();print();sys.stdout.flush()
   if leaves==args.printtree:
     dectree="decisiontree"
+    if args.gisaid: dectree+=".GISAID"
+    else: dectree+=".COG-UK"
+    dectree+=".from"+args.mindate
+    dectree+=".leaves%d"%leaves
+    dectree+=".maxbad%g"%args.maxbad
     with open(dectree,"w") as fp: tr.printdecisiontree(file=fp)
 
 if dectree!=None: print("Written decision tree to \"%s\""%dectree)
