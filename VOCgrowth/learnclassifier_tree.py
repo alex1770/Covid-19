@@ -248,7 +248,7 @@ class tree:
     if depth==0:
       print("lineages =",lineages,file=file)
       print(file=file)
-      print("def treeclassify_%s(mutations):"%("gisaid" if args.gisaid else "cog"),file=file)
+      print("def treeclassify(mutations):",file=file)
       print(ind+"# Classification run at",datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S"),file=file)
       prparams(prefix=ind+"# ",file=file)
     if self.mutation==None:
