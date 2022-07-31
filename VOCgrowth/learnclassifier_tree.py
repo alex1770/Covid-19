@@ -244,7 +244,7 @@ class tree:
     ind=" "*((depth+1)*wid)
     if depth==0:
       print("def treeclassify_%s(mutations):"%("gisaid" if args.gisaid else "cog"),file=file)
-      print(ind+"# Classification run at",datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S"))
+      print(ind+"# Classification run at",datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S"),file=file)
       prparams(prefix=ind+"# ",file=file)
     if self.mutation==None:
       print(ind+'return "%s"'%(max(zip(self.count,lineages))[1]),file=file)
