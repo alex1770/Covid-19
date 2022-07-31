@@ -17,7 +17,8 @@ parser.add_argument('-m', '--mincount',    type=int, default=50,     help="Min c
 parser.add_argument('-M', '--maxleaves',   type=int, default=50,     help="Maximum number of leaves in the tree")
 parser.add_argument('-l', '--lineages',                              help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
 parser.add_argument('-n', '--numtoplin',   type=int, default=5,      help="Classify the most prevalent 'n' lineages (alternative to --lineages)")
-parser.add_argument('-s', '--synperm',     type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonumous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
+parser.add_argument('-p', '--printtree',   type=int, default=20,     help="Print decision tree with this many leaves")
+parser.add_argument('-s', '--synperm',     type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
 
 if args.gisaid:
@@ -235,6 +236,16 @@ class tree:
     return self.left.check() and self.right.check()
   def leafent(self):
     return sum(leaf.ent for leaf in self.getleaves())
+  def printdecisiontree(self,depth=0,file=sys.stdout):
+    wid=2
+    ns=depth*wid
+    if self.mutation==None:
+      print('%*slineage="%s"'%(ns,"",max(zip(self.count,lineages))[1]),file=file)
+    else:
+      print('%*sif "%s" in mutations:'%(ns,"",self.mutation),file=file)
+      self.left.printdecisiontree(depth+1,file=file)
+      print("%*selse:"%(ns,""),file=file)
+      self.right.printdecisiontree(depth+1,file=file)
 
 tr=tree()
 print("Ent per sequence %g"%(tr.leafent()/len(ml)))
@@ -260,6 +271,7 @@ print()
 
 print("Pruning")
 print()
+dectree=None
 while leaves>1:
   best=(-1e10,)
   if not tr.check(): raise RuntimeError("A")
@@ -290,3 +302,8 @@ while leaves>1:
   leaves-=1
   print("Ent per sequence %g"%(tr.leafent()/len(ml)))
   tr.pr2();print();sys.stdout.flush()
+  if leaves==args.printtree:
+    dectree="decisiontree"
+    with open(dectree,"w") as fp: tr.printdecisiontree(file=fp)
+
+if dectree!=None: print("Written decision tree to \"%s\""%dectree)
