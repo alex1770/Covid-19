@@ -26,14 +26,17 @@ if args.gisaid:
 else:
   infile='cog_metadata_sorted.csv';inputsorted=True
 
-print("Using input file",infile)
-print("From:",args.mindate)
-print("To:",args.maxdate)
-print("Mincount:",args.mincount)
-print("Maxleaves:",args.maxleaves)
-print("Database:","GISAID" if args.gisaid else "COG-UK")
-print("synSNP permissiveness:",args.synperm)
-print("Max N-content:",args.maxbad)
+def prparams(prefix="",file=sys.stdout):
+  print(prefix+"Using input file",infile,file=file)
+  print(prefix+"From:",args.mindate,file=file)
+  print(prefix+"To:",args.maxdate,file=file)
+  print(prefix+"Mincount:",args.mincount,file=file)
+  print(prefix+"Maxleaves:",args.maxleaves,file=file)
+  print(prefix+"Database:","GISAID" if args.gisaid else "COG-UK",file=file)
+  print(prefix+"synSNP permissiveness:",args.synperm,file=file)
+  print(prefix+"Max N-content:",args.maxbad,file=file)
+
+prparams()
 print()
 
 # List of overlapping ORFs for which there is evidence that they encode
@@ -238,13 +241,17 @@ class tree:
     return sum(leaf.ent for leaf in self.getleaves())
   def printdecisiontree(self,depth=0,file=sys.stdout):
     wid=2
-    ns=depth*wid
+    ind=" "*((depth+1)*wid)
+    if depth==0:
+      print("def treeclassify_%s(mutations):"%("gisaid" if args.gisaid else "cog"),file=file)
+      print(ind+"# Classification run at",datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S"))
+      prparams(prefix=ind+"# ",file=file)
     if self.mutation==None:
-      print('%*slineage="%s"'%(ns,"",max(zip(self.count,lineages))[1]),file=file)
+      print(ind+'return "%s"'%(max(zip(self.count,lineages))[1]),file=file)
     else:
-      print('%*sif "%s" in mutations:'%(ns,"",self.mutation),file=file)
+      print(ind+'if "%s" in mutations:'%(self.mutation),file=file)
       self.left.printdecisiontree(depth+1,file=file)
-      print("%*selse:"%(ns,""),file=file)
+      print(ind+"else:",file=file)
       self.right.printdecisiontree(depth+1,file=file)
 
 tr=tree()
