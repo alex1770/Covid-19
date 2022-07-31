@@ -35,6 +35,7 @@ def prparams(prefix="",file=sys.stdout):
   print(prefix+"Database:","GISAID" if args.gisaid else "COG-UK",file=file)
   print(prefix+"synSNP permissiveness:",args.synperm,file=file)
   print(prefix+"Max N-content:",args.maxbad,file=file)
+  print(prefix+"Number of leaves in decision tree:",args.printtree,file=file)
 
 prparams()
 print()
