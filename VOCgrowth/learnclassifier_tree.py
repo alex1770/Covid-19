@@ -163,12 +163,13 @@ class tree:
     step=4
     maxcol=30
     nl=len(lineages)
+    wid=[len(lineages[j])+1 for j in range(min(nl,maxcol))]
     if label=="Top":
-      for j in range(min(nl,maxcol)): print(" %9s"%lineages[j],end="")
+      for j in range(min(nl,maxcol)): print("  "+lineages[j],end="")
       if nl>maxcol: print(" ...",end="")
       print()
     for j in range(min(nl,maxcol)):
-      print(" %9d"%self.count[j],end="")
+      print(" %*d"%(wid[j],self.count[j]),end="")
     if nl>maxcol: print(" ...",end="")
     print(" %12.1f"%self.ent,end="  ")
     for i in range(level): print("."+" "*(step-1),end="")
@@ -179,8 +180,9 @@ class tree:
   def pr2(self,mlist=[]):
     maxcol=30
     nl=len(lineages)
+    wid=[len(lineages[j])+1 for j in range(min(nl,maxcol))]
     if mlist==[]:
-      for j in range(min(nl,maxcol)): print(" %9s"%lineages[j],end="")
+      for j in range(min(nl,maxcol)): print("  "+lineages[j],end="")
       if nl>maxcol: print(" ...",end="")
       print()
     if self.mutation!=None:
@@ -188,7 +190,7 @@ class tree:
       self.right.pr2(mlist+["-"+self.mutation])
       return
     for j in range(min(nl,maxcol)):
-      print(" %9d"%self.count[j],end="")
+      print(" %*d"%(wid[j],self.count[j]),end="")
     if nl>maxcol: print(" ...",end="")
     print(" %12.1f"%self.ent,end="  ")
     for m in mlist: print(m.replace("Spike","S"),end=" ")
@@ -231,8 +233,8 @@ class tree:
     return sum(leaf.ent for leaf in self.getleaves())
 
 tr=tree()
-print("Total ent %.1f"%tr.leafent())
-tr.pr2();print()
+print("Ent per sequence %g"%(tr.leafent()/len(ml)))
+tr.pr2();print();sys.stdout.flush()
 leaves=1
 while leaves<args.maxleaves:
   worst=None
@@ -248,7 +250,7 @@ while leaves<args.maxleaves:
   if best[1]==None: print("Couldn't improve worst node");break
   worst.split(best[1])
   leaves+=1
-  print("Total ent %.1f"%tr.leafent())
+  print("Ent per sequence %g"%(tr.leafent()/len(ml)))
   tr.pr2();print();sys.stdout.flush()
 print()
 
@@ -282,5 +284,5 @@ while leaves>1:
   if not par.check(): raise RuntimeError("C")
   if not tr.check(): raise RuntimeError("D")
   leaves-=1
-  print("Total ent %.1f"%tr.leafent())
+  print("Ent per sequence %g"%(tr.leafent()/len(ml)))
   tr.pr2();print();sys.stdout.flush()
