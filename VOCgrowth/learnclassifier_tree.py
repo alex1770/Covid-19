@@ -68,6 +68,7 @@ def mutationlist(mutations):
   else: return mutations.split('|')
 
 print("Reading sequence metadata")
+sys.stdout.flush()
 allm={}
 ml=[]
 numl={}
@@ -108,6 +109,7 @@ if args.lineages==None:
 else:
   lineages=args.lineages.split(',')
 print("Classifying lineages:",lineages)
+sys.stdout.flush()
 # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
 # Note that BA.5* will match BA.5.1 and BA.5 but not BA.53
 #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
@@ -163,9 +165,9 @@ class tree:
     step=4
     maxcol=30
     nl=len(lineages)
-    wid=[len(lineages[j])+1 for j in range(min(nl,maxcol))]
+    wid=[max(len(lineages[j])+1,6) for j in range(min(nl,maxcol))]
     if label=="Top":
-      for j in range(min(nl,maxcol)): print("  "+lineages[j],end="")
+      for j in range(min(nl,maxcol)): print(" %*s"%(wid[j],lineages[j]),end="")
       if nl>maxcol: print(" ...",end="")
       print()
     for j in range(min(nl,maxcol)):
@@ -180,9 +182,9 @@ class tree:
   def pr2(self,mlist=[]):
     maxcol=30
     nl=len(lineages)
-    wid=[len(lineages[j])+1 for j in range(min(nl,maxcol))]
+    wid=[max(len(lineages[j])+1,6) for j in range(min(nl,maxcol))]
     if mlist==[]:
-      for j in range(min(nl,maxcol)): print("  "+lineages[j],end="")
+      for j in range(min(nl,maxcol)): print(" %*s"%(wid[j],lineages[j]),end="")
       if nl>maxcol: print(" ...",end="")
       print()
     if self.mutation!=None:
