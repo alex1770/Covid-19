@@ -165,7 +165,7 @@ class tree:
     step=4
     maxcol=30
     nl=len(lineages)
-    wid=[max(len(lineages[j])+1,6) for j in range(min(nl,maxcol))]
+    wid=[max(len(lineages[j])+1,7) for j in range(min(nl,maxcol))]
     if label=="Top":
       for j in range(min(nl,maxcol)): print(" %*s"%(wid[j],lineages[j]),end="")
       if nl>maxcol: print(" ...",end="")
@@ -182,7 +182,7 @@ class tree:
   def pr2(self,mlist=[]):
     maxcol=30
     nl=len(lineages)
-    wid=[max(len(lineages[j])+1,6) for j in range(min(nl,maxcol))]
+    wid=[max(len(lineages[j])+1,7) for j in range(min(nl,maxcol))]
     if mlist==[]:
       for j in range(min(nl,maxcol)): print(" %*s"%(wid[j],lineages[j]),end="")
       if nl>maxcol: print(" ...",end="")
