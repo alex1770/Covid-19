@@ -27,7 +27,8 @@ else:
   infile='cog_metadata_sorted.csv';inputsorted=True
 
 def prparams(prefix="",file=sys.stdout):
-  print(prefix+"Using input file",infile,file=file)
+  print(prefix+"Command line:",' '.join(sys.argv),file=file)
+  print(prefix+"Using input file:",infile,file=file)
   print(prefix+"From:",args.mindate,file=file)
   print(prefix+"To:",args.maxdate,file=file)
   print(prefix+"Mincount:",args.mincount,file=file)
@@ -245,6 +246,8 @@ class tree:
     wid=2
     ind=" "*((depth+1)*wid)
     if depth==0:
+      print("lineages =",lineages,file=file)
+      print(file=file)
       print("def treeclassify_%s(mutations):"%("gisaid" if args.gisaid else "cog"),file=file)
       print(ind+"# Classification run at",datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S"),file=file)
       prparams(prefix=ind+"# ",file=file)
