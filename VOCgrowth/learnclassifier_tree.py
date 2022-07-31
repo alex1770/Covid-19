@@ -9,14 +9,15 @@ from math import log
 from variantaliases import aliases
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-f', '--mindate',     default="2019-01-01", help="Min sample date of sequence")
-parser.add_argument('-g', '--gisaid',      action="store_true",  help="Use GISAID data instead of COG-UK data")
-parser.add_argument('-t', '--maxdate',     default="9999-12-31", help="Max sample date of sequence")
-parser.add_argument('-m', '--mincount',    type=int, default=50, help="Min count of mutation: only consider mutations which have occurred at least this many times")
-parser.add_argument('-M', '--maxleaves',   type=int, default=50, help="Maximum number of leaves in the tree")
-parser.add_argument('-l', '--lineages',                          help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
-parser.add_argument('-n', '--numtoplin',   type=int, default=5,  help="Classify the most prevalent 'n' lineages (alternative to --lineages)")
-parser.add_argument('-s', '--synperm',     type=int, default=1,  help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonumous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
+parser.add_argument('-b', '--maxbad',      type=float, default=0.05, help="Maximum proportion of Ns allowed")
+parser.add_argument('-f', '--mindate',     default="2019-01-01",     help="Min sample date of sequence")
+parser.add_argument('-g', '--gisaid',      action="store_true",      help="Use GISAID data instead of COG-UK data")
+parser.add_argument('-t', '--maxdate',     default="9999-12-31",     help="Max sample date of sequence")
+parser.add_argument('-m', '--mincount',    type=int, default=50,     help="Min count of mutation: only consider mutations which have occurred at least this many times")
+parser.add_argument('-M', '--maxleaves',   type=int, default=50,     help="Maximum number of leaves in the tree")
+parser.add_argument('-l', '--lineages',                              help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
+parser.add_argument('-n', '--numtoplin',   type=int, default=5,      help="Classify the most prevalent 'n' lineages (alternative to --lineages)")
+parser.add_argument('-s', '--synperm',     type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonumous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
 
 if args.gisaid:
@@ -70,21 +71,36 @@ print("Reading sequence metadata")
 allm={}
 ml=[]
 numl={}
-if args.gisaid: keys=['Collection date','Pango lineage',"AA Substitutions"];sep='\t'
-else: keys=['sample_date','lineage',"mutations"];sep=','
-for (date,lineage,mutations) in csvrows(infile,keys,sep=sep):
+if args.gisaid: keys=["Collection date","Pango lineage","AA Substitutions","N-Content"];sep='\t'
+else: keys=["sample_date","lineage","mutations","ambiguities"];sep=','
+t0=t1=0
+for (date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
   if len(date)<10: continue
   if date<args.mindate:
     if inputsorted: break
     continue
   if lineage=="" or lineage=="Unassigned": continue
+  if args.gisaid:
+    if Ncontent!="": bad=float(Ncontent)
+    else: bad=0
+  else:
+    t=0
+    for x in Ncontent.split('|'):
+      y=x.split('-')
+      if len(y)==1: t+=1
+      else: t+=int(y[1])-int(y[0])+1
+    bad=t/29903
+  t0+=1
+  if bad>args.maxbad: t1+=1;continue
   for m in mutationlist(mutations): allm[m]=allm.get(m,0)+1
   ml.append((lineage,mutations))
   numl[lineage]=numl.get(lineage,0)+1
-  
+
 print("Found",len(ml),"relevant entries since",args.mindate)
+print("Discarded",t1,"from",t0,"(%.1f%%) due to bad coverage"%(t1/t0*100))
 okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and oksyn(m,args.synperm))
 print("Found",len(allm),"mutations, of which",len(okm),("pass synSNP permissiveness %d and"%args.synperm if not args.gisaid else ""),"have occurred at least",args.mincount,"times")
+
 if args.lineages==None:
   lineages=list(set(lineage for (lineage,mutations) in ml))
   lineages.sort(key=lambda l: -numl[l])
