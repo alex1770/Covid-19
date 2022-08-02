@@ -57,7 +57,9 @@ def treeclassify(mutations):
           return "BA.5.2"
         else:
           if '|orf1ab:V7086F|' in mutations: return "BF.1"
-          else: return "BA.5.2.1"
+          else:
+            if '|S:A1020S|' in mutations and '|ORF7a:H47Y|' in mutations: return "BF.5"
+            return "BA.5.2.1"
       else:
         if '|ORF10:L37F|' in mutations: return "BA.5.1"
         else:
