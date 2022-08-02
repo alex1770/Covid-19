@@ -335,7 +335,12 @@ graphfn=datafn+'.png'
 ndates=maxdate-mindate+1
 allothers=', '.join(Vnames[1:])
 oneother=' or '.join(Vnames[1:])
-number="they are" if numv>2 else "it is"
+if numv==2:
+  number="it is"
+  possessive="its"
+else:
+  number="they are"
+  possessive="their"
 
 cmd=f"""
 set xdata time
@@ -355,7 +360,7 @@ set style fill transparent solid 0.25
 set style fill noborder
 
 set output "{graphfn}"
-set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not their absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"""
+set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not {possessive} absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"""
 if args.plotpoints: cmd+="Larger blobs indicate more certainty (more samples). "
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 min(a,b)=(a<b)?a:b
