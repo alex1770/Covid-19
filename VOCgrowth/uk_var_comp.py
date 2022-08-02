@@ -295,7 +295,7 @@ for i in range(1,numv):
   cross=t[int(numsamp/2)]
   crosslow,crosshigh=t[int(numsamp*(1-conf)/2)],t[int(numsamp*(1+conf)/2)]
   crosserr=(crosshigh-crosslow)/2
-  growthstr=f"Relative growth in {Vnames[i]} vs {Vnames[0]} of {grad:.3f} ({grad-graderr:.3f} - {grad+graderr:.3f}) per day"
+  growthstr=f"Relative growth in {Vnames[i]} vs {Vnames[0]} of {grad*100:.1f}% ({(grad-graderr)*100:.1f}% - {(grad+graderr)*100:.1f}%) per day"
   doubstr=f"Doubling of ratio {Vnames[i]}/{Vnames[0]} every {log(2)/grad:.1f} ({log(2)/(grad+graderr):.1f} - {log(2)/(grad-graderr):.1f}) days"
   print(growthstr)
   print(doubstr)
