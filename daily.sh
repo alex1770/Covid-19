@@ -16,7 +16,7 @@ set -e
     #python3 uk_var_comp.py -f 2022-05-01 -p -l 'BA.2*,BA.2.12.1,BA.4*,BA.5*'
     python3 uk_var_comp.py -f 2022-05-01 -p -l 'BA.5*,BA.2.12.1,BA.4*'
     python3 uk_var_comp.py -f 2022-06-01 -b -l 'BA.5.1,BA.4,BE.1,BA.5.2,BA.5.2.1'
-    python3 uk_var_comp.py -f 2022-06-01 -p -l 'BA.5*,BA.2.75' -c1
+    python3 uk_var_comp.py -f 2022-06-01 -b -p -l 'BA.5*,BA.2.75' -c0 -d
 )
 
 make
@@ -35,6 +35,7 @@ for x in $bigpics; do
     pics="$pics $small"
     cat $x | convert - -resize 47% - > $small
 done
+pics="$pics VOCgrowth/UK_BA.5*_BA.2.75"
 set +o noglob
 
 rsync -pt worldometer.csv $pics sonorous@sonorouschocolate.com:public_html/covid19/extdata
