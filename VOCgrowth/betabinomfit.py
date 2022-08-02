@@ -17,7 +17,7 @@ import numpy as np
 import argparse
 from math import exp,log,sqrt
 from scipy.optimize import minimize
-from scipy.special import gammaln,betaln,digamma
+from scipy.special import gammaln,betaln
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-c', '--col0',        type=int,default=1,    help="Column number of variant 0 (includes date column, count from 0)")
