@@ -260,7 +260,7 @@ if args.DM:
       if i<2*numv: desc=Vnames[i%numv]+[" intercept"," growth"][i//numv]
       else: desc="multiplier"
       print("Warning:",desc,"hit bound")
-  print("Residual(overdispersion) multiplier from DM = %.3f"%xx[2*numv],end="")
+  print("Residual(overdispersion) multiplier from DM = %.3f"%xx[2*numv])
   
   eps=[1e-3]*numv+[1e-4]*numv+[1e-3]
   H=Hessian(xx,eps)
