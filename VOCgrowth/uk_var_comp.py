@@ -41,6 +41,10 @@ cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).str
 
 def treeclassify(mutations):
   if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: return "XE"
+  if '|S:R346T|' in mutations:
+    if '|S:N658S|' in mutations: return "BA.4.6"
+    elif '|S:Y248N|' in mutations: return "BA.2.76"
+    elif '|S:L452M|' in mutations: return "BA.2.74"
   if '|S:F486V|' in mutations:
     if '|N:P151S|' in mutations:
       if '|S:V3G|' in mutations:
