@@ -1,6 +1,8 @@
 import sys,pickle,os,argparse
 from stuff import *
 from scipy.stats import norm, multivariate_normal as mvn
+from scipy.optimize import minimize
+from scipy.special import gammaln
 import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
@@ -9,13 +11,11 @@ np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
 cachedir="cogukcachedir"
 datafile='cog_metadata.csv'
-Vnames=["BA.1","BA.1.1*","BA.2*"]# A name ending in '*' is considered as a prefix/ancestor, so BA.1* includes BA.1 and BA.1.17 though not BA.12
-mindate=Date('2000-01-01')
-maxdate=Date('2099-12-31')
 conf=0.95
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-c', '--mincount',    type=int,default=5,    help="Minimum variant count considered")
+parser.add_argument('-d', '--DM',          action="store_true",   help="Use Dirichlet-Multinomial regression instead of logistic approximation")
 parser.add_argument('-f', '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
 parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-l', '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
@@ -35,6 +35,7 @@ print("Labs:",location)
 print("Variants considered:",' '.join(Vnames))
 print("Initial date range:",mindate,"-",maxdate)
 zconf=norm.ppf((1+conf)/2)
+maxmult=20
 numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
 
@@ -148,12 +149,16 @@ n=len(NN)
 if n<2: raise RuntimeError("Can't find enough samples")
 # NN[timestep up to n][variant up to numv] = count
 
+# Do simple regression to get decent initial values for Dirichlet-Multinomial regression
+
 # Expand multinomial log probability about maximum:
 # log(prod_r p_r ^ n_r) = constant - (1/2)*[ sum_r n_r.x_r^2 - (sum_r n_r.x_r)^2/(sum_r n_r) ] + O(x_^3)
-# Note that this is invariant under x_r -> x_r + constant
+# where x_r=log(p_r/n_r)
+# Note that this is invariant under x_r -> x_r + constant, and we're expanding about the line (c,c,c,...,c).
 
 # Let t = timestep, r = variant number
 # Calculate, for each t, the quadratic form QF(x) = sum_r n_{t,r}x_{t,r}^2 - 1/(sum_r n_{t,r})*(sum_r n_{t,r}x_{t,r})^2
+# Note that log likelihood(x) = (-1/2) * QF(x)
 # I.e., find coefficients Q_{t,r,s} such that QF(x) = sum_{r,s} Q_{t,r,s}x_{t,r.x_{t,s}
 Q=np.zeros([n,numv,numv])
 Q[:,np.arange(numv),np.arange(numv)]=NN
@@ -162,17 +167,19 @@ Q-=NN[:,None,:]*NN[:,:,None]/NN.sum(axis=1)[:,None,None]
 # We're looking for p_{t,r} = exp(a_r+t*b_r)/(constant independent of r), where b_r is the growth of variant r, so 
 # substitute x_{t,r} = a_r + t*b_r - log(n_{t,r}), and sum over t.
 # Amalgamate indexes corresponding to a_r and b_s as one single k index of size 2*numv.
-# So (c_k) = (a_0,...,a_{numv-1},b_0,...,b_{numv-1}), and the quadratic (+linear) form is
+# So (c_k) = (a_0,...,a_{numv-1},b_0,...,b_{numv-1}), and the quadratic (+linear) form, representing -2*LL, is
 #    sum_{k,l} M_{k,l}.c_k.c_l - 2*sum_k R_k.c_k + constant, i.e. c^t.M.c - 2*R.c, with MLE(c) = M^{-1}R
 M=np.zeros([numv*2,numv*2])
 M[:numv,:numv]=Q.sum(axis=0)
 M[numv:,:numv]=M[:numv,numv:]=(Q*np.arange(n)[:,None,None]).sum(axis=0)
 M[numv:,numv:]=(Q*(np.arange(n)**2)[:,None,None]).sum(axis=0)
 
-# Add gauge-fixing terms to M, requiring the sum of a_r and sum of b_r both to be 0. (Other gauges are available.)
+# Add gauge-fixing terms to M, requiring a_0=b_0=0 (other gauges are available).
 scale=sqrt(NN.sum())# Some kind of size scale - result doesn't depend on this unless we change it by many orders of magnitude.
-M[:numv,:numv]+=scale*np.ones([numv,numv])
-M[numv:,numv:]+=scale*np.ones([numv,numv])
+M[0,0]+=scale
+M[numv,numv]+=scale
+#M[:numv,:numv]+=scale*np.ones([numv,numv])
+#M[numv:,numv:]+=scale*np.ones([numv,numv])
 
 # Calculate linear term, R
 LN=np.log(NN)
@@ -181,6 +188,9 @@ R[:numv]=(Q*LN[:,:,None]).sum(axis=(0,1))
 R[numv:]=(Q*np.arange(n)[:,None,None]*LN[:,:,None]).sum(axis=(0,1))
 
 # Calculate provisional covariance matrix and MLE
+# Only differences of c[] elements and certain col,row differences of C[] make sense.
+# E.g,. c[5]-c[2] and C[2,2]-C[2,5]-C[5,2]+C[5,5] make sense (assuming numv>5 in this example).
+# Anything that can't be written as a function of these differences will be gauge-dependent.
 C=np.linalg.inv(M)
 c=C@R
 
@@ -188,29 +198,98 @@ c=C@R
 # Effective covariance matrix, corrected for overdispersion, is then mult*C
 res=c[None,:numv]+np.arange(n)[:,None]*c[None,numv:]-LN
 mult=(Q*res[:,:,None]*res[:,None,:]).sum()/(n*(numv-1))
-print("Residual multiplier = %.3f"%mult,end="")
+print("Residual(overdispersion) multiplier = %.3f"%mult,end="")
 if mult<1: print("    - adjusting to 1");mult=1
 else: print()
+C*=mult
+
+# xx[:numv] = intercepts
+# xx[numv:2*numv] = growths
+# xx[2*numv] = overdispersion multiplier
+# NN[timestep up to n][variant up to numv] = count
+def LL(xx,pr=0):
+  LL=0
+  aa=xx[:numv]
+  bb=xx[numv:2*numv]
+  mult=xx[2*numv]
+  for t in range(n):
+    rho=np.exp(aa+t*bb)
+    N=NN[t].sum()
+    s=max((N-mult)/(mult-1),1e-3)
+    al=s*rho/rho.sum()
+    DLL=gammaln(N+1)+gammaln(s)-gammaln(N+s)
+    DLL+=gammaln(NN[t]+al).sum()-gammaln(al).sum()-gammaln(NN[t]+1).sum()
+    if pr: print(mindate+t,NN[t],"logrho",np.log(rho),"al",al,"aa",aa,"bb",bb,"mult",mult,"DLL",DLL)
+    LL+=DLL
+  return LL
+
+condition=1e3
+def NLL(xx): return -LL(xx)/condition
+
+def Hessian(xx,eps):
+  N=len(xx)
+  H=np.zeros([N,N])
+  for i in range(N-1):
+    for j in range(i+1,N):
+      v=0
+      for (s1,s2) in [(-1,-1),(-1,1),(1,-1),(1,1)]:
+        x=np.copy(xx)
+        x[i]+=s1*eps[i]
+        x[j]+=s2*eps[j]
+        v+=s1*s2*LL(x)
+      H[i,j]=H[j,i]=v/(4*eps[i]*eps[j])
+  for i in range(N):
+    x=np.copy(xx)
+    v=0
+    for s in [-1,0,1]:
+      x=np.copy(xx)
+      x[i]+=s*eps[i]
+      v+=(s*s*3-2)*LL(x)
+    H[i,i]=v/eps[i]**2
+  return H
+
+if args.DM:
+  bounds=[(c[i]-c[0]-3,c[i]-c[0]+3) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
+  bounds[0]=bounds[numv]=(0,0)
+  res=minimize(NLL,list(c)+[min(2,maxmult)],bounds=bounds, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+  if not res.success: raise RuntimeError(res.message)
+  print("Log likelihood: %.3f"%(LL(res.x)))
+  xx=res.x
+  for i in range(len(xx)):
+    if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
+      if i<2*numv: desc=Vnames[i%numv]+[" intercept"," growth"][i//numv]
+      else: desc="multiplier"
+      print("Warning:",desc,"hit bound")
+  print("Residual(overdispersion) multiplier from DM = %.3f"%xx[2*numv],end="")
+  
+  eps=[1e-3]*numv+[1e-4]*numv+[1e-3]
+  H=Hessian(xx,eps)
+  # Add gauge-fixing terms (to ensure a0=b0=0). These won't affect the result after C is processed (below) to only see differences.
+  H[0,0]+=scale
+  H[numv,numv]+=scale
+  C=-np.linalg.inv(H)
+  c=xx
+
+# Only gauge-invariant parts of C make sense: covariances referring to differences in intercepts and growth rates
+# Now make a choice that all variances/covariances refer to baseline variant
+# Convert query Cov[a_i,a_j] into Cov[a_i-a_0,a_j-a_0]
+#               Cov[a_i,b_j] into Cov[a_i-a_0,b_j-b_0]
+#               Cov[a_i,mult] into Cov[a_i-a_0,mult]
+#               etc
+C[:numv,      :]-=C[0,:][None,:]
+C[numv:2*numv,:]-=C[numv,:][None,:]
+C[:,      :numv]-=C[:,0][:,None]
+C[:,numv:2*numv]-=C[:,numv][:,None]
 
 # Sampling is most convenient way of getting CrIs for crossover points
 numsamp=100000
-test=mvn.rvs(mean=c,cov=C*mult,size=numsamp)
-
-# Move to gauge where baseline offset and growth are 0
-test[:,:numv]-=test[:,0][:,None]
-test[:,numv:]-=test[:,numv][:,None]
-c[:numv]=c[:numv]-c[0]
-c[numv:]=c[numv:]-c[numv]
-C[:numv,:numv]=C[:numv,:numv]-C[0,:numv][None,:]-C[:numv,0][:,None]+C[0,0][None,None]
-C[:numv,numv:]=C[:numv,numv:]-C[0,numv:][None,:]-C[:numv,numv][:,None]+C[0,numv][None,None]
-C[numv:,:numv]=C[numv:,:numv]-C[numv,:numv][None,:]-C[numv:,0][:,None]+C[numv,0][None,None]
-C[numv:,numv:]=C[numv:,numv:]-C[numv,numv:][None,:]-C[numv:,numv][:,None]+C[numv,numv][None,None]
+test=mvn.rvs(mean=c,cov=C,size=numsamp)
 
 out=[None]
 for i in range(1,numv):
   print()
   grad=c[numv+i]
-  graderr=sqrt(mult*C[numv+i,numv+i])*zconf
+  graderr=sqrt(C[numv+i,numv+i])*zconf
   yoff=c[i]
   t=sorted(-test[:,i]/test[:,numv+i])
   cross=t[int(numsamp/2)]
@@ -233,8 +312,8 @@ with open(datafn,'w') as fp:
     t=date-mindate
     v=VV[t]
     print(date,' '.join("%6d"%x for x in v),end='',file=fp)
-    mu=c[:numv]+t*c[numv:]
-    var=mult*np.array([C[i,i]+2*t*C[i,numv+i]+t**2*C[numv+i,numv+i] for i in range(numv)])
+    mu=c[:numv]+t*c[numv:2*numv]
+    var=np.array([C[i,i]+2*t*C[i,numv+i]+t**2*C[numv+i,numv+i] for i in range(numv)])
     q0=mu-zconf*np.sqrt(var)
     q1=mu+zconf*np.sqrt(var)
     for i in range(numv):
@@ -306,7 +385,7 @@ PR=NR/NR.sum()
 stats=[]
 for i in range(numv):
   grad=c[numv+i]
-  graderr=sqrt(mult*C[numv+i,numv+i])*zconf
+  graderr=sqrt(C[numv+i,numv+i])*zconf
   stats.append([i,grad,graderr,PR[i],PR[i]*exp(grad*proj)])
 stats=np.array(stats)
 stats[:,4]=stats[:,4]/stats[:,4].sum()
