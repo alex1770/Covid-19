@@ -1,8 +1,5 @@
-import sys,os
+import sys,os,argparse
 from stuff import *
-
-c='Europe / United Kingdom'
-mindate='2021-01-01'
 
 #VV=['B.1.1.7','B.1.617','B.1.617.1','B.1.617.2','B.1.617.3']
 #VV=['B.1.1.7','B.1.617.2','AY.1','AY.2','AY.3','AY.4','AY.5','AY.6','C.1.2']
@@ -12,11 +9,18 @@ mindate='2021-01-01'
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1','B.1.2','B.1.243','B.1.1.7','B.1.1.519','B.1.427','B.1.429']
 #VV=['B.1.617.2','AY.*','BA.1','BA.1.1','BA.2','BA.3']
-VV=['Spike_F486V-N_P151S', 'NSP8_N118S', 'BA.2*', 'BA.3', 'BA.4*', 'BA.5*', 'Unassigned']
+#VV=['Spike_F486V-N_P151S', 'NSP8_N118S', 'BA.2*', 'BA.3', 'BA.4*', 'BA.5*', 'Unassigned']
 
-if len(sys.argv)>1: c=sys.argv[1]
-if len(sys.argv)>2: mindate=sys.argv[2]
-if len(sys.argv)>3: VV=sys.argv[3].split(',')
+defaultlineages="Spike_F486V-N_P151S,NSP8_N118S,BA.2*,BA.3,BA.4*,BA.5*,Unassigned"
+
+parser=argparse.ArgumentParser()
+parser.add_argument('-b', '--maxbad',      type=float, default=0.05,           help="Maximum proportion of Ns allowed")
+parser.add_argument('-l', '--lineages',    default=defaultlineages,            help="Comma-separated list of lineages or mutations; AND together with +/- prefixes")
+parser.add_argument('-L', '--location',    default="Europe / United Kingdom",  help="Location prefix; AND together with +/- prefixes")
+parser.add_argument('-f', '--mindate',     default="2021-01-01",               help="Min sample date of sequence")
+args=parser.parse_args()
+
+VV=args.lineages.split(',')
 
 try:
   t0=os.path.getmtime('metadata.tsv')
@@ -52,15 +56,15 @@ def compile(expr):
 
 
 CVV=[compile(v) for v in VV]
-CC=compile(c)
+CC=compile(args.location)
 
 VV.append("Others")
 numv=len(VV)
 
 print('#Using input file',infile)
-
-print("#Country/region:",c)
-print("#From:",mindate)
+print("#Country/region:",args.location)
+print("#From:",args.mindate)
+print("#Max N-Content:",args.maxbad)
 
 print('#Date         All  ',end='')
 wid=[]
@@ -70,11 +74,12 @@ for v in VV:
   print(' %*s'%(w,v),end='')
 print()
 d={}
-for (date,loc,lineage,mutations) in csvrows(infile,['Collection date','Location','Pango lineage','AA Substitutions'],sep='\t'):
+for (date,loc,lineage,mutations,Ncontent) in csvrows(infile,['Collection date','Location','Pango lineage','AA Substitutions','N-Content'],sep='\t'):
   if len(date)!=10 or date[:2]!="20": continue
-  if date<mindate:
+  if date<args.mindate:
     if inputsorted: break
     continue
+  if Ncontent!="" and float(Ncontent)>args.maxbad: continue
   ok=1
   for wanted,place in CC:
     if (loc[:len(place)]==place)!=wanted: ok=0;break
