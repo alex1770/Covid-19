@@ -58,14 +58,16 @@ else:
   else: keys=['sample_date',"adm1",'lineage','scorpio_call','mutations'];sep=','
   mutcounts={}
   with open(datafile,'r') as fp:
-    for (dt,loc,lin,var,mut) in csvrows_it(fp,keys,sep=sep):
+    for (dt,loc,lin,var,mutstring) in csvrows_it(fp,keys,sep=sep):
       if dt<mindate0:
         if inputsorted: break
         continue
+      if len(mutstring)<=2: continue# Skip if no mutations listed
       day=datetoday(dt)
-      if args.gisaid: muts=mut[1:-1].split(',')
-      else: muts=mut.split('|')
+      if args.gisaid: muts=mutstring[1:-1].split(',')
+      else: muts=mutstring.split('|')
       for mut in muts:
+        if mut=="": print(dt,loc,lin,var,">"+mutstring+"<");oiuoiuiou
         mutcounts[mut]=mutcounts.get(mut,0)+1
   num2name=[]
   name2num={}
@@ -133,17 +135,23 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
         mutlincounts[m][lin]=mutlincounts[m].get(lin,0)+1
   return daycounts,mutdaycounts,lincounts,mutlincounts
 
-def getgrowth(daycounts,mutdaycount,invert=False):
+def getgrowth(daycounts,mutdaycount):
   # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
+  if len(mutdaycount)<=1: return None
   m=np.zeros([2,2])
   r=np.zeros(2)
   s0=syy=0
   tv0=tv1=0
+  day0=min(mutdaycount)
+  day1=max(mutdaycount)
+  V0=np.zeros(day1-day0+1)
+  V1=np.zeros(day1-day0+1)
   for day in mutdaycount:
     x=day-mindate0
     v1=mutdaycount[day]
     v0=daycounts.get(day,0)-v1
-    if invert: (v0,v1)=(v1,v0)
+    V0[day-day0]=v0
+    V1[day-day0]=v1
     if v0>0 and v1>0:
       y=log(v1/v0)
       w=1/(1/v0+1/v1)
@@ -157,9 +165,31 @@ def getgrowth(daycounts,mutdaycount,invert=False):
       syy+=w*y*y
       tv0+=v0;tv1+=v1
   if m[0,0]<5: return None#(0,1000),(0,10),(tv0,tv1)#alter
-  mi=np.linalg.pinv(m)
-  c=mi@r#c=np.linalg.solve(m,r)
-  cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
+  C=np.linalg.pinv(m)
+  c=C@r
+  cv=[C[0,0],C[1,1]]# These should be the variances of c[0],c[1]
+  V0+=1e-30
+  V1+=1e-30
+  W=V0*V1/(V0+V1)
+  X=np.arange(day1-day0+1)
+  Y=np.log(V1/V0)
+  M=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
+  r2=np.array([sum(W*Y),sum(W*X*Y)])
+  C2=np.linalg.inv(M)
+  c2=C2@r2
+  res=c2[0]+c2[1]*X-Y
+  mult=(W*res*res).sum()/(day1-day0+1)
+  #print("Res mult",mult)
+  if 0 and mult<.03:
+    for i in range(day1-day0+1):
+      if W[i]>1e-9: print("XXX",i,V0[i],V1[i],W[i],c2[0]+c2[1]*i,Y[i],res[i])
+    print()
+    print(C2)
+    print(c2)
+    print(res)
+    poi
+  c2[0]+=c2[1]*(mindate0-day0)
+  #print(c[0],c2[0],"     ",c[1],c2[1])
 
   # alter - not using residual yet
   # Want sum( w*(c0+c1*x-y)^2 )
@@ -169,8 +199,8 @@ def getgrowth(daycounts,mutdaycount,invert=False):
   # Try crossing number stats
 
   return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1])),(tv0,tv1)
-  # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
-  # return (mindate0-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
+  # This form is nicer to interpret (and minday0-independent), but will become singular if c[1]=0:
+  # return (minday0-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
 
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-10-01')
@@ -237,7 +267,7 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# High %d"%high,file=fp)
 
-  sd=8
+  sd=4
   gr0=0.0
   def gval(mut):
     if tv[mut][0]+tv[mut][1]==0: return -1e9
@@ -252,19 +282,18 @@ if 1:
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-gval(x))
 
-  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif NumNonVar  NumVar Examples")
+  print("     Mutation          -------- %Growth ---------     ---- %Growth effect ----- Gr-signif NumNonVar  NumVar  Examples")
   nm=0
   for mut in l:
     gr=growth[mut]
     (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
     #if gl<gr0: break
     #if abs(gr[0])<sd*gr[1]: break
-    print("%-20s  %7.3f (%7.3f - %7.3f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
+    print("%-20s  %7.2f (%7.2f - %7.2f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
     p=tv[mut][0]/(tv[mut][0]+tv[mut][1])
     if g>0: (ga,gla,gha)=(g*p,gl*p,gh*p)
     else: (ga,gla,gha)=(-g*(1-p),-gh*(1-p),-gl*(1-p))
-    print("   %7.3f (%7.3f - %7.3f)"%(ga*100,gla*100,gha*100),end='')
-    print("   %7.2f"%((ga-.5*(gha-gla))*100),end='')
+    print("   %7.2f (%7.2f - %7.2f)"%(ga*100,gla*100,gha*100),end='')
     print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]),end='')
     ml=list(mutlincounts[mut])
     score={}# score = number of lineages with mutation if it's a growing mutation, or number without mutation if it's a falling mutation
@@ -276,7 +305,7 @@ if 1:
     for lin in ml[:3]:
       n=score[lin]
       if n0==None: n0=n
-      elif n/n0<0.05: break
+      elif n0==0 or n/n0<0.05: break
       print("  %s:%d"%(contractlin(lin),n),end="")
     print()
     nm+=1
