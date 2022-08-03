@@ -50,7 +50,7 @@ for x in fp:
     d=datetoday(y[0])
     v0=int(y[args.col0])
     v1=int(y[args.col1])
-    if v0+v1>=2: V0.append(v0);V1.append(v1);DT.append(d)
+    if v0+v1>=1: V0.append(v0);V1.append(v1);DT.append(d)
 ndays=len(V0)
 
 def LL(xx,pr=0):
