@@ -440,7 +440,7 @@ for desc,col in types:
 
 
 graphfn=datafn+".growthproj.png"
-linetitle=f"g(t)-g({maxdate}), where g(t) = percentage daily increase in cases due to variant growth"
+linetitle=f"The change (compared with {maxdate}) in percentage daily increase in new cases per day that is due to the change in variant mixture"
 cmd=f"""
 set xdata time
 set key left Left reverse
@@ -454,7 +454,7 @@ set xtics nomirror
 set grid xtics ytics lc rgb "#dddddd" lt 1
 set terminal pngcairo font "sans,13" size 1728,1296
 set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
-set ylabel "Percentage growth rate per day compared with {maxdate}"
+set ylabel "Percentage growth rate of new cases per day, compared with {maxdate}"
 set style fill transparent solid 0.25
 set style fill noborder
 set format y "%.1f%%"
