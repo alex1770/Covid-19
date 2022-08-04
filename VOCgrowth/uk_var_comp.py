@@ -311,34 +311,53 @@ for i in range(1,numv):
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
 datafn=location+'_%s'%('_'.join(Vnames))
+future=30
+maxt0=maxdate-mindate+1
+maxt=maxt0+future
+samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
+b=test[:,numv:2*numv,None]
+e=np.exp(samp)
+eb=(e*b).sum(axis=1)/e.sum(axis=1)
+beta_mean=np.mean(eb,axis=0)
+zeropoint=beta_mean[maxt0-1]
+beta_mean-=zeropoint
+beta_low=np.quantile(eb,(1-conf)/2,0)-zeropoint
+beta_high=np.quantile(eb,(1+conf)/2,0)-zeropoint
 visthr=1e-6
 ymin=50;ymax=-50
 with open(datafn,'w') as fp:
-  for date in Daterange(mindate,maxdate+1):
-    t=date-mindate
-    v=VV[t]
-    print(date,' '.join("%6d"%x for x in v),end='',file=fp)
-    mu=c[:numv]+t*c[numv:2*numv]
-    var=np.array([C[i,i]+2*t*C[i,numv+i]+t**2*C[numv+i,numv+i] for i in range(numv)])
-    q0=mu-zconf*np.sqrt(var)
-    q1=mu+zconf*np.sqrt(var)
+  for t in range(maxt):
+    if t<maxt0:
+      v=VV[t]
+      print(mindate+t,' '.join("%6d"%x for x in v),end='',file=fp)
+    else:
+      print(mindate+t,' '.join("%6s"%'-' for x in v),end='',file=fp)
+    print(" %12g %12g %12g"%(beta_mean[t],beta_low[t],beta_high[t]),end='',file=fp)
     for i in range(numv):
-      a,b=v[0]+1e-30,v[i]+1e-30
-      y=log(b/a)
-      prec=sqrt(a*b/(a+b))
-      print(" %12g %12g"%(y,prec),end='',file=fp)
-      print(" %12g %12g"%(q0[i],q1[i]),end='',file=fp)# Would be better as a formula in gnuplot, then it's continuous and can be extrapolated (though the code would be more cluttered)
-      if prec>visthr:
-        if args.plotpoints:
-          ymin=min(ymin,y);ymax=max(ymax,y)
-        if args.plotbands:
-          ymin=min(ymin,q0[i])
-          ymax=max(ymax,q1[i])
+      mu=c[i]+t*c[numv+i]
+      var=C[i,i]+2*t*C[i,numv+i]+t**2*C[numv+i,numv+i]
+      q0=mu-zconf*sqrt(var)
+      q1=mu+zconf*sqrt(var)
+      if t<maxt0:
+        a,b=v[0]+1e-30,v[i]+1e-30
+        y=log(b/a)
+        prec=sqrt(a*b/(a+b))# Heuristic to guide size of blobs in plot
+        print(" %12g %12g"%(y,prec),end='',file=fp)
+        if prec>visthr:
+          if args.plotpoints:
+            ymin=min(ymin,y);ymax=max(ymax,y)
+          if args.plotbands:
+            ymin=min(ymin,q0)
+            ymax=max(ymax,q1)
+      else:
+        print(" %12s %12s"%('-','-'),end='',file=fp)
+      print(" %12g %12g"%(q0,q1),end='',file=fp)# Would be better as a formula in gnuplot, then it's continuous and can be extrapolated (though the code would be more cluttered)
+      
     print(file=fp)
 print("Written data to",datafn)
 
 graphfn=datafn+'.png'
-ndates=maxdate-mindate+1
+maxt=maxdate-mindate+1
 allothers=', '.join(Vnames[1:])
 oneother=' or '.join(Vnames[1:])
 if numv==2:
@@ -348,6 +367,13 @@ else:
   number="they are"
   possessive="their"
 
+graphtitle=f"New cases per day in the UK of {allothers} compared with {Vnames[0]}"
+if future>0: graphtitle+=f", with a {future}-day projection"
+graphtitle+=f"\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not {possessive} absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"
+if args.plotpoints:
+  graphtitle+="Larger blobs indicate more certainty (more samples). "
+graphtitle+=f"Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
+  
 cmd=f"""
 set xdata time
 set key left Left reverse
@@ -366,17 +392,19 @@ set style fill transparent solid 0.25
 set style fill noborder
 
 set output "{graphfn}"
-set title "New cases per day in the UK of {allothers} compared with {Vnames[0]}\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not {possessive} absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"""
-if args.plotpoints: cmd+="Larger blobs indicate more certainty (more samples). "
-cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
+set title "{graphtitle}"
 min(a,b)=(a<b)?a:b
+"""
+if future>0 and not args.plotpoints:
+  cmd+=f"""set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)\n"""
+cmd+=f"""
 plot [:] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
 #plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i})/log(2)):(min(${numv+2+4*i+1},20)/{ndates/8.}) pt 5 lc {i} ps variable title "","""
-  if args.plotbands: cmd+=f""" "{datafn}" u 1:((${numv+2+4*i+2})/log(2)):((${numv+2+4*i+3})/log(2)) w filledcurves lc {i} title "","""
+  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i})/log(2)):(min(${numv+5+4*i+1},20)/{maxt/8.}) pt 5 lc {i} ps variable title "","""
+  if args.plotbands: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i+2})/log(2)):((${numv+5+4*i+3})/log(2)) w filledcurves lc {i} title "","""
   cmd+=f""" ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{crossstr}", """
 cmd+=f""" 0 lc 8 lw 3 title "{Vnames[0]} baseline" """
 
@@ -409,4 +437,42 @@ for desc,col in types:
     row=stats[orders[i,col],:]
     print("%15s %6.3f (%6.3f - %6.3f)      %5.1f%%     %5.1f%%"%(Vnames[int(row[0])],row[1],row[1]-row[2],row[1]+row[2],row[3]*100,row[4]*100))
   print()
-  
+
+
+graphfn=datafn+".growthproj.png"
+linetitle=f"g(t)-g({maxdate}), where g(t) = percentage daily increase in cases due to variant growth"
+cmd=f"""
+set xdata time
+set key left Left reverse
+set key spacing 2.5
+fmt="%Y-%m-%d"
+set timefmt fmt
+set format x fmt
+set xtics "2020-01-06", 604800
+set xtics rotate by 45 right offset 0.5,0
+set xtics nomirror
+set grid xtics ytics lc rgb "#dddddd" lt 1
+set terminal pngcairo font "sans,13" size 1728,1296
+set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
+set ylabel "Percentage growth rate per day compared with {maxdate}"
+set style fill transparent solid 0.25
+set style fill noborder
+set format y "%.1f%%"
+
+set output "{graphfn}"
+set title "Estimated effect of variant mixture {', '.join(Vnames)} on the overall growth rate in new cases/day, set at 0 on {maxdate}\\nNB: This growth rate is affected by other things - only the contribution to the growth rate due to the variant mixture is shown here\\n"""
+cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
+set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
+plot"""
+cmd+=f""" "{datafn}" u 1:((${numv+2})*100) lc 1 lw 2 w lines title "{linetitle}", """
+cmd+=f""" "{datafn}" u 1:((${numv+3})*100):((${numv+4})*100) lc 1 w filledcurves title "" """
+
+po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
+p=po.stdin
+p.write(cmd.encode('utf-8'))
+p.close()
+po.wait()
+print()
+print("Written graph to",graphfn)
+print()
+
