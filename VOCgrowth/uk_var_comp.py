@@ -311,9 +311,10 @@ for i in range(1,numv):
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
 datafn=location+'_%s'%('_'.join(Vnames))
-future=30
+future1=30
+future2=30
 maxt0=maxdate-mindate+1
-maxt=maxt0+future
+maxt=maxt0+max(future1,future2)
 samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
 b=test[:,numv:2*numv,None]
 e=np.exp(samp)
@@ -357,7 +358,6 @@ with open(datafn,'w') as fp:
 print("Written data to",datafn)
 
 graphfn=datafn+'.png'
-maxt=maxdate-mindate+1
 allothers=', '.join(Vnames[1:])
 oneother=' or '.join(Vnames[1:])
 if numv==2:
@@ -368,7 +368,7 @@ else:
   possessive="their"
 
 graphtitle=f"New cases per day in the UK of {allothers} compared with {Vnames[0]}"
-if future>0: graphtitle+=f", with a {future}-day projection"
+if future1>0: graphtitle+=f", with a {future1}-day projection"
 graphtitle+=f"\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not {possessive} absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"
 if args.plotpoints:
   graphtitle+="Larger blobs indicate more certainty (more samples). "
@@ -395,15 +395,15 @@ set output "{graphfn}"
 set title "{graphtitle}"
 min(a,b)=(a<b)?a:b
 """
-if future>0 and not args.plotpoints:
+if future1>0 and not args.plotpoints:
   cmd+=f"""set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)\n"""
 cmd+=f"""
-plot [:] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
+plot [:"{str(maxdate+future1)}"] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
 #plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i})/log(2)):(min(${numv+5+4*i+1},20)/{maxt/8.}) pt 5 lc {i} ps variable title "","""
+  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i})/log(2)):(min(${numv+5+4*i+1},20)/{maxt0/8.}) pt 5 lc {i} ps variable title "","""
   if args.plotbands: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i+2})/log(2)):((${numv+5+4*i+3})/log(2)) w filledcurves lc {i} title "","""
   cmd+=f""" ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{crossstr}", """
 cmd+=f""" 0 lc 8 lw 3 title "{Vnames[0]} baseline" """
@@ -440,7 +440,7 @@ for desc,col in types:
 
 
 graphfn=datafn+".growthproj.png"
-linetitle=f"The change (compared with {maxdate}) in percentage daily increase in new cases per day that is due to the change in variant mixture"
+linetitle=f"The part of the change (compared with {maxdate}) in the percentage daily increase\\n in new cases per day that is due to the change in variant mixture"
 cmd=f"""
 set xdata time
 set key left Left reverse
@@ -463,7 +463,7 @@ set output "{graphfn}"
 set title "Estimated effect of variant mixture {', '.join(Vnames)} on the overall growth rate in new cases/day, set at 0 on {maxdate}\\nNB: This growth rate is affected by other things - only the contribution to the growth rate due to the variant mixture is shown here\\n"""
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
-plot"""
+plot [:"{str(maxdate+future2)}"] """
 cmd+=f""" "{datafn}" u 1:((${numv+2})*100) lc 1 lw 2 w lines title "{linetitle}", """
 cmd+=f""" "{datafn}" u 1:((${numv+3})*100):((${numv+4})*100) lc 1 w filledcurves title "" """
 
