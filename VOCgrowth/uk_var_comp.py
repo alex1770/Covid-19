@@ -395,7 +395,7 @@ set output "{graphfn}"
 set title "{graphtitle}"
 min(a,b)=(a<b)?a:b
 """
-if future1>0 and not args.plotpoints:
+if future1>0:# and not args.plotpoints:
   cmd+=f"""set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)\n"""
 cmd+=f"""
 plot [:"{str(maxdate+future1)}"] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
