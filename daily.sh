@@ -19,6 +19,7 @@ set -e
     python3 uk_var_comp.py -f 2022-06-01 -b -p -l 'BA.5.1,BA.4.6,BA.5.2,BA.5.2.1,BF.5' -c0 -d
     python3 uk_var_comp.py -f 2022-06-01 -b -p -l 'BA.5*,BA.2.75' -c0 -d
     python3 uk_var_comp.py -f 2022-06-01 -b -p -l 'BA.5*,BA.2.75,BA.2.76' -c0 -d
+    python3 uk_var_comp.py -f 2022-06-01 -b -p -l 'BA.5.1,BA.4.6,BA.5.2,BA.5.2.1,BF.5,BA.2*,BA.4*,BA.5*' -c0 -d -f2 60
 )
 
 make
