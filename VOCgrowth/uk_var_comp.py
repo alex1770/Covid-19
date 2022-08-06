@@ -100,13 +100,25 @@ def contractlin(lin):
   ccache[lin]=lin
   return lin
 
+# lin is assumed to have already been expanded
+def patmatch(lin):
+  ind=-1
+  for i in range(len(Vnames)):
+    exact=targlinsexact[i]
+    prefix=targlinsprefix[i]
+    if lin==exact:
+      ind=i
+      if prefix=='-': return ind# Exact match with non-wildcard takes precendence over anything later
+    if (lin+'.')[:len(prefix)]==prefix: ind=i
+  return ind
+
 fn=os.path.join(cachedir,location+'_'+'_'.join(Vnames)+'__%s'%cogdate)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     data=pickle.load(fp)
 else:
   # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
-  # Note that BA.5* will match BA.5.1 and BA.5 but not BA.53
+  # Note that BA.5* will match BA.5 and BA.5.1 but not BA.53
   #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
   targlinsexact=[]
   targlinsprefix=[]
@@ -135,11 +147,7 @@ else:
       if mylin=="BA.2.75": lin_e=mylin_e# Special case pro tem, as COG-UK and GISAID wrongly classify this as BA.2.73
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
-    ind=-1
-    for i in range(len(Vnames)):
-      exact=targlinsexact[i]
-      prefix=targlinsprefix[i]
-      if lin_e==exact or (lin_e+'.')[:len(prefix)]==prefix: ind=i;break
+    ind=patmatch(lin_e)
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1

@@ -111,6 +111,17 @@ print("Discarded",t1,"from",t0,"(%.1f%%) due to bad coverage"%(t1/t0*100))
 okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and oksyn(m,args.synperm))
 print("Found",len(allm),"mutations, of which",len(okm),("pass synSNP permissiveness %d and"%args.synperm if not args.gisaid else ""),"have occurred at least",args.mincount,"times")
 
+def patmatch(lin):
+  ind=len(lineages)
+  for i in range(len(lineages)):
+    exact=targlinsexact[i]
+    prefix=targlinsprefix[i]
+    if lin==exact:
+      ind=i
+      if prefix=='-': return ind# Exact match with non-wildcard takes precendence over anything later
+    if (lin+'.')[:len(prefix)]==prefix: ind=i
+  return ind
+
 if args.lineages==None:
   lineages=list(set(lineage for (lineage,mutations) in ml))
   lineages.sort(key=lambda l: -numl[l])
@@ -134,12 +145,7 @@ print()
 
 mml=[]
 for (lineage,mutations) in ml:
-  dblin=expandlin(lineage)
-  for i in range(len(lineages)):
-    exact=targlinsexact[i]
-    prefix=targlinsprefix[i]
-    if dblin==exact or (dblin+'.')[:len(prefix)]==prefix: ind=i;break
-  else: i=len(lineages)
+  i=patmatch(expandlin(lineage))
   #print("Assigning",lineage,"to",lineages[i] if i<len(lineages) else "Other")
   mml.append((i,set(mutationlist(mutations)).intersection(okm)))
 lineages.append("Other")
