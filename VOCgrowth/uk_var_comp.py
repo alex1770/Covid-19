@@ -14,13 +14,15 @@ datafile='cog_metadata.csv'
 conf=0.95
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-c', '--mincount',    type=int,default=5,    help="Minimum variant count considered")
-parser.add_argument('-d', '--DM',          action="store_true",   help="Use Dirichlet-Multinomial regression instead of logistic approximation")
-parser.add_argument('-f', '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
-parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
-parser.add_argument('-l', '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
-parser.add_argument('-p', '--plotpoints',  action="store_true",   help="Whether to plot points corresponding to log(num(variant)/num(base variant))")
-parser.add_argument('-b', '--plotbands',   action="store_true",   help="Whether to plot confidence bands around best-fit lines")
+parser.add_argument('-c',  '--mincount',    type=int,default=5,    help="Minimum variant count considered")
+parser.add_argument('-d',  '--DM',          action="store_true",   help="Use Dirichlet-Multinomial regression instead of logistic approximation")
+parser.add_argument('-f',  '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
+parser.add_argument('-t',  '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
+parser.add_argument('-l',  '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
+parser.add_argument('-p',  '--plotpoints',  action="store_true",   help="Whether to plot points corresponding to log(num(variant)/num(base variant))")
+parser.add_argument('-b',  '--plotbands',   action="store_true",   help="Whether to plot confidence bands around best-fit lines")
+parser.add_argument('-f1', '--future1',     type=int,default=30,   help="Number of days ahead to project variant proportion estimates")
+parser.add_argument('-f2', '--future2',     type=int,default=30,   help="Number of days ahead to project variant-induced overall growth estimates")
 args=parser.parse_args()
 
 Vnames=args.lineages.split(',')
@@ -324,10 +326,8 @@ for i in range(1,numv):
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
 datafn=location+'_%s'%('_'.join(Vnames))
-future1=30
-future2=30
 maxt0=maxdate-mindate+1
-maxt=maxt0+max(future1,future2)
+maxt=maxt0+max(args.future1,args.future2)
 samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
 b=test[:,numv:2*numv,None]
 e=np.exp(samp)
@@ -381,7 +381,7 @@ else:
   possessive="their"
 
 graphtitle=f"New cases per day in the UK of {allothers} compared with {Vnames[0]}"
-if future1>0: graphtitle+=f", with a {future1}-day projection"
+if args.future1>0: graphtitle+=f", with a {args.future1}-day projection"
 graphtitle+=f"\\nNB: This is the est'd relative growth of {allothers} compared to {Vnames[0]}, not {possessive} absolute growth. It indicates how fast {number} taking over from {Vnames[0]}\\n"
 if args.plotpoints:
   graphtitle+="Larger blobs indicate more certainty (more samples). "
@@ -408,10 +408,10 @@ set output "{graphfn}"
 set title "{graphtitle}"
 min(a,b)=(a<b)?a:b
 """
-if future1>0:# and not args.plotpoints:
+if args.future1>0:# and not args.plotpoints:
   cmd+=f"""set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)\n"""
 cmd+=f"""
-plot [:"{str(maxdate+future1)}"] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
+plot [:"{str(maxdate+args.future1)}"] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*(numv*0.1+0.1),0.5)/log(2)}]"""
 #plot [:] [{(ymin-0.5)/log(2)}:{max(ymax+0.8*numv-0.6,1.8)/log(2)}]"""
 
 for i in range(1,numv):
@@ -476,7 +476,7 @@ set output "{graphfn}"
 set title "Estimated effect of variant mixture {', '.join(Vnames)} on the overall growth rate in new cases/day, set at 0 on {maxdate}\\nNB: This growth rate is affected by other things - only the contribution to the growth rate due to the variant mixture is shown here\\n"""
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
-plot [:"{str(maxdate+future2)}"] """
+plot [:"{str(maxdate+args.future2)}"] """
 cmd+=f""" "{datafn}" u 1:((${numv+2})*100) lc 1 lw 2 w lines title "{linetitle}", """
 cmd+=f""" "{datafn}" u 1:((${numv+3})*100):((${numv+4})*100) lc 1 w filledcurves title "" """
 
@@ -488,4 +488,3 @@ po.wait()
 print()
 print("Written graph to",graphfn)
 print()
-
