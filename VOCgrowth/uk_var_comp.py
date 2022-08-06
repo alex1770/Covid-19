@@ -103,7 +103,18 @@ if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     data=pickle.load(fp)
 else:
-  Vnames_e=[expandlin(lin) for lin in Vnames]
+  # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
+  # Note that BA.5* will match BA.5.1 and BA.5 but not BA.53
+  #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
+  targlinsexact=[]
+  targlinsprefix=[]
+  for lin0 in Vnames:
+    lin=expandlin(lin0)
+    if lin[-2:]=='.*': exact="-";prefix=lin[:-1]
+    elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
+    else: exact=lin;prefix="-"
+    targlinsexact.append(expandlin(exact))
+    targlinsprefix.append(expandlin(prefix))
   data={}
   for (name,date,p2,lin,mutations) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','lineage','mutations']):
     #if p2!='Y': continue
@@ -122,9 +133,11 @@ else:
       if mylin=="BA.2.75": lin_e=mylin_e# Special case pro tem, as COG-UK and GISAID wrongly classify this as BA.2.73
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
-    longest=-1;ind=-1
-    for (i,vn) in enumerate(Vnames_e):
-      if lin_e==vn or (vn[-1]=='*' and (lin_e+'.')[:len(vn)]==vn[:-1]+'.' and len(vn)>longest): ind=i;longest=len(vn)
+    ind=-1
+    for i in range(len(Vnames)):
+      exact=targlinsexact[i]
+      prefix=targlinsprefix[i]
+      if lin_e==exact or (lin_e+'.')[:len(prefix)]==prefix: ind=i;break
     if ind==-1: continue
     if date not in data: data[date]=[0]*numv
     data[date][ind]+=1
