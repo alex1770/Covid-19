@@ -138,10 +138,6 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
 def getgrowth(daycounts,mutdaycount):
   # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
   if len(mutdaycount)<=1: return None
-  m=np.zeros([2,2])
-  r=np.zeros(2)
-  s0=syy=0
-  tv0=tv1=0
   day0=min(mutdaycount)
   day1=max(mutdaycount)
   V0=np.zeros(day1-day0+1)
@@ -152,55 +148,26 @@ def getgrowth(daycounts,mutdaycount):
     v0=daycounts.get(day,0)-v1
     V0[day-day0]=v0
     V1[day-day0]=v1
-    if v0>0 and v1>0:
-      y=log(v1/v0)
-      w=1/(1/v0+1/v1)
-      m[0,0]+=w
-      m[0,1]+=w*x
-      m[1,0]+=w*x
-      m[1,1]+=w*x*x
-      r[0]+=w*y
-      r[1]+=w*x*y
-      s0+=1
-      syy+=w*y*y
-      tv0+=v0;tv1+=v1
-  if m[0,0]<5: return None#(0,1000),(0,10),(tv0,tv1)#alter
-  C=np.linalg.pinv(m)
-  c=C@r
-  cv=[C[0,0],C[1,1]]# These should be the variances of c[0],c[1]
+  
+  tv=V0.sum(),V1.sum()
   V0+=1e-30
   V1+=1e-30
   W=V0*V1/(V0+V1)
+  if W.sum()<5: return None
   X=np.arange(day1-day0+1)
   Y=np.log(V1/V0)
   M=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
-  r2=np.array([sum(W*Y),sum(W*X*Y)])
-  C2=np.linalg.inv(M)
-  c2=C2@r2
-  res=c2[0]+c2[1]*X-Y
+  r=np.array([sum(W*Y),sum(W*X*Y)])
+  C=np.linalg.inv(M)
+  c=C@r
+  res=c[0]+c[1]*X-Y
   mult=(W*res*res).sum()/(day1-day0+1)
-  #print("Res mult",mult)
-  if 0 and mult<.03:
-    for i in range(day1-day0+1):
-      if W[i]>1e-9: print("XXX",i,V0[i],V1[i],W[i],c2[0]+c2[1]*i,Y[i],res[i])
-    print()
-    print(C2)
-    print(c2)
-    print(res)
-    poi
-  c2[0]+=c2[1]*(mindate0-day0)
-  #print(c[0],c2[0],"     ",c[1],c2[1])
+  #print("Res mult",Date(day0),Date(day1),mult)
+  C*=max(mult,1)
+  #print(day1-day0+1,((V0!=0)|(V1!=0)).sum())
+  #c[0]+=c[1]*(mindate0-day0)
 
-  # alter - not using residual yet
-  # Want sum( w*(c0+c1*x-y)^2 )
-  # vr = (c[0]**2*m[0,0] + 2*c[0]*c[1]*m[0,1] - 2*c[0]*r[0] + c[1]**2*m[1,1] - 2*c[1]*r[1] + syy)/s0
-  #print(vr)
-  # Investigate simple correction for overdispersion. Not sure it's right yet.
-  # Try crossing number stats
-
-  return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1])),(tv0,tv1)
-  # This form is nicer to interpret (and minday0-independent), but will become singular if c[1]=0:
-  # return (minday0-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
+  return (c[1],sqrt(C[1,1])),tv
 
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-10-01')
@@ -242,10 +209,10 @@ if 1:
   growth={};tv={}
   okmuts=[]
   for mut in range(nmut):
-    gr=getgrowth(daycounts,mutdaycounts[mut])
-    if gr!=None:
-      growth[mut]=gr[1]
-      tv[mut]=gr[2]
+    gre=getgrowth(daycounts,mutdaycounts[mut])
+    if gre!=None:
+      growth[mut]=gre[0]
+      tv[mut]=gre[1]
       okmuts.append(mut)
 
   with open('tempvargr','w') as fp:
