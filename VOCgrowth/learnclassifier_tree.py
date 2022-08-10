@@ -3,10 +3,12 @@
 from __future__ import print_function,division
 # ^ To enable use of pypy when pypy3 isn't available
 
-import sys,os,argparse
+import sys,os,argparse,platform
 from stuff import *
 from math import log
 from variantaliases import aliases
+
+if platform.python_implementation()=="CPython": print("Suggestion: use PyPy for speed\n")
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-b', '--maxbad',      type=float, default=0.05, help="Maximum proportion of Ns allowed")
