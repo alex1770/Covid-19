@@ -18,6 +18,7 @@ import argparse
 from math import exp,log,sqrt
 from scipy.optimize import minimize
 from scipy.special import gammaln,betaln
+from scipy.stats import norm, multivariate_normal as mvn
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-c', '--col0',        type=int,default=1,    help="Column number of variant 0 (includes date column, count from 0)")
@@ -27,7 +28,8 @@ parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max samp
 parser.add_argument('-p', '--prlevel',     type=int,default=1,    help="Print level")
 args=parser.parse_args()
 
-zconf=1.96
+conf=0.95
+zconf=norm.ppf((1+conf)/2)
 maxmult=20
 prlevel=args.prlevel
 print("Using date range",args.mindate,"-",args.maxdate)
@@ -115,14 +117,11 @@ def Hessian(xx,eps):
     H[i,i]=v/eps[i]**2
   return H
 
-def Fisher(xx):
-  eps=(5e-3,1e-4,1e-3)
-  H=Hessian(xx,eps)
-  HI=np.linalg.inv(H)
+def getCI(C):
   N=len(xx)
   err=[]
   for i in range(N):
-    if HI[i,i]<=0: err.append(zconf*sqrt(-HI[i,i]))
+    if C[i,i]>=0: err.append(zconf*sqrt(C[i,i]))
     else: err.append(None)
   return err
 
@@ -147,8 +146,8 @@ m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
 r=np.array([sum(W*Y),sum(W*X*Y)])
 c=np.linalg.solve(m,r)
 C=np.linalg.pinv(m)
-conf=zconf*sqrt(C[1,1])
-print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-conf,c[1]+conf))
+dlam=zconf*sqrt(C[1,1])
+print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-dlam,c[1]+dlam))
 res=c[0]+c[1]*X-Y
 mult=(W*res*res).sum()/ndays
 print("Variance overdispersion as estimated from simple residuals (though caution because smoothing): %.3f"%mult)
@@ -161,7 +160,11 @@ res=minimize(NLL,[c[0],c[1],min(2,maxmult)],bounds=bounds, method="SLSQP", optio
 if not res.success: raise RuntimeError(res.message)
 print("Log likelihood: %.3f"%(LL(res.x)))
 a0,lam,mult=xx=res.x
-da0,dlam,dmult=dxx=Fisher(res.x)
+eps=(5e-3,1e-4,1e-3)
+H=Hessian(xx,eps)
+negdef=np.all(np.linalg.eigvals(H)<0)
+C=-np.linalg.inv(H)
+da0,dlam,dmult=getCI(C)
 for i in range(len(xx)):
   if xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3: print("Warning:",desc[i],"hit bound")
 
@@ -170,8 +173,17 @@ if dlam==None: print(" (couldn't evaluate CI)")
 else: print(" (%.4f - %.4f)"%(lam-dlam,lam+dlam))
 
 print("Crossover date: %s"%(Date(minday+int(round(day0-a0/lam)))),end="")
-if 1: print(" (not done CI yet)")
-else: print(" +/- %.1f days"%dt0)
+if not negdef:
+  print(" (CI n/a as Hessian is not negative definite)")
+elif lam-dlam<1e-3 and lam+dlam>-1e-3:
+  print(" (CI n/a as relative growth can get too close to 0)")
+else:
+  # Sampling is most convenient way of getting CrIs for crossover points
+  numsamp=100000
+  test=mvn.rvs(mean=xx,cov=C,size=numsamp)
+  cr0=Date(minday+int(round(day0-np.quantile(test[:,0]/test[:,1],(1+conf)/2))))
+  cr1=Date(minday+int(round(day0-np.quantile(test[:,0]/test[:,1],(1-conf)/2))))
+  print(" (%s - %s)"%(cr0,cr1))
 
 print("Variance overdispersion (proper estimate): %.3f"%mult,end="")
 if dmult==None: print(" (couldn't evaluate CI)")
