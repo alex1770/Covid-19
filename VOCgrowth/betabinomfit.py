@@ -147,7 +147,6 @@ c=np.linalg.solve(m,r)
 C=np.linalg.pinv(m)
 dlam=zconf*sqrt(C[1,1])
 print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-dlam,c[1]+dlam))
-res=c[0]+c[1]*X-Y
 rho=np.exp(c[0]+c[1]*X)
 T=V0+V1
 # Take off one degree of freedom because rho is tuned to V0s, V1s using two degrees of freedom, but
