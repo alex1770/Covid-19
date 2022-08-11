@@ -137,7 +137,7 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
 
 def getgrowth(daycounts,mutdaycount):
   # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
-  if len(mutdaycount)<=1: return None
+  if len(mutdaycount)<=3: return None
   day0=min(mutdaycount)
   day1=max(mutdaycount)
   V0=np.zeros(day1-day0+1)
@@ -160,8 +160,10 @@ def getgrowth(daycounts,mutdaycount):
   r=np.array([sum(W*Y),sum(W*X*Y)])
   C=np.linalg.inv(M)
   c=C@r
-  res=c[0]+c[1]*X-Y
-  mult=(W*res*res).sum()/(day1-day0+1)
+  rho=np.exp(c[0]+c[1]*X)
+  T=V0+V1;T.sort()
+  # Crudely take off two degrees of freedom because rho is tuned to V0, V1 using slope and intercept. (Semi-guess, with some empirical backup.)
+  mult=((V1-V0*rho)**2/rho).sum()/T[:-2].sum()
   #print("Res mult",Date(day0),Date(day1),mult)
   C*=max(mult,1)
   #print(day1-day0+1,((V0!=0)|(V1!=0)).sum())
