@@ -126,7 +126,6 @@ def getCI(C):
   return err
 
 smooth=1
-
 # Do simple regression to get decent initial values for NB regression
 # V0s, V1s = smoothed V0, V1
 V0s=np.zeros(len(V0))
@@ -149,8 +148,12 @@ C=np.linalg.pinv(m)
 dlam=zconf*sqrt(C[1,1])
 print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-dlam,c[1]+dlam))
 res=c[0]+c[1]*X-Y
-mult=(W*res*res).sum()/ndays
-print("Variance overdispersion as estimated from simple residuals (though caution because smoothing): %.3f"%mult)
+rho=np.exp(c[0]+c[1]*X)
+T=V0+V1
+# Take off one degree of freedom because rho is tuned to V0s, V1s using two degrees of freedom, but
+# we're evaluating residuals using the original V0, V1. (Semi-guess, with some empirical backup.)
+mult0=((V1-V0*rho)**2/rho).sum()/(T.sum()-max(T))
+print("Variance overdispersion as estimated from simple residuals (though caution because smoothing): %.3f"%mult0)
 # dayoffset=day0-c[0]/c[1]
 
 desc=["Intercept","Growth of V1 rel V0","Overdispersion multiplier"]
@@ -215,4 +218,4 @@ for day in range(ndays):
     if prlevel>=2:
       print()
 
-print("Variance overdispersion as estimated from BB residuals (though caution because smoothing): %.3f"%(s1/s0))
+#print("Variance overdispersion as estimated from BB residuals (though caution because smoothing): %.3f"%(s1/s0))
