@@ -1,7 +1,7 @@
 import sys,time,os,pickle,argparse
 from stuff import *
 import numpy as np
-from math import log,sqrt,floor
+from math import log,exp,sqrt,floor
 from variantaliases import aliases
 
 mindate0=Date('2022-05-01')# Hard-coded minday
@@ -16,6 +16,7 @@ parser.add_argument('-m', '--givenmutations', default="",           help="Condit
 parser.add_argument('-l', '--lineage',                              help="Condition on this lineage")
 parser.add_argument('-L', '--location',       default="",           help="Location prefix")
 parser.add_argument('-n', '--numdisp',        default=8,            help="Number of mutations to display horizontally")
+parser.add_argument('-s', '--synperm',        type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
 
 if args.mindate<mindate0: raise RuntimeError(f"Specfied mindate {args.mindate} is less that hard-coded mindate {mindate0}")
@@ -24,6 +25,17 @@ if args.gisaid:
   source='GISAID';datafile='metadata_sorted.tsv';inputsorted=True
 else:
   source='COG';datafile='cog_metadata_sorted.csv';inputsorted=True
+
+# List of overlapping ORFs for which there is evidence that they encode
+# https://www.sciencedirect.com/science/article/pii/S0042682221000532
+# https://virological.org/t/sars-cov-2-dont-ignore-non-canonical-genes/740/2
+# 
+accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
+def oksyn(m):
+  if args.gisaid or args.synperm==2 or m[:6]!="synSNP": return True
+  if args.synperm==0: return False
+  loc=int(m[8:-1])
+  return loc in accessorygenes
 
 ecache={}
 def expandlin(lin):
@@ -102,6 +114,8 @@ else:
 
 print("Got linelist at time",time.process_time()-tim0)
 
+oksyn_num=[oksyn(x) for x in num2name]
+
 # Does 'lin' fit in with the (possibly wildcarded) 'lineage'?
 # Note that BA.1.2 is considered part of BA.1*, but
 #           BA.12 is not considered part of BA.1*,
@@ -131,8 +145,9 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
       daycounts[day]=daycounts.get(day,0)+1
       lincounts[lin]=lincounts.get(lin,0)+1
       for m in muts:
-        mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
-        mutlincounts[m][lin]=mutlincounts[m].get(lin,0)+1
+        if oksyn_num[m]:
+          mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
+          mutlincounts[m][lin]=mutlincounts[m].get(lin,0)+1
   return daycounts,mutdaycounts,lincounts,mutlincounts
 
 def getgrowth(daycounts,mutdaycount):
@@ -236,15 +251,15 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# High %d"%high,file=fp)
 
-  sd=4
+  sd=2
   gr0=0.0
+  proj=14
   def gval(mut):
     if tv[mut][0]+tv[mut][1]==0: return -1e9
     gr=growth[mut]
-    p=tv[mut][0]/(tv[mut][0]+tv[mut][1])
     g,dg=gr[0],gr[1]
-    if g<0: g=-g;p=1-p
-    return (g-sd*dg)*p
+    p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
+    return max(abs(g)-sd*dg,0)*sqrt(p*(1-p))
   #l=[mut for mut in growth if growth[mut][0]>0]
   l=list(growth)
   #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
@@ -258,12 +273,17 @@ if 1:
     (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
     #if gl<gr0: break
     #if abs(gr[0])<sd*gr[1]: break
+
+    # Growth
     print("%-20s  %7.2f (%7.2f - %7.2f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
-    p=tv[mut][0]/(tv[mut][0]+tv[mut][1])
-    if g>0: (ga,gla,gha)=(g*p,gl*p,gh*p)
-    else: (ga,gla,gha)=(-g*(1-p),-gh*(1-p),-gl*(1-p))
+
+    # Growth effect
+    p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
+    (ga,gla,gha)=(abs(g)*sqrt(p*(1-p)),min(abs(gl),abs(gh))*sqrt(p*(1-p)),max(abs(gl),abs(gh))*sqrt(p*(1-p)))
     print("   %7.2f (%7.2f - %7.2f)"%(ga*100,gla*100,gha*100),end='')
+    
     print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]),end='')
+    
     ml=list(mutlincounts[mut])
     score={}# score = number of lineages with mutation if it's a growing mutation, or number without mutation if it's a falling mutation
     for lin in ml:
