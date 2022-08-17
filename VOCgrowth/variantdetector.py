@@ -251,7 +251,7 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# High %d"%high,file=fp)
 
-  sd=2
+  sd=3
   gr0=0.0
   proj=14
   def gval(mut):
