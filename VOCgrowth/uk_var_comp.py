@@ -43,8 +43,10 @@ cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).str
 
 def treeclassify(mutations):
   if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: return "XE"
+  if '|S:T547I|' in mutations and '|S:A1020S|' in mutations: return "BF.3"
   if '|S:R346T|' in mutations:
-    if '|S:N658S|' in mutations: return "BA.4.6"
+    if '|N:S33F|' in mutations: return "BF.7"
+    elif '|S:N658S|' in mutations: return "BA.4.6"
     elif '|S:Y248N|' in mutations: return "BA.2.76"
     elif '|S:L452M|' in mutations: return "BA.2.74"
   if '|S:F486V|' in mutations:
@@ -56,8 +58,10 @@ def treeclassify(mutations):
     else:
       if '|synSNP:A28330G|' in mutations:
         if '|orf1ab:T5451N|' in mutations:
+          if '|S:R346T|' in mutations: return "BA.5.2+S:R346T"
           return "BA.5.2"
         else:
+          if '|S:R346T|' in mutations and '|N:S33F|' not in mutations: return "BF.11"
           if '|orf1ab:V7086F|' in mutations: return "BF.1"
           else:
             if '|S:A1020S|' in mutations and '|ORF7a:H47Y|' in mutations: return "BF.5"
@@ -108,7 +112,7 @@ def patmatch(lin):
     prefix=targlinsprefix[i]
     if lin==exact:
       ind=i
-      if prefix=='-': return ind# Exact match with non-wildcard takes precendence over anything later
+      if prefix=='-': return ind# Exact match with non-wildcard takes precedence over anything later
     if (lin+'.')[:len(prefix)]==prefix: ind=i
   return ind
 
@@ -437,6 +441,18 @@ po.wait()
 print()
 print("Written graph to",graphfn)
 print()
+
+#for date in Daterange(mindate,maxdate+50):
+#  print(date,end="")
+#  q=[]
+#  for i in range(numv):
+#    if i>0: (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
+#    else: grad=yoff=0
+#    q.append(exp((date-mindate)*grad+yoff))
+#  for i in range(numv):
+#    print(" %6.1f%%"%(q[i]/sum(q)*100),end="")
+#  print()
+#print()
 
 last=14
 proj=28
