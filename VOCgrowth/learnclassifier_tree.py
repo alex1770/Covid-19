@@ -18,7 +18,7 @@ parser.add_argument('-t', '--maxdate',     default="9999-12-31",     help="Max s
 parser.add_argument('-m', '--mincount',    type=int, default=50,     help="Min count of mutation: only consider mutations which have occurred at least this many times")
 parser.add_argument('-M', '--maxleaves',   type=int, default=50,     help="Maximum number of leaves in the tree")
 parser.add_argument('-l', '--lineages',                              help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
-parser.add_argument('-n', '--numtoplin',   type=int, default=5,      help="Classify the most prevalent 'n' lineages (alternative to --lineages)")
+parser.add_argument('-n', '--numtoplin',   type=int, default=5,      help="Classify the most prevalent 'n' lineages (alternative to specifying target lineages with --lineages)")
 parser.add_argument('-p', '--printtree',   type=int, default=20,     help="Print decision tree with this many leaves")
 parser.add_argument('-s', '--synperm',     type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
@@ -174,6 +174,8 @@ class tree:
   mutation=None
   left=None# With mutation
   right=None# Without mutation
+  bestm=None# Which is the best mutation to split this node (only defined for leaf nodes)
+  bestv=0# What is the biggest value from splitting this node (only defined for leaf nodes)
   def __init__(self,indexlist=range(len(mml)),parent=None):
     self.parent=parent
     self.indexlist=list(indexlist)
@@ -272,18 +274,16 @@ print("Ent per sequence %g"%(tr.leafent()/len(ml)))
 tr.pr2();print();sys.stdout.flush()
 leaves=1
 while leaves<args.maxleaves:
-  worst=None
+  best=None# Leaf with biggest available improvement
   for leaf in tr.getleaves():
-    if worst==None or leaf.ent<worst.ent: worst=leaf
-  if worst==None: break
-  best=(0,None)
-  for m in okm:
-    (withm,withoutm)=splitindexlist(worst.indexlist,m)
-    improvement=getstats(withm)[1]+getstats(withoutm)[1]-worst.ent
-    #print("XXX",m,improvement)
-    if improvement>best[0]: best=(improvement,m)
-  if best[1]==None: print("Couldn't improve worst node");break
-  worst.split(best[1])
+    if leaf.bestm==None:
+      for m in okm:
+        (withm,withoutm)=splitindexlist(leaf.indexlist,m)
+        improvement=getstats(withm)[1]+getstats(withoutm)[1]-leaf.ent
+        if improvement>leaf.bestv: leaf.bestm=m;leaf.bestv=improvement
+    if best is None or leaf.bestv>best.bestv: best=leaf
+  if best is None or best.bestm==None: print("No further improvements possible");break
+  best.split(best.bestm)
   leaves+=1
   print("Ent per sequence %g"%(tr.leafent()/len(ml)))
   tr.pr2();print();sys.stdout.flush()
