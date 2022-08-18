@@ -257,6 +257,7 @@ class tree:
     ind=" "*((depth+1)*wid)
     if depth==0:
       print("lineages =",lineages,file=file)
+      print('mindate = "%s"'%args.mindate,file=file)
       print(file=file)
       print("def treeclassify(mutations):",file=file)
       print(ind+"# Classification run at",datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S"),file=file)
