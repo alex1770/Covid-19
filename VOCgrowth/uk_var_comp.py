@@ -307,11 +307,10 @@ samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
 b=test[:,numv:2*numv,None]
 e=np.exp(samp)
 eb=(e*b).sum(axis=1)/e.sum(axis=1)
-beta_mean=np.mean(eb,axis=0)
-zeropoint=beta_mean[maxt0-1]
-beta_mean-=zeropoint
-beta_low=np.quantile(eb,(1-conf)/2,0)-zeropoint
-beta_high=np.quantile(eb,(1+conf)/2,0)-zeropoint
+zeropoint=eb[:,maxt0-1]
+beta_mean=np.mean(eb-zeropoint[:,None],axis=0)
+beta_low=np.quantile(eb-zeropoint[:,None],(1-conf)/2,0)
+beta_high=np.quantile(eb-zeropoint[:,None],(1+conf)/2,0)
 visthr=1e-6
 ymin=50;ymax=-50
 with open(datafn,'w') as fp:
