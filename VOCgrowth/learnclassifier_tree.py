@@ -22,6 +22,7 @@ parser.add_argument('-n', '--numtoplin',   type=int, default=5,      help="Class
 parser.add_argument('-p', '--printtree',   type=int, default=20,     help="Print decision tree with this many leaves")
 parser.add_argument('-s', '--synperm',     type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
+maxcol=1000000
 
 if args.gisaid:
   infile='metadata_sorted.tsv';inputsorted=True
@@ -182,7 +183,6 @@ class tree:
     self.count,self.ent=getstats(self.indexlist)
   def pr(self,level=0,label="Top"):
     step=4
-    maxcol=30
     nl=len(lineages)
     wid=[max(len(lineages[j])+1,7) for j in range(min(nl,maxcol))]
     if label=="Top":
@@ -199,7 +199,6 @@ class tree:
       self.left.pr(level+1,"+"+self.mutation)
       self.right.pr(level+1,"-"+self.mutation)
   def pr2(self,mlist=[]):
-    maxcol=30
     nl=len(lineages)
     wid=[max(len(lineages[j])+1,7) for j in range(min(nl,maxcol))]
     if mlist==[]:
