@@ -15,8 +15,8 @@ datafile='cog_metadata.csv'
 conf=0.95
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-c',  '--mincount',    type=int,default=5,    help="Minimum variant count considered")
-parser.add_argument('-d',  '--DM',          action="store_true",   help="Use Dirichlet-Multinomial regression instead of logistic approximation")
+parser.add_argument('-c',  '--mincount',    type=int,default=0,    help="Minimum variant count considered")
+parser.add_argument('-s',  '--simple',      action="store_true",   help="Use simple weighted and overdispersion-corrected logistic regression instead of Dirichlet-Multinomial")
 parser.add_argument('-f',  '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
 parser.add_argument('-t',  '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-l',  '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
@@ -244,7 +244,7 @@ def Hessian(xx,eps):
     H[i,i]=v/eps[i]**2
   return H
 
-if args.DM:
+if not args.simple:
   bounds=[(c[i]-c[0]-3,c[i]-c[0]+3) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
   bounds[0]=bounds[numv]=(0,0)
   res=minimize(NLL,list(c)+[min(2,maxmult)],bounds=bounds, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
