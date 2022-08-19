@@ -251,18 +251,18 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# High %d"%high,file=fp)
 
-  sd=3
+  nsd=3
   gr0=0.0
-  proj=14
+  proj=14# Calculate growth significance this many days ahead
   def gval(mut):
     if tv[mut][0]+tv[mut][1]==0: return -1e9
     gr=growth[mut]
     g,dg=gr[0],gr[1]
     p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
-    return max(abs(g)-sd*dg,0)*sqrt(p*(1-p))
+    return max(abs(g)-nsd*dg,0)*sqrt(p*(1-p))
   #l=[mut for mut in growth if growth[mut][0]>0]
   l=list(growth)
-  #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
+  #l.sort(key=lambda x:-(growth[x][0]-nsd*growth[x][1]))
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-gval(x))
 
@@ -270,19 +270,19 @@ if 1:
   nm=0
   for mut in l:
     gr=growth[mut]
-    (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
-    #if gl<gr0: break
-    #if abs(gr[0])<sd*gr[1]: break
-
+    g,dg=gr[0],gr[1]
+    (gl,gh)=(g-nsd*dg,g+nsd*dg)
+    if gl<=0 and gh>=0: break
+    
     # Growth
     print("%-20s  %7.2f (%7.2f - %7.2f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
-
+    
     # Growth effect
     p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
     (ga,gla,gha)=(abs(g)*sqrt(p*(1-p)),min(abs(gl),abs(gh))*sqrt(p*(1-p)),max(abs(gl),abs(gh))*sqrt(p*(1-p)))
     print("   %7.2f (%7.2f - %7.2f)"%(ga*100,gla*100,gha*100),end='')
     
-    print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]),end='')
+    print("   %7.2f   %7d %7d"%((g-gr0)/dg,tv[mut][0],tv[mut][1]),end='')
     
     ml=list(mutlincounts[mut])
     score={}# score = number of lineages with mutation if it's a growing mutation, or number without mutation if it's a falling mutation
