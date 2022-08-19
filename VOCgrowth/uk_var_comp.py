@@ -6,6 +6,7 @@ from scipy.special import gammaln
 import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
+import classifycog
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
@@ -42,48 +43,10 @@ numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
 
 def treeclassify(mutations):
-  if '|synSNP:C14599T|' in mutations and '|synSNP:C3241T|' in mutations: return "XE"
-  if '|S:T547I|' in mutations and '|S:A1020S|' in mutations: return "BF.3"
-  if '|S:R346T|' in mutations:
-    if '|N:S33F|' in mutations: return "BF.7"
-    elif '|S:N658S|' in mutations: return "BA.4.6"
-    elif '|S:Y248N|' in mutations: return "BA.2.76"
-    elif '|S:L452M|' in mutations: return "BA.2.74"
-  if '|S:F486V|' in mutations:
-    if '|N:P151S|' in mutations:
-      if '|S:V3G|' in mutations:
-        if '|S:I670V|' in mutations: return "BA.4.1.1"
-        else: return "BA.4.1"
-      else: return "BA.4"
-    else:
-      if '|synSNP:A28330G|' in mutations:
-        if '|orf1ab:T5451N|' in mutations:
-          if '|S:R346T|' in mutations: return "BA.5.2+S:R346T"
-          return "BA.5.2"
-        else:
-          if '|S:R346T|' in mutations and '|N:S33F|' not in mutations: return "BF.11"
-          if '|orf1ab:V7086F|' in mutations: return "BF.1"
-          else:
-            if '|S:A1020S|' in mutations and '|ORF7a:H47Y|' in mutations: return "BF.5"
-            return "BA.5.2.1"
-      else:
-        if '|ORF10:L37F|' in mutations: return "BA.5.1"
-        else:
-          if '|orf1ab:M5557I|' in mutations: return "BE.1"
-          else:
-            if '|S:T76I|' in mutations: return "BA.5.5"
-            else:
-              if '|N:E136D|' in mutations: return "BA.5.3.1"
-              else:
-                if '|orf1ab:R119H|' in mutations: return "BA.5.3.2"
-                else: return "BA.5"
-  else:
-    if '|S:L452Q|' in mutations: return "BA.2.12.1"
-    elif '|orf1ab:N4060S|' in mutations: return "BA.2.75"
-    else:
-      # Identifying "pure" BA.2 is messy due to a proliferation of BA.2.*. This rule isn't perfect, but it won't much matter as the BA.2 bit is right and it will likely get extended by COG-UK classification.
-      if '|orf1ab:S135R|' in mutations and '|ORF3a:H78Y|' not in mutations and '|S:K417T|' not in mutations and '|ORF3a:L140F|' not in mutations and '|S:I68T|' not in mutations and '|orf1ab:T4175I|' not in mutations and '|S:S704L|' not in mutations and '|ORF3a:A31T|' not in mutations and '|orf1ab:S5360P|' not in mutations and '|S:F186S|' not in mutations: return "BA.2"
-  return "Unassigned"
+  var=classifycog.treeclassify(mutations)
+  if var[:4]=="BA.5":# Pro tem: would like a way to distinguish S:R346T in BA.5*, but these are not yet designated as separate variants (as of 2022-08-18)
+    if '|S:R346T|' in mutations: var+="+S:R346T"
+  return var
 
 ecache={}
 def expandlin(lin):
