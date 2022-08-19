@@ -277,7 +277,7 @@ C[:,      :numv]-=C[:,0][:,None]
 C[:,numv:2*numv]-=C[:,numv][:,None]
 
 # Sampling is most convenient way of getting CrIs for crossover points
-numsamp=100000
+numsamp=50000
 test=mvn.rvs(mean=c,cov=C,size=numsamp)
 
 out=[None]
