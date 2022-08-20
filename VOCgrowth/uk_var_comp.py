@@ -306,10 +306,15 @@ samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
 b=test[:,numv:2*numv,None]
 e=np.exp(samp)
 eb=(e*b).sum(axis=1)/e.sum(axis=1)
+eb2=(e*b*b).sum(axis=1)/e.sum(axis=1)
+vb=eb2-eb*eb
 zeropoint=eb[:,maxt0-1]
-beta_mean=np.mean(eb-zeropoint[:,None],axis=0)
-beta_low=np.quantile(eb-zeropoint[:,None],(1-conf)/2,0)
-beta_high=np.quantile(eb-zeropoint[:,None],(1+conf)/2,0)
+growth_mean=np.mean(eb-zeropoint[:,None],axis=0)
+growth_low=np.quantile(eb-zeropoint[:,None],(1-conf)/2,0)
+growth_high=np.quantile(eb-zeropoint[:,None],(1+conf)/2,0)
+pressure_mean=np.mean(vb,axis=0)
+pressure_low=np.quantile(vb,(1-conf)/2,0)
+pressure_high=np.quantile(vb,(1+conf)/2,0)
 visthr=1e-6
 ymin=50;ymax=-50
 with open(datafn,'w') as fp:
@@ -319,7 +324,8 @@ with open(datafn,'w') as fp:
       print(mindate+t,' '.join("%6d"%x for x in v),end='',file=fp)
     else:
       print(mindate+t,' '.join("%6s"%'-' for x in v),end='',file=fp)
-    print(" %12g %12g %12g"%(beta_mean[t],beta_low[t],beta_high[t]),end='',file=fp)
+    print(" %12g %12g %12g"%(growth_mean[t],growth_low[t],growth_high[t]),end='',file=fp)
+    print(" %12g %12g %12g"%(pressure_mean[t],pressure_low[t],pressure_high[t]),end='',file=fp)
     for i in range(numv):
       mu=c[i]+t*c[numv+i]
       var=C[i,i]+2*t*C[i,numv+i]+t**2*C[numv+i,numv+i]
@@ -389,8 +395,8 @@ plot [:"{str(maxdate+args.future)}"] [{(ymin-0.1)/log(2)}:{max(ymax+(ymax-ymin)*
 
 for i in range(1,numv):
   (grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr)=out[i]
-  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i})/log(2)):(min(${numv+5+4*i+1},20)/{maxt0/8.}) pt 5 lc {i} ps variable title "","""
-  if args.plotbands: cmd+=f""" "{datafn}" u 1:((${numv+5+4*i+2})/log(2)):((${numv+5+4*i+3})/log(2)) w filledcurves lc {i} title "","""
+  if args.plotpoints: cmd+=f""" "{datafn}" u 1:((${numv+8+4*i})/log(2)):(min(${numv+8+4*i+1},20)/{maxt0/8.}) pt 5 lc {i} ps variable title "","""
+  if args.plotbands: cmd+=f""" "{datafn}" u 1:((${numv+8+4*i+2})/log(2)):((${numv+8+4*i+3})/log(2)) w filledcurves lc {i} title "","""
   cmd+=f""" ((x/86400-{int(mindate)})*{grad}+{yoff})/log(2) lc {i} lw 2 w lines title "{growthstr}\\n{crossstr}", """
 cmd+=f""" 0 lc 8 lw 3 title "{Vnames[0]} baseline" """
 
@@ -464,6 +470,43 @@ set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (
 plot [:"{str(maxdate+args.future)}"] """
 cmd+=f""" "{datafn}" u 1:((${numv+2})*100) lc 1 lw 2 w lines title "{linetitle}", """
 cmd+=f""" "{datafn}" u 1:((${numv+3})*100):((${numv+4})*100) lc 1 w filledcurves title "" """
+
+po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
+p=po.stdin
+p.write(cmd.encode('utf-8'))
+p.close()
+po.wait()
+print()
+print("Written graph to",graphfn)
+
+
+graphfn=datafn+".variantpressure.png"
+linetitle=f"Variant pressure (the pressure that the changing variant mixture puts on the overall growth rate)"
+cmd=f"""
+set xdata time
+set key left Left reverse
+set key spacing 2.5
+fmt="%Y-%m-%d"
+set timefmt fmt
+set format x fmt
+set xtics "2020-01-06", 604800
+set xtics rotate by 45 right offset 0.5,0
+set xtics nomirror
+set grid xtics ytics lc rgb "#dddddd" lt 1
+set terminal pngcairo font "sans,13" size 1728,1296
+set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
+set ylabel "Variant pressure on growth rate of new cases per day (percentage growth rate per day per day)"
+set style fill transparent solid 0.25
+set style fill noborder
+set format y "%.2f%%"
+
+set output "{graphfn}"
+set title "Estimated pressure the changing variant mixture puts on the change in overall growth rate of new cases per day, in new cases per day per day\\nVariants considered: {', '.join(Vnames)}\\nNB: changes in growth rate can arise from several causes - only the contribution to the change in growth rate due to the variant mixture is shown here\\n"""
+cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
+set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
+plot [:"{str(maxdate+args.future)}"] """
+cmd+=f""" "{datafn}" u 1:((${numv+5})*100) lc 1 lw 2 w lines title "{linetitle}", """
+cmd+=f""" "{datafn}" u 1:((${numv+6})*100):((${numv+7})*100) lc 1 w filledcurves title "" """
 
 po=subprocess.Popen("gnuplot",shell=True,stdin=subprocess.PIPE)
 p=po.stdin
