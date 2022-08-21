@@ -45,6 +45,7 @@ def treeclassify(mutations):
   var=classifycog.treeclassify(mutations)
   if var[:4]=="BA.5":# Pro tem: would like a way to distinguish S:R346T in BA.5*, but these are not yet designated as separate variants (as of 2022-08-18)
     if '|S:R346T|' in mutations: var+="+S:R346T"
+  if var=="BA.2.75" and '|S:D574V|' in mutations: var="BA.2.75.1"
   return var
 
 ecache={}
@@ -244,7 +245,7 @@ def Hessian(xx,eps):
   return H
 
 if not args.simple:
-  bounds=[(c[i]-c[0]-3,c[i]-c[0]+3) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
+  bounds=[(c[i]-c[0]-5,c[i]-c[0]+5) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
   bounds[0]=bounds[numv]=(0,0)
   res=minimize(NLL,list(c)+[min(2,maxmult)],bounds=bounds, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
   if not res.success: raise RuntimeError(res.message)
