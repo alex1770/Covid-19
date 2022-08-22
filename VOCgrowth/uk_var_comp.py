@@ -435,7 +435,7 @@ print()
 #print()
 
 last=14
-proj=28
+proj=42
 NR=NN[-last:,:].sum(axis=0)
 PR=NR/NR.sum()
 stats=[]
@@ -494,7 +494,7 @@ print("Written graph to",graphfn)
 
 
 graphfn=datafn+".variantpressure.png"
-linetitle=f"Variant pressure (the pressure that the changing variant mixture puts on the overall growth rate)"
+linetitle=f"Variant pressure (the effect of the changing variant mixture on the rate of change of the growth in overall new cases per day)"
 cmd=f"""
 set xdata time
 set key left Left reverse
@@ -508,7 +508,7 @@ set xtics nomirror
 set grid xtics ytics lc rgb "#dddddd" lt 1
 set terminal pngcairo font "sans,13" size 1728,1296
 set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
-set ylabel "Variant pressure on growth rate of new cases per day (percentage growth rate per day per day)"
+set ylabel "Variant pressure (percentage growth rate per day per day)"
 set style fill transparent solid 0.25
 set style fill noborder
 set format y "%.2f%%"
