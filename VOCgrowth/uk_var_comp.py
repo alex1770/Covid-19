@@ -2,7 +2,7 @@ import sys,pickle,os,argparse
 from stuff import *
 from scipy.stats import norm, multivariate_normal as mvn
 from scipy.optimize import minimize
-from scipy.special import gammaln
+from scipy.special import gammaln,digamma
 import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
@@ -155,7 +155,7 @@ if n<2: raise RuntimeError("Can't find enough samples")
 # Let t = timestep, r = variant number
 # Calculate, for each t, the quadratic form QF(x) = sum_r n_{t,r}x_{t,r}^2 - 1/(sum_r n_{t,r})*(sum_r n_{t,r}x_{t,r})^2
 # Note that log likelihood(x) = (-1/2) * QF(x)
-# I.e., find coefficients Q_{t,r,s} such that QF(x) = sum_{r,s} Q_{t,r,s}x_{t,r.x_{t,s}
+# I.e., find coefficients Q_{t,r,s} such that QF(x) = sum_{r,s} Q_{t,r,s}x_{t,r}x_{t,s}
 Q=np.zeros([n,numv,numv])
 Q[:,np.arange(numv),np.arange(numv)]=NN
 Q-=NN[:,None,:]*NN[:,:,None]/NN.sum(axis=1)[:,None,None]
@@ -219,51 +219,63 @@ def LL(xx,pr=0):
     LL+=DLL
   return LL
 
+def dLL(xx,pr=0):
+  dLL=0
+  aa=xx[:numv]
+  bb=xx[numv:2*numv]
+  mult=xx[2*numv]
+  for t in range(n):
+    rho=np.exp(aa+t*bb)
+    N=NN[t].sum()
+    s=max((N-mult)/(mult-1),1e-3)
+    al=s*rho/rho.sum()
+    dal_da=s*(rho.sum()*np.diag(rho)-np.outer(rho,rho))/rho.sum()**2
+    dal_db=dal_da*t
+    if s<1e-3: dal_dm=np.zeros(numv)[:,None]
+    else: dal_dm=(rho/rho.sum()*-(N-1)/(mult-1)**2)[:,None]
+    dal=np.concatenate([dal_da,dal_db,dal_dm],axis=1)
+    ds=np.array([0]*(numv*2)+[-(N-1)/(mult-1)**2])
+    if pr: print(mindate+t,((digamma(s)-digamma(N+s))*ds+(digamma(NN[t]+al)-digamma(al))@dal)[2])
+    dLL+=(digamma(s)-digamma(N+s))*ds+(digamma(NN[t]+al)-digamma(al))@dal
+  return dLL
+
 condition=1e3
 def NLL(xx): return -LL(xx)/condition
+def NdLL(xx): return -dLL(xx)/condition
 
 def Hessian(xx,eps):
   N=len(xx)
   H=np.zeros([N,N])
-  for i in range(N-1):
-    for j in range(i+1,N):
-      v=0
-      for (s1,s2) in [(-1,-1),(-1,1),(1,-1),(1,1)]:
-        x=np.copy(xx)
-        x[i]+=s1*eps[i]
-        x[j]+=s2*eps[j]
-        v+=s1*s2*LL(x)
-      H[i,j]=H[j,i]=v/(4*eps[i]*eps[j])
   for i in range(N):
-    x=np.copy(xx)
-    v=0
-    for s in [-1,0,1]:
-      x=np.copy(xx)
-      x[i]+=s*eps[i]
-      v+=(s*s*3-2)*LL(x)
-    H[i,i]=v/eps[i]**2
-  return H
+    leps=[0]*i+[eps[i]]+[0]*(N-1-i)
+    H[i,:]=(dLL(xx+leps)-dLL(xx-leps))/(2*eps[i])
+  return (H+H.T)/2
 
 if not args.simple:
-  bounds=[(c[i]-c[0]-5,c[i]-c[0]+5) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
+  bounds=[(c[i]-c[0]-15,c[i]-c[0]+15) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
   bounds[0]=bounds[numv]=(0,0)
-  res=minimize(NLL,list(c)+[min(2,maxmult)],bounds=bounds, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+  res=minimize(NLL,list(c)+[min(2,maxmult)],bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
   if not res.success: raise RuntimeError(res.message)
   print("Log likelihood: %.3f"%(LL(res.x)))
   xx=res.x
+  odmbound=False
   for i in range(len(xx)):
     if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
-      if i<2*numv: desc=Vnames[i%numv]+[" intercept"," growth"][i//numv]
-      else: desc="multiplier"
-      print("Warning:",desc,"hit bound")
+      if i<2*numv: print("Error:",Vnames[i%numv]+[" intercept"," growth"][i//numv],"hit bound")
+      else: odmbound=True;print("Note: overdispersion multiplier hit bound")
   print("Residual(overdispersion) multiplier from DM = %.3f"%xx[2*numv])
   
-  eps=[1e-3]*numv+[1e-4]*numv+[1e-3]
+  eps=np.array([1e-5]*numv+[1e-6]*numv+[1e-5])
   H=Hessian(xx,eps)
   # Add gauge-fixing terms (to ensure a0=b0=0). These won't affect the result after C is processed (below) to only see differences.
-  H[0,0]+=scale
-  H[numv,numv]+=scale
-  C=-np.linalg.inv(H)
+  H[0,0]-=scale
+  H[numv,numv]-=scale
+  if odmbound:# If multiplier hit bound, then need to treat it as fixed
+    C=np.zeros([2*numv+1,2*numv+1])
+    C[:2*numv,:2*numv]=-np.linalg.inv(H[:2*numv,:2*numv])
+    C[2*numv,2*numv]=0
+  else:
+    C=-np.linalg.inv(H)
   c=xx
 
 # Only gauge-invariant parts of C make sense: covariances referring to differences in intercepts and growth rates
