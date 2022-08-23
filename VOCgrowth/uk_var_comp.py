@@ -20,6 +20,7 @@ parser.add_argument('-s',  '--simple',      action="store_true",   help="Use sim
 parser.add_argument('-f',  '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
 parser.add_argument('-t',  '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-l',  '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
+parser.add_argument('-m',  '--maxmult',     type=float,default=20, help="Maximum overdispersion multiplier")
 parser.add_argument('-p',  '--plotpoints',  action="store_true",   help="Whether to plot points corresponding to log(num(variant)/num(base variant))")
 parser.add_argument('-b',  '--plotbands',   action="store_true",   help="Whether to plot confidence bands around best-fit lines")
 parser.add_argument('-F',  '--future',      type=int,default=30,   help="Number of days ahead to project")
@@ -37,7 +38,6 @@ print("Labs:",location)
 print("Variants considered:",' '.join(Vnames))
 print("Initial date range:",mindate,"-",maxdate)
 zconf=norm.ppf((1+conf)/2)
-maxmult=20
 numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
 
@@ -252,9 +252,9 @@ def Hessian(xx,eps):
   return (H+H.T)/2
 
 if not args.simple:
-  bounds=[(c[i]-c[0]-15,c[i]-c[0]+15) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(1.01,maxmult)]
+  bounds=[(c[i]-c[0]-15,c[i]-c[0]+15) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(min(1.01,args.maxmult),args.maxmult)]
   bounds[0]=bounds[numv]=(0,0)
-  res=minimize(NLL,list(c)+[min(2,maxmult)],bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+  res=minimize(NLL,list(c)+[min(2,args.maxmult)],bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
   if not res.success: raise RuntimeError(res.message)
   print("Log likelihood: %.3f"%(LL(res.x)))
   xx=res.x
