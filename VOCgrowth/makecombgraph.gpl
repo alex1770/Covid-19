@@ -1,0 +1,27 @@
+set xdata time
+set key left Left reverse
+fmt="%Y-%m-%d"
+set timefmt fmt
+set format x fmt
+set xtics "2020-01-06", 604800
+set xtics rotate by 45 right offset 0.5,0
+set xtics nomirror
+set grid xtics lc rgb "#dddddd" lt 1
+set terminal pngcairo font "sans,13" size 1728,1296
+set bmargin 5.5;set lmargin 13;set rmargin 13;set tmargin 7.5
+set ytics nomirror
+set y2tics nomirror
+set ylabel "Variant pressure (percentage variant-induced growth rate per day per day)"
+set y2label "New Covid-19 infections per day"
+set y2range [0:]
+#set logscale y2 2
+set style fill transparent solid 0.25
+set style fill noborder
+set format y "%.2f%%"
+
+set output "varpressureinfectiongraph.png"
+set title "Comparison of \"variant pressure\" with new infections per day in the UK\nDescription/caveats: http://sonorouschocolate.com/covid19/index.php/UK\\_variant\\_comparison\nSources: Sequenced cases from COG-UK; infections estimate from Epiforecasts (https://github.com/epiforecasts/inc2prev)"
+
+vardata='UK_AY.*_BA.1_BA.1.1_BA.5.1_BA.4.6_BA.5.2_BA.5.2.1_BA.5.2+S:R346T_BF.3_BF.5_BF.7_BF.11_BA.2.12.1_BA.2.75_BA.2.75.1_BA.1*_BA.2*_BA.4*_BA.5*'
+infdata='UKincidence_fromepiforecasts'
+plot ["2022-02-01":] vardata u 1:(($24)*100) lw 2 w lines title "Variant pressure (left scale)", vardata u 1:(($25)*100):(($26)*100) lc 1 w filledcurves title "", infdata u 1:2 axes x1y2 lw 2 w lines title "New infections per day (right scale)", infdata u 1:(($2)-($3)):(($2)+($3)) lc 2 w filledcurves axes x1y2 title ""
