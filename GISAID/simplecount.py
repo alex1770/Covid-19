@@ -16,7 +16,7 @@ defaultlineages="Spike_F486V-N_P151S,NSP8_N118S,BA.2*,BA.3,BA.4*,BA.5*,Unassigne
 parser=argparse.ArgumentParser()
 parser.add_argument('-b', '--maxbad',      type=float, default=0.05,           help="Maximum proportion of Ns allowed")
 parser.add_argument('-l', '--lineages',    default=defaultlineages,            help="Comma-separated list of lineages or mutations; AND together with +/- prefixes")
-parser.add_argument('-L', '--location',    default="Europe / United Kingdom",  help="Location prefix; AND together with +/- prefixes")
+parser.add_argument('-L', '--location',    default="",                         help="Location prefix; AND together with +/- prefixes")
 parser.add_argument('-f', '--mindate',     default="2021-01-01",               help="Min sample date of sequence")
 args=parser.parse_args()
 
