@@ -7,6 +7,7 @@ import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
 import classifycog
+import hashlib
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
@@ -43,9 +44,21 @@ cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).str
 
 def treeclassify(mutations):
   var=classifycog.treeclassify(mutations)
-  if var[:4]=="BA.5":# Pro tem: would like a way to distinguish S:R346T in BA.5*, but these are not yet designated as separate variants (as of 2022-08-18)
-    if '|S:R346T|' in mutations: var+="+S:R346T"
-  if var=="BA.2.75" and '|S:D574V|' in mutations: var="BA.2.75.1"
+
+  # Pro tem: manually classify BA.2.75*, because at time of writing (2022-09-01) the autoclassifier is having a hard time on its own (possibly due to bad training data)
+  if ("S:G446S" in mutations)+("S:G257S" in mutations)+("S:K147E" in mutations)+("S:G339H" in mutations)>=2: # BA.2.75*
+    if "S:D574V" in mutations:
+      if "S:R346T" in mutations: var="BL.1"
+      else: var="BA.2.75.1"
+    elif "S:R346T" in mutations and "S:F486S" in mutations and "S:D1199N" in mutations: var="BA.2.75.2"
+    elif "orf1ab:S1221L" in mutations and "orf1ab:V6107I" in mutations: var="BA.2.75.3"
+    elif "S:L452R" in mutations: var="BA.2.75.4"
+    elif "S:K356T" in mutations: var="BA.2.75.5"
+    else: var="BA.2.75"
+  
+  # Pro tem: add suffix "+S:R346T" for lineages that don't yet have a designated name (that has been adopted by COG-UK) for this particular mutation
+  if var not in ["BA.5.2.6", "BF.7", "BF.11", "BA.4.1.8", "BA.4.6", "BA.2.75.1", "BA.2.75.2", "BL.1"] and "|S:R346T|" in mutations: var+="+S:R346T"
+  
   return var
 
 ecache={}
@@ -79,7 +92,11 @@ def patmatch(lin):
     if (lin+'.')[:len(prefix)]==prefix: ind=i
   return ind
 
-fn=os.path.join(cachedir,location+'_'+'_'.join(Vnames)+'__%s'%cogdate)
+jn='_'.join(Vnames)
+fn=os.path.join(cachedir,location+'_'+jn+'__%s'%cogdate)
+if len(fn)>250:
+  jn=hashlib.sha256(jn.encode("utf-8")).hexdigest()[-16:]
+  fn=os.path.join(cachedir,location+'_'+jn+'__%s'%cogdate)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
     data=pickle.load(fp)
@@ -107,11 +124,11 @@ else:
     lin_e=expandlin(lin)
 
     # If the COG-UK lineage is Unassigned or a prefix of tree-rule lineage, then replace it with tree-rule lineage
-    if date>="2022-01-01":
+    if date>="2022-06-01":
       mylin=treeclassify(mutations)
       mylin_e=expandlin(mylin)
       if lin=="Unassigned" or lin_e==mylin_e[:len(lin_e)]: lin_e=mylin_e
-      if mylin=="BA.2.75": lin_e=mylin_e# Special case pro tem, as COG-UK and GISAID wrongly classify this as BA.2.73
+    #if date>="2022-07-01": print("YYY",contractlin(lin_e))
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     ind=patmatch(lin_e)
@@ -139,6 +156,10 @@ for date in Daterange(mindate,maxdate+1):
   VV.append(v)
 if VV==[]: print("No data points found");sys.exit(0)
 VV=np.array(VV)
+npd=(VV>0).sum(axis=0);bad=0
+for i in range(numv):
+  if npd[i]<2: print("Variant",Vnames[i],"only has positive counts on",npd[i],"day"+"s"*(npd[i]!=1));bad=1
+if bad: raise RuntimeError("Variant counts too low")
 
 NN=VV+1e-30
 n=len(NN)
@@ -252,7 +273,7 @@ def Hessian(xx,eps):
   return (H+H.T)/2
 
 if not args.simple:
-  bounds=[(c[i]-c[0]-15,c[i]-c[0]+15) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(min(1.01,args.maxmult),args.maxmult)]
+  bounds=[(c[i]-c[0]-30,c[i]-c[0]+30) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(min(1.01,args.maxmult),args.maxmult)]
   bounds[0]=bounds[numv]=(0,0)
   res=minimize(NLL,list(c)+[min(2,args.maxmult)],bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
   if not res.success: raise RuntimeError(res.message)
@@ -312,7 +333,7 @@ for i in range(1,numv):
   print(crossstr)
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
-datafn=location+'_%s'%('_'.join(Vnames))
+datafn=location+'_%s'%jn
 maxt0=maxdate-mindate+1
 maxt=maxt0+args.future
 samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
@@ -514,10 +535,10 @@ set style fill noborder
 set format y "%.2f%%"
 
 set output "{graphfn}"
-set title "Estimated pressure the changing variant mixture puts on the change in overall growth rate of new cases per day, in new cases per day per day\\nVariants considered: {', '.join(Vnames)}\\nNB: changes in growth rate can arise from several causes - only the contribution to the change in growth rate due to the variant mixture is shown here\\n"""
+set title "Estimated pressure the changing variant mixture puts on the change in overall growth rate of new cases per day, in new cases per day per day\\nVariants considered: {{/=10{', '.join(Vnames)}}}\\nNB: changes in growth rate can arise from several causes - only the contribution to the change in growth rate due to the variant mixture is shown here\\n"""
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
-plot [:"{str(maxdate+args.future)}"] """
+plot [:"{str(maxdate+args.future)}"] [:{min(max(pressure_mean)*2,max(pressure_high)*1.05)*100}] """
 cmd+=f""" "{datafn}" u 1:((${numv+5})*100) lc 1 lw 2 w lines title "{linetitle}", """
 cmd+=f""" "{datafn}" u 1:((${numv+6})*100):((${numv+7})*100) lc 1 w filledcurves title "" """
 
