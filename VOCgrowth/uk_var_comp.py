@@ -156,6 +156,10 @@ for date in Daterange(mindate,maxdate+1):
   VV.append(v)
 if VV==[]: print("No data points found");sys.exit(0)
 VV=np.array(VV)
+npd=(VV>0).sum(axis=0);bad=0
+for i in range(numv):
+  if npd[i]<2: print("Variant",Vnames[i],"only has positive counts on",npd[i],"day"+"s"*(npd[i]!=1));bad=1
+if bad: raise RuntimeError("Variant counts too low")
 
 NN=VV+1e-30
 n=len(NN)
@@ -531,10 +535,10 @@ set style fill noborder
 set format y "%.2f%%"
 
 set output "{graphfn}"
-set title "Estimated pressure the changing variant mixture puts on the change in overall growth rate of new cases per day, in new cases per day per day\\nVariants considered: {', '.join(Vnames)}\\nNB: changes in growth rate can arise from several causes - only the contribution to the change in growth rate due to the variant mixture is shown here\\n"""
+set title "Estimated pressure the changing variant mixture puts on the change in overall growth rate of new cases per day, in new cases per day per day\\nVariants considered: {{/=10{', '.join(Vnames)}}}\\nNB: changes in growth rate can arise from several causes - only the contribution to the change in growth rate due to the variant mixture is shown here\\n"""
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
-plot [:"{str(maxdate+args.future)}"] """
+plot [:"{str(maxdate+args.future)}"] [:{min(max(pressure_mean)*2,max(pressure_high)*1.05)*100}] """
 cmd+=f""" "{datafn}" u 1:((${numv+5})*100) lc 1 lw 2 w lines title "{linetitle}", """
 cmd+=f""" "{datafn}" u 1:((${numv+6})*100):((${numv+7})*100) lc 1 w filledcurves title "" """
 
