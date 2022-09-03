@@ -51,11 +51,11 @@ for x in fp:
   if y[0]>=args.mindate and y[0]<=args.maxdate:
     d=datetoday(y[0])
     try:
-      v0=int(y[args.col0])
+      v0=float(y[args.col0])
     except ValueError:
       v0=0
     try:
-      v1=int(y[args.col1])
+      v1=float(y[args.col1])
     except ValueError:
       v1=0
     if v0+v1>=1: N0.append(v0);N1.append(v1);DT.append(d)
