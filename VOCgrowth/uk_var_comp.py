@@ -478,7 +478,7 @@ for desc,col in types:
 
 
 graphfn=datafn+".growthproj.png"
-linetitle=f"The part of the change (compared with {maxdate}) in the percentage daily increase\\n in new cases per day that is due to the change in variant mixture"
+linetitle=f"Variant effect (integral of variant pressure; effect of changing variant mixture on the growth rate in new cases per day, compared with {maxdate})"
 cmd=f"""
 set xdata time
 set key left Left reverse
@@ -498,7 +498,7 @@ set style fill noborder
 set format y "%.1f%%"
 
 set output "{graphfn}"
-set title "Estimated effect of variant mixture {', '.join(Vnames)} on the overall growth rate in new cases/day, set at 0 on {maxdate}\\nNB: This growth rate is affected by other things - only the contribution to the growth rate due to the variant mixture is shown here\\n"""
+set title "Estimated effect of the changing variant mixture on the overall growth rate in new cases per day\\nVariants considered: {{/=10{', '.join(Vnames)}}}\\nNB: changes in growth rate can arise from several causes - only the contribution to the change in growth rate due to the variant mixture is shown here\\n"""
 cmd+=f"""Description/caveats/current graph: http://sonorouschocolate.com/covid19/index.php/UK\\\\_variant\\\\_comparison\\nSource: Sequenced cases from COG-UK {cogdate}"
 set arrow from "{maxdate}",graph 0 to "{maxdate}",graph 1 nohead lc 8 dashtype (40,20)
 plot [:"{str(maxdate+args.future)}"] """
@@ -515,7 +515,7 @@ print("Written graph to",graphfn)
 
 
 graphfn=datafn+".variantpressure.png"
-linetitle=f"Variant pressure (the effect of the changing variant mixture on the rate of change of the growth in overall new cases per day)"
+linetitle=f"Variant pressure (effect of changing variant mixture on the rate of change of the growth in overall new cases per day)"
 cmd=f"""
 set xdata time
 set key left Left reverse
