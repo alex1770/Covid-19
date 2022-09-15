@@ -155,11 +155,15 @@ for i in range(ncat):
 print("Time =",cpu()-t0)
 print()
 
-# Same, but do dot product with newdata first
+# Same, but do dot product with newdata first (should be identical results)
 # df=2, mult=1
 # Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.03000 -  0.78180)
 # Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.17678 -  0.96720)
 # Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00000 -  0.25237)
+#
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.14249 -  0.43042)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.56784 -  0.85685)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00009 -  0.00508)
 #
 # df=2, mult=100
 # Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.21819 -  0.31067)
@@ -180,11 +184,15 @@ for i in range(ncat):
 print("Time =",cpu()-t0)
 print()
 
-# CI with MVN on exp(xx@newdata)
+# CI with MVN on exp(xx@newdata) (kind of stupid, but including anyway because can do it semi-analytically)
 # df=2, mult=1
 # Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 (-0.29006 -  0.29257)
 # Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 (-2.79991 -  2.90877)
 # Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 (-2.03564 -  3.92320)
+#
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.15523 -  0.60348)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.39408 -  0.84406)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 (-0.00195 -  0.00508)
 #
 # Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.22104 -  0.31671)
 # Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.68242 -  0.77833)
@@ -206,6 +214,11 @@ print("Time =",cpu()-t0)
 print()
 
 # Analytic CI pretending exp(xx@newdata) is normal and sum is positive
+# df=2, mult=10
+# Pretending denominator>0: Prob(newdata = cat0) =  0.26182 ( 0.15547 -  0.60668)
+# Pretending denominator>0: Prob(newdata = cat1) =  0.73749 ( 0.39087 -  0.84382)
+# Pretending denominator>0: Prob(newdata = cat2) =  0.00070 (-0.00194 -  0.00510)
+#
 # df=2, mult=100
 # Pretending denominator>0: Prob(newdata = cat0) =  0.26182 ( 0.22104 -  0.31671)
 # Pretending denominator>0: Prob(newdata = cat1) =  0.73749 ( 0.68243 -  0.77833)
@@ -235,18 +248,27 @@ for i in range(ncat):
 # Iterations: 24777382
 # Acceptance ratio: 0.270102
 # Time/iteration: 289.117us
-# Median 0.193764      CI 0.007115 - 0.760380
-# Median 0.804226      CI 0.235111 - 0.992809
-# Median 0.000029      CI 0.000000 - 0.019679
+# Category 0:   Median 0.193764      CI 0.007115 - 0.760380
+# Category 1:   Median 0.804226      CI 0.235111 - 0.992809
+# Category 2:   Median 0.000029      CI 0.000000 - 0.019679
+#
+# df: 2
+# Multiplicity: 10
+# Iterations: 70692757
+# Acceptance ratio: 0.203377
+# Time/iteration: 277.481us
+# Category 0:   Median 0.255805      CI 0.132258 - 0.418642
+# Category 1:   Median 0.743344      CI 0.580095 - 0.867277
+# Category 2:   Median 0.000532      CI 0.000057 - 0.003591
 #
 # df: 2
 # Multiplicity: 100
 # Iterations: 24777382
 # Acceptance ratio: 0.195965
 # Time/iteration: 286.916us
-# Median 0.261200      CI 0.216945 - 0.309441
-# Median 0.738090      CI 0.689729 - 0.782447
-# Median 0.000678      CI 0.000353 - 0.001262
+# Category 0:   Median 0.261200      CI 0.216945 - 0.309441
+# Category 1:   Median 0.738090      CI 0.689729 - 0.782447
+# Category 2:   Median 0.000678      CI 0.000353 - 0.001262
 #
 it=ac=0
 al=1
