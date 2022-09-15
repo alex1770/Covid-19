@@ -137,12 +137,12 @@ newdata=data_in[0]
 o=np.exp(yy@newdata)
 p=o/o.sum()
 print("Newdata probs =",p)
+numsamp=1000000
 
 # CI with MVN (on xx, the log scale)
-# Using 10000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.03006 -  0.78184)
-# Using 10000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.17676 -  0.96718)
-# Using 10000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00000 -  0.25239)
-numsamp=1000000
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.03000 -  0.78178)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.17680 -  0.96721)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00000 -  0.25222)
 t0=cpu()
 print("Sampling xx")
 samp=mvn.rvs(mean=xx,cov=C,size=numsamp)
@@ -156,7 +156,17 @@ print("Time =",cpu()-t0)
 print()
 
 # Same, but do dot product with newdata first
-numsamp=1000000
+# df=2, mult=1
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.03000 -  0.78180)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.17678 -  0.96720)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00000 -  0.25237)
+#
+# df=2, mult=100
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.21819 -  0.31067)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.68848 -  0.78119)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00037 -  0.00131)
+# Time = 26.5s
+
 mu=xx.reshape([ncat-1,nvar])@newdata
 D=(C.reshape([ncat-1,nvar,ncat-1,nvar])*newdata[None,:,None,None]*newdata[None,None,None,:]).sum(axis=[1,3])
 t0=cpu()
@@ -171,6 +181,15 @@ print("Time =",cpu()-t0)
 print()
 
 # CI with MVN on exp(xx@newdata)
+# df=2, mult=1
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 (-0.29006 -  0.29257)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 (-2.79991 -  2.90877)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 (-2.03564 -  3.92320)
+#
+# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26182 ( 0.22104 -  0.31671)
+# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73749 ( 0.68242 -  0.77833)
+# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00070 ( 0.00027 -  0.00123)
+#
 # exp(N(mu,v)) has mean exp(mu+v/2) and variance exp(2(mu+v/2))(exp(v)-1)
 mu1=jnp.concatenate([jnp.zeros(1),mu])
 D1=jnp.concatenate([jnp.zeros([ncat,1]),jnp.concatenate([jnp.zeros([1,ncat-1]),D])],axis=1)
@@ -187,6 +206,11 @@ print("Time =",cpu()-t0)
 print()
 
 # Analytic CI pretending exp(xx@newdata) is normal and sum is positive
+# df=2, mult=100
+# Pretending denominator>0: Prob(newdata = cat0) =  0.26182 ( 0.22104 -  0.31671)
+# Pretending denominator>0: Prob(newdata = cat1) =  0.73749 ( 0.68243 -  0.77833)
+# Pretending denominator>0: Prob(newdata = cat2) =  0.00070 ( 0.00027 -  0.00123)
+#
 zconf=norm.ppf((1+conf)/2)
 mu2s=mu2.sum()
 D2s=D2.sum(axis=1)
@@ -205,8 +229,25 @@ for i in range(ncat):
     print("Pretending denominator>0: Prob(newdata = cat%d) = %8.5f (n/a - n/a)"%(i,p[i]))
     
 
-# Now try MCMC over xx (with uniform prior)
-#        it       acc      time/it    CI
+# MCMC over xx, i.e., exact multinomial posterior (with uniform prior)
+# df: 2
+# Multiplicity: 1
+# Iterations: 24777382
+# Acceptance ratio: 0.270102
+# Time/iteration: 289.117us
+# Median 0.193764      CI 0.007115 - 0.760380
+# Median 0.804226      CI 0.235111 - 0.992809
+# Median 0.000029      CI 0.000000 - 0.019679
+#
+# df: 2
+# Multiplicity: 100
+# Iterations: 24777382
+# Acceptance ratio: 0.195965
+# Time/iteration: 286.916us
+# Median 0.261200      CI 0.216945 - 0.309441
+# Median 0.738090      CI 0.689729 - 0.782447
+# Median 0.000678      CI 0.000353 - 0.001262
+#
 it=ac=0
 al=1
 L=-NLL(xx)
