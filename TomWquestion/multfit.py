@@ -160,21 +160,20 @@ if 0:
 
 # Same, but do dot product with newdata first (should be identical results)
 # df=2, mult=1
-# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26213 ( 0.03011 -  0.78154)
-# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73715 ( 0.17674 -  0.96706)
-# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00071 ( 0.00000 -  0.25479)
+# Using 500000000 samples of MVN: Prob(newdata = cat0) = 0.262135 (0.030118 - 0.781554)
+# Using 500000000 samples of MVN: Prob(newdata = cat1) = 0.737154 (0.176761 - 0.967048)
+# Using 500000000 samples of MVN: Prob(newdata = cat2) = 0.000711 (0.000001 - 0.254774)
 #
 # df=2, mult=10
-# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26213 ( 0.14280 -  0.43058)
-# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73715 ( 0.56763 -  0.85652)
-# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00071 ( 0.00009 -  0.00517)
+# Using 500000000 samples of MVN: Prob(newdata = cat0) = 0.262135 (0.142799 - 0.430576)
+# Using 500000000 samples of MVN: Prob(newdata = cat1) = 0.737154 (0.567646 - 0.856529)
+# Using 500000000 samples of MVN: Prob(newdata = cat2) = 0.000711 (0.000094 - 0.005171)
 #
 # df=2, mult=100
-# Using 100000000 samples of MVN: Prob(newdata = cat0) =  0.26213 ( 0.21852 -  0.31097)
-# Using 100000000 samples of MVN: Prob(newdata = cat1) =  0.73715 ( 0.68817 -  0.78084)
-# Using 100000000 samples of MVN: Prob(newdata = cat2) =  0.00071 ( 0.00038 -  0.00134)
-#
-# Time = 26.5s
+# Using 500000000 samples of MVN: Prob(newdata = cat0) = 0.262135 (0.218520 - 0.310958)
+# Using 500000000 samples of MVN: Prob(newdata = cat1) = 0.737154 (0.688176 - 0.780843)
+# Using 500000000 samples of MVN: Prob(newdata = cat2) = 0.000711 (0.000377 - 0.001338)
+
 mu=xx.reshape([ncat-1,nvar])@newdata
 D=(C.reshape([ncat-1,nvar,ncat-1,nvar])*newdata[None,:,None,None]*newdata[None,None,None,:]).sum(axis=[1,3])
 t0=cpu()
@@ -184,9 +183,11 @@ print("Sampled")
 oo=jnp.concatenate([jnp.ones([numsamp,1]),jnp.exp(samp)],axis=1)
 pp=oo/oo.sum(axis=1)[:,None]
 for i in range(ncat):
-  print("Using %d samples of MVN: Prob(newdata = cat%d) = %8.5f (%8.5f - %8.5f)"%(numsamp,i,p[i],np.quantile(pp[:,i],(1-conf)/2),np.quantile(pp[:,i],(1+conf)/2)))
+  print("Using %d samples of MVN: Prob(newdata = cat%d) = %8.6f (%8.6f - %8.6f)"%(numsamp,i,p[i],np.quantile(pp[:,i],(1-conf)/2),np.quantile(pp[:,i],(1+conf)/2)))
 print("Time =",cpu()-t0)
 print()
+
+# (Consider also doing this by direct integral: either in normal approx, or fully with multinomial)
 
 # CI with MVN on exp(xx@newdata) (kind of stupid, but including anyway because can do it semi-analytically)
 # df=2, mult=1
@@ -252,29 +253,29 @@ for i in range(ncat):
 #
 # df: 2
 # Multiplicity: 1
-# Iterations: 13986189
-# Acceptance ratio: 0.269691
-# Time/iteration: 286.970us
-# Category 0:   Median 0.194351      CI 0.007174 - 0.759602
-# Category 1:   Median 0.803590      CI 0.235823 - 0.992740
-# Category 2:   Median 0.000030      CI 0.000000 - 0.020243
+# Iterations: 36276564
+# Acceptance ratio: 0.269666
+# Time/iteration: 285.536us
+# Category 0:   Median 0.194395      CI 0.007197 - 0.759243
+# Category 1:   Median 0.803560      CI 0.236196 - 0.992717
+# Category 2:   Median 0.000030      CI 0.000000 - 0.020185
 # 
 # df: 2
 # Multiplicity: 10
-# Iterations: 13986189
-# Acceptance ratio: 0.203501
-# Time/iteration: 285.757us
-# Category 0:   Median 0.255909      CI 0.132504 - 0.418585
-# Category 1:   Median 0.743223      CI 0.580143 - 0.867037
-# Category 2:   Median 0.000544      CI 0.000058 - 0.003661
+# Iterations: 36276564
+# Acceptance ratio: 0.203362
+# Time/iteration: 286.034us
+# Category 0:   Median 0.256059      CI 0.132571 - 0.418683
+# Category 1:   Median 0.743074      CI 0.580025 - 0.866950
+# Category 2:   Median 0.000545      CI 0.000058 - 0.003662
 # 
 # df: 2
 # Multiplicity: 100
-# Iterations: 13986189
-# Acceptance ratio: 0.195765
-# Time/iteration: 283.877us
-# Category 0:   Median 0.261571      CI 0.217346 - 0.309746
-# Category 1:   Median 0.737699      CI 0.689411 - 0.782042
+# Iterations: 36276564
+# Acceptance ratio: 0.195855
+# Time/iteration: 286.830us
+# Category 0:   Median 0.261572      CI 0.217324 - 0.309741
+# Category 1:   Median 0.737700      CI 0.689417 - 0.782064
 # Category 2:   Median 0.000693      CI 0.000361 - 0.001288
 
 it=ac=0
