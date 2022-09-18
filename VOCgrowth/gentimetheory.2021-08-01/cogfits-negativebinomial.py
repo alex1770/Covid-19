@@ -40,7 +40,7 @@ def LL(xx):
   for i in range(ndays):
     a,d,day=V0[i],V1[i],DT[i]
     e=exp(lam*(day-dayoffset-t0))
-    # Need to set r to maximise this:
+    # Setting r to maximise P( NB(r,p)=a and NB(er,p)=d ), which is a constant times this:
     # Gamma(a+r)Gamma(d+e*r)/(Gamma(r)*Gamma(e*r))*(1-p)**(r*(1+e))
     r0=-1/((1+e)*log(1-p))
     r1=-1/((1+e)*log(1-p))*(a+d)

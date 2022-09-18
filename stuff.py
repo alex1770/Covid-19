@@ -66,7 +66,10 @@ def datetoday(x):
   elif '/' in x:
     format='%d/%m/%Y';# E.g., 25/06/2021
   elif ' ' in x:
-    format='%d %B %Y';# E.g., 05 June 2021
+    if len(x)==11:
+      format='%d %b %Y'# E.g., 05 Jun 2021
+    else:
+      format='%d %B %Y'# E.g., 05 June 2021
   elif '-' in x:
     y=x.split('-')
     if len(y[0])==4 and y[1].isdigit():

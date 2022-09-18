@@ -17,7 +17,8 @@ import numpy as np
 import argparse
 from math import exp,log,sqrt
 from scipy.optimize import minimize
-from scipy.special import gammaln,betaln,digamma
+from scipy.special import gammaln,betaln
+from scipy.stats import norm, multivariate_normal as mvn
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-c', '--col0',        type=int,default=1,    help="Column number of variant 0 (includes date column, count from 0)")
@@ -27,13 +28,14 @@ parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max samp
 parser.add_argument('-p', '--prlevel',     type=int,default=1,    help="Print level")
 args=parser.parse_args()
 
-zconf=1.96
+conf=0.95
+zconf=norm.ppf((1+conf)/2)
 maxmult=20
 prlevel=args.prlevel
 print("Using date range",args.mindate,"-",args.maxdate)
 
 # Variant0, Variant1 counts by day
-V0=[];V1=[];DT=[]
+N0=[];N1=[];DT=[]
 if 0:
   #fp=open('BA5vsCent','r')
   #fp=open('UK_BA.5*_BA.2.12.1_BA.4*','r')
@@ -48,16 +50,30 @@ for x in fp:
   y=x.strip().split()
   if y[0]>=args.mindate and y[0]<=args.maxdate:
     d=datetoday(y[0])
-    v0=int(y[args.col0])
-    v1=int(y[args.col1])
-    if v0+v1>=2: V0.append(v0);V1.append(v1);DT.append(d)
-ndays=len(V0)
+    try:
+      v0=float(y[args.col0])
+    except ValueError:
+      v0=0
+    try:
+      v1=float(y[args.col1])
+    except ValueError:
+      v1=0
+    if v0+v1>=1: N0.append(v0);N1.append(v1);DT.append(d)
+
+minday=min(DT)
+maxday=max(DT)+1
+ndays=maxday-minday
+V0=np.zeros(ndays)
+V1=np.zeros(ndays)
+for (v0,v1,dt) in zip(N0,N1,DT):
+  V0[dt-minday]=v0
+  V1[dt-minday]=v1
 
 def LL(xx,pr=0):
   a0,lam,mult=xx
   LL=0
-  for i in range(ndays):
-    n0,n1,day=V0[i],V1[i],DT[i]
+  for day in range(ndays):
+    n0,n1=V0[day],V1[day]
     rho=exp(a0+lam*(day-day0))# odds ratio
     n=n0+n1
     if n>mult:
@@ -101,44 +117,42 @@ def Hessian(xx,eps):
     H[i,i]=v/eps[i]**2
   return H
 
-def Fisher(xx):
-  eps=(5e-3,1e-4,1e-3)
-  H=Hessian(xx,eps)
-  HI=np.linalg.inv(H)
+def getCI(C):
   N=len(xx)
   err=[]
   for i in range(N):
-    if HI[i,i]<=0: err.append(zconf*sqrt(-HI[i,i]))
+    if C[i,i]>=0: err.append(zconf*sqrt(C[i,i]))
     else: err.append(None)
   return err
 
 smooth=1
-revdict={}
-for i in range(ndays): revdict[DT[i]]=(V0[i],V1[i])
-
 # Do simple regression to get decent initial values for NB regression
 # V0s, V1s = smoothed V0, V1
 V0s=np.zeros(len(V0))
 V1s=np.zeros(len(V1))
 for i in range(ndays):
-  for r in range(-smooth,smooth+1):
-    dt=DT[i]+r
-    if dt in revdict:
-      (v0,v1)=revdict[dt]
-      V0s[i]+=v0
-      V1s[i]+=v1
+  i0=max(i-smooth,0)
+  i1=min(i+smooth+1,ndays)
+  V0s[i]=V0[i0:i1].sum()/(i1-i0)
+  V1s[i]=V1[i0:i1].sum()/(i1-i0)
 V0sp=V0s+1e-30
 V1sp=V1s+1e-30
 W=1/(1/V0sp+1/V1sp)
-day0=int(round(sum(DT)/len(DT)))
-X=np.array(DT)-day0
+day0=ndays//2
+X=np.arange(ndays)-day0
 Y=np.log(V1sp/V0sp)
 m=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
 r=np.array([sum(W*Y),sum(W*X*Y)])
 c=np.linalg.solve(m,r)
 C=np.linalg.pinv(m)
-conf=zconf*sqrt(C[1,1])
-print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-conf,c[1]+conf))
+dlam=zconf*sqrt(C[1,1])
+print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-dlam,c[1]+dlam))
+rho=np.exp(c[0]+c[1]*X)
+T=V0+V1
+# Take off one degree of freedom because rho is tuned to V0s, V1s using two degrees of freedom, but
+# we're evaluating residuals using the original V0, V1. (Semi-guess, with some empirical backup.)
+mult0=((V1-V0*rho)**2/rho).sum()/(T.sum()-max(T))
+print("Variance overdispersion as estimated from simple residuals (though caution because smoothing): %.3f"%mult0)
 # dayoffset=day0-c[0]/c[1]
 
 desc=["Intercept","Growth of V1 rel V0","Overdispersion multiplier"]
@@ -148,7 +162,11 @@ res=minimize(NLL,[c[0],c[1],min(2,maxmult)],bounds=bounds, method="SLSQP", optio
 if not res.success: raise RuntimeError(res.message)
 print("Log likelihood: %.3f"%(LL(res.x)))
 a0,lam,mult=xx=res.x
-da0,dlam,dmult=dxx=Fisher(res.x)
+eps=(5e-3,1e-4,1e-3)
+H=Hessian(xx,eps)
+negdef=np.all(np.linalg.eigvals(H)<0)
+C=-np.linalg.inv(H)
+da0,dlam,dmult=getCI(C)
 for i in range(len(xx)):
   if xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3: print("Warning:",desc[i],"hit bound")
 
@@ -156,11 +174,20 @@ print("Growth of V1 rel V0: %.4f"%lam,end="")
 if dlam==None: print(" (couldn't evaluate CI)")
 else: print(" (%.4f - %.4f)"%(lam-dlam,lam+dlam))
 
-print("Crossover date: %s"%(daytodate(int(round(day0-a0/lam)))),end="")
-if 1: print(" (not done CI yet)")
-else: print(" +/- %.1f days"%dt0)
+print("Crossover date: %s"%(Date(minday+int(round(day0-a0/lam)))),end="")
+if not negdef:
+  print(" (CI n/a as Hessian is not negative definite)")
+elif lam-dlam<1e-3 and lam+dlam>-1e-3:
+  print(" (CI n/a as relative growth can get too close to 0)")
+else:
+  # Sampling is most convenient way of getting CrIs for crossover points
+  numsamp=100000
+  test=mvn.rvs(mean=xx,cov=C,size=numsamp)
+  cr0=Date(minday+int(round(day0-np.quantile(test[:,0]/test[:,1],(1+conf)/2))))
+  cr1=Date(minday+int(round(day0-np.quantile(test[:,0]/test[:,1],(1-conf)/2))))
+  print(" (%s - %s)"%(cr0,cr1))
 
-print("Variance overdispersion: %.3f"%mult,end="")
+print("Variance overdispersion (proper estimate): %.3f"%mult,end="")
 if dmult==None: print(" (couldn't evaluate CI)")
 else: print(" (%.3f - %.3f)"%(mult-dmult,mult+dmult))
 
@@ -169,16 +196,16 @@ if prlevel>=2:
   print("                                                  =Smoothed log odds ratios=")
   print("Date       Num V0  Num V1       Pred     Actual   Pred_lor  Act_lor    Resid")
 s0=s1=0
-for i in range(ndays):
-  a,d,day=V0[i],V1[i],DT[i]
+for day in range(ndays):
+  a,d=V0[day],V1[day]
   if a==0 and d==0: continue
   rho=exp(a0+lam*(day-day0))
   #rho=exp(c[0]+c[1]*(day-day0))
   pred_pr=rho/(1+rho)
   actual_pr=d/(a+d)
   if prlevel>=2:
-    print(Date(day),"%6d  %6d  %9.5f  %9.5f"%(a,d,pred_pr,actual_pr),end="")
-  a_s,d_s=V0s[i],V1s[i]
+    print(Date(minday+day),"%6d  %6d  %9.5f  %9.5f"%(a,d,pred_pr,actual_pr),end="")
+  a_s,d_s=V0s[day],V1s[day]
   if a_s>0 and d_s>0:
     pred_lor=log(rho)
     actual_lor=log(d_s/a_s)
@@ -190,4 +217,4 @@ for i in range(ndays):
     if prlevel>=2:
       print()
 
-print("Variance overdispersion as estimated from residuals (though caution because smoothing): %.3f"%(s1/s0))
+#print("Variance overdispersion as estimated from BB residuals (though caution because smoothing): %.3f"%(s1/s0))

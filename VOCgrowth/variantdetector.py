@@ -1,7 +1,7 @@
 import sys,time,os,pickle,argparse
 from stuff import *
 import numpy as np
-from math import log,sqrt,floor
+from math import log,exp,sqrt,floor
 from variantaliases import aliases
 
 mindate0=Date('2022-05-01')# Hard-coded minday
@@ -16,6 +16,7 @@ parser.add_argument('-m', '--givenmutations', default="",           help="Condit
 parser.add_argument('-l', '--lineage',                              help="Condition on this lineage")
 parser.add_argument('-L', '--location',       default="",           help="Location prefix")
 parser.add_argument('-n', '--numdisp',        default=8,            help="Number of mutations to display horizontally")
+parser.add_argument('-s', '--synperm',        type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
 args=parser.parse_args()
 
 if args.mindate<mindate0: raise RuntimeError(f"Specfied mindate {args.mindate} is less that hard-coded mindate {mindate0}")
@@ -24,6 +25,17 @@ if args.gisaid:
   source='GISAID';datafile='metadata_sorted.tsv';inputsorted=True
 else:
   source='COG';datafile='cog_metadata_sorted.csv';inputsorted=True
+
+# List of overlapping ORFs for which there is evidence that they encode
+# https://www.sciencedirect.com/science/article/pii/S0042682221000532
+# https://virological.org/t/sars-cov-2-dont-ignore-non-canonical-genes/740/2
+# 
+accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
+def oksyn(m):
+  if args.gisaid or args.synperm==2 or m[:6]!="synSNP": return True
+  if args.synperm==0: return False
+  loc=int(m[8:-1])
+  return loc in accessorygenes
 
 ecache={}
 def expandlin(lin):
@@ -58,14 +70,16 @@ else:
   else: keys=['sample_date',"adm1",'lineage','scorpio_call','mutations'];sep=','
   mutcounts={}
   with open(datafile,'r') as fp:
-    for (dt,loc,lin,var,mut) in csvrows_it(fp,keys,sep=sep):
+    for (dt,loc,lin,var,mutstring) in csvrows_it(fp,keys,sep=sep):
       if dt<mindate0:
         if inputsorted: break
         continue
+      if len(mutstring)<=2: continue# Skip if no mutations listed
       day=datetoday(dt)
-      if args.gisaid: muts=mut[1:-1].split(',')
-      else: muts=mut.split('|')
+      if args.gisaid: muts=mutstring[1:-1].split(',')
+      else: muts=mutstring.split('|')
       for mut in muts:
+        if mut=="": print(dt,loc,lin,var,">"+mutstring+"<");oiuoiuiou
         mutcounts[mut]=mutcounts.get(mut,0)+1
   num2name=[]
   name2num={}
@@ -100,6 +114,8 @@ else:
 
 print("Got linelist at time",time.process_time()-tim0)
 
+oksyn_num=[oksyn(x) for x in num2name]
+
 # Does 'lin' fit in with the (possibly wildcarded) 'lineage'?
 # Note that BA.1.2 is considered part of BA.1*, but
 #           BA.12 is not considered part of BA.1*,
@@ -129,48 +145,46 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
       daycounts[day]=daycounts.get(day,0)+1
       lincounts[lin]=lincounts.get(lin,0)+1
       for m in muts:
-        mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
-        mutlincounts[m][lin]=mutlincounts[m].get(lin,0)+1
+        if oksyn_num[m]:
+          mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
+          mutlincounts[m][lin]=mutlincounts[m].get(lin,0)+1
   return daycounts,mutdaycounts,lincounts,mutlincounts
 
-def getgrowth(daycounts,mutdaycount,invert=False):
+def getgrowth(daycounts,mutdaycount):
   # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
-  m=np.zeros([2,2])
-  r=np.zeros(2)
-  s0=syy=0
-  tv0=tv1=0
+  if len(mutdaycount)<=3: return None
+  day0=min(mutdaycount)
+  day1=max(mutdaycount)
+  V0=np.zeros(day1-day0+1)
+  V1=np.zeros(day1-day0+1)
   for day in mutdaycount:
     x=day-mindate0
     v1=mutdaycount[day]
     v0=daycounts.get(day,0)-v1
-    if invert: (v0,v1)=(v1,v0)
-    if v0>0 and v1>0:
-      y=log(v1/v0)
-      w=1/(1/v0+1/v1)
-      m[0,0]+=w
-      m[0,1]+=w*x
-      m[1,0]+=w*x
-      m[1,1]+=w*x*x
-      r[0]+=w*y
-      r[1]+=w*x*y
-      s0+=1
-      syy+=w*y*y
-      tv0+=v0;tv1+=v1
-  if m[0,0]<5: return None#(0,1000),(0,10),(tv0,tv1)#alter
-  mi=np.linalg.pinv(m)
-  c=mi@r#c=np.linalg.solve(m,r)
-  cv=[mi[0,0],mi[1,1]]# These should be the variances of c[0],c[1]
+    V0[day-day0]=v0
+    V1[day-day0]=v1
+  
+  tv=V0.sum(),V1.sum()
+  V0+=1e-30
+  V1+=1e-30
+  W=V0*V1/(V0+V1)
+  if W.sum()<5: return None
+  X=np.arange(day1-day0+1)
+  Y=np.log(V1/V0)
+  M=np.array([[sum(W), sum(W*X)], [sum(W*X), sum(W*X*X)]])
+  r=np.array([sum(W*Y),sum(W*X*Y)])
+  C=np.linalg.inv(M)
+  c=C@r
+  rho=np.exp(c[0]+c[1]*X)
+  T=V0+V1;T.sort()
+  # Crudely take off two degrees of freedom because rho is tuned to V0, V1 using slope and intercept. (Semi-guess, with some empirical backup.)
+  mult=((V1-V0*rho)**2/rho).sum()/T[:-2].sum()
+  #print("Res mult",Date(day0),Date(day1),mult)
+  C*=max(mult,1)
+  #print(day1-day0+1,((V0!=0)|(V1!=0)).sum())
+  #c[0]+=c[1]*(mindate0-day0)
 
-  # alter - not using residual yet
-  # Want sum( w*(c0+c1*x-y)^2 )
-  # vr = (c[0]**2*m[0,0] + 2*c[0]*c[1]*m[0,1] - 2*c[0]*r[0] + c[1]**2*m[1,1] - 2*c[1]*r[1] + syy)/s0
-  #print(vr)
-  # Investigate simple correction for overdispersion. Not sure it's right yet.
-  # Try crossing number stats
-
-  return (c[0],sqrt(cv[0])),(c[1],sqrt(cv[1])),(tv0,tv1)
-  # This form is nicer to interpret (and minday-independent), but will become singular if c[1]=0:
-  # return (mindate0-c[0]/c[1],sqrt(cv[0])/c[1]),(c[1],sqrt(cv[1]))
+  return (c[1],sqrt(C[1,1])),tv
 
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-10-01')
@@ -212,10 +226,10 @@ if 1:
   growth={};tv={}
   okmuts=[]
   for mut in range(nmut):
-    gr=getgrowth(daycounts,mutdaycounts[mut])
-    if gr!=None:
-      growth[mut]=gr[1]
-      tv[mut]=gr[2]
+    gre=getgrowth(daycounts,mutdaycounts[mut])
+    if gre!=None:
+      growth[mut]=gre[0]
+      tv[mut]=gre[1]
       okmuts.append(mut)
 
   with open('tempvargr','w') as fp:
@@ -237,35 +251,39 @@ if 1:
       print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
     print("# High %d"%high,file=fp)
 
-  sd=8
+  nsd=3
   gr0=0.0
+  proj=14# Calculate growth significance this many days ahead
   def gval(mut):
     if tv[mut][0]+tv[mut][1]==0: return -1e9
     gr=growth[mut]
-    p=tv[mut][0]/(tv[mut][0]+tv[mut][1])
     g,dg=gr[0],gr[1]
-    if g<0: g=-g;p=1-p
-    return (g-sd*dg)*p
+    p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
+    return max(abs(g)-nsd*dg,0)*sqrt(p*(1-p))
   #l=[mut for mut in growth if growth[mut][0]>0]
   l=list(growth)
-  #l.sort(key=lambda x:-(growth[x][0]-sd*growth[x][1]))
+  #l.sort(key=lambda x:-(growth[x][0]-nsd*growth[x][1]))
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-gval(x))
 
-  print("     Mutation          -------- %Growth ---------     ---- %Growth effect -----    GE-1sd Gr-signif NumNonVar  NumVar Examples")
+  print("     Mutation          -------- %Growth ---------     ---- %Growth effect ----- Gr-signif NumNonVar  NumVar  Examples")
   nm=0
   for mut in l:
     gr=growth[mut]
-    (g,gl,gh)=(gr[0],gr[0]-sd*gr[1],gr[0]+sd*gr[1])
-    #if gl<gr0: break
-    #if abs(gr[0])<sd*gr[1]: break
-    print("%-20s  %7.3f (%7.3f - %7.3f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
-    p=tv[mut][0]/(tv[mut][0]+tv[mut][1])
-    if g>0: (ga,gla,gha)=(g*p,gl*p,gh*p)
-    else: (ga,gla,gha)=(-g*(1-p),-gh*(1-p),-gl*(1-p))
-    print("   %7.3f (%7.3f - %7.3f)"%(ga*100,gla*100,gha*100),end='')
-    print("   %7.2f"%((ga-.5*(gha-gla))*100),end='')
-    print("   %7.2f   %7d %7d"%((gr[0]-gr0)/gr[1],tv[mut][0],tv[mut][1]),end='')
+    g,dg=gr[0],gr[1]
+    (gl,gh)=(g-nsd*dg,g+nsd*dg)
+    if gl<=0 and gh>=0: break
+    
+    # Growth
+    print("%-20s  %7.2f (%7.2f - %7.2f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
+    
+    # Growth effect
+    p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
+    (ga,gla,gha)=(abs(g)*sqrt(p*(1-p)),min(abs(gl),abs(gh))*sqrt(p*(1-p)),max(abs(gl),abs(gh))*sqrt(p*(1-p)))
+    print("   %7.2f (%7.2f - %7.2f)"%(ga*100,gla*100,gha*100),end='')
+    
+    print("   %7.2f   %7d %7d"%((g-gr0)/dg,tv[mut][0],tv[mut][1]),end='')
+    
     ml=list(mutlincounts[mut])
     score={}# score = number of lineages with mutation if it's a growing mutation, or number without mutation if it's a falling mutation
     for lin in ml:
@@ -276,7 +294,7 @@ if 1:
     for lin in ml[:3]:
       n=score[lin]
       if n0==None: n0=n
-      elif n/n0<0.05: break
+      elif n0==0 or n/n0<0.05: break
       print("  %s:%d"%(contractlin(lin),n),end="")
     print()
     nm+=1
