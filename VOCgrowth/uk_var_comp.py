@@ -55,9 +55,14 @@ def treeclassify(mutations):
     elif "S:L452R" in mutations: var="BA.2.75.4"
     elif "S:K356T" in mutations: var="BA.2.75.5"
     else: var="BA.2.75"
+  # Manually classify BE.1.1.stuff
+  if var=="BE.1.1" and "S:K444T" in mutations: var="BE.1.1.1"
+  if var=="BE.1.1.1" and "S:N460K" in mutations: var="BQ.1"
+  if var=="BQ.1" and "S:R346T" in mutations: var="BQ.1.1"
   
   # Pro tem: add suffix "+S:R346T" for lineages that don't yet have a designated name (that has been adopted by COG-UK) for this particular mutation
-  if var not in ["BA.5.2.6", "BF.7", "BF.11", "BA.4.1.8", "BA.4.6", "BA.2.75.1", "BA.2.75.2", "BL.1"] and "|S:R346T|" in mutations: var+="+S:R346T"
+  #if var not in ["BA.5.2.6", "BF.7", "BF.11", "BA.4.1.8", "BA.4.6", "BA.2.75.1", "BA.2.75.2", "BL.1", "BQ.1.1"] and "S:R346T" in mutations: var+="+S:R346T"
+  if var=="BA.5.1" and "S:R346T" in mutations: var+="+S:R346T"
   
   return var
 
