@@ -146,13 +146,13 @@ r=np.array([sum(W*Y),sum(W*X*Y)])
 c=np.linalg.solve(m,r)
 C=np.linalg.pinv(m)
 dlam=zconf*sqrt(C[1,1])
-print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-dlam,c[1]+dlam))
+if prlevel>=2: print("Simple regression growth: %.4f (%.4f - %.4f)  (but CI may be a bit off due to smoothing)"%(c[1],c[1]-dlam,c[1]+dlam))
 rho=np.exp(c[0]+c[1]*X)
 T=V0+V1
 # Take off one degree of freedom because rho is tuned to V0s, V1s using two degrees of freedom, but
 # we're evaluating residuals using the original V0, V1. (Semi-guess, with some empirical backup.)
 mult0=((V1-V0*rho)**2/rho).sum()/(T.sum()-max(T))
-print("Variance overdispersion as estimated from simple residuals (though caution because smoothing): %.3f"%mult0)
+if prlevel>=2: print("Variance overdispersion as estimated from simple residuals (though caution because smoothing): %.3f"%mult0)
 # dayoffset=day0-c[0]/c[1]
 
 desc=["Intercept","Growth of V1 rel V0","Overdispersion multiplier"]
@@ -191,7 +191,7 @@ print("Variance overdispersion (proper estimate): %.3f"%mult,end="")
 if dmult==None: print(" (couldn't evaluate CI)")
 else: print(" (%.3f - %.3f)"%(mult-dmult,mult+dmult))
 
-if prlevel>=2:
+if prlevel>=3:
   print()
   print("                                                  =Smoothed log odds ratios=")
   print("Date       Num V0  Num V1       Pred     Actual   Pred_lor  Act_lor    Resid")
@@ -203,7 +203,7 @@ for day in range(ndays):
   #rho=exp(c[0]+c[1]*(day-day0))
   pred_pr=rho/(1+rho)
   actual_pr=d/(a+d)
-  if prlevel>=2:
+  if prlevel>=3:
     print(Date(minday+day),"%6d  %6d  %9.5f  %9.5f"%(a,d,pred_pr,actual_pr),end="")
   a_s,d_s=V0s[day],V1s[day]
   if a_s>0 and d_s>0:
@@ -212,9 +212,9 @@ for day in range(ndays):
     iv=a_s*d_s/(a_s+d_s)
     s0+=1
     s1+=(pred_lor-actual_lor)**2*iv
-    if prlevel>=2: print("    %7.3f  %7.3f  %7.3f"%(pred_lor,actual_lor,(pred_lor-actual_lor)*sqrt(iv)))
+    if prlevel>=3: print("    %7.3f  %7.3f  %7.3f"%(pred_lor,actual_lor,(pred_lor-actual_lor)*sqrt(iv)))
   else:
-    if prlevel>=2:
+    if prlevel>=3:
       print()
 
 #print("Variance overdispersion as estimated from BB residuals (though caution because smoothing): %.3f"%(s1/s0))
