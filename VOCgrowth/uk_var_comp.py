@@ -6,7 +6,7 @@ from scipy.special import gammaln,digamma
 import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
-import classifycog
+from classifycog import treeclassify
 import hashlib
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
@@ -41,30 +41,6 @@ print("Initial date range:",mindate,"-",maxdate)
 zconf=norm.ppf((1+conf)/2)
 numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
-
-def treeclassify(mutations):
-  var=classifycog.treeclassify(mutations)
-
-  # Pro tem: manually classify BA.2.75*, because at time of writing (2022-09-01) the autoclassifier is having a hard time on its own (possibly due to bad training data)
-  if ("S:G446S" in mutations)+("S:G257S" in mutations)+("S:K147E" in mutations)+("S:G339H" in mutations)>=2: # BA.2.75*
-    if "S:D574V" in mutations:
-      if "S:R346T" in mutations: var="BL.1"
-      else: var="BA.2.75.1"
-    elif "S:R346T" in mutations and "S:F486S" in mutations and "S:D1199N" in mutations: var="BA.2.75.2"
-    elif "orf1ab:S1221L" in mutations and "orf1ab:V6107I" in mutations: var="BA.2.75.3"
-    elif "S:L452R" in mutations: var="BA.2.75.4"
-    elif "S:K356T" in mutations: var="BA.2.75.5"
-    else: var="BA.2.75"
-  # Manually classify BE.1.1.stuff
-  if var=="BE.1.1" and "S:K444T" in mutations: var="BE.1.1.1"
-  if var=="BE.1.1.1" and "S:N460K" in mutations: var="BQ.1"
-  if var=="BQ.1" and "S:R346T" in mutations: var="BQ.1.1"
-  
-  # Pro tem: add suffix "+S:R346T" for lineages that don't yet have a designated name (that has been adopted by COG-UK) for this particular mutation
-  #if var not in ["BA.5.2.6", "BF.7", "BF.11", "BA.4.1.8", "BA.4.6", "BA.2.75.1", "BA.2.75.2", "BL.1", "BQ.1.1"] and "S:R346T" in mutations: var+="+S:R346T"
-  if var=="BA.5.1" and "S:R346T" in mutations: var+="+S:R346T"
-  
-  return var
 
 ecache={}
 def expandlin(lin):
@@ -133,7 +109,7 @@ else:
       mylin=treeclassify(mutations)
       mylin_e=expandlin(mylin)
       if lin=="Unassigned" or lin_e==mylin_e[:len(lin_e)]: lin_e=mylin_e
-    #if date>="2022-07-01": print("YYY",contractlin(lin_e))
+    #if date>="2022-07-01": print("YYY",date,lin,contractlin(lin_e))
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     ind=patmatch(lin_e)
