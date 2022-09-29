@@ -22,22 +22,19 @@ set -e
     #python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.1,BA.2.75.5,BA.4.6,BA.5.1.12,BA.5.1+S:R346T,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BE.1,BE.1.1,BF.11,BF.3,BF.5,BF.7,BA.2.12.1,BA.1*,BA.2*,BA.4*,BA.5*' -F30
     #python3 uk_var_comp.py -f 2022-07-01 -b -l 'BA.5.2,BF.7,BA.2.75.1' -F30
     #python3 uk_var_comp.py -f 2022-07-01 -b -l 'BA.5.2,BA.2.75.2,BA.2.75.5' -F30
-    python3 uk_var_comp.py -f 2022-07-01 -b -l 'BA.5.2,BF.7,BA.2.75.1,BA.2.75.2,BA.2.75.5' -F30
-    python3 uk_var_comp.py -f 2022-07-15 -b -l 'BA.5.2*,BF.7,BA.2.75.2,BQ.1,BQ.1.1' -F30
-    python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.1,BA.2.75.2,BA.2.75.5,BA.4.6,BA.5.1.12,BA.5.1+S:R346T,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BE.1,BE.1.1,BF.11,BF.3,BF.5,BF.7,BA.2.12.1,BA.1*,BA.2*,BA.4*,BA.5*' -F30
-    python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.1,BA.2.75.2,BA.2.75.5,BA.4.6,BA.5.1.12,BA.5.1+S:R346T,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.5,BF.7,BA.2.12.1,BQ.1,BQ.1.1,BA.1*,BA.2*,BA.4*,BA.5*' -F30
+    #python3 uk_var_comp.py -f 2022-07-01 -b -l 'BA.5.2,BF.7,BA.2.75.1,BA.2.75.2,BA.2.75.5' -F30
+    #python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.1,BA.2.75.2,BA.2.75.5,BA.4.6,BA.5.1.12,BA.5.1+S:R346T,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BE.1,BE.1.1,BF.11,BF.3,BF.5,BF.7,BA.2.12.1,BA.1*,BA.2*,BA.4*,BA.5*' -F30
+    python3 uk_var_comp.py -f 2022-07-15 -b -l 'BA.5.2*,BA.2.75.2,BN.1,BQ.1,BQ.1.1' -F30
+    python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.2,BA.2.75.5,BN.1,BA.4.6,BA.5.1.12,BA.5.1+S:R346T,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.7,BA.2.12.1,BQ.1,BQ.1.1,BA.1*,BA.2*,BA.4*,BA.5*,BA.2.75.*' -F30
 )
 
 make
 python3 maketrend.py
 
 bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.2_BF.7_BA.2.75.1_BA.2.75.2_BA.2.75.5.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.2*_BF.7_BA.2.75.2_BQ.1_BQ.1.1.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.1_BA.2.75.2_BA.2.75.5_BA.4.6_BA.5.1.12_BA.5.1+S:R346T_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BE.1_BE.1.1_BF.11_BF.3_BF.5_BF.7_BA.2.12.1_BA.1*_BA.2*_BA.4*_BA.5*.growthproj.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.1_BA.2.75.2_BA.2.75.5_BA.4.6_BA.5.1.12_BA.5.1+S:R346T_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BE.1_BE.1.1_BF.11_BF.3_BF.5_BF.7_BA.2.12.1_BA.1*_BA.2*_BA.4*_BA.5*.variantpressure.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.1_BA.2.75.2_BA.2.75.5_BA.4.6_BA.5.1.12_BA.5.1+S:R346T_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BF.5_BF.7_BA.2.12.1_BQ.1_BQ.1.1_BA.1*_BA.2*_BA.4*_BA.5*.variantpressure.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.1_BA.2.75.2_BA.2.75.5_BA.4.6_BA.5.1.12_BA.5.1+S:R346T_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BF.5_BF.7_BA.2.12.1_BQ.1_BQ.1.1_BA.1*_BA.2*_BA.4*_BA.5*.growthproj.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.2*_BA.2.75.2_BN.1_BQ.1_BQ.1.1.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.2_BA.2.75.5_BN.1_BA.4.6_BA.5.1.12_BA.5.1+S:R346T_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BF.7_BA.2.12.1_BQ.1_BQ.1.1_BA.1*_BA.2*_BA.4*_BA.5*_BA.2.75.*.variantpressure.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.2_BA.2.75.5_BN.1_BA.4.6_BA.5.1.12_BA.5.1+S:R346T_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BF.7_BA.2.12.1_BQ.1_BQ.1.1_BA.1*_BA.2*_BA.4*_BA.5*_BA.2.75.*.growthproj.png'
 
 set -o noglob
 pics=$bigpics
