@@ -25,6 +25,7 @@ l=list(d)
 l.sort(key=lambda x:-len(d[x]))
 
 with open("variantaliases.py","w") as fp:
+  print("# Automatically generated using makealiaslist.py",file=fp)
   print("aliases=[",file=fp)
   for x in l:
     print('("%s","%s"),'%(x,d[x]),file=fp)
