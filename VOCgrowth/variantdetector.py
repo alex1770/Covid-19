@@ -5,7 +5,7 @@ from math import log,exp,sqrt,floor
 from variantaliases import aliases
 
 mindate0=Date('2022-05-01')# Hard-coded minday
-minmutcount=50# Ignore mutations that have occurred less than this often
+minmutcount=5# Ignore mutations that have occurred less than this often
 cachedir='seqdatacachedir'
 
 parser=argparse.ArgumentParser()
@@ -272,7 +272,7 @@ if 1:
     gr=growth[mut]
     g,dg=gr[0],gr[1]
     (gl,gh)=(g-nsd*dg,g+nsd*dg)
-    if gl<=0 and gh>=0: break
+    #if gl<=0 and gh>=0: break
     
     # Growth
     print("%-20s  %7.2f (%7.2f - %7.2f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
