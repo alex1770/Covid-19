@@ -1,4 +1,5 @@
 import requests,bs4
+import sys
 
 page=requests.get("https://cov-lineages.org/lineage_list.html")
 soup=bs4.BeautifulSoup(page.content,features="lxml")
@@ -15,7 +16,9 @@ for x in soup.find_all('tr'):
   if lin!=None and alias!=None:
     p=lin.find('.')
     assert p>=0
-    assert lin[p:]==alias[-(len(lin)-p):]
+    if lin[p:]!=alias[-(len(lin)-p):]:
+      print("Inconsistent alias",lin,alias,file=sys.stderr)
+      continue
     alias=alias[:-(len(lin)-p)];lin=lin[:p]
     if lin in d: assert d[lin]==alias
     else: d[lin]=alias
