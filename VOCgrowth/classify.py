@@ -12,7 +12,7 @@ args=parser.parse_args()
 if args.gisaid:
   from classifygisaid import *
 else:
-  from classifycog import *
+  from classifycog import lineages, treeclassify_automatic as treeclassify
   
 def mutationlist(mutations):
   if args.gisaid: return mutations[1:-1].split(',')
@@ -115,14 +115,16 @@ if args.compare:
       else: rest+=1
     else:
       dblin=expandlin(oldlin)
+      ind=len(lineages)-1
       for i in range(len(lineages)):
         exact=targlinsexact[i]
         prefix=targlinsprefix[i]
-        if dblin==exact or (dblin+'.')[:len(prefix)]==prefix: break
-      else: i=len(lineages)-1
-      good=comp[oldlin][i]
-      bad=sum(comp[oldlin])-comp[oldlin][i]
-      if tot>=10: print("%*s"%(dbwid,oldlin)," %*s"%(mwid,lineages[i])," "," ".join("%*s"%(w,n) for (w,n) in zip(wid,comp[oldlin]))," %9d %9d"%(good,bad),file=sys.stderr)
+        if dblin==exact:
+          if prefix=='-': ind=i;break# Exact match with non-wildcard takes precedence over anything later
+        if (dblin+'.')[:len(prefix)]==prefix: ind=i
+      good=comp[oldlin][ind]
+      bad=sum(comp[oldlin])-comp[oldlin][ind]
+      if tot>=10: print("%*s"%(dbwid,oldlin)," %*s"%(mwid,lineages[ind])," "," ".join("%*s"%(w,n) for (w,n) in zip(wid,comp[oldlin]))," %9d %9d"%(good,bad),file=sys.stderr)
       else: rest+=1
       match+=good
       nonmatch+=bad
