@@ -1,6 +1,7 @@
 import requests,bs4
 import sys
 
+# Consider using https://github.com/cov-lineages/pango-designation/blob/master/lineage_notes.txt instead
 page=requests.get("https://cov-lineages.org/lineage_list.html")
 soup=bs4.BeautifulSoup(page.content,features="lxml")
 
