@@ -16,7 +16,7 @@ parser.add_argument('-m', '--givenmutations', default="",           help="Condit
 parser.add_argument('-l', '--lineage',                              help="Condition on this lineage")
 parser.add_argument('-L', '--location',       default="",           help="Location prefix")
 parser.add_argument('-n', '--numdisp',        default=8,            help="Number of mutations to display horizontally")
-parser.add_argument('-s', '--synperm',        type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
+parser.add_argument('-s', '--genomesubset',   type=int, default=2,  help="0 = Only consider mutations in a particular hand-picked subset of RBD, 1 = Only consider mutations in receptor-binding domain, 2 = Only consider mutations in spike gene, 3 = Consider mutations in any gene, but not (COG-designated) synSNPs, 4 = Consider synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 5 = Consider any mutation, including all synSNPs")
 args=parser.parse_args()
 
 if args.mindate<mindate0: raise RuntimeError(f"Specfied mindate {args.mindate} is less that hard-coded mindate {mindate0}")
@@ -31,11 +31,24 @@ else:
 # https://virological.org/t/sars-cov-2-dont-ignore-non-canonical-genes/740/2
 # 
 accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
-def oksyn(m):
-  if args.gisaid or args.synperm==2 or m[:6]!="synSNP": return True
-  if args.synperm==0: return False
-  loc=int(m[8:-1])
-  return loc in accessorygenes
+
+# Hand-picked RBD subset from https://twitter.com/CorneliusRoemer/status/1576903120608600064
+handpickedsubset=[346,356,444,445,446,450,452,460,486,490,494]
+
+# Determine whether mutation meets restrictions specified by -s argument
+def okmut(m):
+  if args.genomesubset>=5: return True
+  if m[:6]=="synSNP":# Implies COG-UK
+    if args.genomesubset<=3: return False
+    loc=int(m[8:-1])
+    return loc in accessorygenes
+  if args.genomesubset>=3: return True
+  if args.gisaid and m[:6]=="Spike_": m="S:"+m[6:]
+  if m[:2]!="S:": return False
+  if args.genomesubset==2: return True
+  loc=int(m[3:-1])
+  if args.genomesubset==1: return loc>=329 and loc<=521# RBD
+  return loc in handpickedsubset
 
 ecache={}
 def expandlin(lin):
@@ -114,7 +127,7 @@ else:
 
 print("Got linelist at time",time.process_time()-tim0)
 
-oksyn_num=[oksyn(x) for x in num2name]
+okmut_num=[okmut(x) for x in num2name]
 
 # Does 'lin' fit in with the (possibly wildcarded) 'lineage'?
 # Note that BA.1.2 is considered part of BA.1*, but
@@ -145,7 +158,7 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
       daycounts[day]=daycounts.get(day,0)+1
       lincounts[lin]=lincounts.get(lin,0)+1
       for m in muts:
-        if oksyn_num[m]:
+        if okmut_num[m]:
           mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
           mutlincounts[m][lin]=mutlincounts[m].get(lin,0)+1
   return daycounts,mutdaycounts,lincounts,mutlincounts
