@@ -51,7 +51,7 @@ def manualclassifycog(cl,mutations):
   if cl=="BA.2.75.4" and "S:R346T" in mutations and "S:F486I" in mutations: cl="BR.2"
 
   # Recombinant
-  if "S:G252V" in mutations and ("S:F486V" in mutations)+("S:F490V" in mutations)+("S:R346T" in mutations)>=2: cl="XBB.1"
+  if "S:G252V" in mutations and ("S:F486S" in mutations)+("S:F490S" in mutations)+("S:R346T" in mutations)>=2: cl="XBB.1"
   
   return cl
 
