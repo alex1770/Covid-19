@@ -130,7 +130,7 @@ if args.lineages==None:
   lineages.sort(key=lambda l: -numl[l])
   lineages=lineages[:args.numtoplin]
 else:
-  lineages=sorted(args.lineages.split(','))
+  lineages=args.lineages.split(',')
 print("Classifying lineages:",lineages)
 sys.stdout.flush()
 # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
