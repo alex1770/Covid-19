@@ -55,6 +55,41 @@ def manualclassifycog(cl,mutations):
   
   return cl
 
+# Manual addition to automatic classification, because the official classifications are so far behind that the learner can't be trained properly
+def manualclassifygisaid(cl,mutations):
+
+  # Manually classify BA.2.75*
+  if ("Spike_G446S" in mutations)+("Spike_G257S" in mutations)+("Spike_K147E" in mutations)+("Spike_G339H" in mutations)>=2: # BA.2.75*
+    if "Spike_D574V" in mutations:
+      if "Spike_R346T" in mutations: cl="BL.1"
+      else: cl="BA.2.75.1"
+    elif "Spike_R346T" in mutations and "Spike_F486S" in mutations and "Spike_D1199N" in mutations: cl="BA.2.75.2"
+    elif "NSP3_S403L" in mutations and "NSP14_V182I" in mutations: cl="BA.2.75.3"
+    elif "Spike_L452R" in mutations: cl="BA.2.75.4"
+    elif "Spike_K356T" in mutations:
+      if "Spike_F490S" in mutations and "Spike_R346T" in mutations: cl="BN.1"
+      else: cl="BA.2.75.5"
+    else: cl="BA.2.75"
+  
+  # BE.1.1.stuff -> BQ.stuff
+  if cl=="BE.1.1" and "Spike_K444T" in mutations: cl="BE.1.1.1"
+  if cl=="BE.1.1.1" and "Spike_N460K" in mutations: cl="BQ.1"
+  if cl=="BQ.1" and "Spike_R346T" in mutations: cl="BQ.1.1"
+
+  # Offshoots of BA.2.75.*
+  if cl=="BA.2.75.2" and "Spike_T604I" in mutations and "Spike_L452R" in mutations: cl="CA.1"
+  
+  if cl=="BA.2.75.3" and "Spike_F486S" in mutations: cl="BM.1"
+  if cl=="BM.1" and "Spike_R346T" in mutations: cl="BM.1.1"
+  if cl=="BM.1.1" and "Spike_F490S" in mutations: cl="BM.1.1.1"
+
+  if cl=="BA.2.75.4" and "Spike_R346T" in mutations and "Spike_F486I" in mutations: cl="BR.2"
+
+  # Recombinant
+  if "Spike_G252V" in mutations and ("Spike_F486S" in mutations)+("Spike_F490S" in mutations)+("Spike_R346T" in mutations)>=2: cl="XBB.1"
+  
+  return cl
+
 # Return classification cl1 if (cl0 is Unassigned) or (cl0 is a prefix of cl1) or (cl1 is a recombinant and cl0 isn't), otherwise return cl0
 # So cl0 takes priority if there is a disagreement
 def join(cl0,cl1):
