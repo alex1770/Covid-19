@@ -4,7 +4,7 @@
 import sys,os,argparse
 from stuff import *
 from variantaliases import aliases
-from classifycog import treeclassify
+from classify import classify, expandlin, contractlin
 
 infile='cog_metadata_sorted.csv';inputsorted=True
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime('cog_metadata.csv.gz')).strftime('%Y-%m-%d')
@@ -25,25 +25,6 @@ print("Labs:",location)
 print("Date range:",mindate,"-",maxdate)
 print("Date of COG metadata file:",cogdate)
 
-ecache={}
-def expandlin(lin):
-  if lin in ecache: return ecache[lin]
-  for (short,long) in aliases:
-    s=len(short)
-    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
-  ecache[lin]=lin
-  return lin
-
-ccache={}
-def contractlin(lin):
-  if lin in ccache: return ccache[lin]
-  lin=expandlin(lin)
-  for (short,long) in aliases:
-    l=len(long)
-    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
-  ccache[lin]=lin
-  return lin
-
 fn="cog_metadata_furtherclassified."+cogdate+".csv"
 fp=open(fn,'w')
 print("sequence_name,sample_date,cog_lineage,new_lineage,full_lineage",file=fp)
@@ -57,14 +38,11 @@ for (name,date,p2,lin,mutations) in csvrows(infile,['sequence_name','sample_date
     if inputsorted: break
     continue
   mutations='|'+mutations+'|'
-  lin_e=expandlin(lin)
 
   # If the COG-UK lineage is Unassigned or a prefix of tree-rule lineage, then replace it with tree-rule lineage
-  if date>="2022-06-01":
-    mylin=treeclassify(mutations)
-    mylin_e=expandlin(mylin)
-    if lin=="Unassigned" or lin_e==mylin_e[:len(lin_e)]: lin_e=mylin_e
+  if date>="2022-06-01": newlin=classify(mutations,lin)
+  else: newlin=lin
 
-  print(f"{name},{date},{lin},{contractlin(lin_e)},{lin_e}",file=fp)
+  print(f"{name},{date},{lin},{contractlin(newlin)},{expandlin(newlin)}",file=fp)
 fp.close()
 print("Written",fn)
