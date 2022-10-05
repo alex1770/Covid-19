@@ -1,5 +1,5 @@
 #!/usr/bin/pypy3
-# Similar to classify.py. Should unify if have the time.
+# Similar to classifycsv.py. Could unify if have the time.
 
 import sys,os,argparse
 from stuff import *

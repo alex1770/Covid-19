@@ -6,7 +6,7 @@ from __future__ import print_function,division
 import sys,os,argparse,platform
 from stuff import *
 from math import log
-from variantaliases import aliases
+from classify import contractlin, expandlin
 
 if platform.python_implementation()=="CPython": print("Suggestion: use PyPy for speed\n")
 
@@ -54,25 +54,6 @@ def oksyn(m,perm):
   if perm==0: return False
   loc=int(m[8:-1])
   return loc in accessorygenes
-
-ecache={}
-def expandlin(lin):
-  if lin in ecache: return ecache[lin]
-  for (short,long) in aliases:
-    s=len(short)
-    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
-  ecache[lin]=lin
-  return lin
-
-ccache={}
-def contractlin(lin):
-  if lin in ccache: return ccache[lin]
-  lin=expandlin(lin)
-  for (short,long) in aliases:
-    l=len(long)
-    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
-  ccache[lin]=lin
-  return lin
 
 def mutationlist(mutations):
   if args.gisaid: return mutations[1:-1].split(',')

@@ -2,7 +2,7 @@ import sys,time,os,pickle,argparse
 from stuff import *
 import numpy as np
 from math import log,exp,sqrt,floor
-from variantaliases import aliases
+from classify import contractlin, expandlin
 
 mindate0=Date('2022-05-01')# Hard-coded minday
 minmutcount=5# Ignore mutations that have occurred less than this often
@@ -49,25 +49,6 @@ def okmut(m):
   loc=int(m[3:-1])
   if args.genomesubset==1: return loc>=329 and loc<=521# RBD
   return loc in handpickedsubset
-
-ecache={}
-def expandlin(lin):
-  if lin in ecache: return ecache[lin]
-  for (short,long) in aliases:
-    s=len(short)
-    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
-  ecache[lin]=lin
-  return lin
-
-ccache={}
-def contractlin(lin):
-  if lin in ccache: return ccache[lin]
-  lin=expandlin(lin)
-  for (short,long) in aliases:
-    l=len(long)
-    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
-  ccache[lin]=lin
-  return lin
 
 tim0=time.process_time()
 datamtime=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile)).strftime('%Y-%m-%d-%H-%M-%S')

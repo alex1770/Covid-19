@@ -6,7 +6,7 @@ from scipy.special import gammaln,digamma
 import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
-from classify import classify
+from classify import classify, contractlin, expandlin
 import hashlib
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
@@ -41,25 +41,6 @@ print("Initial date range:",mindate,"-",maxdate)
 zconf=norm.ppf((1+conf)/2)
 numv=len(Vnames)
 cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).strftime('%Y-%m-%d')
-
-ecache={}
-def expandlin(lin):
-  if lin in ecache: return ecache[lin]
-  for (short,long) in aliases:
-    s=len(short)
-    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
-  ecache[lin]=lin
-  return lin
-
-ccache={}
-def contractlin(lin):
-  if lin in ccache: return ccache[lin]
-  lin=expandlin(lin)
-  for (short,long) in aliases:
-    l=len(long)
-    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
-  ccache[lin]=lin
-  return lin
 
 # lin is assumed to have already been expanded
 def patmatch(lin):
@@ -102,12 +83,10 @@ else:
       if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
     mutations='|'+mutations+'|'
-    lin_e=expandlin(lin)
 
-    # If the COG-UK lineage is Unassigned or a prefix of tree-rule lineage, then replace it with tree-rule lineage
-    if date>="2022-06-01":
-      lin_e=expandlin(classify(mutations,lin))
-    #if date>="2022-07-01": print("YYY",date,lin,contractlin(lin_e))
+    # Possibly refine COG-UK lineage, or replace an Unassigned lineage, with lineage from decision tree
+    if date>="2022-06-01": lin=classify(mutations,lin)
+    lin_e=expandlin(lin)
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     ind=patmatch(lin_e)

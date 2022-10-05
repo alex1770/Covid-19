@@ -9,7 +9,7 @@ parser.add_argument('-t', '--maxdate',     default="9999-12-31",     help="Max s
 parser.add_argument('-s', '--sorted',      action="store_true",      help="Guarantees the input is sorted in reverse date order")
 args=parser.parse_args()
 
-from classify import classify
+from classify import classify, expandlin, contractlin
   
 def mutationlist(mutations):
   if args.gisaid: return mutations[1:-1].split(',')
@@ -54,7 +54,7 @@ while 1:
   bad=badness(Ncontent)
   t0+=1
   if bad>args.maxbad: t1+=1;continue
-  newlin=classify(mutationlist(mutations))
+  newlin=classify(mutationlist(mutations),lineage)
   row[cols[1]]=newlin
   if args.compare:
     if lineage not in comp: comp[lineage]=[0]*len(lineages)
@@ -63,27 +63,7 @@ while 1:
 
 print("Discarded",t1,"from",t0,"(%.1f%%) due to bad coverage"%(t1/t0*100),file=sys.stderr)
 
-ecache={}
-def expandlin(lin):
-  if lin in ecache: return ecache[lin]
-  for (short,long) in aliases:
-    s=len(short)
-    if lin[:s+1]==short+".": ecache[lin]=long+lin[s:];return ecache[lin]
-  ecache[lin]=lin
-  return lin
-
-ccache={}
-def contractlin(lin):
-  if lin in ccache: return ccache[lin]
-  lin=expandlin(lin)
-  for (short,long) in aliases:
-    l=len(long)
-    if lin[:l+1]==long+".": ccache[lin]=short+lin[l:];return ccache[lin]
-  ccache[lin]=lin
-  return lin
-
 if args.compare:
-  from variantaliases import aliases
   # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
   # Note that BA.5* will match BA.5.1 and BA.5 but not BA.53
   #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
