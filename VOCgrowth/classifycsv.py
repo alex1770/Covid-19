@@ -9,10 +9,7 @@ parser.add_argument('-t', '--maxdate',     default="9999-12-31",     help="Max s
 parser.add_argument('-s', '--sorted',      action="store_true",      help="Guarantees the input is sorted in reverse date order")
 args=parser.parse_args()
 
-if args.gisaid:
-  from classifygisaid import *
-else:
-  from classifycog import lineages, treeclassify_automatic as treeclassify
+from classify import classify
   
 def mutationlist(mutations):
   if args.gisaid: return mutations[1:-1].split(',')
@@ -57,7 +54,7 @@ while 1:
   bad=badness(Ncontent)
   t0+=1
   if bad>args.maxbad: t1+=1;continue
-  newlin=treeclassify(mutationlist(mutations))
+  newlin=classify(mutationlist(mutations))
   row[cols[1]]=newlin
   if args.compare:
     if lineage not in comp: comp[lineage]=[0]*len(lineages)

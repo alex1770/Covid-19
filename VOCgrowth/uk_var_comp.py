@@ -6,7 +6,7 @@ from scipy.special import gammaln,digamma
 import numpy as np
 from math import sqrt,floor,log,exp
 from variantaliases import aliases
-from classifycog import treeclassify
+from classify import classify
 import hashlib
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
@@ -106,9 +106,7 @@ else:
 
     # If the COG-UK lineage is Unassigned or a prefix of tree-rule lineage, then replace it with tree-rule lineage
     if date>="2022-06-01":
-      mylin=treeclassify(mutations)
-      mylin_e=expandlin(mylin)
-      if lin=="Unassigned" or lin_e==mylin_e[:len(lin_e)]: lin_e=mylin_e
+      lin_e=expandlin(classify(mutations,lin))
     #if date>="2022-07-01": print("YYY",date,lin,contractlin(lin_e))
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
