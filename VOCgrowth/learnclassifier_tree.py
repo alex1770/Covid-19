@@ -130,7 +130,7 @@ if args.lineages==None:
   lineages.sort(key=lambda l: -numl[l])
   lineages=lineages[:args.numtoplin]
 else:
-  lineages=args.lineages.split(',')
+  lineages=sorted(args.lineages.split(','))
 print("Classifying lineages:",lineages)
 sys.stdout.flush()
 # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
@@ -149,9 +149,9 @@ print()
 mml=[]
 for (lineage,mutations) in ml:
   i=patmatch(expandlin(lineage))
-  #print("Assigning",lineage,"to",lineages[i] if i<len(lineages) else "Other")
+  #print("Assigning",lineage,"to",lineages[i] if i<len(lineages) else "Unassigned")
   mml.append((i,set(mutationlist(mutations)).intersection(okm)))
-lineages.append("Other")
+lineages.append("Unassigned")
 
 def getstats(indexlist):
   nl=len(lineages)
