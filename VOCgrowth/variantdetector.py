@@ -2,7 +2,7 @@ import sys,time,os,pickle,argparse
 from stuff import *
 import numpy as np
 from math import log,exp,sqrt,floor
-from classify import contractlin, expandlin
+from classify import classify, contractlin, expandlin
 
 mindate0=Date('2022-05-01')# Hard-coded minday
 minmutcount=5# Ignore mutations that have occurred less than this often
@@ -99,7 +99,7 @@ else:
       l=[]
       for mut in muts:
         if mut in name2num: l.append(name2num[mut])
-      linelist.append([day,loc,expandlin(lin),var,l])
+      linelist.append([day,loc,expandlin(classify(muts,lin,gisaid=args.gisaid)),var,l])
       for m in l: mutdaycounts[m][day]=mutdaycounts[m].get(day,0)+1
     if not inputsorted: linelist.sort(reverse=True)# Sort into reverse date order
   os.makedirs(cachedir,exist_ok=True)
