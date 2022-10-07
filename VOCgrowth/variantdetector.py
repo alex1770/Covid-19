@@ -12,8 +12,9 @@ parser=argparse.ArgumentParser()
 parser.add_argument('-f', '--mindate',        default=mindate0,     help="Min sample date of sequence")
 parser.add_argument('-t', '--maxdate',        default="9999-12-31", help="Max sample date of sequence")
 parser.add_argument('-a', '--effectfrom',     type=int,default=-14, help="Growth effect start date, as offset from input data datestamp")
-parser.add_argument('-b', '--effectto',       type=int,default=42,  help="Growth effect end date, as offset from input data datestamp")
+parser.add_argument('-b', '--effectto',       type=int,default=35,  help="Growth effect end date, as offset from input data datestamp")
 parser.add_argument('-g', '--gisaid',         action="store_true",  help="Use GISAID data instead of COG-UK data")
+parser.add_argument('-M', '--mode',           type=int,default=0,   help="Mode: 0=evaluate individual mutations, 1=find subsets of mutations")
 parser.add_argument('-m', '--givenmutations', default="",           help="Condition on this set of mutations (use a comma-separated list)")
 parser.add_argument('-l', '--lineage',                              help="Condition on this lineage")
 parser.add_argument('-L', '--location',       default="",           help="Location prefix")
@@ -202,7 +203,7 @@ daycounts,mutdaycounts,lincounts,mutlincounts = getmutday(linelist, mindate=args
 
 print("Got all mutation-day counts at time",time.process_time()-tim0)
 
-if 1:
+if args.mode==0:
   growth={}
   nsd=3
   for mut in range(nmut):
