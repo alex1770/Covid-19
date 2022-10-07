@@ -37,18 +37,30 @@ accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(282
 # Hand-picked RBD subset from https://twitter.com/CorneliusRoemer/status/1576903120608600064, https://cov-spectrum.org/collections/54?region=Europe
 handpickedsubset=[346,356,444,445,446,450,452,460,486,490,493,494]
 
+def extractint(s):
+  i=0
+  while i<len(s):
+    if s[i].isdigit(): break
+    i+=1
+  if i==len(s): return -1
+  j=i
+  while j<len(s):
+    if not s[j].isdigit(): break
+    j+=1
+  return int(s[i:j])
+
 # Determine whether mutation meets restrictions specified by -s argument
 def okmut(m):
   if args.genomesubset>=5: return True
   if m[:6]=="synSNP":# Implies COG-UK
     if args.genomesubset<=3: return False
-    loc=int(m[8:-1])
+    loc=extractint(m)
     return loc in accessorygenes
   if args.genomesubset>=3: return True
   if args.gisaid and m[:6]=="Spike_": m="S:"+m[6:]
   if m[:2]!="S:": return False
   if args.genomesubset==2: return True
-  loc=int(m[3:-1])
+  loc=extractint(m)
   if args.genomesubset==1: return loc>=329 and loc<=521# RBD
   return loc in handpickedsubset
 
@@ -127,7 +139,7 @@ def linin(lin,lineage):
   if lineage[-1]!='*': return False
   if lin==lineage[:-1]: return True
   return lin[:len(lineage)]==lineage[:-1]+'.'
-  
+
 
 def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notlineage=None,location=None):# Might need a givennot argument too
   daycounts={}
@@ -135,14 +147,15 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
   mutlincounts=[{} for m in range(nmut)]
   lincounts={}
   if type(givenmuts)==str: givenmuts=(givenmuts.split(',') if givenmuts!="" else [])
-  givenmuts_num={name2num[x] for x in givenmuts}
+  yesmuts_num={name2num[x] for x in givenmuts if x[0]!='~'}
+  notmuts_num={name2num[x[1:]] for x in givenmuts if x[0]=='~'}
   if mindate!=None: minday=int(Date(mindate))
   else: minday=0
   if maxdate!=None: maxday=int(Date(maxdate))
   else: maxday=1000000
   if lineage!=None: lineage=expandlin(lineage)
   for (day,loc,lin,var,muts) in linelist:
-    if day>=minday and day<maxday and givenmuts_num.issubset(muts) and (lineage==None or linin(lin,lineage)) and (notlineage==None or not linin(lin,notlineage)) and (location==None or loc[:len(location)]==location):
+    if day>=minday and day<maxday and yesmuts_num.issubset(muts) and notmuts_num.intersection(muts)==set() and (lineage==None or linin(lin,lineage)) and (notlineage==None or not linin(lin,notlineage)) and (location==None or loc[:len(location)]==location):
       daycounts[day]=daycounts.get(day,0)+1
       lincounts[lin]=lincounts.get(lin,0)+1
       for m in muts:
