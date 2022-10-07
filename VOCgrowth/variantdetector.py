@@ -34,8 +34,8 @@ else:
 # 
 accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
 
-# Hand-picked RBD subset from https://twitter.com/CorneliusRoemer/status/1576903120608600064
-handpickedsubset=[346,356,444,445,446,450,452,460,486,490,494]
+# Hand-picked RBD subset from https://twitter.com/CorneliusRoemer/status/1576903120608600064, https://cov-spectrum.org/collections/54?region=Europe
+handpickedsubset=[346,356,444,445,446,450,452,460,486,490,493,494]
 
 # Determine whether mutation meets restrictions specified by -s argument
 def okmut(m):
@@ -185,38 +185,6 @@ def getgrowth(daycounts,mutdaycount):
 
   return c[0],c[1],sqrt(C[1,1]),tv
 
-#daycounts,mutdaycounts,lincounts=getmutday(linelist)
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-10-01')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,givenmuts={'S:Y145H'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-08-16')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-08-01',givenmuts={'S:G142D'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-01-01',maxdate='2021-08-01',lineage='AY.4')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-01-01',maxdate='2021-08-15',givenmuts={'S:T95I'},lineage='AY.4')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-08-15',givenmuts={'S:T95I'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-01-01',maxdate='2021-08-01',lineage='AY.4')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-09-01',maxdate='2021-10-07',givenmuts={'S:Y145H'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-14',lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-14',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',maxdate='2021-10-10',lineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-14',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',maxdate='2021-10-10',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-10-18',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',notlineage='AY.4.2',maxdate='2021-10-12')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',notlineage='AY.4.2',givenmuts={'N:Q9L'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-08-01',notlineage='AY.4.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-12-25',lineage='BA.1')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-12-25',lineage='BA.1',givenmuts={'S:N440K'})
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-01-17',lineage='BA.1')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-01-17',lineage='BA.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-03-01',lineage='BA.2')
-#daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2022-03-01')
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'S:F486V'})
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'Spike_F486V'})
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'Spike_F486V'},location="Europe / Denmark")
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-06-01',givenmuts={'Spike_F486V'},location="Europe / Austria / Vienna")
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-05-01')
-#daycounts,mutdaycounts,lincounts,mutlincounts=getmutday(linelist,mindate='2022-05-01',location="Asia / India")
 daycounts,mutdaycounts,lincounts,mutlincounts = getmutday(linelist, mindate=args.mindate, maxdate=args.maxdate, givenmuts=args.givenmutations, lineage=args.lineage, location=args.location)
 
 print("Got all mutation-day counts at time",time.process_time()-tim0)
@@ -241,26 +209,6 @@ if 1:
   #l.sort(key=lambda x:-(growth[x][0]-nsd*growth[x][1]))
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
   l.sort(key=lambda x:-growth[x][3])
-
-  if 0:
-    with open('tempvargr','w') as fp:
-      sg=[growth[x][0]/growth[x][1] for x in growth]
-      n=len(sg)
-      d=int(sqrt(n))
-      sg.sort()
-      x0=sg[int(0.01*n)]
-      x1=sg[-max(int(0.01*n),1)]
-      hist=[0]*d
-      low=high=0
-      for x in sg:
-        i=int(floor((x-x0)/(x1-x0)*d))
-        if i<0: low+=1
-        elif i<d: hist[i]+=1
-        else: high+=1
-      print("# Low %d"%low,file=fp)
-      for (i,k) in enumerate(hist):
-        print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
-      print("# High %d"%high,file=fp)
 
   print("     Mutation          -------- %Growth ---------     ---- %Growth effect ----- Gr-signif NumNonVar  NumVar  Examples")
   nm=0
