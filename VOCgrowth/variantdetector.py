@@ -4,13 +4,15 @@ import numpy as np
 from math import log,exp,sqrt,floor
 from classify import classify, contractlin, expandlin
 
-mindate0=Date('2022-05-01')# Hard-coded minday
+mindate0=Date('2022-07-01')# Hard-coded minday
 minmutcount=5# Ignore mutations that have occurred less than this often
 cachedir='seqdatacachedir'
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-f', '--mindate',        default=mindate0,     help="Min sample date of sequence")
 parser.add_argument('-t', '--maxdate',        default="9999-12-31", help="Max sample date of sequence")
+parser.add_argument('-a', '--effectfrom',     default=-14,          help="Growth effect start date, as offset from input data datestamp")
+parser.add_argument('-b', '--effectto',       default=42,           help="Growth effect end date, as offset from input data datestamp")
 parser.add_argument('-g', '--gisaid',         action="store_true",  help="Use GISAID data instead of COG-UK data")
 parser.add_argument('-m', '--givenmutations', default="",           help="Condition on this set of mutations (use a comma-separated list)")
 parser.add_argument('-l', '--lineage',                              help="Condition on this lineage")
@@ -52,6 +54,11 @@ def okmut(m):
 
 tim0=time.process_time()
 datamtime=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile)).strftime('%Y-%m-%d-%H-%M-%S')
+now=Date(datamtime[:10])
+print("Now =",now)
+print("Calculating growth from",args.mindate,"to",args.maxdate)
+print("Calculating growth effect from now%+d to now%+d ="%(args.effectfrom,args.effectto),now+args.effectfrom,"to",now+args.effectto)
+
 id=source+'_'+datamtime+'_'+mindate0+'_'+str(minmutcount)
 fn=os.path.join(cachedir,id)
 if os.path.isfile(fn):
@@ -145,7 +152,7 @@ def getmutday(linelist,mindate=None,maxdate=None,givenmuts=[],lineage=None,notli
   return daycounts,mutdaycounts,lincounts,mutlincounts
 
 def getgrowth(daycounts,mutdaycount):
-  # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-minday) = growth*(day-crossoverday)
+  # log(varcount/(backgroundcount-varcount)) ~ c0+c1*(day-now) = growth*(day-crossoverday)
   if len(mutdaycount)<=3: return None
   day0=min(mutdaycount)
   day1=max(mutdaycount)
@@ -157,7 +164,7 @@ def getgrowth(daycounts,mutdaycount):
     v0=daycounts.get(day,0)-v1
     V0[day-day0]=v0
     V1[day-day0]=v1
-  
+
   tv=V0.sum(),V1.sum()
   V0+=1e-30
   V1+=1e-30
@@ -173,12 +180,10 @@ def getgrowth(daycounts,mutdaycount):
   T=V0+V1;T.sort()
   # Crudely take off two degrees of freedom because rho is tuned to V0, V1 using slope and intercept. (Semi-guess, with some empirical backup.)
   mult=((V1-V0*rho)**2/rho).sum()/T[:-2].sum()
-  #print("Res mult",Date(day0),Date(day1),mult)
   C*=max(mult,1)
-  #print(day1-day0+1,((V0!=0)|(V1!=0)).sum())
-  #c[0]+=c[1]*(mindate0-day0)
+  c[0]+=c[1]*(now-day0)
 
-  return (c[1],sqrt(C[1,1])),tv
+  return c[0],c[1],sqrt(C[1,1]),tv
 
 #daycounts,mutdaycounts,lincounts=getmutday(linelist)
 #daycounts,mutdaycounts,lincounts=getmutday(linelist,mindate='2021-07-01',maxdate='2021-10-01')
@@ -217,66 +222,60 @@ daycounts,mutdaycounts,lincounts,mutlincounts = getmutday(linelist, mindate=args
 print("Got all mutation-day counts at time",time.process_time()-tim0)
 
 if 1:
-  growth={};tv={}
-  okmuts=[]
+  growth={}
+  nsd=3
   for mut in range(nmut):
     gre=getgrowth(daycounts,mutdaycounts[mut])
     if gre!=None:
-      growth[mut]=gre[0]
-      tv[mut]=gre[1]
-      okmuts.append(mut)
-
-  with open('tempvargr','w') as fp:
-    sg=[growth[x][0]/growth[x][1] for x in growth]
-    n=len(sg)
-    d=int(sqrt(n))
-    sg.sort()
-    x0=sg[int(0.01*n)]
-    x1=sg[-max(int(0.01*n),1)]
-    hist=[0]*d
-    low=high=0
-    for x in sg:
-      i=int(floor((x-x0)/(x1-x0)*d))
-      if i<0: low+=1
-      elif i<d: hist[i]+=1
-      else: high+=1
-    print("# Low %d"%low,file=fp)
-    for (i,k) in enumerate(hist):
-      print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
-    print("# High %d"%high,file=fp)
-
-  nsd=3
-  gr0=0.0
-  proj=14# Calculate growth significance this many days ahead
-  def gval(mut):
-    if tv[mut][0]+tv[mut][1]==0: return -1e9
-    gr=growth[mut]
-    g,dg=gr[0],gr[1]
-    p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
-    return max(abs(g)-nsd*dg,0)*sqrt(p*(1-p))
-  #l=[mut for mut in growth if growth[mut][0]>0]
+      c0,g,dg,tv=gre
+      l=[]
+      for gg in [g, g-nsd*dg, g+nsd*dg]:
+        if g*gg<0: gg=0
+        R0=exp(c0+gg*args.effectfrom)
+        R1=exp(c0+gg*args.effectto)
+        greffect=gg*(R1-R0)/((1+R0)*(1+R1))
+        l.append(greffect)
+      if l[1]>l[2]: l=[l[0],l[2],l[1]]
+      growth[mut]=g,dg,l[0],l[1],l[2],tv
   l=list(growth)
   #l.sort(key=lambda x:-(growth[x][0]-nsd*growth[x][1]))
   #l.sort(key=lambda x:-abs((growth[x][0]-gr0)/growth[x][1]))
-  l.sort(key=lambda x:-gval(x))
+  l.sort(key=lambda x:-growth[x][3])
+
+  if 0:
+    with open('tempvargr','w') as fp:
+      sg=[growth[x][0]/growth[x][1] for x in growth]
+      n=len(sg)
+      d=int(sqrt(n))
+      sg.sort()
+      x0=sg[int(0.01*n)]
+      x1=sg[-max(int(0.01*n),1)]
+      hist=[0]*d
+      low=high=0
+      for x in sg:
+        i=int(floor((x-x0)/(x1-x0)*d))
+        if i<0: low+=1
+        elif i<d: hist[i]+=1
+        else: high+=1
+      print("# Low %d"%low,file=fp)
+      for (i,k) in enumerate(hist):
+        print("%8.3f  %8d"%(x0+(i+.5)/d*(x1-x0),hist[i]),file=fp)
+      print("# High %d"%high,file=fp)
 
   print("     Mutation          -------- %Growth ---------     ---- %Growth effect ----- Gr-signif NumNonVar  NumVar  Examples")
   nm=0
   for mut in l:
-    gr=growth[mut]
-    g,dg=gr[0],gr[1]
+    g,dg,greff,greff_low,greff_high,tv=growth[mut]
     (gl,gh)=(g-nsd*dg,g+nsd*dg)
-    #if gl<=0 and gh>=0: break
+    if gl<=0 and gh>=0: continue
     
     # Growth
     print("%-20s  %7.2f (%7.2f - %7.2f)"%(num2name[mut],g*100,gl*100,gh*100),end='')
     
     # Growth effect
-    p=tv[mut][0]/(tv[mut][0]+tv[mut][1]*exp(proj*g))
-    (ga,gla,gha)=(abs(g)*sqrt(p*(1-p)),min(abs(gl),abs(gh))*sqrt(p*(1-p)),max(abs(gl),abs(gh))*sqrt(p*(1-p)))
-    print("   %7.2f (%7.2f - %7.2f)"%(ga*100,gla*100,gha*100),end='')
+    print("   %7.2f (%7.2f - %7.2f)"%(greff*100,greff_low*100,greff_high*100),end='')
     
-    print("   %7.2f   %7d %7d"%((g-gr0)/dg,tv[mut][0],tv[mut][1]),end='')
+    print("   %7.2f   %7d %7d"%(greff/((greff_high-greff_low)/(2*nsd)),tv[0],tv[1]),end='')
     
     ml=list(mutlincounts[mut])
     score={}# score = number of lineages with mutation if it's a growing mutation, or number without mutation if it's a falling mutation
