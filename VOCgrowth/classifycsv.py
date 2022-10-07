@@ -54,7 +54,7 @@ while 1:
   bad=badness(Ncontent)
   t0+=1
   if bad>args.maxbad: t1+=1;continue
-  newlin=classify(mutationlist(mutations),lineage)
+  newlin=classify(mutationlist(mutations),lineage,gisaid=args.gisaid)
   row[cols[1]]=newlin
   if args.compare:
     if lineage not in comp: comp[lineage]=[0]*len(lineages)
