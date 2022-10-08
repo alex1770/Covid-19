@@ -18,25 +18,30 @@ parser.add_argument('-b', '--maxbad',      type=float, default=0.05,           h
 parser.add_argument('-l', '--lineages',    default=defaultlineages,            help="Comma-separated list of lineages or mutations; AND together with +/- prefixes")
 parser.add_argument('-L', '--location',    default="",                         help="Location prefix; AND together with +/- prefixes")
 parser.add_argument('-f', '--mindate',     default="2021-01-01",               help="Min sample date of sequence")
+parser.add_argument('-i', '--infile',                                          help="Input tsv file (assumed sorted)")
 args=parser.parse_args()
 
 VV=args.lineages.split(',')
 
-try:
-  t0=os.path.getmtime('metadata.tsv')
-except FileNotFoundError:
-  t0=-1e30
-
-try:
-  t1=os.path.getmtime('metadata_sorted.tsv')
-except FileNotFoundError:
-  t1=-1e30
-
-if t0<0 and t1<0: raise FileNotFoundError("Could not find GISAID files metadata.tsv or metadata_sorted.tsv")
-if t1>=t0:
-  infile='metadata_sorted.tsv';inputsorted=True
+if args.infile!=None:
+  infile=args.infile
+  inputsorted=True
 else:
-  infile='metadata.tsv';inputsorted=False
+  try:
+    t0=os.path.getmtime('metadata.tsv')
+  except FileNotFoundError:
+    t0=-1e30
+  
+  try:
+    t1=os.path.getmtime('metadata_sorted.tsv')
+  except FileNotFoundError:
+    t1=-1e30
+  
+  if t0<0 and t1<0: raise FileNotFoundError("Could not find GISAID files metadata.tsv or metadata_sorted.tsv")
+  if t1>=t0:
+    infile='metadata_sorted.tsv';inputsorted=True
+  else:
+    infile='metadata.tsv';inputsorted=False
 
 # "Compile" expression with '+'s and '-'s into logical components
 # E.g., Spike_F486V-N_P151S goes to [(True,"Spike_F486V"),(False,"N_P151S")]
