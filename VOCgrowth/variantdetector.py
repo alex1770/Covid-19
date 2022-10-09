@@ -4,6 +4,8 @@ import numpy as np
 from math import log,exp,sqrt,floor
 from classify import classify, contractlin, expandlin
 
+np.set_printoptions(precision=6,suppress=True,linewidth=200)
+
 mindate0=Date('2022-08-01')# Hard-coded minday for cache purposes
 minmutcount=20# Ignore mutations that have occurred less than this often
 cachedir='seqdatacachedir'
@@ -290,7 +292,7 @@ if args.mode==1:
   linelist=linelist1
   print("Filtered linelist at time",time.process_time()-tim0)
   
-  M=[]
+  M=[mlist[0]]
   for m in mlist:
     if m in M: continue
     # Contemplating M -> M u {m}
@@ -305,9 +307,10 @@ if args.mode==1:
     # nn0[I] = sum_t n_{t,I}
     # nn1[I] = sum_t t*n_{t,I}
     # nn[t]  = sum_I n_{t,I}
-    nn0=[0]*(1<<n)
-    nn1=[0]*(1<<n)
-    nn=[0]*ndays
+    nn0=np.zeros(1<<n)
+    nn1=np.zeros(1<<n)
+    nn=np.zeros(ndays)
+    nnt=np.zeros(ndays)
     for x in linelist:
       I=0
       for ml in x[4]:
@@ -316,17 +319,26 @@ if args.mode==1:
       nn0[I]+=1
       nn1[I]+=t
       nn[t]+=1
+      nnt[t]+=t
 
+    bit=np.zeros([1<<n,n])
+    for i in range(1<<n):
+      for j in range(n):
+        bit[i,j]=(i>>j)&1
+
+    r=np.arange(ndays,dtype=float)
     def LL(xx):
-      LL1=0
-      den=[0]*ndays
-      for I in range(1<<n):
-        g=sum(xx[(1<<n)+j]*((I>>j)&1) for j in range(n))
-        LL1+=nn0[I]*xx[I]+nn1[I]*g
-        for t in range(ndays):
-          den[t]+=exp(xx[I]+g*t)
-      for t in range(ndays):
-        LL1-=nn[t]*log(den[t])
+      gg=bit@xx[1<<n:]
+      LL1=nn0@xx[:1<<n]+nn1@gg
+      den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+      LL1-=nn@np.log(den)
       return LL1
 
-    print(m,LL([0,-6,.033]))
+    def dLL(xx):
+      dLL1=np.concatenate([nn0,nn1@bit])
+      gg=bit@xx[1<<n:]
+      dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
+      den=dens.sum(axis=0)
+      dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
+      dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
+      return dLL1
