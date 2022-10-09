@@ -3,6 +3,7 @@ from stuff import *
 import numpy as np
 from math import log,exp,sqrt,floor
 from classify import classify, contractlin, expandlin
+from scipy.optimize import minimize
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
@@ -38,7 +39,8 @@ else:
 accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
 
 # Hand-picked RBD subset from https://twitter.com/CorneliusRoemer/status/1576903120608600064, https://cov-spectrum.org/collections/54?region=Europe
-handpickedsubset=[346,356,444,445,446,450,452,460,486,490,493,494]
+# plus 144, 252, 484 that I added
+handpickedsubset=[144,252,346,356,444,445,446,450,452,460,484,486,490,493,494]
 
 def extractint(s):
   i=0
@@ -279,7 +281,8 @@ if args.mode==0:
 if args.mode==1:
   
   mlist=[m for m in range(nmut) if okmut_num[m]]
-  mindate=args.mindate
+  mlist.sort(key=lambda m:(extractint(num2name[m]),num2name[m]))
+  mindate=Date(args.mindate)
   maxdate=min(args.maxdate,Date(linelist[0][0]))
   ndays=maxdate-mindate+1
   
@@ -291,10 +294,14 @@ if args.mode==1:
     x[4]=[m for m in x[4] if okmut_num[m]]
   linelist=linelist1
   print("Filtered linelist at time",time.process_time()-tim0)
+  print()
   
-  M=[mlist[0]]
+  M=[]
+  #M=[name2num['Spike_R346T']]
+  Mints=[extractint(num2name[m]) for m in M]
+  deb=0
   for m in mlist:
-    if m in M: continue
+    if extractint(num2name[m]) in Mints: continue
     # Contemplating M -> M u {m}
     
     M1=M+[m]
@@ -311,6 +318,7 @@ if args.mode==1:
     nn1=np.zeros(1<<n)
     nn=np.zeros(ndays)
     nnt=np.zeros(ndays)
+    if deb: nnx=np.zeros([1<<n,ndays])
     for x in linelist:
       I=0
       for ml in x[4]:
@@ -320,13 +328,13 @@ if args.mode==1:
       nn1[I]+=t
       nn[t]+=1
       nnt[t]+=t
+      if deb: nnx[I,t]+=1
 
     bit=np.zeros([1<<n,n])
     for i in range(1<<n):
       for j in range(n):
         bit[i,j]=(i>>j)&1
 
-    r=np.arange(ndays,dtype=float)
     def LL(xx):
       gg=bit@xx[1<<n:]
       LL1=nn0@xx[:1<<n]+nn1@gg
@@ -342,3 +350,50 @@ if args.mode==1:
       dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
       dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
       return dLL1
+
+    def NLL(xx): return -LL(xx)/(((1<<n)+n)*ndays)
+    def NdLL(xx): return -dLL(xx)/(((1<<n)+n)*ndays)
+
+    def LLpr(xx):
+      gg=bit@xx[1<<n:]
+      dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
+      den=dens.sum(axis=0)
+      print("                                   ",end="")
+      for I in range(1<<n): print(" %10.5f"%xx[I],end="")
+      print()
+      print("                                   ",end="")
+      for I in range(1<<n): print(" %10.5f"%gg[I],end="")
+      print()
+      lltot=0
+      for t in range(ndays):
+        print("%3d |"%t,end="")
+        for I in range(1<<n): print(" %6d"%nnx[I,t],end="")
+        print(" |",end="")
+        for I in range(1<<n): print(" %10.4g"%(dens[I][t]/den[t]),end="")
+        ll=0
+        for I in range(1<<n): ll+=nnx[I,t]*log(dens[I][t]/den[t])
+        print(" |",end="")
+        for I in range(1<<n): print(" %7.5f"%(nnx[I,t]/nn[t]),end="")
+        lltot+=ll
+        print(" | %14.6f %14.6f"%(ll,lltot))
+      assert abs(LL(xx)-lltot)<1e-3
+    
+    bounds=[(-20,10)]*(1<<n)+[(-0.5,0.5)]*n
+    bounds[0]=(0,0)
+    for i in range(1,1<<n):
+      if nn0[i]==0: bounds[i]=(-30,-30)
+    xx=[0]*((1<<n)+n)
+    res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+    xx=res.x
+    if not res.success: raise RuntimeError(res.message)
+    err=0
+    for i in range(len(xx)):
+      if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
+        err=1
+        if i<(1<<n): print("Error: intercept of",'+'.join(num2name[M1[j]] for j in range(n) if bit[i,j]),"hit bound")
+        else: print("Error: growth of",num2name[M1[i-(1<<n)]],"hit bound")
+    for m in M1:
+      print("%15s"%num2name[m],end="")
+    print(" ",xx,nn0)
+    if deb: LLpr(xx)
+    if err: break
