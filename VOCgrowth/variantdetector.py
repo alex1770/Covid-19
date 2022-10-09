@@ -349,66 +349,80 @@ if args.mode==1:
     return gg@den/den.sum()
     
   M=[]
-  #M=[name2num['Spike_R346T']]
-  Mints=[extractint(num2name[m]) for m in M]
-  deb=0
-  best=(-1,)
-  for mnew in mlist:
-    if extractint(num2name[mnew]) in Mints: continue
-    # Contemplating M -> M u {m}
-    
-    M1=M+[mnew]
-    n=len(M1)
-    # a_I, g_i
-    # I <-> 2^n
-    # Use gauge: a_{empty}=0; (g_i don't need gauge fixing)
-    
-    # n_{t,I} = number of instances of mutation pattern I on day t
-    # nn0[I] = sum_t n_{t,I}
-    # nn1[I] = sum_t t*n_{t,I}
-    # nn[t]  = sum_I n_{t,I}
-    nn0=np.zeros(1<<n)
-    nn1=np.zeros(1<<n)
-    nn=np.zeros(ndays)
-    nnt=np.zeros(ndays)
-    if deb: nnx=np.zeros([1<<n,ndays])
-    for x in linelist:
-      I=0
-      for ml in x[4]:
-        if ml in M1: I+=1<<M1.index(ml)
-      t=x[0]-mindate
-      nn0[I]+=1
-      nn1[I]+=t
-      nn[t]+=1
-      nnt[t]+=t
-      if deb: nnx[I,t]+=1
-
-    bit=np.zeros([1<<n,n])
-    for i in range(1<<n):
-      for j in range(n):
-        bit[i,j]=(i>>j)&1
-
-    bounds=[(-20,10)]*(1<<n)+[(-0.5,0.5)]*n
-    bounds[0]=(0,0)
-    for i in range(1,1<<n):
-      if nn0[i]==0: bounds[i]=(-30,-30)
-    xx=[0]*((1<<n)+n)
-    res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
-    xx=res.x
-    if not res.success: raise RuntimeError(res.message)
-    err=0
-    for i in range(len(xx)):
-      if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
-        err=1
-        if i<(1<<n): print("Error: intercept of",'+'.join(num2name[M1[j]] for j in range(n) if bit[i,j]),"hit bound")
-        else: print("Error: growth of",num2name[M1[i-(1<<n)]],"hit bound")
-    if err: raise RuntimeError("Optimisation hit bounds")
-    for m in M1:
-      print("%15s"%num2name[m],end="")
-    ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
-    print(" ",xx,nn0,"| %7.5f"%ge)
-    if ge>best[0]: best=(ge,mnew)
-    if deb: LLpr(xx)
-  ge,m=best
-  print("Best growth effect",ge,"using",num2name[m])
+  thr=0.005# Require at least this much improvement in growth effect
+  ge0=0
+  best0=[0,]
+  while 1:
+    Mints=[extractint(num2name[m]) for m in M]
+    deb=0
+    best=(-1,)
+    for mnew in mlist:
+      if extractint(num2name[mnew]) in Mints: continue
+      # Contemplating M -> M u {m}
+      
+      M1=M+[mnew]
+      n=len(M1)
+      # a_I, g_i
+      # I <-> 2^n
+      # Use gauge: a_{empty}=0; (g_i don't need gauge fixing)
+      
+      # n_{t,I} = number of instances of mutation pattern I on day t
+      # nn0[I] = sum_t n_{t,I}
+      # nn1[I] = sum_t t*n_{t,I}
+      # nn[t]  = sum_I n_{t,I}
+      nn0=np.zeros(1<<n)
+      nn1=np.zeros(1<<n)
+      nn=np.zeros(ndays)
+      nnt=np.zeros(ndays)
+      if deb: nnx=np.zeros([1<<n,ndays])
+      for x in linelist:
+        I=0
+        for ml in x[4]:
+          if ml in M1: I+=1<<M1.index(ml)
+        t=x[0]-mindate
+        nn0[I]+=1
+        nn1[I]+=t
+        nn[t]+=1
+        nnt[t]+=t
+        if deb: nnx[I,t]+=1
   
+      bit=np.zeros([1<<n,n])
+      for i in range(1<<n):
+        for j in range(n):
+          bit[i,j]=(i>>j)&1
+  
+      bounds=[(-20,10)]*(1<<n)+[(-0.5,0.5)]*n
+      bounds[0]=(0,0)
+      for i in range(1,1<<n):
+        if nn0[i]==0: bounds[i]=(-30,-30)
+      xx=[0]*((1<<n)+n)
+      res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+      xx=res.x
+      if not res.success: raise RuntimeError(res.message)
+      err=0
+      for i in range(len(xx)):
+        if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
+          err=1
+          if i<(1<<n): print("Error: intercept of",'+'.join(num2name[M1[j]] for j in range(n) if bit[i,j]),"hit bound")
+          else: print("Error: growth of",num2name[M1[i-(1<<n)]],"hit bound")
+      if err: raise RuntimeError("Optimisation hit bounds")
+      for m in M1:
+        print("%15s"%num2name[m],end="")
+      ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
+      #print(" ",xx,nn0,"| %7.5f"%ge)
+      for i in range(n): print("  %7.4f"%xx[(1<<n)+i],end="")
+      print(" | %7.4f"%ge)
+      if ge>best[0]: best=(ge,mnew,xx)
+      if deb: LLpr(xx)
+    ge,m,xx=best
+    print("Best growth effect",ge,"using",num2name[m])
+    print()
+    if ge-best0[0]<thr: break
+    best0=best
+    M.append(m)
+  print("Final choice")
+  ge,m,xx=best0
+  n=len(M)
+  for i,m in enumerate(M):
+    print("%15s  %7.4f"%(num2name[m],xx[(1<<n)+i]))
+  print("Growth effect %.4f"%ge)
