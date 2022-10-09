@@ -278,6 +278,8 @@ if args.mode==0:
       print(" %5d"%vm,end='')
     print()
 
+
+
 if args.mode==1:
   
   mlist=[m for m in range(nmut) if okmut_num[m]]
@@ -296,15 +298,66 @@ if args.mode==1:
   print("Filtered linelist at time",time.process_time()-tim0)
   print()
   
+  def LL(xx):
+    gg=bit@xx[1<<n:]
+    LL1=nn0@xx[:1<<n]+nn1@gg
+    den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+    LL1-=nn@np.log(den)
+    return LL1
+
+  def dLL(xx):
+    dLL1=np.concatenate([nn0,nn1@bit])
+    gg=bit@xx[1<<n:]
+    dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
+    den=dens.sum(axis=0)
+    dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
+    dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
+    return dLL1
+
+  def NLL(xx): return -LL(xx)/(((1<<n)+n)*ndays)
+  def NdLL(xx): return -dLL(xx)/(((1<<n)+n)*ndays)
+
+  def LLpr(xx):
+    gg=bit@xx[1<<n:]
+    dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
+    den=dens.sum(axis=0)
+    print("                                   ",end="")
+    for I in range(1<<n): print(" %10.5f"%xx[I],end="")
+    print()
+    print("                                   ",end="")
+    for I in range(1<<n): print(" %10.5f"%gg[I],end="")
+    print()
+    lltot=0
+    for t in range(ndays):
+      print("%3d |"%t,end="")
+      for I in range(1<<n): print(" %6d"%nnx[I,t],end="")
+      print(" |",end="")
+      for I in range(1<<n): print(" %10.4g"%(dens[I][t]/den[t]),end="")
+      ll=0
+      for I in range(1<<n): ll+=nnx[I,t]*log(dens[I][t]/den[t])
+      print(" |",end="")
+      for I in range(1<<n): print(" %7.5f"%(nnx[I,t]/nn[t]),end="")
+      lltot+=ll
+      print(" | %14.6f %14.6f"%(ll,lltot))
+    assert abs(LL(xx)-lltot)<1e-3
+
+  # Growth effect, defined up to an additive constant
+  # GE(xx,t1)-GE(xx,t0) is well-defined
+  def GE(xx,t):
+    gg=bit@xx[1<<n:]
+    den=np.exp(xx[:1<<n]+gg*t)
+    return gg@den/den.sum()
+    
   M=[]
   #M=[name2num['Spike_R346T']]
   Mints=[extractint(num2name[m]) for m in M]
   deb=0
-  for m in mlist:
-    if extractint(num2name[m]) in Mints: continue
+  best=(-1,)
+  for mnew in mlist:
+    if extractint(num2name[mnew]) in Mints: continue
     # Contemplating M -> M u {m}
     
-    M1=M+[m]
+    M1=M+[mnew]
     n=len(M1)
     # a_I, g_i
     # I <-> 2^n
@@ -335,49 +388,6 @@ if args.mode==1:
       for j in range(n):
         bit[i,j]=(i>>j)&1
 
-    def LL(xx):
-      gg=bit@xx[1<<n:]
-      LL1=nn0@xx[:1<<n]+nn1@gg
-      den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
-      LL1-=nn@np.log(den)
-      return LL1
-
-    def dLL(xx):
-      dLL1=np.concatenate([nn0,nn1@bit])
-      gg=bit@xx[1<<n:]
-      dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
-      den=dens.sum(axis=0)
-      dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
-      dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
-      return dLL1
-
-    def NLL(xx): return -LL(xx)/(((1<<n)+n)*ndays)
-    def NdLL(xx): return -dLL(xx)/(((1<<n)+n)*ndays)
-
-    def LLpr(xx):
-      gg=bit@xx[1<<n:]
-      dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
-      den=dens.sum(axis=0)
-      print("                                   ",end="")
-      for I in range(1<<n): print(" %10.5f"%xx[I],end="")
-      print()
-      print("                                   ",end="")
-      for I in range(1<<n): print(" %10.5f"%gg[I],end="")
-      print()
-      lltot=0
-      for t in range(ndays):
-        print("%3d |"%t,end="")
-        for I in range(1<<n): print(" %6d"%nnx[I,t],end="")
-        print(" |",end="")
-        for I in range(1<<n): print(" %10.4g"%(dens[I][t]/den[t]),end="")
-        ll=0
-        for I in range(1<<n): ll+=nnx[I,t]*log(dens[I][t]/den[t])
-        print(" |",end="")
-        for I in range(1<<n): print(" %7.5f"%(nnx[I,t]/nn[t]),end="")
-        lltot+=ll
-        print(" | %14.6f %14.6f"%(ll,lltot))
-      assert abs(LL(xx)-lltot)<1e-3
-    
     bounds=[(-20,10)]*(1<<n)+[(-0.5,0.5)]*n
     bounds[0]=(0,0)
     for i in range(1,1<<n):
@@ -392,8 +402,13 @@ if args.mode==1:
         err=1
         if i<(1<<n): print("Error: intercept of",'+'.join(num2name[M1[j]] for j in range(n) if bit[i,j]),"hit bound")
         else: print("Error: growth of",num2name[M1[i-(1<<n)]],"hit bound")
+    if err: raise RuntimeError("Optimisation hit bounds")
     for m in M1:
       print("%15s"%num2name[m],end="")
-    print(" ",xx,nn0)
+    ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
+    print(" ",xx,nn0,"| %7.5f"%ge)
+    if ge>best[0]: best=(ge,mnew)
     if deb: LLpr(xx)
-    if err: break
+  ge,m=best
+  print("Best growth effect",ge,"using",num2name[m])
+  
