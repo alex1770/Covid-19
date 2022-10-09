@@ -4,8 +4,8 @@ import numpy as np
 from math import log,exp,sqrt,floor
 from classify import classify, contractlin, expandlin
 
-mindate0=Date('2022-07-01')# Hard-coded minday
-minmutcount=5# Ignore mutations that have occurred less than this often
+mindate0=Date('2022-08-01')# Hard-coded minday for cache purposes
+minmutcount=20# Ignore mutations that have occurred less than this often
 cachedir='seqdatacachedir'
 
 parser=argparse.ArgumentParser()
@@ -274,3 +274,59 @@ if args.mode==0:
       print(" %5d"%vm,end='')
     print()
 
+if args.mode==1:
+  
+  mlist=[m for m in range(nmut) if okmut_num[m]]
+  mindate=args.mindate
+  maxdate=min(args.maxdate,Date(linelist[0][0]))
+  ndays=maxdate-mindate+1
+  
+  linelist1=[]
+  for x in linelist:
+    if x[0]>maxdate: continue
+    if x[0]<mindate: break
+    linelist1.append(x)
+    x[4]=[m for m in x[4] if okmut_num[m]]
+  linelist=linelist1
+  print("Filtered linelist at time",time.process_time()-tim0)
+  
+  M=[]
+  for m in mlist:
+    if m in M: continue
+    # Contemplating M -> M u {m}
+    
+    M1=M+[m]
+    n=len(M1)
+    # a_I, g_i
+    # I <-> 2^n
+    # Use gauge: a_{empty}=0; (g_i don't need gauge fixing)
+    
+    # n_{t,I} = number of instances of mutation pattern I on day t
+    # nn0[I] = sum_t n_{t,I}
+    # nn1[I] = sum_t t*n_{t,I}
+    # nn[t]  = sum_I n_{t,I}
+    nn0=[0]*(1<<n)
+    nn1=[0]*(1<<n)
+    nn=[0]*ndays
+    for x in linelist:
+      I=0
+      for ml in x[4]:
+        if ml in M1: I+=1<<M1.index(ml)
+      t=x[0]-mindate
+      nn0[I]+=1
+      nn1[I]+=t
+      nn[t]+=1
+
+    def LL(xx):
+      LL1=0
+      den=[0]*ndays
+      for I in range(1<<n):
+        g=sum(xx[(1<<n)+j]*((I>>j)&1) for j in range(n))
+        LL1+=nn0[I]*xx[I]+nn1[I]*g
+        for t in range(ndays):
+          den[t]+=exp(xx[I]+g*t)
+      for t in range(ndays):
+        LL1-=nn[t]*log(den[t])
+      return LL1
+
+    print(m,LL([0,-6,.033]))
