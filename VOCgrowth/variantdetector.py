@@ -353,11 +353,10 @@ if args.mode==1:
   ge0=0
   best0=[0,]
   while 1:
-    Mints=[extractint(num2name[m]) for m in M]
     deb=0
     best=(-1,)
     for mnew in mlist:
-      if extractint(num2name[mnew]) in Mints: continue
+      if mnew in M: continue
       # Contemplating M -> M u {m}
       
       M1=M+[mnew]
