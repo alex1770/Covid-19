@@ -361,7 +361,7 @@ if args.mode==1:
     return gg@den/den.sum()
     
   M=[]
-  thr=0.005# Require at least this much improvement in growth effect
+  thr=0.0025# Require at least this much improvement in growth effect
   ge0=0
   best0=[0,]
   while 1:
