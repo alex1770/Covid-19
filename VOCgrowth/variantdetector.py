@@ -299,7 +299,16 @@ if args.mode==1:
   linelist=linelist1
   print("Filtered linelist at time",time.process_time()-tim0)
   print()
-  
+
+  # M = set of mutations considered, |M|=n
+  # a[] = xx[:1<<n]  2^n offsets, indexed by subset of M
+  # g[] = xx[1<<n:]    n growths of each mutation in M
+  # If I is a subset of M then
+  # n[I,t] = observed counts of mutation set I on day t (counting from mindate)
+  # gg[I] = sum_{m in I} g[m]
+  # P(I,t) = exp(a[I]+gg[I]*t)
+  # P(.,t) = sum_I P(I,t)
+  # Likelihood = const*prod_t prod_I (P(I,t)/P(.,t))^n[I,t]
   def LL(xx):
     gg=bit@xx[1<<n:]
     LL1=nn0@xx[:1<<n]+nn1@gg
@@ -356,7 +365,6 @@ if args.mode==1:
   ge0=0
   best0=[0,]
   while 1:
-    deb=0
     best=(-1,)
     for mnew in mlist:
       if mnew in M: continue
@@ -396,7 +404,7 @@ if args.mode==1:
       bounds=[(-20,10)]*(1<<n)+[(-0.5,0.5)]*n
       bounds[0]=(0,0)
       for i in range(1,1<<n):
-        if nn0[i]==0: bounds[i]=(-30,-30)
+        if nn0[i]==0: bounds[i]=(-50,-50)
       xx=[0]*((1<<n)+n)
       res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
       xx=res.x
@@ -415,7 +423,7 @@ if args.mode==1:
       for i in range(n): print("  %7.4f"%xx[(1<<n)+i],end="")
       print(" | %7.4f"%ge)
       if ge>best[0]: best=(ge,mnew,xx,bit,nn0,nn1,nn,nnx)
-      if deb: LLpr(xx)
+      #LLpr(xx)
     print("Best growth effect",best[0],"using",num2name[best[1]])
     print()
     if best[0]-best0[0]<thr: break
@@ -425,8 +433,21 @@ if args.mode==1:
   print("Final choice")
   ge,m,xx,bit,nn0,nn1,nn,nnx=best0
   n=len(M)
+  gg=bit@xx[1<<n:]
   for i,m in enumerate(M):
     print("%15s  %7.4f"%(num2name[m],xx[(1<<n)+i]))
   print("Growth effect %.4f"%ge)
-  LLpr(xx)
+  print()
+  s=sum(len(num2name[m]) for m in M)
+  print(" "*(s+2*n),"  Count   Offset Growth       GE0      GE1  GE1-GE0")
+  dens=[np.exp(xx[:1<<n]+gg*(now+off-mindate)) for off in [args.effectfrom,args.effectto]]
+  sdens=[sum(den) for den in dens]
+  for I in range(1<<n):
+    for i in range(n):
+      print('~ '[(I>>i)&1]+num2name[M[i]],end=" ")
+    print("%8d   %6.1f %6.3f"%(nn0[I],xx[I],gg[I]),end=" ")
+    for j in range(2):
+      print(" %8.4f"%(gg[I]*dens[j][I]/sdens[j]),end="")
+    print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])))
+  #LLpr(xx)
   
