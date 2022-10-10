@@ -596,6 +596,7 @@ if args.mode==2:
       if ge>best[0]: best=(ge,mnew,xx,nn0,nn1,nn,nnx)
       if err: raise RuntimeError("Optimisation hit bounds")
       #LLpr(xx)
+      sys.stdout.flush()
     print("Best growth effect",best[0],"using",num2name[best[1]])
     print()
     if best[0]-best0[0]<thr: break
@@ -620,4 +621,5 @@ if args.mode==2:
       print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])))
     #LLpr(xx)
     print("\n")
+    sys.stdout.flush()
     best0=best
