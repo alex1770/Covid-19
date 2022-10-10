@@ -300,6 +300,7 @@ if args.mode==1:
   print("Filtered linelist at time",time.process_time()-tim0)
   print()
 
+  prior=100
   # M = set of mutations considered, |M|=n
   # a[] = xx[:1<<n]  2^n offsets, indexed by subset of M
   # g[] = xx[1<<n:]    n growths of each mutation in M
@@ -314,6 +315,7 @@ if args.mode==1:
     LL1=nn0@xx[:1<<n]+nn1@gg
     den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
     LL1-=nn@np.log(den)
+    LL1-=prior*xx[1<<n:]@xx[1<<n:]/2
     return LL1
 
   def dLL(xx):
@@ -323,6 +325,7 @@ if args.mode==1:
     den=dens.sum(axis=0)
     dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
     dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
+    dLL1[1<<n:]-=prior*xx[1<<n:]
     return dLL1
 
   def NLL(xx): return -LL(xx)/(((1<<n)+n)*ndays)
@@ -436,6 +439,175 @@ if args.mode==1:
   gg=bit@xx[1<<n:]
   for i,m in enumerate(M):
     print("%15s  %7.4f"%(num2name[m],xx[(1<<n)+i]))
+  print("Growth effect %.4f"%ge)
+  print()
+  s=sum(len(num2name[m]) for m in M)
+  print(" "*(s+2*n),"  Count   Offset Growth       GE0      GE1  GE1-GE0")
+  dens=[np.exp(xx[:1<<n]+gg*(now+off-mindate)) for off in [args.effectfrom,args.effectto]]
+  sdens=[sum(den) for den in dens]
+  for I in range(1<<n):
+    for i in range(n):
+      print('~ '[(I>>i)&1]+num2name[M[i]],end=" ")
+    print("%8d   %6.1f %6.3f"%(nn0[I],xx[I],gg[I]),end=" ")
+    for j in range(2):
+      print(" %8.4f"%(gg[I]*dens[j][I]/sdens[j]),end="")
+    print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])))
+  #LLpr(xx)
+  
+
+if args.mode==2:
+  
+  mlist=[m for m in range(nmut) if okmut_num[m]]
+  mlist.sort(key=lambda m:(extractint(num2name[m]),num2name[m]))
+  mindate=Date(args.mindate)
+  maxdate=min(args.maxdate,Date(linelist[0][0]))
+  ndays=maxdate-mindate+1
+  
+  linelist1=[]
+  for x in linelist:
+    if x[0]>maxdate: continue
+    if x[0]<mindate: break
+    linelist1.append(x)
+    x[4]=[m for m in x[4] if okmut_num[m]]
+  linelist=linelist1
+  print("Filtered linelist at time",time.process_time()-tim0)
+  print()
+
+  prior=1000
+  # M = set of mutations considered, |M|=n
+  # a[] = xx[:1<<n]       2^n offsets, indexed by subset of M
+  # gg[] = xx[1<<n:2<<n]  2^n growths, indexed by subset of M
+  # If I is a subset of M then
+  # n[I,t] = observed counts of mutation set I on day t (counting from mindate)
+  # P(I,t) = exp(a[I]+gg[I]*t)
+  # P(.,t) = sum_I P(I,t)
+  # Likelihood = const*prod_t prod_I (P(I,t)/P(.,t))^n[I,t]
+  def LL(xx):
+    off=xx[:1<<n]
+    gg=xx[1<<n:]
+    LL1=nn0@off+nn1@gg
+    den=np.exp(off[:,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+    LL1-=nn@np.log(den)
+    LL1-=prior*gg@gg/2
+    return LL1
+
+  def dLL(xx):
+    dLL1=np.concatenate([nn0,nn1])
+    off=xx[:1<<n]
+    gg=xx[1<<n:]
+    dens=np.exp(off[:,None]+gg[:,None]*np.arange(ndays))
+    den=dens.sum(axis=0)
+    dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
+    dLL1[1<<n:]-=((dens*nnt)/den).sum(axis=1)
+    dLL1[1<<n:]-=prior*gg
+    return dLL1
+  
+  def NLL(xx): return -LL(xx)/((2<<n)*ndays)
+  def NdLL(xx): return -dLL(xx)/((2<<n)*ndays)
+
+  def LLpr(xx):
+    gg=xx[1<<n:]
+    dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
+    den=dens.sum(axis=0)
+    print(" "*((7<<n)+6),end="")
+    for I in range(1<<n): print(" %9.5f"%xx[I],end="")
+    print()
+    print(" "*((7<<n)+6),end="")
+    for I in range(1<<n): print(" %9.5f"%gg[I],end="")
+    c=(8<<n)-8
+    print("    "+"-"*(c//2)+"Actual"+"-"*((c+1)//2))
+    lltot=0
+    for t in range(ndays):
+      print("%3d |"%t,end="")
+      for I in range(1<<n): print(" %6d"%nnx[I,t],end="")
+      print(" |",end="")
+      for I in range(1<<n): print(" %9.6f"%(dens[I][t]/den[t]),end="")
+      ll=0
+      for I in range(1<<n): ll+=nnx[I,t]*log(dens[I][t]/den[t])
+      print(" |",end="")
+      for I in range(1<<n): print(" %7.5f"%(nnx[I,t]/nn[t]),end="")
+      lltot+=ll
+      print(" | %14.6f %14.6f"%(ll,lltot))
+    assert abs(LL(xx)-lltot)<1e-3
+
+  # Growth effect, defined up to an additive constant
+  # GE(xx,t1)-GE(xx,t0) is well-defined
+  def GE(xx,t):
+    gg=xx[1<<n:]
+    den=np.exp(xx[:1<<n]+gg*t)
+    return gg@den/den.sum()
+    
+  M=[]
+  thr=0.001# Require at least this much improvement in growth effect
+  ge0=0
+  best0=[0,]
+  while 1:
+    best=(-1,)
+    for mnew in mlist:
+      if mnew in M: continue
+      # Contemplating M -> M u {m}
+      
+      M1=M+[mnew]
+      n=len(M1)
+      # a_I, g_i
+      # I <-> 2^n
+      # Use gauge: a_{empty}=0; (g_i don't need gauge fixing)
+      
+      # n_{t,I} = number of instances of mutation pattern I on day t
+      # nn0[I] = sum_t n_{t,I}
+      # nn1[I] = sum_t t*n_{t,I}
+      # nn[t]  = sum_I n_{t,I}
+      nn0=np.zeros(1<<n)
+      nn1=np.zeros(1<<n)
+      nn=np.zeros(ndays)
+      nnt=np.zeros(ndays)
+      nnx=np.zeros([1<<n,ndays])
+      for x in linelist:
+        I=0
+        for ml in x[4]:
+          if ml in M1: I+=1<<M1.index(ml)
+        t=x[0]-mindate
+        nn0[I]+=1
+        nn1[I]+=t
+        nn[t]+=1
+        nnt[t]+=t
+        nnx[I,t]+=1
+  
+      bounds=[(-20,20)]*(1<<n)+[(-0.5,0.5)]*(1<<n)
+      bounds[0]=(0,0)
+      bounds[1<<n]=(0,0)
+      xx=[0]*(2<<n)
+      for I in range(1,1<<n):
+        if nn0[I]==0: bounds[I]=(-50,-50);xx[I]=-50
+        if (nnx[I,:]>0).sum()<2: bounds[(1<<n)+I]=(0,0)# Set growth to zero unless there are entries on >=2 different days
+      res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+      xx=res.x
+      if not res.success: raise RuntimeError(res.message)
+      err=0
+      for i in range(len(xx)):
+        if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
+          err=1
+          print("Error:",["intercept","growth"][i>>n],"of",'+'.join(num2name[M1[j]] for j in range(n) if ((i>>j)&1)),"=",xx[i],"hit bound")
+      if err: raise RuntimeError("Optimisation hit bounds")
+      for m in M1:
+        print("%15s"%num2name[m],end="")
+      for i in range(1<<n): print("  %7.4f"%xx[(1<<n)+i],end="")
+      ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
+      print(" | %7.4f"%ge)
+      if ge>best[0]: best=(ge,mnew,xx,nn0,nn1,nn,nnx)
+      #LLpr(xx)
+    print("Best growth effect",best[0],"using",num2name[best[1]])
+    print()
+    if best[0]-best0[0]<thr: break
+    best0=best
+    M.append(best[1])
+  
+  ge,m,xx,nn0,nn1,nn,nnx=best0
+  n=len(M)
+  gg=xx[1<<n:]
+  print("Final choice:",end="")
+  for m in M: print("",num2name[m],end="")
+  print()
   print("Growth effect %.4f"%ge)
   print()
   s=sum(len(num2name[m]) for m in M)
