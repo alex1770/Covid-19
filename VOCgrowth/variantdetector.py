@@ -473,7 +473,7 @@ if args.mode==2:
   print("Filtered linelist at time",time.process_time()-tim0)
   print()
 
-  prior=1000
+  prior=100
   # M = set of mutations considered, |M|=n
   # a[] = xx[:1<<n]       2^n offsets, indexed by subset of M
   # gg[] = xx[1<<n:2<<n]  2^n growths, indexed by subset of M
@@ -588,38 +588,36 @@ if args.mode==2:
         if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
           err=1
           print("Error:",["intercept","growth"][i>>n],"of",'+'.join(num2name[M1[j]] for j in range(n) if ((i>>j)&1)),"=",xx[i],"hit bound")
-      if err: raise RuntimeError("Optimisation hit bounds")
       for m in M1:
         print("%15s"%num2name[m],end="")
       for i in range(1<<n): print("  %7.4f"%xx[(1<<n)+i],end="")
       ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
       print(" | %7.4f"%ge)
       if ge>best[0]: best=(ge,mnew,xx,nn0,nn1,nn,nnx)
+      if err: raise RuntimeError("Optimisation hit bounds")
       #LLpr(xx)
     print("Best growth effect",best[0],"using",num2name[best[1]])
     print()
     if best[0]-best0[0]<thr: break
-    best0=best
+    (ge,mnew,xx,nn0,nn1,nn,nnx)=best
+    gg=xx[1<<n:]
+    print("Mutations: ",end="")
     M.append(best[1])
-  
-  ge,m,xx,nn0,nn1,nn,nnx=best0
-  n=len(M)
-  gg=xx[1<<n:]
-  print("Final choice:",end="")
-  for m in M: print("",num2name[m],end="")
-  print()
-  print("Growth effect %.4f"%ge)
-  print()
-  s=sum(len(num2name[m]) for m in M)
-  print(" "*(s+2*n),"  Count   Offset Growth       GE0      GE1  GE1-GE0")
-  dens=[np.exp(xx[:1<<n]+gg*(now+off-mindate)) for off in [args.effectfrom,args.effectto]]
-  sdens=[sum(den) for den in dens]
-  for I in range(1<<n):
-    for i in range(n):
-      print('~ '[(I>>i)&1]+num2name[M[i]],end=" ")
-    print("%8d   %6.1f %6.3f"%(nn0[I],xx[I],gg[I]),end=" ")
-    for j in range(2):
-      print(" %8.4f"%(gg[I]*dens[j][I]/sdens[j]),end="")
-    print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])))
-  #LLpr(xx)
-  
+    for m in M: print("",num2name[m],end="")
+    print()
+    print("Growth effect %.4f"%ge)
+    print()
+    s=sum(len(num2name[m]) for m in M)
+    print(" "*(s+2*n),"  Count   Offset Growth       GE0      GE1  GE1-GE0")
+    dens=[np.exp(xx[:1<<n]+gg*(now+off-mindate)) for off in [args.effectfrom,args.effectto]]
+    sdens=[sum(den) for den in dens]
+    for I in range(1<<n):
+      for i in range(n):
+        print('~ '[(I>>i)&1]+num2name[M[i]],end=" ")
+      print("%8d   %6.1f %6.3f"%(nn0[I],xx[I],gg[I]),end=" ")
+      for j in range(2):
+        print(" %8.4f"%(gg[I]*dens[j][I]/sdens[j]),end="")
+      print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])))
+    #LLpr(xx)
+    print("\n")
+    best0=best
