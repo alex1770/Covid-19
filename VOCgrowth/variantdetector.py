@@ -7,8 +7,8 @@ from scipy.optimize import minimize
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
-mindate0=Date('2022-08-01')# Hard-coded minday for cache purposes
-minmutcount=20# Ignore mutations that have occurred less than this often
+mindate0=Date('2022-08-01')# (Hard limit for cache file) Minimum date
+minmutcount0=20# (Hard limit for cache file) Ignore mutations that have occurred less than this often
 cachedir='seqdatacachedir'
 
 parser=argparse.ArgumentParser()
@@ -16,6 +16,7 @@ parser.add_argument('-f', '--mindate',        default=mindate0,     help="Min sa
 parser.add_argument('-t', '--maxdate',        default="9999-12-31", help="Max sample date of sequence")
 parser.add_argument('-a', '--effectfrom',     type=int,default=-14, help="Growth effect start date, as offset from input data datestamp")
 parser.add_argument('-b', '--effectto',       type=int,default=35,  help="Growth effect end date, as offset from input data datestamp")
+parser.add_argument('-c', '--minmutcount',    type=int,default=minmutcount0,  help="Minimum number of occurrences of mutation")
 parser.add_argument('-g', '--gisaid',         action="store_true",  help="Use GISAID data instead of COG-UK data")
 parser.add_argument('-M', '--mode',           type=int,default=0,   help="Mode: 0=evaluate individual mutations, 1=find subsets of mutations")
 parser.add_argument('-m', '--givenmutations', default="",           help="Condition on this set of mutations (use a comma-separated list)")
@@ -54,8 +55,9 @@ def extractint(s):
     j+=1
   return int(s[i:j])
 
-# Determine whether mutation meets restrictions specified by -s argument
+# Determine whether mutation meets restrictions specified by -s argument and minmutcount
 def okmut(m):
+  if mutcounts[name2num[m]]<args.minmutcount: return False
   if args.genomesubset>=5: return True
   if m[:6]=="synSNP":# Implies COG-UK
     if args.genomesubset<=3: return False
@@ -76,7 +78,7 @@ print("Now =",now)
 print("Calculating growth from",args.mindate,"to",args.maxdate)
 print("Calculating growth effect from now%+d to now%+d ="%(args.effectfrom,args.effectto),now+args.effectfrom,"to",now+args.effectto)
 
-id=source+'_'+datamtime+'_'+mindate0+'_'+str(minmutcount)
+id=source+'_'+datamtime+'_'+mindate0+'_'+str(minmutcount0)
 fn=os.path.join(cachedir,id)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
@@ -102,10 +104,10 @@ else:
   num2name=[]
   name2num={}
   for mut in sorted(mutcounts):
-    if mutcounts[mut]>=minmutcount:
+    if mutcounts[mut]>=minmutcount0:
       name2num[mut]=len(num2name)
       num2name.append(mut)
-  print("Found %d mutations of which %d occur at least %d times, in %.3fs"%(len(mutcounts),len(num2name),minmutcount,time.process_time()-tim0))
+  print("Found %d mutations of which %d occur at least %d times, in %.3fs"%(len(mutcounts),len(num2name),minmutcount0,time.process_time()-tim0))
   nmut=len(num2name)
   linelist=[]
   mutcounts=[mutcounts[mut] for mut in num2name]
@@ -321,18 +323,19 @@ if args.mode==1:
     gg=bit@xx[1<<n:]
     dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
     den=dens.sum(axis=0)
-    print("                                   ",end="")
-    for I in range(1<<n): print(" %10.5f"%xx[I],end="")
+    print(" "*((7<<n)+6),end="")
+    for I in range(1<<n): print(" %9.5f"%xx[I],end="")
     print()
-    print("                                   ",end="")
-    for I in range(1<<n): print(" %10.5f"%gg[I],end="")
-    print()
+    print(" "*((7<<n)+6),end="")
+    for I in range(1<<n): print(" %9.5f"%gg[I],end="")
+    c=(8<<n)-8
+    print("    "+"-"*(c//2)+"Actual"+"-"*((c+1)//2))
     lltot=0
     for t in range(ndays):
       print("%3d |"%t,end="")
       for I in range(1<<n): print(" %6d"%nnx[I,t],end="")
       print(" |",end="")
-      for I in range(1<<n): print(" %10.4g"%(dens[I][t]/den[t]),end="")
+      for I in range(1<<n): print(" %9.6f"%(dens[I][t]/den[t]),end="")
       ll=0
       for I in range(1<<n): ll+=nnx[I,t]*log(dens[I][t]/den[t])
       print(" |",end="")
@@ -373,7 +376,7 @@ if args.mode==1:
       nn1=np.zeros(1<<n)
       nn=np.zeros(ndays)
       nnt=np.zeros(ndays)
-      if deb: nnx=np.zeros([1<<n,ndays])
+      nnx=np.zeros([1<<n,ndays])
       for x in linelist:
         I=0
         for ml in x[4]:
@@ -383,7 +386,7 @@ if args.mode==1:
         nn1[I]+=t
         nn[t]+=1
         nnt[t]+=t
-        if deb: nnx[I,t]+=1
+        nnx[I,t]+=1
   
       bit=np.zeros([1<<n,n])
       for i in range(1<<n):
@@ -411,17 +414,19 @@ if args.mode==1:
       #print(" ",xx,nn0,"| %7.5f"%ge)
       for i in range(n): print("  %7.4f"%xx[(1<<n)+i],end="")
       print(" | %7.4f"%ge)
-      if ge>best[0]: best=(ge,mnew,xx)
+      if ge>best[0]: best=(ge,mnew,xx,bit,nn0,nn1,nn,nnx)
       if deb: LLpr(xx)
-    ge,m,xx=best
-    print("Best growth effect",ge,"using",num2name[m])
+    print("Best growth effect",best[0],"using",num2name[best[1]])
     print()
-    if ge-best0[0]<thr: break
+    if best[0]-best0[0]<thr: break
     best0=best
-    M.append(m)
+    M.append(best[1])
+  
   print("Final choice")
-  ge,m,xx=best0
+  ge,m,xx,bit,nn0,nn1,nn,nnx=best0
   n=len(M)
   for i,m in enumerate(M):
     print("%15s  %7.4f"%(num2name[m],xx[(1<<n)+i]))
   print("Growth effect %.4f"%ge)
+  LLpr(xx)
+  
