@@ -287,7 +287,7 @@ if args.mode==1:
   mlist=[m for m in range(nmut) if okmut_num[m]]
   def order(name):
     f=name.find('_') if args.gisaid else name.find(':')
-    return (name[:f],extractint(name),name))
+    return (name[:f],extractint(name),name)
   mlist.sort(key=lambda m:order(num2name[m]))
   mindate=Date(args.mindate)
   maxdate=min(args.maxdate,Date(linelist[0][0]))
@@ -463,7 +463,7 @@ if args.mode==2:
   mlist=[m for m in range(nmut) if okmut_num[m]]
   def order(name):
     f=name.find('_') if args.gisaid else name.find(':')
-    return (name[:f],extractint(name),name))
+    return (name[:f],extractint(name),name)
   mlist.sort(key=lambda m:order(num2name[m]))
   mindate=Date(args.mindate)
   maxdate=min(args.maxdate,Date(linelist[0][0]))
