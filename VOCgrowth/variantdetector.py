@@ -568,6 +568,7 @@ if args.mode==2:
       nn=np.zeros(ndays)
       nnt=np.zeros(ndays)
       nnx=np.zeros([1<<n,ndays])
+      lins=[{} for I in range(1<<n)]
       for x in linelist:
         I=0
         for ml in x[4]:
@@ -578,6 +579,7 @@ if args.mode==2:
         nn[t]+=1
         nnt[t]+=t
         nnx[I,t]+=1
+        lins[I][x[2]]=lins[I].get(x[2],0)+1
   
       bounds=[(-20,20)]*(1<<n)+[(-0.5,0.5)]*(1<<n)
       bounds[0]=(0,0)
@@ -600,7 +602,7 @@ if args.mode==2:
       ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
       print(" | %7.4f"%ge)
       if ge>best[0]: best=(ge,mnew,xx,nn0,nn1,nn,nnx)
-      if err: raise RuntimeError("Optimisation hit bounds")
+      #if err: raise RuntimeError("Optimisation hit bounds")
       #LLpr(xx)
       sys.stdout.flush()
     print("Best growth effect",best[0],"using",num2name[best[1]])
@@ -624,7 +626,19 @@ if args.mode==2:
       print("%8d   %6.1f %6.3f"%(nn0[I],xx[I],gg[I]),end=" ")
       for j in range(2):
         print(" %8.4f"%(gg[I]*dens[j][I]/sdens[j]),end="")
-      print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])))
+      print(" %8.4f"%(gg[I]*(dens[1][I]/sdens[1]-dens[0][I]/sdens[0])),end="")
+      d=list(lins[I])
+      d.sort(key=lambda x: -lins[I][x])
+      s0=sum(lins[I].values())
+      print(" |",end="")
+      s=0
+      for i in range(len(d)):
+        if s>0.8*s0: break
+        m=lins[I][d[i]]
+        print(" %s=%d"%(contractlin(d[i]),m),end="")
+        s+=m
+      print()
+    
     #LLpr(xx)
     print("\n")
     sys.stdout.flush()
