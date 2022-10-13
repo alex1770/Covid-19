@@ -205,11 +205,9 @@ def getgrowth(daycounts,mutdaycount):
 
   return c[0],c[1],sqrt(C[1,1]),tv
 
-daycounts,mutdaycounts,lincounts,mutlincounts = getmutday(linelist, mindate=args.mindate, maxdate=args.maxdate, givenmuts=args.givenmutations, lineage=args.lineage, location=args.location)
-
-print("Got all mutation-day counts at time",time.process_time()-tim0)
-
 if args.mode==0:
+  daycounts,mutdaycounts,lincounts,mutlincounts = getmutday(linelist, mindate=args.mindate, maxdate=args.maxdate, givenmuts=args.givenmutations, lineage=args.lineage, location=args.location)
+  print("Got all mutation-day counts at time",time.process_time()-tim0)
   growth={}
   nsd=3
   for mut in range(nmut):
@@ -281,28 +279,29 @@ if args.mode==0:
     print()
 
 
+mlist=[m for m in range(nmut) if okmut_num[m]]
+def order(name):
+  f=name.find('_') if args.gisaid else name.find(':')
+  return (name[:f],extractint(name),name)
+mlist.sort(key=lambda m:order(num2name[m]))
+mindate=Date(args.mindate)
+maxdate=min(args.maxdate,Date(linelist[0][0]))
+ndays=maxdate-mindate+1
+
+linelist1=[]
+location=args.location
+for x in linelist:
+  if x[0]>maxdate: continue
+  if x[0]<mindate: break
+  if location==None or x[1][:len(location)]==location:
+    linelist1.append(x)
+    x[4]=[m for m in x[4] if okmut_num[m]]
+linelist=linelist1
+print("Filtered linelist at time",time.process_time()-tim0)
+print()
 
 if args.mode==1:
   
-  mlist=[m for m in range(nmut) if okmut_num[m]]
-  def order(name):
-    f=name.find('_') if args.gisaid else name.find(':')
-    return (name[:f],extractint(name),name)
-  mlist.sort(key=lambda m:order(num2name[m]))
-  mindate=Date(args.mindate)
-  maxdate=min(args.maxdate,Date(linelist[0][0]))
-  ndays=maxdate-mindate+1
-  
-  linelist1=[]
-  for x in linelist:
-    if x[0]>maxdate: continue
-    if x[0]<mindate: break
-    linelist1.append(x)
-    x[4]=[m for m in x[4] if okmut_num[m]]
-  linelist=linelist1
-  print("Filtered linelist at time",time.process_time()-tim0)
-  print()
-
   prior=100
   # M = set of mutations considered, |M|=n
   # a[] = xx[:1<<n]  2^n offsets, indexed by subset of M
@@ -460,24 +459,6 @@ if args.mode==1:
 
 if args.mode==2:
   
-  mlist=[m for m in range(nmut) if okmut_num[m]]
-  def order(name):
-    f=name.find('_') if args.gisaid else name.find(':')
-    return (name[:f],extractint(name),name)
-  mlist.sort(key=lambda m:order(num2name[m]))
-  mindate=Date(args.mindate)
-  maxdate=min(args.maxdate,Date(linelist[0][0]))
-  ndays=maxdate-mindate+1
-  
-  linelist1=[]
-  for x in linelist:
-    if x[0]>maxdate: continue
-    if x[0]<mindate: break
-    linelist1.append(x)
-    x[4]=[m for m in x[4] if okmut_num[m]]
-  linelist=linelist1
-  print("Filtered linelist at time",time.process_time()-tim0)
-  print()
 
   prior=100
   # M = set of mutations considered, |M|=n
