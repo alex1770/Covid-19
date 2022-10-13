@@ -582,14 +582,14 @@ if args.mode==2:
       for i in range(1<<n): print("  %7.4f"%xx[(1<<n)+i],end="")
       ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
       print(" | %7.4f"%ge)
-      if ge>best[0]: best=(ge,mnew,xx,nn0,nn1,nn,nnx)
+      if ge>best[0]: best=(ge,mnew,xx,nn0,nn1,nn,nnx,nnt,lins)
       #if err: raise RuntimeError("Optimisation hit bounds")
       #LLpr(xx)
       sys.stdout.flush()
     print("Best growth effect",best[0],"using",num2name[best[1]])
     print()
     if best[0]-best0[0]<thr: break
-    (ge,mnew,xx,nn0,nn1,nn,nnx)=best
+    (ge,mnew,xx,nn0,nn1,nn,nnx,nnt,lins)=best
     gg=xx[1<<n:]
     print("Mutations: ",end="")
     M.append(best[1])
