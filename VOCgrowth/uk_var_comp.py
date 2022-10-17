@@ -233,7 +233,7 @@ def Hessian(xx,eps):
 if not args.simple:
   bounds=[(c[i]-c[0]-30,c[i]-c[0]+30) for i in range(numv)]+[(c[i]-c[numv]-0.2,c[i]-c[numv]+0.2) for i in range(numv,2*numv)]+[(min(1.01,args.maxmult),args.maxmult)]
   bounds[0]=bounds[numv]=(0,0)
-  res=minimize(NLL,list(c)+[min(2,args.maxmult)],bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+  res=minimize(NLL,list(c)+[min(2,args.maxmult)],bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-10, 'maxiter':10000})
   if not res.success: raise RuntimeError(res.message)
   print("Log likelihood: %.3f"%(LL(res.x)))
   xx=res.x
