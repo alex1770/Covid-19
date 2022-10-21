@@ -76,7 +76,7 @@ else:
     targlinsexact.append(expandlin(exact))
     targlinsprefix.append(expandlin(prefix))
   data={}
-  for (name,date,p2,lin,mutations) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','lineage','mutations']):
+  for (name,date,p2,lin,mutations) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','usher_lineage','mutations']):
     #if p2!='Y': continue
     if location!="UK":
       country=name.split('/')[0]
@@ -85,7 +85,7 @@ else:
     mutations='|'+mutations+'|'
 
     # Possibly refine COG-UK lineage, or replace an Unassigned lineage, with lineage from decision tree
-    if date>="2022-06-01": lin=classify(mutations,lin)
+    # if date>="2022-06-01": lin=classify(mutations,lin)
     lin_e=expandlin(lin)
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
