@@ -39,7 +39,15 @@ def manualclassifycog(cl,mutations):
   # BE.1.1.stuff -> BQ.stuff
   if cl=="BE.1.1" and "S:K444T" in mutations: cl="BE.1.1.1"
   if cl=="BE.1.1.1" and "S:N460K" in mutations: cl="BQ.1"
-  if cl=="BQ.1" and "S:R346T" in mutations: cl="BQ.1.1"
+  if cl=="BQ.1":
+    if "S:R346T" in mutations:
+      if "orf1ab:V6040A" in mutations: cl="BQ.1.1.1"
+      else: cl="BQ.1.1"
+    elif "S:I666V" in mutations: cl="BQ.1.2"
+    elif "S:E619Q" in mutations: cl="BQ.1.3"
+    elif "S:R190T" in mutations: cl="BQ.1.4"
+    elif "orf1ab:T5477I" in mutations: cl="BQ.1.5"
+    elif "orf1ab:S505F" in mutations: cl="BQ.1.8"
 
   # Offshoots of BA.2.75.*
   if cl=="BA.2.75.2" and "S:T604I" in mutations and "S:L452R" in mutations: cl="CA.1"
@@ -76,7 +84,11 @@ def manualclassifygisaid(cl,mutations):
   # BE.1.1.stuff -> BQ.stuff
   if cl=="BE.1.1" and "Spike_K444T" in mutations: cl="BE.1.1.1"
   if cl=="BE.1.1.1" and "Spike_N460K" in mutations: cl="BQ.1"
-  if cl=="BQ.1" and "Spike_R346T" in mutations: cl="BQ.1.1"
+  if cl=="BQ.1":
+    if "Spike_R346T" in mutations: cl="BQ.1.1"
+    elif "Spike_I666V" in mutations: cl="BQ.1.2"
+    elif "Spike_E619Q" in mutations: cl="BQ.1.3"
+    elif "Spike_R190T" in mutations: cl="BQ.1.4"
 
   # Offshoots of BA.2.75.*
   if cl=="BA.2.75.2" and "Spike_T604I" in mutations and "Spike_L452R" in mutations: cl="CA.1"
