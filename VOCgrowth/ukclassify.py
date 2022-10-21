@@ -27,8 +27,8 @@ print("Date of COG metadata file:",cogdate)
 
 fn="cog_metadata_furtherclassified."+cogdate+".csv"
 fp=open(fn,'w')
-print("sequence_name,sample_date,cog_lineage,new_lineage,full_lineage",file=fp)
-for (name,date,p2,lin,mutations) in csvrows(infile,['sequence_name','sample_date','is_pillar_2','lineage','mutations']):
+print("sequence_name,sample_date,cog_lineage,cog_usherlineage,new_lineage,full_lineage",file=fp)
+for (name,date,p2,lin,ushlin,mutations) in csvrows(infile,['sequence_name','sample_date','is_pillar_2','lineage','usher_lineage','mutations']):
   if location!="UK":
     country=name.split('/')[0]
     if country!=location: continue
@@ -43,6 +43,6 @@ for (name,date,p2,lin,mutations) in csvrows(infile,['sequence_name','sample_date
   if date>="2022-06-01": newlin=classify(mutations,lin)
   else: newlin=lin
 
-  print(f"{name},{date},{lin},{contractlin(newlin)},{expandlin(newlin)}",file=fp)
+  print(f"{name},{date},{lin},{ushlin},{contractlin(newlin)},{expandlin(newlin)}",file=fp)
 fp.close()
 print("Written",fn)
