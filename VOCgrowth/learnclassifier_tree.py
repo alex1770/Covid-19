@@ -62,6 +62,18 @@ accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(282
 # plus 144, 252, 484 that I added
 handpickedsubset=[144,252,346,356,444,445,446,450,452,460,484,486,490,493,494]
 
+def extractint(s):
+  i=0
+  while i<len(s):
+    if s[i].isdigit(): break
+    i+=1
+  if i==len(s): return -1
+  j=i
+  while j<len(s):
+    if not s[j].isdigit(): break
+    j+=1
+  return int(s[i:j])
+
 def okmut(m):
   if args.genomesubset>=5: return True
   if m[:6]=="synSNP":# Implies COG-UK
