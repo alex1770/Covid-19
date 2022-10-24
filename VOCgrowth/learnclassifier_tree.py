@@ -20,7 +20,7 @@ parser.add_argument('-M', '--maxleaves',   type=int, default=50,     help="Maxim
 parser.add_argument('-l', '--lineages',                              help="Comma-separated list of lineages to classify (takes precedence over --numtop)")
 parser.add_argument('-n', '--numtoplin',   type=int, default=5,      help="Classify the most prevalent 'n' lineages (alternative to specifying target lineages with --lineages)")
 parser.add_argument('-p', '--printtree',   type=int, default=20,     help="Print decision tree with this many leaves")
-parser.add_argument('-s', '--synperm',     type=int, default=1,      help="[Only applies to COG-UK] 0 = disallow all mutations that COG-UK designates as synSNPs, 1 = allow synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 2 = allow all synSNPs")
+parser.add_argument('-s', '--genomesubset', type=int, default=4,     help="0 = Only consider mutations in a particular hand-picked subset of RBD, 1 = Only consider mutations in receptor-binding domain, 2 = Only consider mutations in spike gene, 3 = Consider mutations in any gene, but not (COG-designated) synSNPs, 4 = Consider synSNPs that are non-synonymous in some overlapping and functional ORF (e.g., A28330G), 5 = Consider any mutation, including all synSNPs")
 args=parser.parse_args()
 maxcol=1000000
 
@@ -28,6 +28,14 @@ if args.gisaid:
   infile='metadata_sorted.tsv';inputsorted=True
 else:
   infile='cog_metadata_sorted.csv';inputsorted=True
+
+def genomesubsetdesc(s):
+  if s==0: return "in hand-picked subset of RBD specified by spike locations "+str(handpickedsubset)
+  elif s==1: return "in the RBD"
+  elif s==2: return "in the spike gene"
+  elif s==3: return "not (COG-designated) synSNPs"
+  elif s==4: return "not (COG-designated) synSNPs, except those that overlap with a (thought to be) functional ORF, e.g., A28330G"
+  else: return "any location in genome"
 
 def prparams(prefix="",file=sys.stdout):
   print(prefix+"Command line:",' '.join(sys.argv),file=file)
@@ -37,7 +45,7 @@ def prparams(prefix="",file=sys.stdout):
   print(prefix+"Mincount:",args.mincount,file=file)
   print(prefix+"Maxleaves:",args.maxleaves,file=file)
   print(prefix+"Database:","GISAID" if args.gisaid else "COG-UK",file=file)
-  print(prefix+"synSNP permissiveness:",args.synperm,file=file)
+  print(prefix+"Allowed locations:",genomesubsetdesc(args.genomesubset),file=file)
   print(prefix+"Max N-content:",args.maxbad,file=file)
   print(prefix+"Number of leaves in decision tree:",args.printtree,file=file)
 
@@ -49,11 +57,24 @@ print()
 # https://virological.org/t/sars-cov-2-dont-ignore-non-canonical-genes/740/2
 # 
 accessorygenes=set(range(21744,21861)).union(range(25457,25580)).union(range(28284,28575))
-def oksyn(m,perm):
-  if args.gisaid or perm==2 or m[:6]!="synSNP": return True
-  if perm==0: return False
-  loc=int(m[8:-1])
-  return loc in accessorygenes
+
+# Hand-picked RBD subset from https://twitter.com/CorneliusRoemer/status/1576903120608600064, https://cov-spectrum.org/collections/54?region=Europe
+# plus 144, 252, 484 that I added
+handpickedsubset=[144,252,346,356,444,445,446,450,452,460,484,486,490,493,494]
+
+def okmut(m):
+  if args.genomesubset>=5: return True
+  if m[:6]=="synSNP":# Implies COG-UK
+    if args.genomesubset<=3: return False
+    loc=extractint(m)
+    return loc in accessorygenes
+  if args.genomesubset>=3: return True
+  if args.gisaid and m[:6]=="Spike_": m="S:"+m[6:]
+  if m[:2]!="S:": return False
+  if args.genomesubset==2: return True
+  loc=extractint(m)
+  if args.genomesubset==1: return loc>=329 and loc<=521# RBD
+  return loc in handpickedsubset
 
 def mutationlist(mutations):
   if args.gisaid: return mutations[1:-1].split(',')
@@ -92,8 +113,8 @@ for (date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
 
 print("Found",len(ml),"relevant entries since",args.mindate)
 print("Discarded",t1,"from",t0,"(%.1f%%) due to bad coverage"%(t1/t0*100))
-okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and oksyn(m,args.synperm))
-print("Found",len(allm),"mutations, of which",len(okm),("pass synSNP permissiveness %d and"%args.synperm if not args.gisaid else ""),"have occurred at least",args.mincount,"times")
+okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and okmut(m))
+print("Found",len(allm),"mutations, of which",len(okm),"have occurred at least",args.mincount,"times and are",genomesubsetdesc(args.genomesubset))
 
 def patmatch(lin):
   ind=len(lineages)
