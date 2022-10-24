@@ -98,7 +98,7 @@ allm={}
 ml=[]
 numl={}
 if args.gisaid: keys=["Collection date","Pango lineage","AA Substitutions","N-Content"];sep='\t'
-else: keys=["sample_date","lineage","mutations","ambiguities"];sep=','
+else: keys=["sample_date","usher_lineage","mutations","ambiguities"];sep=','
 t0=t1=0
 for (date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
   if len(date)<10: continue
