@@ -45,7 +45,7 @@ def prparams(prefix="",file=sys.stdout):
   print(prefix+"Mincount:",args.mincount,file=file)
   print(prefix+"Maxleaves:",args.maxleaves,file=file)
   print(prefix+"Database:","GISAID" if args.gisaid else "COG-UK",file=file)
-  print(prefix+"Allowed locations:",genomesubsetdesc(args.genomesubset),file=file)
+  print(prefix+"Allowed mutation locations:",genomesubsetdesc(args.genomesubset),file=file)
   print(prefix+"Max N-content:",args.maxbad,file=file)
   print(prefix+"Number of leaves in decision tree:",args.printtree,file=file)
 
