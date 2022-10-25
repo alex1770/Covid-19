@@ -290,7 +290,7 @@ leaves=1
 while leaves<args.maxleaves:
   best=None# Leaf with biggest available improvement
   for leaf in tr.getleaves():
-    if leaf.bestm==None:
+    if leaf.bestm==None and leaf.ent<0:
       for m in okm:
         (withm,withoutm)=splitindexlist(leaf.indexlist,m)
         improvement=getstats(withm)[1]+getstats(withoutm)[1]-leaf.ent
