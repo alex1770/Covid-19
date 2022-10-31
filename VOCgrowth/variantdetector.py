@@ -87,7 +87,7 @@ if os.path.isfile(fn):
 else:
   print("Reading %s"%datafile)
   if args.gisaid: keys=["Collection date","Location","Pango lineage","Variant","AA Substitutions"];sep='\t'
-  else: keys=['sample_date',"adm1",'lineage','scorpio_call','mutations'];sep=','
+  else: keys=['sample_date',"adm1",'usher_lineage','scorpio_call','mutations'];sep=','
   mutcounts={}
   with open(datafile,'r') as fp:
     for (dt,loc,lin,var,mutstring) in csvrows_it(fp,keys,sep=sep):
