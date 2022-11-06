@@ -4,6 +4,7 @@ import numpy as np
 from math import log,exp,sqrt,floor
 from classify import classify, contractlin, expandlin
 from scipy.optimize import minimize
+from collections import defaultdict
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
@@ -279,11 +280,11 @@ if args.mode==0:
     print()
 
 
-mlist=[m for m in range(nmut) if okmut_num[m]]
+okmlist=[m for m in range(nmut) if okmut_num[m]]
 def order(name):
   f=name.find('_') if args.gisaid else name.find(':')
   return (name[:f],extractint(name),name)
-mlist.sort(key=lambda m:order(num2name[m]))
+okmlist.sort(key=lambda m:order(num2name[m]))
 mindate=Date(args.mindate)
 maxdate=min(args.maxdate,Date(linelist[0][0]))
 ndays=maxdate-mindate+1
@@ -371,7 +372,7 @@ if args.mode==1:
   best0=[0,]
   while 1:
     best=(-1,)
-    for mnew in mlist:
+    for mnew in okmlist:
       if mnew in M: continue
       # Contemplating M -> M u {m}
       
@@ -459,7 +460,6 @@ if args.mode==1:
 
 if args.mode==2:
   
-
   prior=100
   # M = set of mutations considered, |M|=n
   # a[] = xx[:1<<n]       2^n offsets, indexed by subset of M
@@ -530,7 +530,7 @@ if args.mode==2:
   best0=[0,]
   while 1:
     best=(-1,)
-    for mnew in mlist:
+    for mnew in okmlist:
       if mnew in M: continue
       # Contemplating M -> M u {m}
       
@@ -624,3 +624,121 @@ if args.mode==2:
     print("\n")
     sys.stdout.flush()
     best0=best
+
+
+
+
+
+
+
+def splitindexlist(indexlist,mutation):
+  withm=[];withoutm=[]
+  for i in indexlist:
+    if mutation in linelist[i][4]: withm.append(i)
+    else: withoutm.append(i)
+  return (withm,withoutm)
+
+class tree:
+  mutation=None
+  left=None# With mutation
+  right=None# Without mutation
+  # indexlist is list of sequences matching the mutation specifications of ancestors
+  def __init__(self,indexlist=range(len(linelist)),parent=None):
+    self.parent=parent
+    self.indexlist=list(indexlist)
+    #self.count,self.ent=getstats(self.indexlist)
+  def copy(self):
+    t=tree(self.indexlist)
+    t.parent=self.parent
+    if self.mutation!=None:
+      t.mutation=self.mutation
+      t.left=self.left.copy()
+      t.right=self.right.copy()
+      t.left.parent=t.right.parent=t
+    return t
+  def pr(self,mlist=[],cutoff=0.9):
+    if self.mutation!=None:
+      self.left.pr(mlist+["+"+num2name[self.mutation]])
+      self.right.pr(mlist+["-"+num2name[self.mutation]])
+      return
+    print("%6d  "%len(self.indexlist),end="")
+    for m in mlist: print(m,end=" ")
+    d=defaultdict(int)
+    for i in self.indexlist: d[linelist[i][2]]+=1
+    l=list(d);l.sort(key=lambda x:-d[x])
+    tot=0
+    for lin in l:
+      if tot>cutoff*len(self.indexlist): print(" ...",end="");break
+      print(f" {d[lin]}x{contractlin(lin)}",end="")
+      tot+=d[lin]
+    print()
+  def split(self,mutation):
+    if self.mutation!=None: raise RuntimeError("Can't split already-split node")
+    (left,right)=splitindexlist(self.indexlist,mutation)
+    self.mutation=mutation
+    self.left=tree(left,self)
+    self.right=tree(right,self)
+  def getleaves(self):
+    if self.mutation==None: yield self;return
+    for leaf in self.left.getleaves(): yield leaf
+    for leaf in self.right.getleaves(): yield leaf
+  # Collapse the tree under 'self' into a single node, returning a new allocated tree
+  def join(self):
+    indexlist=sum((x.indexlist for x in self.getleaves()),[])
+    t=tree(indexlist)
+    t.parent=self.parent
+    return t
+  # Collapse the tree under 'self' into a single (leaf) node, modifying self inplace
+  def join_inplace(self):
+    indexlist=sum((x.indexlist for x in self.getleaves()),[])
+    self.indexlist=indexlist
+    self.mutation=None
+    self.left=self.right=None
+
+if args.mode==3:
+  
+  prior=100
+  tr=tree()
+
+  # xx[:n]    = offsets
+  # xx[n:2*n] = growths
+  def LL(xx):
+    gg=bit@xx[1<<n:]
+    LL1=nn0@xx[:1<<n]+nn1@gg
+    den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+    LL1-=nn@np.log(den)
+    LL1-=prior*xx[1<<n:]@xx[1<<n:]/2
+    return LL1
+
+  def dLL(xx):
+    dLL1=np.concatenate([nn0,nn1@bit])
+    gg=bit@xx[1<<n:]
+    dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
+    den=dens.sum(axis=0)
+    dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
+    dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
+    dLL1[1<<n:]-=prior*xx[1<<n:]
+    return dLL1
+
+  mincount=2
+  n=len(list(tr.getleaves()))+1
+  for leaf in tr.getleaves():
+    orig=leaf.copy()
+    for mut in okmlist:
+      print()
+      print("Trying mutation",num2name[mut],"on this leaf:")
+      leaf.pr()
+      leaf.split(mut)
+      print("yielding:")
+      leaf.pr()
+      # n = #leaves
+      # n-1 = #internal nodes
+      ind_l=leaf.left.indexlist
+      ind_r=leaf.right.indexlist
+      if len(ind_l)>=mincount and len(ind_r)>=mincount:
+        P=np.zeros([2*n-1,2*n-1])
+        D=np.zeros(n-1)
+        
+        poip
+      leaf.join_inplace()
+      
