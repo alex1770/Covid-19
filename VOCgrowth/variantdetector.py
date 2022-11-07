@@ -731,14 +731,47 @@ if args.mode==3:
       leaf.split(mut)
       print("yielding:")
       leaf.pr()
-      # n = #leaves
-      # n-1 = #internal nodes
+      # First stage indexing, before marginalising out internal nodes:
+      # 0, ..., n-1  : n #leaves
+      # n, ..., 2n-2 : n-1 #internal nodes
       ind_l=leaf.left.indexlist
       ind_r=leaf.right.indexlist
+      # Introduction of change in growth rates of descendents of an internal node:
+      # If node N has a growth, g(N)=X, and children L and R with number of sequences |L|, |R| resp,
+      # the the growth of its children are:
+      # g(L) = X-|R|/(|L|+|R|)*Delta
+      # g(R) = X+|L|/(|L|+|R|)*Delta
+      # where Delta ~ N(0,global constant)
+      # because we want
+      # (i) g(R)-g(L) = Delta, because it is supposed that any mutation introduces same distribution of growth differences
+      # (ii) (|L|*g(L) + |R|*g(R))/(|L|+|R|) = g(N), because before we've split the node N (when it's a leaf), we want g(N) to be
+      #                                              as accurate a guess as possible as to the growth rate of the mixed population of |L|+|R| variants,
+      #                                              so you weight L and R types according to their relative prevalence in the mixture.
       if len(ind_l)>=mincount and len(ind_r)>=mincount:
         P=np.zeros([2*n-1,2*n-1])
-        D=np.zeros(n-1)
-        
+        leafcount=intcount=0
+        leaf2node=[]
+        def makeprior(node,intcoeffs):
+          global leafcount,intcount
+          if node.mutation is None:
+            node.ind=leafcount
+            # Add (g_leafcount - sum{i<n-1}intcoeffs[i]*Delta_i)^2 to quadratic form defined by precision matrix, P
+            P[leafcount,leafcount]+=1
+            P[leafcount,n:]-=intcoeffs
+            P[n:,leafcount]-=intcoeffs
+            P[n:,n:]+=np.outer(intcoeffs,intcoeffs)
+            leaf2node.append(node)
+            leafcount+=1
+          else:
+            #node.ind=intcount
+            l=len(node.left.indexlist)
+            r=len(node.right.indexlist)
+            ic=intcoeffs.copy()
+            ic[intcount]-=r/(l+r)
+            makeprior(node.left,ic)
+            ic[intcount]+=1
+            makeprior(node.right,ic)
+            intcount+=1
         poip
       leaf.join_inplace()
       
