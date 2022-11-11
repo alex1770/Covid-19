@@ -70,7 +70,7 @@ else:
   targlinsprefix=[]
   for lin0 in Vnames:
     lin=expandlin(lin0)
-    if lin[-2:]=='.*': exact="-";prefix=lin[:-1]
+    if lin=='*' or lin[-2:]=='.*': exact="-";prefix=lin[:-1]
     elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
     else: exact=lin;prefix="-"
     targlinsexact.append(expandlin(exact))
