@@ -25,17 +25,19 @@ set -e
     #python3 uk_var_comp.py -f 2022-07-01 -b -l 'BA.5.2,BF.7,BA.2.75.1,BA.2.75.2,BA.2.75.5' -F30
     #python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.1,BA.2.75.2,BA.2.75.5,BA.4.6,BA.5.1.12,BA.5.1+S:R346T,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BE.1,BE.1.1,BF.11,BF.3,BF.5,BF.7,BA.2.12.1,BA.1*,BA.2*,BA.4*,BA.5*' -F30
     #python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.2,BA.2.75.5,BN.1,BA.4.6,BA.5.1.12,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.7,BM.1.1,BA.2.12.1,BQ.1,BQ.1.1,BA.1*,BA.2*,BA.4*,BA.5*,BA.2.75.*' -F30
-    python3 uk_var_comp.py -f 2022-09-01 -p -b -l 'BA.5.2,BQ.1,BQ.1.1,XBB.1' -F30
-    python3 uk_var_comp.py -f 2022-09-01 -l 'BA.5.1,BA.2.75.2,BA.2.75.5,BN.1,BA.4.6,BA.5.1.12,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.7,BF.11,BM.1.1,BQ.1,BQ.1.1,XBB,XBB.1,BA.*,BA.2.75.*,BA.4*,BA.5*' -F30
+    #python3 uk_var_comp.py -f 2022-09-01 -p -b -l 'BA.5.2,BQ.1,BQ.1.1,XBB.1' -F30
+    #python3 uk_var_comp.py -f 2022-09-01 -l 'BA.5.1,BA.2.75.2,BA.2.75.5,BN.1,BA.4.6,BA.5.1.12,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.7,BF.11,BM.1.1,BQ.1,BQ.1.1,XBB,XBB.1,BA.*,BA.2.75.*,BA.4*,BA.5*' -F30
+    python3 uk_var_comp.py -f 2022-09-15 -p -b -l 'BQ.1.1,BQ.1.8,BQ.1.1.8,XBB.1' -F30
+    python3 uk_var_comp.py -f 2022-09-15 -l 'BA.5.1,BA.2.75.2,BA.4.6,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BA.5.2.13,BA.5.2.35,BF.5,BF.7,BF.11,BQ.1,BQ.1.1,BQ.1.8,BQ.1.1.8,BE.1.1,XBB,XBB.1,*,BA.2.75.*,BA.4*,BA.5*,BF.*,BN.1.*' -F30
 )
 
 make
 python3 maketrend.py
 
 bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.2_BQ.1_BQ.1.1_XBB.1.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.2_BA.2.75.5_BN.1_BA.4.6_BA.5.1.12_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BF.7_BF.11_BM.1.1_BQ.1_BQ.1.1_XBB_XBB.1_BA.*_BA.2.75.*_BA.4*_BA.5*.variantpressure.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.2_BA.2.75.5_BN.1_BA.4.6_BA.5.1.12_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BF.7_BF.11_BM.1.1_BQ.1_BQ.1.1_XBB_XBB.1_BA.*_BA.2.75.*_BA.4*_BA.5*.growthproj.png'
+bigpics=$bigpics' VOCgrowth/UK_BQ.1.1_BQ.1.8_BQ.1.1.8_XBB.1.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.2_BA.4.6_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BA.5.2.13_BA.5.2.35_BF.5_BF.7_BF.11_BQ.1_BQ.1.1_BQ.1.8_BQ.1.1.8_BE.1.1_XBB_XBB.1_*_BA.2.75.*_BA.4*_BA.5*_BF.*_BN.1.*.variantpressure.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.1_BA.2.75.2_BA.4.6_BA.5.2_BA.5.2.1_BA.5.2.6_BA.5.2.7_BA.5.2.13_BA.5.2.35_BF.5_BF.7_BF.11_BQ.1_BQ.1.1_BQ.1.8_BQ.1.1.8_BE.1.1_XBB_XBB.1_*_BA.2.75.*_BA.4*_BA.5*_BF.*_BN.1.*.growthproj.png'
 
 set -o noglob
 pics=$bigpics
