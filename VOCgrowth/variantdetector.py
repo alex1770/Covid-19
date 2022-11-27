@@ -750,28 +750,34 @@ if args.mode==3:
       if len(ind_l)>=mincount and len(ind_r)>=mincount:
         P=np.zeros([2*n-1,2*n-1])
         leafcount=intcount=0
-        leaf2node=[]
+        leafnodes=[]
+        beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
+        gamma=100
         def makeprior(node,intcoeffs):
           global leafcount,intcount
           if node.mutation is None:
             node.ind=leafcount
             # Add (g_leafcount - sum{i<n-1}intcoeffs[i]*Delta_i)^2 to quadratic form defined by precision matrix, P
-            P[leafcount,leafcount]+=1
-            P[leafcount,n:]-=intcoeffs
-            P[n:,leafcount]-=intcoeffs
-            P[n:,n:]+=np.outer(intcoeffs,intcoeffs)
-            leaf2node.append(node)
+            P[leafcount,leafcount]+=1*gamma
+            P[leafcount,n:]-=intcoeffs*gamma
+            P[n:,leafcount]-=intcoeffs*gamma
+            P[n:,n:]+=np.outer(intcoeffs,intcoeffs)*gamma
+            leafnodes.append(node)
             leafcount+=1
           else:
             #node.ind=intcount
             l=len(node.left.indexlist)
             r=len(node.right.indexlist)
+            P[n+intcount,n+intcount]+=beta
             ic=intcoeffs.copy()
             ic[intcount]-=r/(l+r)
             makeprior(node.left,ic)
             ic[intcount]+=1
             makeprior(node.right,ic)
             intcount+=1
-        poip
+        makeprior(tr,np.zeros(n-1))
+        C=np.linalg.inv(P)
+        print(C)
+        poi
       leaf.join_inplace()
       
