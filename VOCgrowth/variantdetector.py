@@ -133,6 +133,7 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump([linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts],fp)
 
+# linelist[mutation index] = [day, location, expandedlineage, broadvariant[not used], mutation list]
 print("Got linelist at time",time.process_time()-tim0)
 
 okmut_num=[okmut(x) for x in num2name]
@@ -720,64 +721,56 @@ if args.mode==3:
     dLL1[1<<n:]-=prior*xx[1<<n:]
     return dLL1
 
+  mused=set()# Mutatons used so far
+  #tr.split(425);mused.add(425)#alter
   mincount=2
   n=len(list(tr.getleaves()))+1
-  for leaf in tr.getleaves():
-    orig=leaf.copy()
+  for branchleaf in tr.getleaves():
+    #orig=branchleaf.copy()
     for mut in okmlist:
+      newmused=sorted(list(mused.union([mut])))
       print()
       print("Trying mutation",num2name[mut],"on this leaf:")
-      leaf.pr()
-      leaf.split(mut)
+      branchleaf.pr()
+      branchleaf.split(mut)
       print("yielding:")
-      leaf.pr()
+      branchleaf.pr()
+      m=len(newmused)
       # First stage indexing, before marginalising out internal nodes:
       # 0, ..., n-1  : n #leaves
-      # n, ..., 2n-2 : n-1 #internal nodes
-      ind_l=leaf.left.indexlist
-      ind_r=leaf.right.indexlist
-      # Introduction of change in growth rates of descendents of an internal node:
-      # If node N has a growth, g(N)=X, and children L and R with number of sequences |L|, |R| resp,
-      # the the growth of its children are:
-      # g(L) = X-|R|/(|L|+|R|)*Delta
-      # g(R) = X+|L|/(|L|+|R|)*Delta
-      # where Delta ~ N(0,global constant)
-      # because we want
-      # (i) g(R)-g(L) = Delta, because it is supposed that any mutation introduces same distribution of growth differences
-      # (ii) (|L|*g(L) + |R|*g(R))/(|L|+|R|) = g(N), because before we've split the node N (when it's a leaf), we want g(N) to be
-      #                                              as accurate a guess as possible as to the growth rate of the mixed population of |L|+|R| variants,
-      #                                              so you weight L and R types according to their relative prevalence in the mixture.
+      # n, ..., n+m-1 : m #mutations
+      ind_l=branchleaf.left.indexlist
+      ind_r=branchleaf.right.indexlist
       if len(ind_l)>=mincount and len(ind_r)>=mincount:
-        P=np.zeros([2*n-1,2*n-1])
-        leafcount=intcount=0
+        leafcount=0
         leafnodes=[]
+        alpha=10# Inverse variance of growth rates
         beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
-        gamma=100
-        def makeprior(node,intcoeffs):
-          global leafcount,intcount
-          if node.mutation is None:
-            node.ind=leafcount
-            # Add (g_leafcount - sum{i<n-1}intcoeffs[i]*Delta_i)^2 to quadratic form defined by precision matrix, P
-            P[leafcount,leafcount]+=1*gamma
-            P[leafcount,n:]-=intcoeffs*gamma
-            P[n:,leafcount]-=intcoeffs*gamma
-            P[n:,n:]+=np.outer(intcoeffs,intcoeffs)*gamma
-            leafnodes.append(node)
-            leafcount+=1
-          else:
-            #node.ind=intcount
-            l=len(node.left.indexlist)
-            r=len(node.right.indexlist)
-            P[n+intcount,n+intcount]+=beta
-            ic=intcoeffs.copy()
-            ic[intcount]-=r/(l+r)
-            makeprior(node.left,ic)
-            ic[intcount]+=1
-            makeprior(node.right,ic)
-            intcount+=1
-        makeprior(tr,np.zeros(n-1))
+        gamma=100# Coupling (inverse variance) of Delta priors at leaves to growth rates
+        deltavecs=np.zeros([n,n+m])
+        mult=np.zeros(n)
+        for leaf in tr.getleaves():
+          mult[leafcount]=len(leaf.indexlist)
+          deltavecs[leafcount,leafcount]=len(leaf.indexlist)
+          for i in leaf.indexlist:
+            for (j,mut1) in enumerate(newmused):
+              if mut1 in linelist[i][4]: deltavecs[leafcount,n+j]-=1
+          ## Add gamma*(g_leafcount - Deltavectorofthisleaf)^2 to quadratic form defined by precision matrix, P
+          #P[leafcount,leafcount]+=1*gamma
+          #P[leafcount,n:]-=deltavec*gamma
+          #P[n:,leafcount]-=deltavec*gamma
+          #P[n:,n:]+=np.outer(deltavec,deltavec)*gamma
+          leaf.ind=leafcount
+          leafnodes.append(leaf)
+          leafcount+=1
+        topvec_ave=deltavecs.sum(axis=0)/mult.sum()
+        deltavecs_ave=deltavecs/mult[:,None]-topvec_ave[None,:]# Put into gauge where top node is 0
+        P=gamma*(deltavecs_ave[:,:,None]*deltavecs_ave[:,None,:]).sum(axis=0)
+        for i in range(n): P[i,i]+=alpha
+        for i in range(m): P[n+i,n+i]+=beta
         C=np.linalg.inv(P)
         print(C)
+        C=C[:n,:n]# Marginalise out the mutation deltas, leaving only the (priors for the) growth rates for the leaves
         poi
-      leaf.join_inplace()
+      branchleaf.join_inplace()
       
