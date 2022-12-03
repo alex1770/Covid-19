@@ -415,8 +415,8 @@ if args.mode==1:
         if nn0[i]==0: bounds[i]=(-50,-50)
       xx=[0]*((1<<n)+n)
       res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
-      xx=res.x
       if not res.success: raise RuntimeError(res.message)
+      xx=res.x
       err=0
       for i in range(len(xx)):
         if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
@@ -702,7 +702,8 @@ if args.mode==3:
   
   prior=100
   tr=tree()
-
+  pr=0
+  
   mused=set()# Mutatons used so far
   #tr.split(425);mused.add(425)#alter
   mincount=2
@@ -710,12 +711,14 @@ if args.mode==3:
   for branchleaf in tr.getleaves():
     for mut in okmlist:
       newmused=sorted(list(mused.union([mut])))
-      print()
-      print("Trying mutation",num2name[mut],"on this leaf:")
-      branchleaf.pr()
+      if pr:
+        print()
+        print("Trying mutation",num2name[mut],"on this leaf:")
+        branchleaf.pr()
       branchleaf.split(mut)
-      print("yielding:")
-      branchleaf.pr()
+      if pr:
+        print("yielding:")
+        branchleaf.pr()
       m=len(newmused)
       # First stage indexing, before marginalising out internal nodes:
       # 0, ..., n-1  : n #leaves
@@ -740,11 +743,6 @@ if args.mode==3:
           for i in leaf.indexlist:
             for (j,mut1) in enumerate(newmused):
               if mut1 in linelist[i][4]: deltavecs[leafcount,n+j]-=1
-          ## Add gamma*(g_leafcount - Deltavectorofthisleaf)^2 to quadratic form defined by precision matrix, P
-          #P[leafcount,leafcount]+=1*gamma
-          #P[leafcount,n:]-=deltavec*gamma
-          #P[n:,leafcount]-=deltavec*gamma
-          #P[n:,n:]+=np.outer(deltavec,deltavec)*gamma
           leaf.ind=leafcount
           leafnodes.append(leaf)
           leafcount+=1
@@ -754,7 +752,7 @@ if args.mode==3:
         for i in range(n): P[i,i]+=alpha
         for i in range(m): P[n+i,n+i]+=beta
         C=np.linalg.inv(P)
-        print(C)
+        #print(C)
         C=C[:n,:n]# Marginalise out the mutation deltas, leaving only the (priors for the) growth rates for the leaves
         Pr=np.linalg.inv(C)
 
@@ -805,9 +803,20 @@ if args.mode==3:
           dLL1[n:]-=((dens*nnt)/den).sum(axis=1)
           dLL1[n:]-=Pr@gg
           return dLL1
+
+        def NLL(xx): return -LL(xx)/len(linelist)
+        def NdLL(xx): return -dLL(xx)/len(linelist)
   
-        
-        
-        poi
+        bounds=[(-50,50)]*n+[(-0.5,0.5)]*n
+        xx=[0]*(2*n)
+        res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+        if not res.success: raise RuntimeError(res.message)
+        for i in range(len(xx)):
+          if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
+            err=1
+            print("Error: param",i,"=",xx[i],"hit bound")
+
+        xx=res.x
+        print(num2name[mut],len(ind_l),len(ind_r),"   ",LL(xx),"   ",xx[n:])
       branchleaf.join_inplace()
       
