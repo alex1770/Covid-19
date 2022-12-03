@@ -303,6 +303,7 @@ print("Filtered linelist at time",time.process_time()-tim0)
 print()
 
 if args.mode==1:
+  # mode 1: assume growth is additive over mutations
   
   prior=100
   # M = set of mutations considered, |M|=n
@@ -460,6 +461,7 @@ if args.mode==1:
   
 
 if args.mode==2:
+  # mode 2: assume different growth parameters for each subset of mutations
   
   prior=100
   # M = set of mutations considered, |M|=n
@@ -701,32 +703,11 @@ if args.mode==3:
   prior=100
   tr=tree()
 
-  # xx[:n]    = offsets
-  # xx[n:2*n] = growths
-  def LL(xx):
-    gg=bit@xx[1<<n:]
-    LL1=nn0@xx[:1<<n]+nn1@gg
-    den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
-    LL1-=nn@np.log(den)
-    LL1-=prior*xx[1<<n:]@xx[1<<n:]/2
-    return LL1
-
-  def dLL(xx):
-    dLL1=np.concatenate([nn0,nn1@bit])
-    gg=bit@xx[1<<n:]
-    dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
-    den=dens.sum(axis=0)
-    dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
-    dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
-    dLL1[1<<n:]-=prior*xx[1<<n:]
-    return dLL1
-
   mused=set()# Mutatons used so far
   #tr.split(425);mused.add(425)#alter
   mincount=2
   n=len(list(tr.getleaves()))+1
   for branchleaf in tr.getleaves():
-    #orig=branchleaf.copy()
     for mut in okmlist:
       newmused=sorted(list(mused.union([mut])))
       print()
@@ -748,7 +729,11 @@ if args.mode==3:
         beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
         gamma=100# Coupling (inverse variance) of Delta priors at leaves to growth rates
         deltavecs=np.zeros([n,n+m])
-        mult=np.zeros(n)
+        # deltavecs[leaf number, l] represents L(l) = sum_{i<n}deltavecs[l][i]*g_i + sum_{j<m}deltavecs[l][n+j]*Delta_j
+        # where g_i is the growth rate (prior) for the leaf node i, and
+        # Delta_j is the growth rate difference for the mutation j
+        # Each leaf l contributes gamma.L(l)^2 to the quadratic form determining the Gaussian prior on g_i and Delta_j.
+        mult=np.zeros(n)# mult[l] = number of sequence in leaf node l
         for leaf in tr.getleaves():
           mult[leafcount]=len(leaf.indexlist)
           deltavecs[leafcount,leafcount]=len(leaf.indexlist)
@@ -771,6 +756,58 @@ if args.mode==3:
         C=np.linalg.inv(P)
         print(C)
         C=C[:n,:n]# Marginalise out the mutation deltas, leaving only the (priors for the) growth rates for the leaves
+        Pr=np.linalg.inv(C)
+
+        # M = set of mutations considered, |M|=m
+        # n = #leaves
+        # a[] = xx[:n]    n offsets, one for each leaf
+        # gg[] = xx[n:]   n growths, one for each leaf
+        # P(a[],g[]) = Prior(g[]) *
+        #              const * 
+        #              Product over leaves, l, of prod_t (P(l,t)/P(.,t))^n[l,t]
+        # where
+        # Prior(g[]) is given by covariance matrix C[,] (or precision matrix Pr[,])
+        # n[l,t] = observed counts of variants in leaf l on day t (counting from mindate)
+        # P(l,t) = exp(a[l]+gg[l]*t)  (t counting from mindate)
+        # P(.,t) = sum_l P(l,t)
+        #
+        # n_{l,t} = number of instances of leaf l on day t
+        # nn0[l] = sum_t n_{l,t}
+        # nn1[l] = sum_t t*n_{l,t}
+        # nn[t]  = sum_l n_{l,t}
+        nn0=np.zeros(n)
+        nn1=np.zeros(n)
+        nn=np.zeros(ndays)
+        nnt=np.zeros(ndays)
+        for (l,lf) in enumerate(tr.getleaves()):
+          for i in lf.indexlist:
+            t=linelist[i][0]-mindate
+            nn0[l]+=1
+            nn1[l]+=t
+            nn[t]+=1
+            nnt[t]+=t
+        #
+        def LL(xx):
+          off=xx[:n]
+          gg=xx[n:]
+          LL1=nn0@off+nn1@gg
+          den=np.exp(off[:,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+          LL1-=nn@np.log(den)
+          LL1-=gg@Pr@gg/2
+          return LL1
+        def dLL(xx):
+          dLL1=np.concatenate([nn0,nn1])
+          off=xx[:n]
+          gg=xx[n:]
+          dens=np.exp(off[:,None]+gg[:,None]*np.arange(ndays))
+          den=dens.sum(axis=0)
+          dLL1[:n]-=((dens*nn)/den).sum(axis=1)
+          dLL1[n:]-=((dens*nnt)/den).sum(axis=1)
+          dLL1[n:]-=Pr@gg
+          return dLL1
+  
+        
+        
         poi
       branchleaf.join_inplace()
       
