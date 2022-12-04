@@ -287,7 +287,7 @@ def order(name):
   return (name[:f],extractint(name),name)
 okmlist.sort(key=lambda m:order(num2name[m]))
 mindate=Date(args.mindate)
-maxdate=min(args.maxdate,Date(linelist[0][0]))
+maxdate=min(Date(args.maxdate),Date(linelist[0][0]))
 ndays=maxdate-mindate+1
 
 linelist1=[]
@@ -700,123 +700,143 @@ class tree:
 
 if args.mode==3:
   
-  prior=100
   tr=tree()
   pr=0
   
   mused=set()# Mutatons used so far
   #tr.split(425);mused.add(425)#alter
   mincount=2
-  n=len(list(tr.getleaves()))+1
-  for branchleaf in tr.getleaves():
-    for mut in okmlist:
-      newmused=sorted(list(mused.union([mut])))
-      if pr:
-        print()
-        print("Trying mutation",num2name[mut],"on this leaf:")
-        branchleaf.pr()
-      branchleaf.split(mut)
-      if pr:
-        print("yielding:")
-        branchleaf.pr()
-      m=len(newmused)
-      # First stage indexing, before marginalising out internal nodes:
-      # 0, ..., n-1  : n #leaves
-      # n, ..., n+m-1 : m #mutations
-      ind_l=branchleaf.left.indexlist
-      ind_r=branchleaf.right.indexlist
-      if len(ind_l)>=mincount and len(ind_r)>=mincount:
-        leafcount=0
-        leafnodes=[]
-        alpha=10# Inverse variance of growth rates
-        beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
-        gamma=100# Coupling (inverse variance) of Delta priors at leaves to growth rates
-        deltavecs=np.zeros([n,n+m])
-        # deltavecs[leaf number, l] represents L(l) = sum_{i<n}deltavecs[l][i]*g_i + sum_{j<m}deltavecs[l][n+j]*Delta_j
-        # where g_i is the growth rate (prior) for the leaf node i, and
-        # Delta_j is the growth rate difference for the mutation j
-        # Each leaf l contributes gamma.L(l)^2 to the quadratic form determining the Gaussian prior on g_i and Delta_j.
-        mult=np.zeros(n)# mult[l] = number of sequence in leaf node l
-        for leaf in tr.getleaves():
-          mult[leafcount]=len(leaf.indexlist)
-          deltavecs[leafcount,leafcount]=len(leaf.indexlist)
-          for i in leaf.indexlist:
-            for (j,mut1) in enumerate(newmused):
-              if mut1 in linelist[i][4]: deltavecs[leafcount,n+j]-=1
-          leaf.ind=leafcount
-          leafnodes.append(leaf)
-          leafcount+=1
-        topvec_ave=deltavecs.sum(axis=0)/mult.sum()
-        deltavecs_ave=deltavecs/mult[:,None]-topvec_ave[None,:]# Put into gauge where top node is 0
-        P=gamma*(deltavecs_ave[:,:,None]*deltavecs_ave[:,None,:]).sum(axis=0)
-        for i in range(n): P[i,i]+=alpha
-        for i in range(m): P[n+i,n+i]+=beta
-        C=np.linalg.inv(P)
-        #print(C)
-        C=C[:n,:n]# Marginalise out the mutation deltas, leaving only the (priors for the) growth rates for the leaves
-        Pr=np.linalg.inv(C)
 
-        # M = set of mutations considered, |M|=m
-        # n = #leaves
-        # a[] = xx[:n]    n offsets, one for each leaf
-        # gg[] = xx[n:]   n growths, one for each leaf
-        # P(a[],g[]) = Prior(g[]) *
-        #              const * 
-        #              Product over leaves, l, of prod_t (P(l,t)/P(.,t))^n[l,t]
-        # where
-        # Prior(g[]) is given by covariance matrix C[,] (or precision matrix Pr[,])
-        # n[l,t] = observed counts of variants in leaf l on day t (counting from mindate)
-        # P(l,t) = exp(a[l]+gg[l]*t)  (t counting from mindate)
-        # P(.,t) = sum_l P(l,t)
-        #
-        # n_{l,t} = number of instances of leaf l on day t
-        # nn0[l] = sum_t n_{l,t}
-        # nn1[l] = sum_t t*n_{l,t}
-        # nn[t]  = sum_l n_{l,t}
-        nn0=np.zeros(n)
-        nn1=np.zeros(n)
-        nn=np.zeros(ndays)
-        nnt=np.zeros(ndays)
-        for (l,lf) in enumerate(tr.getleaves()):
-          for i in lf.indexlist:
-            t=linelist[i][0]-mindate
-            nn0[l]+=1
-            nn1[l]+=t
-            nn[t]+=1
-            nnt[t]+=t
-        #
-        def LL(xx):
-          off=xx[:n]
-          gg=xx[n:]
-          LL1=nn0@off+nn1@gg
-          den=np.exp(off[:,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
-          LL1-=nn@np.log(den)
-          LL1-=gg@Pr@gg/2
-          return LL1
-        def dLL(xx):
-          dLL1=np.concatenate([nn0,nn1])
-          off=xx[:n]
-          gg=xx[n:]
-          dens=np.exp(off[:,None]+gg[:,None]*np.arange(ndays))
-          den=dens.sum(axis=0)
-          dLL1[:n]-=((dens*nn)/den).sum(axis=1)
-          dLL1[n:]-=((dens*nnt)/den).sum(axis=1)
-          dLL1[n:]-=Pr@gg
-          return dLL1
-
-        def NLL(xx): return -LL(xx)/len(linelist)
-        def NdLL(xx): return -dLL(xx)/len(linelist)
+  while 1:
+    n=len(list(tr.getleaves()))+1
+    best=(0,)
+    for branchleaf in tr.getleaves():
+      for mut in okmlist:
+        newmused=sorted(list(mused.union([mut])))
+        if pr>=2:
+          print()
+          print("Trying mutation",num2name[mut],"on this leaf:")
+          branchleaf.pr()
+        branchleaf.split(mut)
+        if pr>=2:
+          print("yielding:")
+          branchleaf.pr()
+        m=len(newmused)
+        # First stage indexing, before marginalising out internal nodes:
+        # 0, ..., n-1  : n #leaves
+        # n, ..., n+m-1 : m #mutations
+        ind_l=branchleaf.left.indexlist
+        ind_r=branchleaf.right.indexlist
+        if len(ind_l)>=mincount and len(ind_r)>=mincount:
+          leafcount=0
+          leafnodes=[]
+          alpha=10# Inverse variance of growth rates
+          beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
+          gamma=100# Coupling (inverse variance) of Delta priors at leaves to growth rates
+          deltavecs=np.zeros([n,n+m])
+          # deltavecs[leaf number, l] represents L(l) = sum_{i<n}deltavecs[l][i]*g_i + sum_{j<m}deltavecs[l][n+j]*Delta_j
+          # where g_i is the growth rate (prior) for the leaf node i, and
+          # Delta_j is the growth rate difference for the mutation j
+          # Each leaf l contributes gamma.L(l)^2 to the quadratic form determining the Gaussian prior on g_i and Delta_j.
+          mult=np.zeros(n)# mult[l] = number of sequence in leaf node l
+          for leaf in tr.getleaves():
+            mult[leafcount]=len(leaf.indexlist)
+            deltavecs[leafcount,leafcount]=len(leaf.indexlist)
+            for i in leaf.indexlist:
+              for (j,mut1) in enumerate(newmused):
+                if mut1 in linelist[i][4]: deltavecs[leafcount,n+j]-=1
+            leaf.ind=leafcount
+            leafnodes.append(leaf)
+            leafcount+=1
+          topvec_ave=deltavecs.sum(axis=0)/mult.sum()
+          deltavecs_ave=deltavecs/mult[:,None]-topvec_ave[None,:]# Put into gauge where top node is 0
+          P=gamma*(deltavecs_ave[:,:,None]*deltavecs_ave[:,None,:]).sum(axis=0)
+          for i in range(n): P[i,i]+=alpha
+          for i in range(m): P[n+i,n+i]+=beta
+          C=np.linalg.inv(P)
+          #print(C)
+          C=C[:n,:n]# Marginalise out the mutation deltas, leaving only the (priors for the) growth rates for the leaves
+          Pr=np.linalg.inv(C)
   
-        bounds=[(-50,50)]*n+[(-0.5,0.5)]*n
-        xx=[0]*(2*n)
-        res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
-        if not res.success: raise RuntimeError(res.message)
-        for i in range(len(xx)):
-          if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
-            err=1
-            print("Error: param",i,"=",xx[i],"hit bound")
-
-        xx=res.x
-        print(num2name[mut],len(ind_l),len(ind_r),"   ",LL(xx),"   ",xx[n:])
-      branchleaf.join_inplace()
-      
+          # M = set of mutations considered, |M|=m
+          # n = #leaves
+          # a[] = xx[:n]    n offsets, one for each leaf
+          # gg[] = xx[n:]   n growths, one for each leaf
+          # P(a[],g[]) = Prior(g[]) *
+          #              const * 
+          #              Product over leaves, l, of prod_t (P(l,t)/P(.,t))^n[l,t]
+          # where
+          # Prior(g[]) is given by covariance matrix C[,] (or precision matrix Pr[,])
+          # n[l,t] = observed counts of variants in leaf l on day t (counting from mindate)
+          # P(l,t) = exp(a[l]+gg[l]*t)  (t counting from mindate)
+          # P(.,t) = sum_l P(l,t)
+          #
+          # n_{l,t} = number of instances of leaf l on day t
+          # nn0[l] = sum_t n_{l,t}
+          # nn1[l] = sum_t t*n_{l,t}
+          # nn[t]  = sum_l n_{l,t}
+          nn0=np.zeros(n)
+          nn1=np.zeros(n)
+          nn=np.zeros(ndays)
+          nnt=np.zeros(ndays)
+          for (l,lf) in enumerate(tr.getleaves()):
+            for i in lf.indexlist:
+              t=linelist[i][0]-mindate
+              nn0[l]+=1
+              nn1[l]+=t
+              nn[t]+=1
+              nnt[t]+=t
+          #
+          def LL(xx):
+            off=xx[:n]
+            gg=xx[n:]
+            LL1=nn0@off+nn1@gg
+            den=np.exp(off[:,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+            LL1-=nn@np.log(den)
+            LL1-=gg@Pr@gg/2
+            return LL1
+          def dLL(xx):
+            dLL1=np.concatenate([nn0,nn1])
+            off=xx[:n]
+            gg=xx[n:]
+            dens=np.exp(off[:,None]+gg[:,None]*np.arange(ndays))
+            den=dens.sum(axis=0)
+            dLL1[:n]-=((dens*nn)/den).sum(axis=1)
+            dLL1[n:]-=((dens*nnt)/den).sum(axis=1)
+            dLL1[n:]-=Pr@gg
+            return dLL1
+  
+          def NLL(xx): return -LL(xx)/len(linelist)
+          def NdLL(xx): return -dLL(xx)/len(linelist)
+    
+          bounds=[(-50,50)]*n+[(-0.5,0.5)]*n
+          xx=[0]*(2*n)
+          res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+          if not res.success: raise RuntimeError(res.message)
+          for i in range(len(xx)):
+            if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
+              err=1
+              print("Error: param",i,"=",xx[i],"hit bound")
+  
+          xx=res.x
+          
+          # Growth effect, defined up to an additive constant
+          # GE(xx,t1)-GE(xx,t0) is well-defined
+          def GE(xx,t):
+            gg=xx[n:]
+            den=np.exp(xx[:n]+gg*t)
+            return gg@den/den.sum()
+  
+          ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
+          if pr>=1: print(num2name[mut],len(ind_l),len(ind_r),"  ",ge,"   ",LL(xx),"   ",xx[n:])
+          if ge>best[0]: best=(ge,branchleaf,mut)
+          
+        branchleaf.join_inplace()
+    if len(best)==1: break
+    (ge,branchleaf,mut)=best
+    print("Splitting on",num2name[mut],"giving a growth effect of",ge)
+    branchleaf.split(mut)
+    print()
+    tr.pr()
+    print()
+    
