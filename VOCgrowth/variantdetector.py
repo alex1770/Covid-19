@@ -659,19 +659,20 @@ class tree:
       t.right=self.right.copy()
       t.left.parent=t.right.parent=t
     return t
-  def pr(self,mlist=[],cutoff=0.9):
+  def pr(self,annotate=None,mlist=[],cutoff=0.9):
     if self.mutation!=None:
-      self.left.pr(mlist+["+"+num2name[self.mutation]])
-      self.right.pr(mlist+["-"+num2name[self.mutation]])
+      self.left.pr(annotate=annotate,mlist=mlist+["+"+num2name[self.mutation]])
+      self.right.pr(annotate=annotate,mlist=mlist+["-"+num2name[self.mutation]])
       return
+    if annotate is not None: print("%8.5f  "%annotate[self.n],end="")
     print("%6d  "%len(self.indexlist),end="")
     for m in mlist: print(m,end=" ")
     d=defaultdict(int)
     for i in self.indexlist: d[linelist[i][2]]+=1
     l=list(d);l.sort(key=lambda x:-d[x])
     tot=0
-    for lin in l:
-      if tot>cutoff*len(self.indexlist): print(" ...",end="");break
+    for (i,lin) in enumerate(l):
+      if i==10 or tot>cutoff*len(self.indexlist): print(" ...",end="");break
       print(f" {d[lin]}x{contractlin(lin)}",end="")
       tot+=d[lin]
     print()
@@ -780,6 +781,7 @@ if args.mode==3:
           nn=np.zeros(ndays)
           nnt=np.zeros(ndays)
           for (l,lf) in enumerate(tr.getleaves()):
+            lf.n=l
             for i in lf.indexlist:
               t=linelist[i][0]-mindate
               nn0[l]+=1
@@ -812,13 +814,12 @@ if args.mode==3:
           bounds=[(-50,50)]*n+[(-0.5,0.5)]*n
           xx=[0]*(2*n)
           res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+          xx=res.x
           if not res.success: raise RuntimeError(res.message)
           for i in range(len(xx)):
             if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
               err=1
               print("Error: param",i,"=",xx[i],"hit bound")
-  
-          xx=res.x
           
           # Growth effect, defined up to an additive constant
           # GE(xx,t1)-GE(xx,t0) is well-defined
@@ -829,14 +830,48 @@ if args.mode==3:
   
           ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
           if pr>=1: print(num2name[mut],len(ind_l),len(ind_r),"  ",ge,"   ",LL(xx),"   ",xx[n:])
-          if ge>best[0]: best=(ge,branchleaf,mut)
+          if ge>best[0]: best=(ge,branchleaf,mut,xx)
           
         branchleaf.join_inplace()
     if len(best)==1: break
-    (ge,branchleaf,mut)=best
+    (ge,branchleaf,mut,xx)=best
     print("Splitting on",num2name[mut],"giving a growth effect of",ge)
     branchleaf.split(mut)
+    nna=np.zeros([n,ndays])
+    for (l,lf) in enumerate(tr.getleaves()):
+      lf.n=l
+      for i in lf.indexlist:
+        t=linelist[i][0]-mindate
+        nna[l,t]+=1
     print()
-    tr.pr()
+    tr.pr(annotate=xx[n:])
     print()
-    
+    lptot=0
+    nn0*=0;nn1*=0;nn*=0;nnt*=0
+    for (l,lf) in enumerate(tr.getleaves()):
+      lf.n=l
+      for i in lf.indexlist:
+        t=linelist[i][0]-mindate
+        nn0[l]+=1
+        nn1[l]+=t
+        nn[t]+=1
+        nnt[t]+=t
+    #for t in range(ndays):
+    #  #print(mindate+t,end="")
+    #  for l in range(n):
+    #    lp=nna[l,t]*log(nna[l,t]/nn[t])
+    #    lptot+=lp
+    #    #print("     %6d %8.3f"%(nna[l,t],lp),end="")
+    #  #print()
+    #print("Total lp =",lptot)
+    res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+    xx=res.x
+    if not res.success: raise RuntimeError(res.message)
+    for i in range(len(xx)):
+      if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
+        err=1
+        print("Error: param",i,"=",xx[i],"hit bound")
+    print()
+    #print(LL(np.array([-4.6,4.6,.035,-0.035])))
+    #print(LL(np.array([-3.2,3.2,0,0])))
+
