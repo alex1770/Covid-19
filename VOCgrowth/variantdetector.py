@@ -664,7 +664,7 @@ class tree:
       self.left.pr(annotate=annotate,mlist=mlist+["+"+num2name[self.mutation]])
       self.right.pr(annotate=annotate,mlist=mlist+["-"+num2name[self.mutation]])
       return
-    if annotate is not None: print("%8.5f  "%annotate[self.n],end="")
+    if annotate is not None: print("%7.3f  "%annotate[self.n],end="")
     print("%6d  "%len(self.indexlist),end="")
     for m in mlist: print(m,end=" ")
     d=defaultdict(int)
@@ -708,6 +708,7 @@ if args.mode==3:
   #tr.split(425);mused.add(425)#alter
   mincount=2
 
+  prevge=0
   while 1:
     n=len(list(tr.getleaves()))+1
     best=(0,)
@@ -835,6 +836,8 @@ if args.mode==3:
         branchleaf.join_inplace()
     if len(best)==1: break
     (ge,branchleaf,mut,xx)=best
+    if ge-prevge<1e-3: print("Not finding sufficient improvement in growth effect - halting");break
+    prevge=ge
     print("Splitting on",num2name[mut],"giving a growth effect of",ge)
     branchleaf.split(mut)
     nna=np.zeros([n,ndays])
@@ -872,6 +875,3 @@ if args.mode==3:
         err=1
         print("Error: param",i,"=",xx[i],"hit bound")
     print()
-    #print(LL(np.array([-4.6,4.6,.035,-0.035])))
-    #print(LL(np.array([-3.2,3.2,0,0])))
-
