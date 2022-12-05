@@ -659,23 +659,32 @@ class tree:
       t.right=self.right.copy()
       t.left.parent=t.right.parent=t
     return t
-  def pr(self,annotate=None,mlist=[],cutoff=0.9):
+  def prr(self,annotate=None,mlist=[],cutoff=0.9):
     if self.mutation!=None:
-      self.left.pr(annotate=annotate,mlist=mlist+["+"+num2name[self.mutation]])
-      self.right.pr(annotate=annotate,mlist=mlist+["-"+num2name[self.mutation]])
-      return
-    if annotate is not None: print("%7.3f  "%annotate[self.n],end="")
-    print("%6d  "%len(self.indexlist),end="")
-    for m in mlist: print(m,end=" ")
+      return self.left.prr(annotate=annotate,mlist=mlist+["+"+num2name[self.mutation]])+\
+        self.right.prr(annotate=annotate,mlist=mlist+["-"+num2name[self.mutation]])
+    rl=[]# rl=[Annotation Numberofsequences Mutationstring Classificationstring]
+    if annotate is None: rl.append(None)
+    else: rl.append(annotate[self.n])
+    rl.append(len(self.indexlist))
+    rl.append(" ".join(mlist))
     d=defaultdict(int)
     for i in self.indexlist: d[linelist[i][2]]+=1
     l=list(d);l.sort(key=lambda x:-d[x])
     tot=0
+    s=""
     for (i,lin) in enumerate(l):
-      if i==10 or tot>cutoff*len(self.indexlist): print(" ...",end="");break
-      print(f" {d[lin]}x{contractlin(lin)}",end="")
+      if i==8 or tot>cutoff*len(self.indexlist): s+=" ...";break
+      s+=f" {d[lin]}x{contractlin(lin)}"
       tot+=d[lin]
-    print()
+    rl.append(s)
+    return [rl]
+  def pr(self,annotate=None,mlist=[],cutoff=0.9):
+    ll=self.prr(annotate=annotate,mlist=mlist,cutoff=cutoff)
+    mx=max(len(l[2]) for l in ll)
+    for l in ll:
+      if l[0]!=None: print("%7.3f  "%l[0],end="")
+      print("%6d  %-*s   "%(l[1],mx,l[2]),l[3])
   def split(self,mutation):
     if self.mutation!=None: raise RuntimeError("Can't split already-split node")
     (left,right)=splitindexlist(self.indexlist,mutation)
@@ -859,14 +868,6 @@ if args.mode==3:
         nn1[l]+=t
         nn[t]+=1
         nnt[t]+=t
-    #for t in range(ndays):
-    #  #print(mindate+t,end="")
-    #  for l in range(n):
-    #    lp=nna[l,t]*log(nna[l,t]/nn[t])
-    #    lptot+=lp
-    #    #print("     %6d %8.3f"%(nna[l,t],lp),end="")
-    #  #print()
-    #print("Total lp =",lptot)
     res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
     xx=res.x
     if not res.success: raise RuntimeError(res.message)
