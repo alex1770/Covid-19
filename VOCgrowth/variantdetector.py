@@ -868,6 +868,7 @@ if args.mode==3:
         nn1[l]+=t
         nn[t]+=1
         nnt[t]+=t
+    FixPr
     res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
     xx=res.x
     if not res.success: raise RuntimeError(res.message)
@@ -876,3 +877,4 @@ if args.mode==3:
         err=1
         print("Error: param",i,"=",xx[i],"hit bound")
     print()
+    
