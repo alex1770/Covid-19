@@ -12,13 +12,7 @@
 # alpha=(alpha+beta)/(1+rho)
 # beta=(alpha+beta)*rho/(1+rho)
 
-from stuff import *
-import numpy as np
 import argparse
-from math import exp,log,sqrt
-from scipy.optimize import minimize
-from scipy.special import gammaln,betaln
-from scipy.stats import norm, multivariate_normal as mvn
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-c', '--col0',        type=int,default=1,    help="Column number of variant 0 (includes date column, count from 0)")
@@ -27,6 +21,13 @@ parser.add_argument('-f', '--mindate',     default="2019-01-01",  help="Min samp
 parser.add_argument('-t', '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-p', '--prlevel',     type=int,default=1,    help="Print level")
 args=parser.parse_args()
+
+from stuff import *
+import numpy as np
+from math import exp,log,sqrt
+from scipy.optimize import minimize
+from scipy.special import gammaln,betaln
+from scipy.stats import norm, multivariate_normal as mvn
 
 conf=0.95
 zconf=norm.ppf((1+conf)/2)
