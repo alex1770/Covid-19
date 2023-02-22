@@ -133,6 +133,7 @@ else:
   with open(fn,'wb') as fp:
     pickle.dump([linelist,num2name,name2num,mutcounts,daycounts,mutdaycounts],fp)
 
+# linelist[mutation index] = [day, location, expandedlineage, broadvariant[not used], mutation list]
 print("Got linelist at time",time.process_time()-tim0)
 
 okmut_num=[okmut(x) for x in num2name]
@@ -286,7 +287,7 @@ def order(name):
   return (name[:f],extractint(name),name)
 okmlist.sort(key=lambda m:order(num2name[m]))
 mindate=Date(args.mindate)
-maxdate=min(args.maxdate,Date(linelist[0][0]))
+maxdate=min(Date(args.maxdate),Date(linelist[0][0]))
 ndays=maxdate-mindate+1
 
 linelist1=[]
@@ -302,6 +303,7 @@ print("Filtered linelist at time",time.process_time()-tim0)
 print()
 
 if args.mode==1:
+  # mode 1: assume growth is additive over mutations
   
   prior=100
   # M = set of mutations considered, |M|=n
@@ -413,8 +415,8 @@ if args.mode==1:
         if nn0[i]==0: bounds[i]=(-50,-50)
       xx=[0]*((1<<n)+n)
       res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
-      xx=res.x
       if not res.success: raise RuntimeError(res.message)
+      xx=res.x
       err=0
       for i in range(len(xx)):
         if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
@@ -459,6 +461,7 @@ if args.mode==1:
   
 
 if args.mode==2:
+  # mode 2: assume different growth parameters for each subset of mutations
   
   prior=100
   # M = set of mutations considered, |M|=n
@@ -656,22 +659,32 @@ class tree:
       t.right=self.right.copy()
       t.left.parent=t.right.parent=t
     return t
-  def pr(self,mlist=[],cutoff=0.9):
+  def prr(self,annotate=None,mlist=[],cutoff=0.9):
     if self.mutation!=None:
-      self.left.pr(mlist+["+"+num2name[self.mutation]])
-      self.right.pr(mlist+["-"+num2name[self.mutation]])
-      return
-    print("%6d  "%len(self.indexlist),end="")
-    for m in mlist: print(m,end=" ")
+      return self.left.prr(annotate=annotate,mlist=mlist+["+"+num2name[self.mutation]])+\
+        self.right.prr(annotate=annotate,mlist=mlist+["-"+num2name[self.mutation]])
+    rl=[]# rl=[Annotation Numberofsequences Mutationstring Classificationstring]
+    if annotate is None: rl.append(None)
+    else: rl.append(annotate[self.n])
+    rl.append(len(self.indexlist))
+    rl.append(" ".join(mlist))
     d=defaultdict(int)
     for i in self.indexlist: d[linelist[i][2]]+=1
     l=list(d);l.sort(key=lambda x:-d[x])
     tot=0
-    for lin in l:
-      if tot>cutoff*len(self.indexlist): print(" ...",end="");break
-      print(f" {d[lin]}x{contractlin(lin)}",end="")
+    s=""
+    for (i,lin) in enumerate(l):
+      if i==8 or tot>cutoff*len(self.indexlist): s+=" ...";break
+      s+=f" {d[lin]}x{contractlin(lin)}"
       tot+=d[lin]
-    print()
+    rl.append(s)
+    return [rl]
+  def pr(self,annotate=None,mlist=[],cutoff=0.9):
+    ll=self.prr(annotate=annotate,mlist=mlist,cutoff=cutoff)
+    mx=max(len(l[2]) for l in ll)
+    for l in ll:
+      if l[0]!=None: print("%7.3f  "%l[0],end="")
+      print("%6d  %-*s   "%(l[1],mx,l[2]),l[3])
   def split(self,mutation):
     if self.mutation!=None: raise RuntimeError("Can't split already-split node")
     (left,right)=splitindexlist(self.indexlist,mutation)
@@ -697,87 +710,171 @@ class tree:
 
 if args.mode==3:
   
-  prior=100
   tr=tree()
-
-  # xx[:n]    = offsets
-  # xx[n:2*n] = growths
-  def LL(xx):
-    gg=bit@xx[1<<n:]
-    LL1=nn0@xx[:1<<n]+nn1@gg
-    den=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
-    LL1-=nn@np.log(den)
-    LL1-=prior*xx[1<<n:]@xx[1<<n:]/2
-    return LL1
-
-  def dLL(xx):
-    dLL1=np.concatenate([nn0,nn1@bit])
-    gg=bit@xx[1<<n:]
-    dens=np.exp(xx[:1<<n,None]+gg[:,None]*np.arange(ndays))
-    den=dens.sum(axis=0)
-    dLL1[:1<<n]-=((dens*nn)/den).sum(axis=1)
-    dLL1[1<<n:]-=((bit.T@dens)*nnt/den).sum(axis=1)
-    dLL1[1<<n:]-=prior*xx[1<<n:]
-    return dLL1
-
+  pr=0
+  
+  mused=set()# Mutatons used so far
+  #tr.split(425);mused.add(425)#alter
   mincount=2
-  n=len(list(tr.getleaves()))+1
-  for leaf in tr.getleaves():
-    orig=leaf.copy()
-    for mut in okmlist:
-      print()
-      print("Trying mutation",num2name[mut],"on this leaf:")
-      leaf.pr()
-      leaf.split(mut)
-      print("yielding:")
-      leaf.pr()
-      # First stage indexing, before marginalising out internal nodes:
-      # 0, ..., n-1  : n #leaves
-      # n, ..., 2n-2 : n-1 #internal nodes
-      ind_l=leaf.left.indexlist
-      ind_r=leaf.right.indexlist
-      # Introduction of change in growth rates of descendents of an internal node:
-      # If node N has a growth, g(N)=X, and children L and R with number of sequences |L|, |R| resp,
-      # the the growth of its children are:
-      # g(L) = X-|R|/(|L|+|R|)*Delta
-      # g(R) = X+|L|/(|L|+|R|)*Delta
-      # where Delta ~ N(0,global constant)
-      # because we want
-      # (i) g(R)-g(L) = Delta, because it is supposed that any mutation introduces same distribution of growth differences
-      # (ii) (|L|*g(L) + |R|*g(R))/(|L|+|R|) = g(N), because before we've split the node N (when it's a leaf), we want g(N) to be
-      #                                              as accurate a guess as possible as to the growth rate of the mixed population of |L|+|R| variants,
-      #                                              so you weight L and R types according to their relative prevalence in the mixture.
-      if len(ind_l)>=mincount and len(ind_r)>=mincount:
-        P=np.zeros([2*n-1,2*n-1])
-        leafcount=intcount=0
-        leafnodes=[]
-        beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
-        gamma=100
-        def makeprior(node,intcoeffs):
-          global leafcount,intcount
-          if node.mutation is None:
-            node.ind=leafcount
-            # Add (g_leafcount - sum{i<n-1}intcoeffs[i]*Delta_i)^2 to quadratic form defined by precision matrix, P
-            P[leafcount,leafcount]+=1*gamma
-            P[leafcount,n:]-=intcoeffs*gamma
-            P[n:,leafcount]-=intcoeffs*gamma
-            P[n:,n:]+=np.outer(intcoeffs,intcoeffs)*gamma
-            leafnodes.append(node)
+
+  prevge=0
+  while 1:
+    n=len(list(tr.getleaves()))+1
+    best=(0,)
+    for branchleaf in tr.getleaves():
+      for mut in okmlist:
+        newmused=sorted(list(mused.union([mut])))
+        if pr>=2:
+          print()
+          print("Trying mutation",num2name[mut],"on this leaf:")
+          branchleaf.pr()
+        branchleaf.split(mut)
+        if pr>=2:
+          print("yielding:")
+          branchleaf.pr()
+        m=len(newmused)
+        # First stage indexing, before marginalising out internal nodes:
+        # 0, ..., n-1  : n #leaves
+        # n, ..., n+m-1 : m #mutations
+        ind_l=branchleaf.left.indexlist
+        ind_r=branchleaf.right.indexlist
+        if len(ind_l)>=mincount and len(ind_r)>=mincount:
+          leafcount=0
+          leafnodes=[]
+          alpha=10# Inverse variance of growth rates
+          beta=100# Inverse variance of the distribution of change of growth rate due to a single mutation
+          gamma=100# Coupling (inverse variance) of Delta priors at leaves to growth rates
+          deltavecs=np.zeros([n,n+m])
+          # deltavecs[leaf number, l] represents L(l) = sum_{i<n}deltavecs[l][i]*g_i + sum_{j<m}deltavecs[l][n+j]*Delta_j
+          # where g_i is the growth rate (prior) for the leaf node i, and
+          # Delta_j is the growth rate difference for the mutation j
+          # Each leaf l contributes gamma.L(l)^2 to the quadratic form determining the Gaussian prior on g_i and Delta_j.
+          mult=np.zeros(n)# mult[l] = number of sequence in leaf node l
+          for leaf in tr.getleaves():
+            mult[leafcount]=len(leaf.indexlist)
+            deltavecs[leafcount,leafcount]=len(leaf.indexlist)
+            for i in leaf.indexlist:
+              for (j,mut1) in enumerate(newmused):
+                if mut1 in linelist[i][4]: deltavecs[leafcount,n+j]-=1
+            leaf.ind=leafcount
+            leafnodes.append(leaf)
             leafcount+=1
-          else:
-            #node.ind=intcount
-            l=len(node.left.indexlist)
-            r=len(node.right.indexlist)
-            P[n+intcount,n+intcount]+=beta
-            ic=intcoeffs.copy()
-            ic[intcount]-=r/(l+r)
-            makeprior(node.left,ic)
-            ic[intcount]+=1
-            makeprior(node.right,ic)
-            intcount+=1
-        makeprior(tr,np.zeros(n-1))
-        C=np.linalg.inv(P)
-        print(C)
-        poi
-      leaf.join_inplace()
-      
+          topvec_ave=deltavecs.sum(axis=0)/mult.sum()
+          deltavecs_ave=deltavecs/mult[:,None]-topvec_ave[None,:]# Put into gauge where top node is 0
+          P=gamma*(deltavecs_ave[:,:,None]*deltavecs_ave[:,None,:]).sum(axis=0)
+          for i in range(n): P[i,i]+=alpha
+          for i in range(m): P[n+i,n+i]+=beta
+          C=np.linalg.inv(P)
+          #print(C)
+          C=C[:n,:n]# Marginalise out the mutation deltas, leaving only the (priors for the) growth rates for the leaves
+          Pr=np.linalg.inv(C)
+  
+          # M = set of mutations considered, |M|=m
+          # n = #leaves
+          # a[] = xx[:n]    n offsets, one for each leaf
+          # gg[] = xx[n:]   n growths, one for each leaf
+          # P(a[],g[]) = Prior(g[]) *
+          #              const * 
+          #              Product over leaves, l, of prod_t (P(l,t)/P(.,t))^n[l,t]
+          # where
+          # Prior(g[]) is given by covariance matrix C[,] (or precision matrix Pr[,])
+          # n[l,t] = observed counts of variants in leaf l on day t (counting from mindate)
+          # P(l,t) = exp(a[l]+gg[l]*t)  (t counting from mindate)
+          # P(.,t) = sum_l P(l,t)
+          #
+          # n_{l,t} = number of instances of leaf l on day t
+          # nn0[l] = sum_t n_{l,t}
+          # nn1[l] = sum_t t*n_{l,t}
+          # nn[t]  = sum_l n_{l,t}
+          nn0=np.zeros(n)
+          nn1=np.zeros(n)
+          nn=np.zeros(ndays)
+          nnt=np.zeros(ndays)
+          for (l,lf) in enumerate(tr.getleaves()):
+            lf.n=l
+            for i in lf.indexlist:
+              t=linelist[i][0]-mindate
+              nn0[l]+=1
+              nn1[l]+=t
+              nn[t]+=1
+              nnt[t]+=t
+          #
+          def LL(xx):
+            off=xx[:n]
+            gg=xx[n:]
+            LL1=nn0@off+nn1@gg
+            den=np.exp(off[:,None]+gg[:,None]*np.arange(ndays)).sum(axis=0)
+            LL1-=nn@np.log(den)
+            LL1-=gg@Pr@gg/2
+            return LL1
+          def dLL(xx):
+            dLL1=np.concatenate([nn0,nn1])
+            off=xx[:n]
+            gg=xx[n:]
+            dens=np.exp(off[:,None]+gg[:,None]*np.arange(ndays))
+            den=dens.sum(axis=0)
+            dLL1[:n]-=((dens*nn)/den).sum(axis=1)
+            dLL1[n:]-=((dens*nnt)/den).sum(axis=1)
+            dLL1[n:]-=Pr@gg
+            return dLL1
+  
+          def NLL(xx): return -LL(xx)/len(linelist)
+          def NdLL(xx): return -dLL(xx)/len(linelist)
+    
+          bounds=[(-50,50)]*n+[(-0.5,0.5)]*n
+          xx=[0]*(2*n)
+          res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+          xx=res.x
+          if not res.success: raise RuntimeError(res.message)
+          for i in range(len(xx)):
+            if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
+              err=1
+              print("Error: param",i,"=",xx[i],"hit bound")
+          
+          # Growth effect, defined up to an additive constant
+          # GE(xx,t1)-GE(xx,t0) is well-defined
+          def GE(xx,t):
+            gg=xx[n:]
+            den=np.exp(xx[:n]+gg*t)
+            return gg@den/den.sum()
+  
+          ge=GE(xx,now+args.effectto-mindate)-GE(xx,now+args.effectfrom-mindate)
+          if pr>=1: print(num2name[mut],len(ind_l),len(ind_r),"  ",ge,"   ",LL(xx),"   ",xx[n:])
+          if ge>best[0]: best=(ge,branchleaf,mut,xx)
+          
+        branchleaf.join_inplace()
+    if len(best)==1: break
+    (ge,branchleaf,mut,xx)=best
+    if ge-prevge<1e-3: print("Not finding sufficient improvement in growth effect - halting");break
+    prevge=ge
+    print("Splitting on",num2name[mut],"giving a growth effect of",ge)
+    branchleaf.split(mut)
+    nna=np.zeros([n,ndays])
+    for (l,lf) in enumerate(tr.getleaves()):
+      lf.n=l
+      for i in lf.indexlist:
+        t=linelist[i][0]-mindate
+        nna[l,t]+=1
+    print()
+    tr.pr(annotate=xx[n:])
+    print()
+    lptot=0
+    nn0*=0;nn1*=0;nn*=0;nnt*=0
+    for (l,lf) in enumerate(tr.getleaves()):
+      lf.n=l
+      for i in lf.indexlist:
+        t=linelist[i][0]-mindate
+        nn0[l]+=1
+        nn1[l]+=t
+        nn[t]+=1
+        nnt[t]+=t
+    FixPr
+    res=minimize(NLL,xx,bounds=bounds, jac=NdLL, method="SLSQP", options={'ftol':1e-20, 'maxiter':10000})
+    xx=res.x
+    if not res.success: raise RuntimeError(res.message)
+    for i in range(len(xx)):
+      if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-4 or xx[i]>bounds[i][1]-1e-4):
+        err=1
+        print("Error: param",i,"=",xx[i],"hit bound")
+    print()
+    
