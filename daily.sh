@@ -27,17 +27,17 @@ set -e
     #python3 uk_var_comp.py -f 2022-05-01 -l 'BA.5.1,BA.2.75.2,BA.2.75.5,BN.1,BA.4.6,BA.5.1.12,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.7,BM.1.1,BA.2.12.1,BQ.1,BQ.1.1,BA.1*,BA.2*,BA.4*,BA.5*,BA.2.75.*' -F30
     #python3 uk_var_comp.py -f 2022-09-01 -p -b -l 'BA.5.2,BQ.1,BQ.1.1,XBB.1' -F30
     #python3 uk_var_comp.py -f 2022-09-01 -l 'BA.5.1,BA.2.75.2,BA.2.75.5,BN.1,BA.4.6,BA.5.1.12,BA.5.2,BA.5.2.1,BA.5.2.6,BA.5.2.7,BF.7,BF.11,BM.1.1,BQ.1,BQ.1.1,XBB,XBB.1,BA.*,BA.2.75.*,BA.4*,BA.5*' -F30
-    python3 uk_var_comp.py -f 2022-12-01 -p -b -l 'BQ.1.1*,CH.1.1.1,XBB.1.5' -F30
-    python3 uk_var_comp.py -f 2022-11-15 -l 'BA.2.75.2,BA.4.6,BA.5.2.6,BA.5.2.13,BA.5.2.35,BF.5,BF.7,BF.11,BQ.1,BQ.1.8,BQ.1.1.8,BE.1.1,CH.1.1,CH.1.1.1,XBB,XBB.1,*,XBB.*,XBB.1.*,BA.2.75.*,BA.4*,BA.5*,BF.*,BN.1.*,BQ.1.*,BQ.1.1*' -F30
+    python3 uk_var_comp.py -f 2022-12-16 -p -b -l 'XBB.1.5,XBB.1.9.1' -F30
+    python3 uk_var_comp.py -f 2022-12-16 -l 'BA.5.2.6,BA.5.2.35,BF.7,BQ.1,BQ.1.8,BQ.1.1.2,BQ.1.1.8,CH.1.1,CH.1.1.1,XBF,DN.1.1,XBB,XBB.1.5,XBB.1.9.1,XBB.1,*,XBB.*,XBB.1.*,BA.4*,BA.5*,BA.5.2*,BF.*,BN.1.*,BQ.1.*,BQ.1.1*' -F30
 )
 
 make
 python3 maketrend.py
 
 bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
-bigpics=$bigpics' VOCgrowth/UK_BQ.1.1*_CH.1.1.1_XBB.1.5.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.2.75.2_BA.4.6_BA.5.2.6_BA.5.2.13_BA.5.2.35_BF.5_BF.7_BF.11_BQ.1_BQ.1.8_BQ.1.1.8_BE.1.1_CH.1.1_CH.1.1.1_XBB_XBB.1_*_XBB.*_XBB.1.*_BA.2.75.*_BA.4*_BA.5*_BF.*_BN.1.*_BQ.1.*_BQ.1.1*.variantpressure.png'
-bigpics=$bigpics' VOCgrowth/UK_BA.2.75.2_BA.4.6_BA.5.2.6_BA.5.2.13_BA.5.2.35_BF.5_BF.7_BF.11_BQ.1_BQ.1.8_BQ.1.1.8_BE.1.1_CH.1.1_CH.1.1.1_XBB_XBB.1_*_XBB.*_XBB.1.*_BA.2.75.*_BA.4*_BA.5*_BF.*_BN.1.*_BQ.1.*_BQ.1.1*.growthproj.png'
+bigpics=$bigpics' VOCgrowth/UK_XBB.1.5_XBB.1.9.1.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.2.6_BA.5.2.35_BF.7_BQ.1_BQ.1.8_BQ.1.1.2_BQ.1.1.8_CH.1.1_CH.1.1.1_XBF_DN.1.1_XBB_XBB.1.5_XBB.1.9.1_XBB.1_*_XBB.*_XBB.1.*_BA.4*_BA.5*_BA.5.2*_BF.*_BN.1.*_BQ.1.*_BQ.1.1*.variantpressure.png'
+bigpics=$bigpics' VOCgrowth/UK_BA.5.2.6_BA.5.2.35_BF.7_BQ.1_BQ.1.8_BQ.1.1.2_BQ.1.1.8_CH.1.1_CH.1.1.1_XBF_DN.1.1_XBB_XBB.1.5_XBB.1.9.1_XBB.1_*_XBB.*_XBB.1.*_BA.4*_BA.5*_BA.5.2*_BF.*_BN.1.*_BQ.1.*_BQ.1.1*.growthproj.png'
 
 set -o noglob
 pics=$bigpics
