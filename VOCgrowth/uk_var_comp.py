@@ -415,23 +415,23 @@ print()
 
 last=14
 proj=42
-NR=NN[-last:,:].sum(axis=0)
-PR=NR/NR.sum()
+AR=NN.sum(axis=0)/NN.sum()
+PR=NN[-last:,:].sum(axis=0)/NN.sum()
 stats=[]
 for i in range(numv):
   grad=c[numv+i]
   graderr=sqrt(C[numv+i,numv+i])*zconf
-  stats.append([i,grad,graderr,PR[i],PR[i]*exp(grad*proj)])
+  stats.append([i,grad,graderr,AR[i],PR[i],PR[i]*exp(grad*proj)])
 stats=np.array(stats)
-stats[:,4]=stats[:,4]/stats[:,4].sum()
+stats[:,5]=stats[:,5]/stats[:,5].sum()
 orders=stats.argsort(axis=0)
-types=[("original given order",0),("growth rate relative to %s"%Vnames[0],1),("relative prevalence over last %d days"%last,3),("relative prevalence projected forward %d days"%proj,4)]
+types=[("original given order",0),("growth rate relative to %s"%Vnames[0],1),("relative prevalence over last %d days"%last,4),("relative prevalence projected forward %d days"%proj,5)]
 for desc,col in types:
   print("Ordered by",desc)
-  print("        Lineage ---------Growth---------  Last%02ddays Proj%02ddays"%(last,proj))
+  print("        Lineage ---------Growth---------     Alldays  Last%02ddays Proj%02ddays"%(last,proj))
   for i in range(numv):
     row=stats[orders[i,col],:]
-    print("%15s %6.3f (%6.3f - %6.3f)      %5.1f%%     %5.1f%%"%(Vnames[int(row[0])],row[1],row[1]-row[2],row[1]+row[2],row[3]*100,row[4]*100))
+    print("%15s %6.3f (%6.3f - %6.3f)      %5.1f%%      %5.1f%%     %5.1f%%"%(Vnames[int(row[0])],row[1],row[1]-row[2],row[1]+row[2],row[3]*100,row[4]*100,row[5]*100))
   print()
 
 
