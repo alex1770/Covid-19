@@ -1,4 +1,4 @@
-import sys,time
+import sys,time,os
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -17,16 +17,17 @@ driver = webdriver.Chrome(options=chrome_options)
 driver.set_window_size(1600, 1200)  # Set the width and height
 
 # Navigate to the site
-driver.get('https://www.google.co.uk/maps/@51.5121089,-0.1476081,11z/data=!5m1!1e1?hl=en')
+# driver.get('https://www.google.co.uk/maps/@51.5121089,-0.1476081,11z/data=!5m1!1e1?hl=en')
+driver.get("file://"+os.path.join(os.getcwd(),"apimap.html"))
 
 # wait for the consent form to load
-wait = WebDriverWait(driver, 10)
-accept_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[text()='Accept all']")))
+# wait = WebDriverWait(driver, 10)
+# accept_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[text()='Accept all']")))
 
 # click on the "accept" button
-accept_button.click()
+# accept_button.click()
 
-time.sleep(10)# Probably 1 second is plenty, but who cares?
+time.sleep(5)# Giving it enough time to render
 #WebDriverWait(driver, 10).until(lambda d: d.execute_script('return jQuery.active == 0'))
 
 # Take a screenshot
