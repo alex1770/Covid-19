@@ -416,7 +416,7 @@ print()
 last=14
 proj=42
 AR=NN.sum(axis=0)/NN.sum()
-PR=NN[-last:,:].sum(axis=0)/NN.sum()
+PR=NN[-last:,:].sum(axis=0)/NN[-last:,:].sum()
 stats=[]
 for i in range(numv):
   grad=c[numv+i]
