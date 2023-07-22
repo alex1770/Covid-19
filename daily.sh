@@ -11,17 +11,17 @@ set -e
 (cd COG-UK; bash update.sh)
 (
     cd VOCgrowth
-    python3 uk_var_comp.py -f 2023-02-01 -p -b -l 'XBB.1.5*,XBB.1.9*,XBB.1.16*' -F30
-    python3 uk_var_comp.py -f 2023-02-01 -l 'BQ.1,BQ.1.1,BQ.1.8,BQ.1.1.2,BQ.1.1.8,CH.1.1,CH.1.1.1,XBF,DN.1.1,EG.1,EM.1,DU.1,XBB.1,*,DV.1*,XBB.*,XBB.1.*,XBB.1.5*,XBB.1.9.1*,XBB.1.9.2*,XBB.1.16*,BA.5*,BA.5.2*,BF.*,BN.1.*,BQ.1.*,BQ.1.1*' -F30
+    python3 uk_var_comp.py -f 2023-05-01 -p -b -l 'XBB.1.16,XBB.1.16.11,EG.5.1*' -F30
+    python3 -i uk_var_comp.py -f 2023-05-01 -l 'CH.1.1.1,EG.1,EG.5.1,EG.5.1.1,FU.1,GE.1,XBB.1.16,XBB.1.16.11,XBB.2.3,XBB.2.3.2,XBB.2.3.3,*,XBB.*,XBB.1.*,XBB.1.5*,XBB.1.9.1*,XBB.1.9.2*,XBB.1.16*,BQ.1.1*,EG.*,FL.*,FE.*,FY.*' -F30
 )
 
 make
 python3 maketrend.py
 
 bigpics='trendthr_cases.png trendthr_deaths.png trendsimple_cases.png trendsimple_deaths.png trendsimple_cases_zoom.png trendsimple_deaths_zoom.png recent_cases.png recent_deaths.png recent_cases_growth.png recent_deaths_growth.png'
-bigpics=$bigpics' VOCgrowth/UK_XBB.1.5*_XBB.1.9*_XBB.1.16*.png'
-bigpics=$bigpics' VOCgrowth/UK_BQ.1_BQ.1.1_BQ.1.8_BQ.1.1.2_BQ.1.1.8_CH.1.1_CH.1.1.1_XBF_DN.1.1_EG.1_EM.1_DU.1_XBB.1_*_DV.1*_XBB.*_XBB.1.*_XBB.1.5*_XBB.1.9.1*_XBB.1.9.2*_XBB.1.16*_BA.5*_BA.5.2*_BF.*_BN.1.*_BQ.1.*_BQ.1.1*.variantpressure.png'
-bigpics=$bigpics' VOCgrowth/UK_BQ.1_BQ.1.1_BQ.1.8_BQ.1.1.2_BQ.1.1.8_CH.1.1_CH.1.1.1_XBF_DN.1.1_EG.1_EM.1_DU.1_XBB.1_*_DV.1*_XBB.*_XBB.1.*_XBB.1.5*_XBB.1.9.1*_XBB.1.9.2*_XBB.1.16*_BA.5*_BA.5.2*_BF.*_BN.1.*_BQ.1.*_BQ.1.1*.growthproj.png'
+bigpics=$bigpics' VOCgrowth/UK_XBB.1.16_XBB.1.16.11_EG.5.1*.png'
+bigpics=$bigpics' VOCgrowth/UK_CH.1.1.1_EG.1_EG.5.1_EG.5.1.1_FU.1_GE.1_XBB.1.16_XBB.1.16.11_XBB.2.3_XBB.2.3.2_XBB.2.3.3_*_XBB.*_XBB.1.*_XBB.1.5*_XBB.1.9.1*_XBB.1.9.2*_XBB.1.16*_BQ.1.1*_EG.*_FL.*_FE.*_FY.*.variantpressure.png'
+bigpics=$bigpics' VOCgrowth/UK_CH.1.1.1_EG.1_EG.5.1_EG.5.1.1_FU.1_GE.1_XBB.1.16_XBB.1.16.11_XBB.2.3_XBB.2.3.2_XBB.2.3.3_*_XBB.*_XBB.1.*_XBB.1.5*_XBB.1.9.1*_XBB.1.9.2*_XBB.1.16*_BQ.1.1*_EG.*_FL.*_FE.*_FY.*.growthproj.png'
 
 set -o noglob
 pics=$bigpics
