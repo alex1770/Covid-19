@@ -1,7 +1,12 @@
 import requests,bs4
 import sys
 
-# Consider using https://github.com/cov-lineages/pango-designation/blob/master/lineage_notes.txt instead
+# Make computer-readable alias list from cov-lineages file https://cov-lineages.org/lineage_list.html
+# Superseded by https://github.com/cov-lineages/pango-designation/raw/master/pango_designation/alias_key.json (includes recombinants)
+#               (from https://github.com/cov-lineages/pango-designation/blob/master/pango_designation/alias_key.json)
+#               or https://cov-spectrum.org/api/v2/resource/pango-lineage-alias
+# 
+# (Note that https://github.com/cov-lineages/pango-designation/blob/master/lineage_notes.txt has further details)
 page=requests.get("https://cov-lineages.org/lineage_list.html")
 soup=bs4.BeautifulSoup(page.content,features="lxml")
 
