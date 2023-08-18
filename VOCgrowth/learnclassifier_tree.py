@@ -97,10 +97,10 @@ sys.stdout.flush()
 allm={}
 ml=[]
 numl={}
-if args.gisaid: keys=["Collection date","Pango lineage","AA Substitutions","N-Content"];sep='\t'
-else: keys=["sample_date","usher_lineage","mutations","ambiguities"];sep=','
+if args.gisaid: keys=["Virus name","Collection date","Pango lineage","AA Substitutions","N-Content"];sep='\t'
+else: keys=["sequence_name","sample_date","usher_lineage","mutations","ambiguities"];sep=','
 t0=t1=0
-for (date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
+for (name,date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
   if len(date)<10: continue
   if date>args.maxdate: continue
   if date<args.mindate:
@@ -120,7 +120,7 @@ for (date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
   t0+=1
   if bad>args.maxbad: t1+=1;continue
   for m in mutationlist(mutations): allm[m]=allm.get(m,0)+1
-  ml.append((lineage,mutations))
+  ml.append((name,lineage,mutations))
   numl[lineage]=numl.get(lineage,0)+1
 
 print("Found",len(ml),"relevant entries since",args.mindate)
@@ -128,19 +128,22 @@ print("Discarded",t1,"from",t0,"(%.1f%%) due to bad coverage"%(t1/t0*100))
 okm=set(m for m in allm if m!="" and allm[m]>=args.mincount and okmut(m))
 print("Found",len(allm),"mutations, of which",len(okm),"have occurred at least",args.mincount,"times and are",genomesubsetdesc(args.genomesubset))
 
-def patmatch(lin):
+def patmatch(name,lin):
   ind=len(lineages)
   for i in range(len(lineages)):
-    exact=targlinsexact[i]
-    prefix=targlinsprefix[i]
-    if lin==exact:
-      ind=i
-      if prefix=='-': return ind# Exact match with non-wildcard takes precendence over anything later
-    if (lin+'.')[:len(prefix)]==prefix: ind=i
+    if name in targlinsname[i]: return i
+  for i in range(len(lineages)):
+    if targlinsname[i] is None:
+      exact=targlinsexact[i]
+      prefix=targlinsprefix[i]
+      if lin==exact:
+        ind=i
+        if prefix=='-': return ind# Exact match with non-wildcard takes precendence over anything later
+      if (lin+'.')[:len(prefix)]==prefix: ind=i
   return ind
 
 if args.lineages==None:
-  lineages=list(set(lineage for (lineage,mutations) in ml))
+  lineages=list(set(lineage for (name,lineage,mutations) in ml))
   lineages.sort(key=lambda l: -numl[l])
   lineages=lineages[:args.numtoplin]
 else:
@@ -152,17 +155,30 @@ sys.stdout.flush()
 #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
 targlinsexact=[]
 targlinsprefix=[]
+targlinsname=[]
 for lin in lineages:
-  if lin[-2:]=='.*': exact="-";prefix=lin[:-1]
-  elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
-  else: exact=lin;prefix="-"
-  targlinsexact.append(expandlin(exact))
-  targlinsprefix.append(expandlin(prefix))
+  if lin[:2]=="f:":
+    templ=[]
+    with open(lin[2:]) as fp:
+      for x in fp:
+        y=x.split()
+        templ.append(y[0])
+    targlinsname.append(set(templ))
+    targlinsexact.append(None)
+    targlinsprefix.append(None)
+  else:
+    if lin[-2:]=='.*': exact="-";prefix=lin[:-1]
+    elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
+    else: exact=lin;prefix="-"
+    targlinsname.append(None)
+    targlinsexact.append(expandlin(exact))
+    targlinsprefix.append(expandlin(prefix))
+
 print()
 
 mml=[]
-for (lineage,mutations) in ml:
-  i=patmatch(expandlin(lineage))
+for (name,lineage,mutations) in ml:
+  i=patmatch(name,expandlin(lineage))
   #print("Assigning",lineage,"to",lineages[i] if i<len(lineages) else "Unassigned")
   mml.append((i,set(mutationlist(mutations)).intersection(okm)))
 lineages.append("Unassigned")
