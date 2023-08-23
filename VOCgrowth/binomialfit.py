@@ -85,9 +85,9 @@ def getlik(countfile):
 
 def printstats(d,desc):
   tot=sum(d.values())
-  #with open("outlik_"+method,"w") as fp:
-  #  for g in sorted(list(d)):
-  #    print("%10.6f %12g"%(g,d[g]/tot/dg),file=fp)
+  with open("outlik_"+desc,"w") as fp:
+    for g in sorted(list(d)):
+      print("%10.6f %12g"%(g,d[g]/tot/dg),file=fp)
   thr=[0.05,0.1,0.25,0.5,0.9,0.95,0.99]
   i=0;t=0;s=0
   for g in sorted(list(d)):
