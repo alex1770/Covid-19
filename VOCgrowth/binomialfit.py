@@ -39,13 +39,13 @@ for (v0,v1,dt) in zip(N0,N1,DT):
   V1[dt-minday]=v1
 
 # p_i/(1-p_i) = exp(xx[0] + i*xx[1]), i=0, 1, ..., ndays-1
-def LL(g,pr=0):
+def LL(g,intro):
   c=-log(ipd)-intro*g
   logodds=c+np.arange(ndays)*g
   Z=np.log(1+np.exp(logodds))
   return np.sum(V1*(logodds-Z)-V0*Z)
 
-ipd=10000# infections per day
+ipd=10000# infections per day, guessed; shouldn't matter much
 firstseen=min(i for i in range(ndays) if V1[i]>0)
 
 # Assuming on day of introduction odds are 1/ipd
@@ -72,7 +72,7 @@ dmax={}# Maximising over nuisance parameter (c or intro)
 for intro in np.arange(0,maxintro,0.25):
   ming,maxg = max((log(ipd)-10)/(firstseen-intro),0), max((log(ipd)+10)/(ndays-intro),0)
   for g in np.arange(bin2g(g2bin(ming)),bin2g(g2bin(maxg)),dg):
-    ll=LL(g);el=exp(ll)
+    ll=LL(g,intro);el=exp(ll)
     dsum[g]=dsum.get(g,0)+el
     dmax[g]=max(dmax.get(g,0),el)
     #print("%8.3f %10.6f %10.6f %12g"%(intro,g,ll,el),file=fp)
@@ -90,8 +90,8 @@ for method,d in ("sum",dsum),("max",dmax):
     t+=d[g]
     s+=d[g]*g
     while i<len(thr) and t>thr[i]:
-      print("Method %s: %2.0f%% point at daily logarithmic growth %5.3f = %+5.0f%% per week"%(method,thr[i]*100,g,(exp(g*7)-1)*100))
+      print("Method %s: %2.0f%% point at daily logarithmic growth %5.3f = %+8.0f%% per week"%(method,thr[i]*100,g,(exp(g*7)-1)*100))
       i+=1
-  print("Method %s: mean      at daily logarithmic growth %5.3f = %+5.0f%% per week"%(method,s,(exp(s*7)-1)*100))
+  print("Method %s: mean      at daily logarithmic growth %5.3f = %+8.0f%% per week"%(method,s,(exp(s*7)-1)*100))
   print()
   
