@@ -553,3 +553,58 @@ def getcasesbyagespeccomplete(maxday,ages=[(a,a+10) for a in range(0,70,10)]+[(7
 def getextrap(maxday,ages=[(a,a+10) for a in range(0,70,10)]+[(70,150)],minday=Date('2021-08-20'),location='England'):
   sp0,sp=getcasesbyagespeccomplete(maxday,ages=ages,minday=minday,location=location)
   return sp0.sum(axis=1)/sp.sum(axis=1)
+
+# https://gensplore.genomium.org/?gb=%2Fsequence.gb
+# Counting from 1, inclusive-exclusive notation
+genes={
+  'ORF1a': [266, 13469],
+  'ORF1b': [13468, 21556],
+  'S': [21563, 25385],
+  'ORF3a': [25393, 26221],
+  'E': [26245, 26473],
+  'M': [26523, 27192],
+  'ORF6': [27202, 27388],
+  'ORF7a': [27394, 27760],
+  'ORF7b': [27756, 27888],
+  'ORF8': [27894, 28260],
+  'N': [28274, 29534],
+  'ORF10': [29558, 29675]
+}
+# ORF1ab codon position p>4401 <-> ORF1b codon position p-4401
+
+codon = {
+  'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+  'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+  'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+  'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',                
+  'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+  'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+  'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+  'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+  'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+  'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+  'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+  'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+  'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+  'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+  'TAC':'Y', 'TAT':'Y', 'TAA':'_', 'TAG':'_',
+  'TGC':'C', 'TGT':'C', 'TGA':'_', 'TGG':'W',
+}
+  
+# i is nucleobase position from 0
+# Return gene name, codon number (from 0), nucleobase pos (from 0) at start of amino acid
+def getaa(i):
+  i+=1
+  for g in genes:
+    [a,b]=genes[g]
+    if i>=a and i<=b: break
+  else: return "????",1,1
+  return g,(i-a)//3,i-(i-a)%3-1
+
+# As getaa() but in orf1ab format
+def getaa2(i):
+  g,c,p=getaa(i)
+  if g=='ORF1a': g='orf1ab'
+  elif g=='ORF1b': g='orf1ab';c+=4401
+  return g,c,p
+
