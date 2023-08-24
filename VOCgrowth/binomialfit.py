@@ -84,7 +84,7 @@ def getlik(countfile):
   return dsum,dmax
 
 def printstats(d,desc):
-  print("Growth rate estimate of BA.2.86 as of",UKdatetime()[0])
+  print(f"Growth rate estimate of BA.2.86 as of {UKdatetime()[0]}. Data from GISAID.")
   tot=sum(d.values())
   with open("outlik_"+desc,"w") as fp:
     for g in sorted(list(d)):
