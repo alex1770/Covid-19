@@ -84,6 +84,7 @@ def getlik(countfile):
   return dsum,dmax
 
 def printstats(d,desc):
+  print("(Assuming uniform prior on logarithmic growth rate)")
   tot=sum(d.values())
   with open("outlik_"+desc,"w") as fp:
     for g in sorted(list(d)):
