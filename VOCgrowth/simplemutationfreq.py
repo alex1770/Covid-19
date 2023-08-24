@@ -1,7 +1,7 @@
 #!/usr/bin/pypy3
 
 from __future__ import print_function,division
-# ^ To enable use of pypy when pypy3 isn't available
+# ^ To enable use of pypy when pypy3 isn't available, or when pypy is faster
 
 import sys,os,argparse,platform
 from stuff import *
@@ -88,7 +88,7 @@ for (name,mutations) in csvrows_it(sys.stdin,keys,sep=sep):
   else: targmuts.intersection_update(muts)
 targnames=set(targnames)
 
-print(f"Found {len(targnames)} target genome(s)")
+print("Found %d target genome(s)"%len(targnames))
 
 
 print("Reading sequence metadata")
@@ -126,11 +126,12 @@ l=sorted(list(targmuts))
 lev={mut:min(s for s in range(1,6) if okmut(mut,s)) for mut in targmuts}
 l.sort(key=lambda mut:allm[mut]+0.1*lev[mut])
 for mut in l:
+  if allm[mut]>=10000: break
   print("%-15s %d  %8d"%(mut,lev[mut],allm[mut]))
 print()
 bestmuts=set(l[:13])
 
-print("Rereading sequence metadata")
+print("Rereading sequence metadata looking for other examples")
 sys.stdout.flush()
 allm={mut:0 for mut in targmuts}
 if args.gisaid: keys=["Virus name","Collection date","Pango lineage","AA Substitutions","N-Content"];sep='\t'
@@ -152,5 +153,4 @@ for (name,date,lineage,mutations,Ncontent) in csvrows(infile,keys,sep=sep):
 scorelist.sort(reverse=True)
 for (score,name,date) in scorelist[:10]:
   print(date,"%-50s"%name,"%3d"%score,name in targnames)
-  
   
