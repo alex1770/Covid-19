@@ -11,6 +11,8 @@
 # essentially zero for i<i0 anyway (assuming g>=0), given that we're sequencing
 # far fewer than the number of infections. So we're back to normal binomial regression.
 #
+# (Though I think this does bias g high a bit)
+#
 # So here we do normal binomial regression,
 # where p_i/(1-p_i) = exp(c + i*g)
 #
@@ -83,8 +85,14 @@ def getlik(countfile):
 
   return dsum,dmax
 
+sources=set()
 def printstats(d,desc):
-  print(f"Growth rate estimate of BA.2.86 as of {UKdatetime()[0]}. Data from GISAID.")
+  if desc=="Combined":
+    source=" and ".join(sources)
+  else:
+    source="COG-UK" if "COG" in desc else "GISAID"
+    sources.add(source)
+  print(f"Growth rate estimate of BA.2.86 as of {UKdatetime()[0]}. Data from {source}.")
   tot=sum(d.values())
   with open("outlik_"+desc,"w") as fp:
     for g in sorted(list(d)):
