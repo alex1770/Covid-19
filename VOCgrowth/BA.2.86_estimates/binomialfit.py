@@ -88,7 +88,7 @@ def printstats(d,desc):
   else:
     source="COG-UK" if "COG" in desc else "GISAID"
     sources.add(source)
-  print(f"Growth rate estimate of BA.2.86 as of {UKdatetime()[0]}. Data from {source}.")
+  print(f"Relative growth rate estimate of BA.2.86 at {UKdatetime()[0]}. Data from {source}.")
   tot=sum(d.values())
   with open("outlik_"+desc,"w") as fp:
     for g in sorted(list(d)):
