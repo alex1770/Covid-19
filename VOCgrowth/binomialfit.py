@@ -1,17 +1,15 @@
 # Binomial fit, with likelihood output of growth rate, and possibly introduction day
-# What happens if you add a day-of-introduction parameter?
+# What happens if you add a day-of-introduction parameter independent of the constant offset?
 # Explain (a_i, b_i)   a_i=non-variant, b_i=variant,
 # by assuming a_i+b_i is given and that b_i ~ B(a_i+b_i, p_i)
 # where p_i/(1-p_i) = exp(c + (i-i0)*g)  if i>=i0
 #                   = 0                  if i<i0
 # But c isn't allowed to be arbitrary, because on the day of introduction
-# we expect the odds to be on the order of (a few)/number_of_cases, i.e.,
+# we expect the chance of seeing the variant to be on the order of (a few)/number_of_cases, i.e.,
 # c should be about -log(number_of_cases/(a few)).
 # So in that case, we don't need to add the 0 for i<i0, because p_i will be
 # essentially zero for i<i0 anyway (assuming g>=0), given that we're sequencing
 # far fewer than the number of infections. So we're back to normal binomial regression.
-#
-# (Though I think this does bias g high a bit)
 #
 # So here we do normal binomial regression,
 # where p_i/(1-p_i) = exp(c + i*g)
@@ -21,8 +19,19 @@
 import numpy as np
 from math import exp,log,sqrt,floor
 from stuff import *
+import argparse
 
-# p_i/(1-p_i) = exp(xx[0] + i*xx[1]), i=0, 1, ..., ndays-1
+parser=argparse.ArgumentParser()
+parser.add_argument('-i', '--ipd',      type=float,default=10000,   help="Guessed total number of infections per day (shouldn't matter much)")
+parser.add_argument('-m', '--maxg',     type=float,default=0.2,     help="Maximum daily logarthmic growth rate considered (effectively the prior is U[0,maxg])")
+parser.add_argument('-f', '--minintrodate',  default="2019-01-01",  help="Earliest possible introduction date of variant")
+parser.add_argument('countfilenames',   nargs='*',                  help="Name of file containing counts of non-variant, variant")
+args=parser.parse_args()
+
+# Odds of variant:non-variant are modelled as exp(c+i*g), i=day number
+# Assuming on day of introduction odds are 1/ipd
+# So c + intro*g = -log(ipd)
+# p_i/(1-p_i) = exp(c + i*g), i=0, 1, ..., ndays-1
 def LL(g,intro,ipd,V0,V1):
   c=-log(ipd)-intro*g
   ndays=len(V0)
@@ -33,6 +42,8 @@ def LL(g,intro,ipd,V0,V1):
 dg=0.001
 def g2bin(g): return int(floor(g/dg+0.5))
 def bin2g(b): return b*dg
+
+minintrodate=datetoday(args.minintrodate)
 
 def getlik(countfile):
 
@@ -55,30 +66,15 @@ def getlik(countfile):
     V0[dt-minday]=v0
     V1[dt-minday]=v1
   
-  ipd=10000# infections per day, guessed; shouldn't matter much
   firstseen=min(i for i in range(ndays) if V1[i]>0)
-  
-  # Assuming on day of introduction odds are 1/ipd
-  # So xx[0] + intro*xx[1] = -log(ipd)
-  # Then (assuming xx[1]>=0) we want to bound xx[0] + ndays*xx[1] in a sensible way
-  # So (ndays-intro)*xx[1]-log(ipd) <= 10, say. (Assuming it hasn't swept yet.)
-  # and xx[1] <= (10+log(ipd))/(ndays-intro)
-  # But also, there needs to be a sensible chance of seeing on the first day it was seen, so
-  # xx[0] + firstseen*xx[1] >= -10 say
-  # (firstseen-intro)*xx[1] >= -10 + log(ipd) (with intro < firstseen)
-  # (log(ipd)-10)/(firstseen-intro) <= xx[1] <= (log(ipd)+10)/(ndays-intro)
-  # (log(ipd)-10)*(ndays-intro) <= (log(ipd)+10)*(firstseen-intro)
-  # 20*intro <= (log(ipd)+10)*firstseen - (log(ipd)-10)*ndays
-  # intro <= ((log(ipd)+10)*firstseen - (log(ipd)-10)*ndays)/20
-  
-  maxintro = min(firstseen, int( ((log(ipd)+10)*firstseen - (log(ipd)-10)*ndays)/20+1 ))
+
   l=[]
   dsum={}# Integrating over nuisance parameter (c or intro)
   dmax={}# Maximising over nuisance parameter (c or intro)
-  for intro in np.arange(0,maxintro,0.25):
-    ming,maxg = max((log(ipd)-10)/(firstseen-intro),0), max((log(ipd)+10)/(ndays-intro),0)
+  for intro in np.arange(max(0,minintrodate-minday),firstseen,0.25):
+    ming,maxg = 0,args.maxg
     for g in np.arange(bin2g(g2bin(ming)),bin2g(g2bin(maxg)),dg):
-      ll=LL(g,intro,ipd,V0,V1);el=exp(ll)
+      ll=LL(g,intro,args.ipd,V0,V1);el=exp(ll)
       dsum[g]=dsum.get(g,0)+el
       dmax[g]=max(dmax.get(g,0),el)
       #print("%8.3f %10.6f %10.6f %12g"%(intro,g,ll,el),file=fp)
@@ -112,13 +108,13 @@ def printstats(d,desc):
   
 post={}
 nn={}
-for countfile in sys.argv[1:]:
+for countfile in args.countfilenames:
   dsum,dmax=getlik(countfile)
   printstats(dsum,countfile)
   for g in dsum:
     post[g]=post.get(g,1)*dsum[g]
     nn[g]=nn.get(g,0)+1
 
-n=len(sys.argv[1:])
+n=len(args.countfilenames)
 post2={g:post[g] for g in post if nn[g]==n}
 printstats(post2,"Combined")
