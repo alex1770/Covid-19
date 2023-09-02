@@ -25,6 +25,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument('-i', '--ipd',      type=float,default=10000,   help="Guessed total number of infections per day (shouldn't matter much)")
 parser.add_argument('-m', '--maxg',     type=float,default=0.2,     help="Maximum daily logarthmic growth rate considered (effectively the prior is U[0,maxg])")
 parser.add_argument('-f', '--minintrodate',  default="2019-01-01",  help="Earliest possible introduction date of variant")
+parser.add_argument('-w', '--writegraph', action="store_true",      help="Whether to write graph output file")
 parser.add_argument('countfilenames',   nargs='*',                  help="Name of file containing counts of non-variant, variant")
 args=parser.parse_args()
 
@@ -90,9 +91,10 @@ def printstats(d,desc):
     sources.add(source)
   print(f"Relative growth rate estimate of BA.2.86 at {UKdatetime()[0]}. Data from {source}.")
   tot=sum(d.values())
-  with open("outlik_"+desc,"w") as fp:
-    for g in sorted(list(d)):
-      print("%10.6f %12g"%(g,d[g]/tot/dg),file=fp)
+  if args.writegraph:
+    with open("outlik_"+desc,"w") as fp:
+      for g in sorted(list(d)):
+        print("%10.6f %12g"%(g,d[g]/tot/dg),file=fp)
   thr=[0.05,0.1,0.25,0.5,0.9,0.95,0.99]
   i=0;t=0;s=0
   for g in sorted(list(d)):
