@@ -31,7 +31,11 @@ def classify(lineage,mutations):
 
 def add(fp,desc):
   reader=csv.reader(fp,delimiter='\t')
-  headings=next(reader)
+  try:
+    headings=next(reader)
+  except StopIteration:
+    print("Ignoring input:",desc,file=sys.stderr)
+    return
   cols=[]
   for k in keys:
     if k=="Lineage" and k not in headings: k="Pango lineage"
