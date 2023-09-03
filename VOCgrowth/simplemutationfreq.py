@@ -88,7 +88,7 @@ for (name,mutations) in csvrows_it(sys.stdin,keys,sep=sep):
   else: targmuts.intersection_update(muts)
 targnames=set(targnames)
 
-print("Found %d target genome(s)"%len(targnames))
+print("Found %d target genome(s) with %d common mutation(s)"%(len(targnames),len(targmuts)))
 
 
 print("Reading sequence metadata")
