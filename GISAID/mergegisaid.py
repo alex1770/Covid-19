@@ -1,6 +1,6 @@
 # Merge metadata files in GISAID format. List files on command line with '-' for standard input.
 # Deduplicate, remove entries with unknown date, filter on sample date>=mindate, remove wastewater samples (Human host only), classify BA.2.86, sort into reverse date order, then output to stdout.
-# For duplicate entries, later-specified files take precedence, and all files take precedence over stdin.
+# For duplicate entries (based on the Accession ID key), later-specified files take precedence.
 # 
 # Example usage:
 #
@@ -8,7 +8,7 @@
 #
 # OR
 #
-# cat metadata_current_sorted.tsv | python3 mergegisaid.py -f 2023-01-01 - gisaid_submitted_2023-08-31.tsv gisaid_submitted_2023-09-01.tsv > temp && mv temp metadata_current_sorted.tsv
+# python3 mergegisaid.py -f 2023-01-01 metadata_current_sorted.tsv gisaid_submitted_2023-08-31.tsv gisaid_submitted_2023-09-01.tsv > temp && mv temp metadata_current_sorted.tsv
 
 import csv,sys,argparse
 
