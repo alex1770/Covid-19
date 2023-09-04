@@ -13,7 +13,7 @@
 import csv,sys,argparse
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-f', '--mindate',  default="2019-01-01",  help="Minimum sample date")
+parser.add_argument('-f', '--mindate',  default="2023-01-01",  help="Minimum sample date")
 parser.add_argument('incrementfilenames',   nargs='*',         help="Names of increment tsv files")
 args=parser.parse_args()
 
