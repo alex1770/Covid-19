@@ -1,14 +1,14 @@
-# Merge big current metadata file (stdin) with additional increment files (list of files on command line),
-# deduplicate, remove entries with unknown date, filter on sample date>=mindate, sort into reverse date order, then output to stdout.
+# Merge metadata files in GISAID format. List files on command line with '-' for standard input.
+# Deduplicate, remove entries with unknown date, filter on sample date>=mindate, remove wastewater samples (Human host only), classify BA.2.86, sort into reverse date order, then output to stdout.
 # For duplicate entries, later-specified files take precedence, and all files take precedence over stdin.
 # 
 # Example usage:
 #
-# tar xf metadata_tsv_2023_08_31.tar.xz metadata.tsv -O | python3 mergegisaid.py -f 2023-01-01 gisaid_submitted_2023-08-31.tsv gisaid_submitted_2023-09-01.tsv > metadata_current_sorted.tsv
+# tar xf metadata_tsv_2023_08_31.tar.xz metadata.tsv -O | python3 mergegisaid.py -f - 2023-01-01 gisaid_submitted_2023-08-31.tsv gisaid_submitted_2023-09-01.tsv > metadata_current_sorted.tsv
 #
 # OR
 #
-# cat metadata_current_sorted.tsv | python3 mergegisaid.py -f 2023-01-01 gisaid_submitted_2023-08-31.tsv gisaid_submitted_2023-09-01.tsv > temp && mv temp metadata_current_sorted.tsv
+# cat metadata_current_sorted.tsv | python3 mergegisaid.py -f 2023-01-01 - gisaid_submitted_2023-08-31.tsv gisaid_submitted_2023-09-01.tsv > temp && mv temp metadata_current_sorted.tsv
 
 import csv,sys,argparse
 
@@ -45,16 +45,19 @@ def add(fp,desc):
   ai=headings.index("Accession ID")# "Accession ID" seems to be more unique than "Virus Name", which can occur with variations
   li=keys.index("Lineage")
   aa=keys.index("AA Substitutions")
+  if "Host" in headings: hn=headings.index("Host")
+  else: hn=-1
   for row in reader:
-    if len(row[cd])==10 and row[cd]>=mindate:
+    if len(row[cd])==10 and row[cd]>=mindate:# and (hn==-1 or row[hn]=="Human"):
       row1=[row[col] for col in cols]
       row1[li]=classify(row1[li],row1[aa])
       output[row[ai]]=row1
 
-add(sys.stdin,"standard input")
 for fn in args.incrementfilenames:
-  with open(fn) as fp:
-    add(fp,fn)
+  if fn=='-': add(sys.stdin,"standard input")
+  else:
+    with open(fn) as fp:
+      add(fp,fn)
 
 cd=keys.index("Collection date")
 outputv=list(output.values())
