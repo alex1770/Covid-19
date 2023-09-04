@@ -48,7 +48,7 @@ def add(fp,desc):
   if "Host" in headings: hn=headings.index("Host")
   else: hn=-1
   for row in reader:
-    if len(row[cd])==10 and row[cd]>=mindate:# and (hn==-1 or row[hn]=="Human"):
+    if len(row[cd])==10 and row[cd]>=mindate and (hn==-1 or row[hn]=="Human"):
       row1=[row[col] for col in cols]
       row1[li]=classify(row1[li],row1[aa])
       output[row[ai]]=row1
