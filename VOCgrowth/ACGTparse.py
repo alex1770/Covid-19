@@ -1,9 +1,9 @@
 from stuff import *
 
 # From Theo Sanderson
-# Counting from 1, inclusive notation
+# Counting from 1, inclusive-exclusive notation
 genes={
-  'ORF1a': [266, 13467],
+  'ORF1a': [266, 13469],
   'ORF1b': [13468, 21556],
   'S': [21563, 25385],
   'ORF3a': [25393, 26221],
