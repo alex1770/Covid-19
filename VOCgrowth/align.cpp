@@ -94,11 +94,11 @@ string getid(string gisaidname){
 }
 
 // Take an input like this
-// (GISAID style, unknown date)  >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
-// (GISAID style, known date)    >hCoV-19/Austria/CeMM11657/2021|2021-06-14|2021-07-01
-// (GISAID style, extra prefix)  >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
-// (COG-UK style, no date)       >England/PHEC-YYF8DBE/2022
-// and extract the ID, e.g., "hCoV-19/env/Austria/CeMM11657/2021", and possibly prepend with given prefix (to put COG-UK on the same footing as GISAID)
+// (GISAID style, unknown sample date)  >hCoV-19/England/PHEC-L303L83F/2021|2021|2021-06-30
+// (GISAID style, known sample date)    >hCoV-19/Austria/CeMM11657/2021|2021-06-14|2021-07-01
+// (GISAID style, extra prefix)         >hCoV-19/env/Austria/CeMM11657/2021|2021-06-14|2021-07-01
+// (COG-UK style, no sample date)       >England/PHEC-YYF8DBE/2022
+// and extract the ID, e.g., "hCoV-19/env/Austria/CeMM11657/2021", and possibly prepend with "hCoV-19/" prefix (to put COG-UK on the same footing as GISAID)
 // "" means not available
 string parseheader(const string &idprefix,const string &header){
   assert(header.size()>0&&header[0]=='>');
@@ -543,15 +543,14 @@ int main(int ac,char**av){
     tick(8);
     FILE*fp;
     if(datadir=="")fp=stdout; else fp=fopen((datadir+"/"+date).c_str(),"a");
-    header=line;// Next header is the last-read line
     switch(compression){
     case 0:
-      fprintf(fp,">%s",id.c_str());
+      fprintf(fp,"%s",header.c_str());
       if(date!="")fprintf(fp,"|%s",date.c_str());
       fprintf(fp,"\n%s\n",&out[0]);
       break;
     case 1:
-      fprintf(fp,"%s|C%d",id.c_str(),compression);
+      fprintf(fp,"%s|C%d",header.c_str(),compression);
       for(i=0;i<N;i++){
         int j;
         if(out[i]==refgenome[i])continue;
@@ -567,7 +566,7 @@ int main(int ac,char**av){
       fprintf(fp,"\n");
       break;
     case 2:
-      fprintf(fp,"%s|C%d|",id.c_str(),compression);
+      fprintf(fp,"%s|C%d|",header.c_str(),compression);
       int p;
       p=0;
       for(i=0;i<N;i++){
@@ -587,7 +586,8 @@ int main(int ac,char**av){
     default:
       error(1,0,"Unknown compression type %d\n",compression);
     }
-      
+    
+    header=line;// Next header is the last-read line
     if(datadir!="")fclose(fp);
     tock(8);
     nwrite++;
