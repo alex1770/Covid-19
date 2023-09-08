@@ -57,12 +57,21 @@ for geneloc in genes.values():
     if x not in stats: stats[x]={}
     stats[x][c]=stats[x].get(c,0)+1
 
+
 # Find most likely triple of bases for each AA
-# (An improvement would be to make this conditional on what's in the refgenome and what mutations are more likely)
+# AA2bases[ new AA name, refgenome triple ] = best guess for new triple
 AA2bases={}
+w0,w1,w2=0.3,0.01,0.3# Weights that work reasonably well
 for x in stats:
   y=stats[x]
-  AA2bases[x]=max((y[b],b) for b in y)[1]
+  best=(-1e30,)
+  s=sum(stats[x].values())
+  for old3 in codontable:
+    for new3 in y:
+      # Mutation from old3 -> new3
+      score=y[new3]/s-w0*(old3[0]!=new3[0])-w1*(old3[1]!=new3[1])-w2*(old3[2]!=new3[2])
+      if score>best[0]: best=(score,new3)
+    AA2bases[x,old3]=best[1]
 
 for (name,date,ml,am) in csvrows_it(sys.stdin,["sequence_name","sample_date","mutations","ambiguities"]):
   if date<args.mindate:
@@ -88,7 +97,7 @@ for (name,date,ml,am) in csvrows_it(sys.stdin,["sequence_name","sample_date","mu
         else: gene='ORF1b';p1-=4401
       p0=genes[gene]
       p=p0[0]+(p1-1)*3-1
-      output[p:p+3]=list(AA2bases[y])
+      output[p:p+3]=list(AA2bases[y,refgenome[p:p+3]])
 
   for ar in am:
     x=[int(p)-1 for p in ar.split('-')]
