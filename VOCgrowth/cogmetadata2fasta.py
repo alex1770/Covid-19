@@ -1,5 +1,6 @@
-# Convert COG metadata into possible (aligned) fasta that would produce these mutations and ambiguities
+# Convert COG metadata into possible (aligned) base sequence that would produce these mutations and ambiguities.
 # It will choose some plausible triple of bases for each AA name, which will often not be the actual triple used.
+# Output in GISAID-style format with hCoV-19/ prefix and |collection date.
 
 from stuff import *
 import sys,argparse
@@ -104,5 +105,5 @@ for (name,date,ml,am) in csvrows_it(sys.stdin,["sequence_name","sample_date","mu
     if len(x)==1: output[x[0]]='N'
     else: output[x[0]:x[1]+1]=['N']*(x[1]+1-x[0])
     
-  print(">hCoV-19/"+name)
+  print(">hCoV-19/"+name+"|"+date)
   print("".join(output))
