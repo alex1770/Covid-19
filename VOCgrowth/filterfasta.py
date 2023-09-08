@@ -17,10 +17,5 @@ for x in sys.stdin:
     f=x.find('|')
     if f>=0: id=x[1:f]
     else: id=x.rstrip()[1:]
-    if id in okids:
-      print(x,end='')
-      mode=1
-    else:
-      mode=0
-  else:
-    if mode: print(x,end='')
+    mode=(id in okids)
+  if mode: print(x,end='')
