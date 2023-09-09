@@ -55,7 +55,7 @@ def getlik(countfile):
       if x[0]=='#': continue
       y=x.strip().split()
       d=datetoday(y[0])
-      v0,v1=int(y[1]),int(y[2])
+      v0,v1=float(y[1]),float(y[2])
       N0.append(v0);N1.append(v1);DT.append(d)
   
   minday=min(DT)
@@ -107,7 +107,7 @@ def printstats(d,desc):
   print("%s: mean      at daily logarithmic growth %5.3f = %+8.0f%% per week"%(desc,s,(exp(s*7)-1)*100))
   print()
     
-  
+
 post={}
 nn={}
 for countfile in args.countfilenames:
