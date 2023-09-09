@@ -4,7 +4,7 @@ from __future__ import print_function,division
 # ^ To enable use of pypy when pypy3 isn't available
 
 from stuff import *
-import sys,argparse,platform
+import sys,argparse,platform,os
 
 reflen=29903# Length of reference genome
 targetvariant="BA.2.86"
@@ -37,7 +37,7 @@ for country in d:
   if numv==0: continue
   print(country)
   country_short=country.split(" / ")[-1].strip().replace(" ","_")
-  with open("counts/"+country_short,"w") as fp:
+  with open(os.path.join("counts",country_short),"w") as fp:
     for date in sorted(list(d[country])):
       print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
   if args.decluster:
@@ -113,7 +113,7 @@ if args.decluster:
       for (loc,isvar) in subd:
         d[country][date][isvar]+=declusternumber(subd[loc,isvar])
     country_short=country.split(" / ")[-1].strip().replace(" ","_")
-    with open("counts_decluster/"+country_short,"w") as fp:
+    with open(os.path.join("counts_decluster",country_short),"w") as fp:
       for date in sorted(list(d[country])):
         print(date,"%9.2f %9.2f"%(tuple(d[country][date][:2])),file=fp)
  
