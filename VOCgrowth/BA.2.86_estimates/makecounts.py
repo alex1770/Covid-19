@@ -36,15 +36,14 @@ for country in d:
   numv=sum(x[1] for x in d[country].values())
   if numv==0: continue
   print(country)
+  country_short=country.split(" / ")[-1].strip().replace(" ","_")
+  with open("counts/"+country_short,"w") as fp:
+    for date in sorted(list(d[country])):
+      print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
   if args.decluster:
     for date in d[country]:
       for (name,loc,lin) in d[country][date][2]:
         ind[name]=[]
-  else:
-    country_short=country.split(" / ")[-1].strip().replace(" ","_")
-    with open("counts/"+country_short,"w") as fp:
-      for date in sorted(list(d[country])):
-        print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
 
 # Bits 3210
 #      ACGT
@@ -114,7 +113,7 @@ if args.decluster:
       for (loc,isvar) in subd:
         d[country][date][isvar]+=declusternumber(subd[loc,isvar])
     country_short=country.split(" / ")[-1].strip().replace(" ","_")
-    with open("counts/"+country_short,"w") as fp:
+    with open("counts_decluster/"+country_short,"w") as fp:
       for date in sorted(list(d[country])):
         print(date,"%9.2f %9.2f"%(tuple(d[country][date][:2])),file=fp)
  
