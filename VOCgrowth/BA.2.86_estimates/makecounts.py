@@ -45,12 +45,16 @@ for country in d:
       for (name,loc,lin) in d[country][date][2]:
         ind[name]=[]
 
+# Return the number of "sufficiently different" sequences from the set of sequences given as input
+# Do this by making a graph where one sequences is joined to another if it is near-identical (up to diffthreshold bases different, not counting dropout regions)
+# then sum up 1/(degree+1) over all nodes. This would be 1 if it is a single clique, and n if it is n distinct sequences, and otherwise something inbetween.
 # Bits 3210
 #      ACGT
 # IUPAC codes: R=AG, Y=CT, K=GT, M=AC, S=CG, W=AT, B=CGT, D=AGT, H=ACT, V=ACG, N=ACGT
 bit={"A":8, "C":4, "G":2, "T":1, "M":12, "R":10, "W":9, "S":6, "Y":5, "K":3, "V":14, "H":13, "D":11, "B":7, "N":15, "-":15}
 def declusternumber(seqs):
   nseq=0
+  # As an optimisation, first reduce to the set of locations which can change amongst the input sequences.
   l=[15]*reflen
   for s in seqs:
     if s=="": nseq+=1# Sequence not known, assumed isolated
