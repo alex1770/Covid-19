@@ -48,11 +48,12 @@ minintrodate=datetoday(args.minintrodate)
 
 def getlik(countfile):
 
+  source="GISAID"
   # Variant0, Variant1 counts by day
   N0=[];N1=[];DT=[]
   with open(countfile) as fp:
     for x in fp:
-      if x[0]=='#': continue
+      if x[0]=='#': source=x[1:].strip();continue
       y=x.strip().split()
       d=datetoday(y[0])
       v0,v1=float(y[1]),float(y[2])
@@ -80,15 +81,9 @@ def getlik(countfile):
       dmax[g]=max(dmax.get(g,0),el)
       #print("%8.3f %10.6f %10.6f %12g"%(intro,g,ll,el),file=fp)
 
-  return dsum,dmax
+  return source,dsum,dmax
 
-sources=set()
-def printstats(d,desc):
-  if desc=="Combined":
-    source=" and ".join(sources)
-  else:
-    source="COG-UK" if "COG" in desc else "GISAID"
-    sources.add(source)
+def printstats(source,d,desc):
   print(f"Relative growth rate estimate of BA.2.86 at {UKdatetime()[0]}. Data from {source}.")
   tot=sum(d.values())
   if args.writegraph:
@@ -110,13 +105,15 @@ def printstats(d,desc):
 
 post={}
 nn={}
+sources=set()
 for countfile in args.countfilenames:
-  dsum,dmax=getlik(countfile)
-  printstats(dsum,countfile)
+  source,dsum,dmax=getlik(countfile)
+  printstats(source,dsum,countfile)
+  sources.add(source)
   for g in dsum:
     post[g]=post.get(g,1)*dsum[g]
     nn[g]=nn.get(g,0)+1
 
 n=len(args.countfilenames)
 post2={g:post[g] for g in post if nn[g]==n}
-printstats(post2,"Combined")
+printstats(" and ".join(sources),post2,"Combined")
