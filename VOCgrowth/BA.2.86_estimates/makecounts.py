@@ -14,22 +14,43 @@ parser=argparse.ArgumentParser()
 parser.add_argument('-m', '--metadata',   default="metadata_sorted_from2023-01-01.tsv",  help="Metadata input file")
 parser.add_argument('-f', '--mindate',    default="2023-03-01",                          help="Minimum date selected from metadata input")
 parser.add_argument('-d', '--decluster',  action="store_true",                           help="Decluster assumes stdin is in fasta format and includes all IDs selected from metadata")
+parser.add_argument('-s', '--sorted',     action="store_true",                           help="Use this flag to speed up processing if the input is in reverse date order")
 args=parser.parse_args()
 
 if args.decluster and platform.python_implementation()=="CPython": print("Suggest using PyPy for speed\n")
 
+# Input is a GISAID tsv or (from UK) a CLIMB csv
+gisaidmode=(args.metadata[-4:]==".tsv")
+
+if gisaidmode:
+  keys=["Virus name","Location","Collection date","Lineage"]
+  sep="\t"
+  source="GISAID"
+else:
+  keys=["sequence_name","country","sample_date","lineage"]
+  sep=","
+  source="CLIMB (UK)"
+
 d={}
-for name,loc,date,lin in csvrows(args.metadata,["Virus name","Location","Collection date","Lineage"],sep="\t"):
-  if len(date)==10 and date>=args.mindate:
+for name,loc,date,lin in csvrows(args.metadata,keys,sep=sep):
+  if len(date)!=10: continue
+  if date<args.mindate:
+    if args.sorted: break
+    continue
+  if gisaidmode:
     name=name.replace(' ','_')
     locl=loc.split(" / ")
     if len(locl)<2: continue
     country=locl[0].strip()+" / "+locl[1].strip()
-    if len(locl)>=3 and (locl[1]=="USA" or locl[1]=="India"): country+=" / "+locl[2].strip()
-    if country not in d: d[country]={}
-    if date not in d[country]: d[country][date]=[0,0,[]]
-    d[country][date][lin[:len(targetvariant)]==targetvariant]+=1
-    d[country][date][2].append((name,loc,lin))
+    if len(locl)>=3 and locl[1] in ["USA","India","China"]: country+=" / "+locl[2].strip()
+  else:
+    country="United Kingdom"
+    loc="Europe / United Kingdom / "+name.split('/')[0]
+    name="hCoV-19/"+name
+  if country not in d: d[country]={}
+  if date not in d[country]: d[country][date]=[0,0,[]]
+  d[country][date][lin[:len(targetvariant)]==targetvariant]+=1
+  d[country][date][2].append((name,loc,lin))
 
 ind={}
 for country in d:
@@ -38,6 +59,7 @@ for country in d:
   print(country)
   country_short=country.split(" / ")[-1].strip().replace(" ","_")
   with open(os.path.join("counts",country_short),"w") as fp:
+    print("# "+source,file=fp)
     for date in sorted(list(d[country])):
       print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
   if args.decluster:
@@ -118,6 +140,7 @@ if args.decluster:
         d[country][date][isvar]+=declusternumber(subd[loc,isvar])
     country_short=country.split(" / ")[-1].strip().replace(" ","_")
     with open(os.path.join("counts_decluster",country_short),"w") as fp:
+      print("# "+source,file=fp)
       for date in sorted(list(d[country])):
         print(date,"%9.2f %9.2f"%(tuple(d[country][date][:2])),file=fp)
  
