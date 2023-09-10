@@ -36,9 +36,9 @@ AA2bases={}
 w0,w1,w2=0.3,0.01,0.3# Weights that work reasonably well
 for x in stats:
   y=stats[x]
-  best=(-1e30,)
   s=sum(stats[x].values())
   for old3 in codontable:
+    best=(-1e30,)
     for new3 in y:
       # Mutation from old3 -> new3
       score=y[new3]/s-w0*(old3[0]!=new3[0])-w1*(old3[1]!=new3[1])-w2*(old3[2]!=new3[2])
