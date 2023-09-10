@@ -200,7 +200,6 @@ if args.decluster:
         subd.setdefault((loc,isvar),[]).append(ind[name])
       for (loc,isvar) in subd:
         d[country][date][isvar]+=declusternumber(subd[loc,isvar])
-        print(date,country,loc,isvar,d[country][date][isvar])
     country_short=country.split(" / ")[-1].strip().replace(" ","_")
     with open(os.path.join("counts_decluster",country_short),"w") as fp:
       print("# "+source,file=fp)
