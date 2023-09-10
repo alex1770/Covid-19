@@ -71,15 +71,20 @@ def getlik(countfile):
   firstseen=min(i for i in range(ndays) if V1[i]>0)
 
   l=[]
+  ming,maxg=0,args.maxg
+  mingq,maxgq=bin2g(g2bin(ming)),bin2g(g2bin(maxg))
+  # Record all log likelihoods first to deal with possible underflow
+  ll={}
+  for g in np.arange(mingq,maxgq,dg):
+    ll[g]=[]
+    for intro in np.arange(max(0,minintrodate-minday),firstseen,0.25):
+      ll[g].append(LL(g,intro,args.ipd,V0,V1))
+  maxll=max(max(lv) for lv in ll.values())
   dsum={}# Integrating over nuisance parameter (c or intro)
   dmax={}# Maximising over nuisance parameter (c or intro)
-  for intro in np.arange(max(0,minintrodate-minday),firstseen,0.25):
-    ming,maxg = 0,args.maxg
-    for g in np.arange(bin2g(g2bin(ming)),bin2g(g2bin(maxg)),dg):
-      ll=LL(g,intro,args.ipd,V0,V1);el=exp(ll)
-      dsum[g]=dsum.get(g,0)+el
-      dmax[g]=max(dmax.get(g,0),el)
-      #print("%8.3f %10.6f %10.6f %12g"%(intro,g,ll,el),file=fp)
+  for g in np.arange(mingq,maxgq,dg):
+    dsum[g]=sum(exp(lv-maxll) for lv in ll[g])
+    dmax[g]=exp(max(ll[g])-maxll)
 
   return source,dsum,dmax
 
