@@ -7,7 +7,6 @@ from stuff import *
 import sys,argparse,platform,os
 
 reflen=29903# Length of reference genome
-targetvariant="BA.2.86"
 diffthreshold=1
 
 parser=argparse.ArgumentParser()
@@ -15,6 +14,7 @@ parser.add_argument('-m', '--metadata',   default="metadata_sorted_from2023-01-0
 parser.add_argument('-f', '--mindate',    default="2023-03-01",                          help="Minimum date selected from metadata input")
 parser.add_argument('-d', '--decluster',  action="store_true",                           help="Decluster assumes stdin is in fasta format and includes all IDs selected from metadata")
 parser.add_argument('-s', '--sorted',     action="store_true",                           help="Use this flag to speed up processing if the input is in reverse date order")
+parser.add_argument('-t', '--target',     default="BA.2.86",                             help="Target variant")
 args=parser.parse_args()
 
 if args.decluster and platform.python_implementation()=="CPython": print("Suggest using PyPy for speed\n")
@@ -49,7 +49,7 @@ for name,loc,date,lin in csvrows(args.metadata,keys,sep=sep):
     name="hCoV-19/"+name
   if country not in d: d[country]={}
   if date not in d[country]: d[country][date]=[0,0,[]]
-  d[country][date][lin[:len(targetvariant)]==targetvariant]+=1
+  d[country][date][lin[:len(args.target)]==args.target]+=1
   d[country][date][2].append((name,loc,lin))
 
 ind={}
@@ -134,7 +134,7 @@ if args.decluster:
       subd={}
       d[country][date][:2]=[0,0]
       for (name,loc,lin) in d[country][date][2]:
-        isvar=lin[:len(targetvariant)]==targetvariant
+        isvar=lin[:len(args.target)]==args.target
         subd.setdefault((loc,isvar),[]).append(ind[name])
       for (loc,isvar) in subd:
         d[country][date][isvar]+=declusternumber(subd[loc,isvar])
