@@ -33,7 +33,7 @@ for geneloc in genes.values():
 # Find most likely triple of bases for each AA
 # AA2bases[ new AA name, refgenome triple ] = best guess for new triple
 AA2bases={}
-w0,w1,w2=0.3,0.01,0.3# Weights that work reasonably well
+w0,w1,w2=0.4,0.7,0.75# Weights that work reasonably well
 for x in stats:
   y=stats[x]
   s=sum(stats[x].values())
