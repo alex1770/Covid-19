@@ -10,7 +10,7 @@ reflen=len(refgenome)
 diffthreshold=1
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-m', '--metadata',   default="metadata_sorted_from2023-01-01.tsv",  help="Metadata input file")
+parser.add_argument('-m', '--metadata',   default="metadata_sorted_from2023-03-01.tsv",  help="Metadata input file")
 parser.add_argument('-f', '--mindate',    default="2023-03-01",                          help="Minimum date selected from metadata input")
 parser.add_argument('-d', '--decluster',  action="store_true",                           help="Decluster assumes stdin is in fasta format and includes all IDs selected from metadata")
 parser.add_argument('-s', '--sorted',     action="store_true",                           help="Use this flag to speed up processing if the input is in reverse date order")
