@@ -73,32 +73,29 @@ def getlik(countfile):
   l=[]
   ming,maxg=0,args.maxg
   mingq,maxgq=bin2g(g2bin(ming)),bin2g(g2bin(maxg))
-  # Record all log likelihoods first to deal with possible underflow
-  ll={}
+  logsum={};logmax={}
   for g in np.arange(mingq,maxgq,dg):
-    ll[g]=[]
+    ll=[]
     for intro in np.arange(max(0,minintrodate-minday),firstseen,0.25):
-      ll[g].append(LL(g,intro,args.ipd,V0,V1))
-  maxll=max(max(lv) for lv in ll.values())
-  dsum={}# Integrating over nuisance parameter (c or intro)
-  dmax={}# Maximising over nuisance parameter (c or intro)
-  for g in np.arange(mingq,maxgq,dg):
-    dsum[g]=sum(exp(lv-maxll) for lv in ll[g])
-    dmax[g]=exp(max(ll[g])-maxll)
+      ll.append(LL(g,intro,args.ipd,V0,V1))
+    logmax[g]=max(ll)
+    logsum[g]=log(sum(exp(x-logmax[g]) for x in ll))+logmax[g]
 
-  return source,dsum,dmax
+  return source,logsum,logmax
 
-def printstats(source,d,desc):
+def printstats(source,ll,desc):
   print(f"Relative growth rate estimate of BA.2.86 at {UKdatetime()[0]}. Data from {source}.")
-  tot=sum(d.values())
+  mx=max(ll.values())
+  el={g:exp(ll[g]-mx) for g in ll}
+  tot=sum(el.values())
   if args.writegraph:
     with open("outlik_"+desc,"w") as fp:
-      for g in sorted(list(d)):
-        print("%10.6f %12g"%(g,d[g]/tot/dg),file=fp)
+      for g in sorted(list(el)):
+        print("%10.6f %12g"%(g,el[g]/tot/dg),file=fp)
   thr=[0.05,0.1,0.25,0.5,0.9,0.95,0.99]
   i=0;t=0;s=0
-  for g in sorted(list(d)):
-    p=d[g]/tot
+  for g in sorted(list(el)):
+    p=el[g]/tot
     t+=p
     s+=p*g
     while i<len(thr) and t>thr[i]:
@@ -112,11 +109,12 @@ post={}
 nn={}
 sources=set()
 for countfile in args.countfilenames:
-  source,dsum,dmax=getlik(countfile)
-  printstats(source,dsum,countfile)
+  source,logsum,logmax=getlik(countfile)
+  printstats(source,logsum,countfile)
   sources.add(source)
-  for g in dsum:
-    post[g]=post.get(g,1)*dsum[g]
+  print("%12g %12g %12g %12g %12g"%(logsum[0],logsum[0.05],logsum[0.1],logsum[0.15],logsum[0.199]))
+  for g in logsum:
+    post[g]=post.get(g,0)+logsum[g]
     nn[g]=nn.get(g,0)+1
 
 n=len(args.countfilenames)
