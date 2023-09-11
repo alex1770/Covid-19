@@ -14,6 +14,7 @@ parser.add_argument('-m', '--metadata',   default="metadata_sorted_from2023-03-0
 parser.add_argument('-f', '--mindate',    default="2023-03-01",                          help="Minimum date selected from metadata input")
 parser.add_argument('-d', '--decluster',  action="store_true",                           help="Decluster assumes stdin is in fasta format and includes all IDs selected from metadata")
 parser.add_argument('-s', '--sorted',     action="store_true",                           help="Use this flag to speed up processing if the input is in reverse date order")
+parser.add_argument('-b', '--baseline',   default="",                                    help="Baseline variant(s)")
 parser.add_argument('-t', '--target',     default="BA.2.86",                             help="Target variant")
 args=parser.parse_args()
 
@@ -109,12 +110,15 @@ for row in csvrows(args.metadata,keys,sep=sep):
     if len(keys)==6: ind[name]=conv_climb_metadata_to_sequence(mutations,ambiguities)
   if country not in d: d[country]={}
   if date not in d[country]: d[country][date]=[0,0,[]]
-  d[country][date][lin[:len(args.target)]==args.target]+=1
-  d[country][date][2].append((name,loc,lin))
+  v0=int(lin[:len(args.baseline)]==args.baseline)
+  v1=int(lin[:len(args.target)]==args.target)
+  if v0 or v1:
+    d[country][date][v1]+=1# Target variant takes priority if both baseline and target match
+    d[country][date][2].append((name,loc,lin))
 
 for country in d:
-  numv=sum(x[1] for x in d[country].values())
-  if numv==0: continue
+  num=[sum(x[i] for x in d[country].values()) for i in range(2)]
+  if num[0]==0 or num[1]==0: continue
   print(country)
   country_short=country.split(" / ")[-1].strip().replace(" ","_")
   with open(os.path.join("counts",country_short),"w") as fp:
@@ -189,8 +193,8 @@ if args.decluster:
   print(wronglength,"sequence(s) of the wrong length (not aligned)",file=sys.stderr)
     
   for country in d:
-    numv=sum(x[1] for x in d[country].values())
-    if numv==0: continue
+    num=[sum(x[i] for x in d[country].values()) for i in range(2)]
+    if num[0]==0 or num[1]==0: continue
     for date in sorted(list(d[country])):
       #print("Declustering",country,date)
       subd={}
