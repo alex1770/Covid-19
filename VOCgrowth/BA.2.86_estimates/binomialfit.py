@@ -11,10 +11,15 @@
 # essentially zero for i<i0 anyway (assuming g>=0), given that we're sequencing
 # far fewer than the number of infections. So we're back to normal binomial regression.
 #
-# So here we do normal binomial regression,
-# where p_i/(1-p_i) = exp(c + i*g)
+# So here we do normal binomial regression, where p_i/(1-p_i) = exp(c + i*g)
 #
-# outputting a likelihood for g, assuming g>=0.
+# Rather than integrating over the nuisance parameter, c, uniformly, we'd like to get a bit more power by using a suitable prior.
+# Assume 1 virus on the day of introduction, so c+introday*g = -log(ipd), where ipd=infections per day.
+# (This assumes that we're comparing variant with everything else. Need to adjust if comparing variant to variant.)
+# Don't know ipd, but a reasonable range for the territories we are using (populous countries India, USA, China are broken down into states)
+# is 3000 - 600000, so treat log(ipd) as a RV U[3000,600000].
+# The prior for the introduction of BA.2.86 is [2023-03-01, variantfirstseen]. (Would need to modify for other variants.)
+# So, for a given g, we assume prior for c is -(U[2023-03-01, variantfirstseen] + U[log(3000),log(600000)]).
 
 import numpy as np
 from math import exp,log,sqrt,floor
@@ -24,17 +29,14 @@ import argparse
 parser=argparse.ArgumentParser()
 parser.add_argument('-i', '--ipd',      type=float,default=10000,   help="Guessed total number of infections per day (shouldn't matter much)")
 parser.add_argument('-m', '--maxg',     type=float,default=0.2,     help="Maximum daily logarthmic growth rate considered (effectively the prior is U[0,maxg])")
-parser.add_argument('-f', '--minintrodate',  default="2019-01-01",  help="Earliest possible introduction date of variant")
+parser.add_argument('-f', '--minintrodate',  default="2023-03-01",  help="Earliest possible introduction date of variant")
 parser.add_argument('-w', '--writegraph', action="store_true",      help="Whether to write graph output file")
 parser.add_argument('countfilenames',   nargs='*',                  help="Name of file containing counts of non-variant, variant")
 args=parser.parse_args()
 
 # Odds of variant:non-variant are modelled as exp(c+i*g), i=day number
-# Assuming on day of introduction odds are 1/ipd
-# So c + intro*g = -log(ipd)
 # p_i/(1-p_i) = exp(c + i*g), i=0, 1, ..., ndays-1
-def LL(g,intro,ipd,V0,V1):
-  c=-log(ipd)-intro*g
+def LL(g,c,ipd,V0,V1):
   ndays=len(V0)
   logodds=c+np.arange(ndays)*g
   Z=np.log(1+np.exp(logodds))
@@ -45,6 +47,9 @@ def g2bin(g): return int(floor(g/dg+0.5))
 def bin2g(b): return b*dg
 
 minintrodate=datetoday(args.minintrodate)
+minipd=3000
+maxipd=600000
+dc=0.25
 
 def getlik(countfile):
 
@@ -74,12 +79,20 @@ def getlik(countfile):
   ming,maxg=0,args.maxg
   mingq,maxgq=bin2g(g2bin(ming)),bin2g(g2bin(maxg))
   logsum={};logmax={}
+  # Take expectation over c ~ -U[minintrodate, firstseen]*g - U[log(minipd),log(maxipd)]
+  A1=log(minipd);B1=log(maxipd)
   for g in np.arange(mingq,maxgq,dg):
+    A0=g*(minintrodate-minday);B0=g*firstseen
+    if A0>B0: raise RuntimeError("First seen variant before min intro date in "+countfile)
+    # c ~ -(U[A0,B0]+U[A1,B1])
     ll=[]
-    for intro in np.arange(max(0,minintrodate-minday),firstseen,0.25):
-      ll.append(LL(g,intro,args.ipd,V0,V1))
-    logmax[g]=max(ll)
-    logsum[g]=log(sum(exp(x-logmax[g]) for x in ll))+logmax[g]
+    totw=0
+    for mc in np.arange(A0+A1,B0+B1,dc):
+      weight=min(mc-(A0+A1),B0+B1-mc,B0-A0,B1-A1)+1e-9
+      totw+=weight
+      ll.append(LL(g,-mc,args.ipd,V0,V1)+log(weight))
+    logmax[g]=max(ll)-log(totw)
+    logsum[g]=log(sum(exp(x-logmax[g]) for x in ll))+logmax[g]-log(totw)
 
   return source,logsum,logmax
 
@@ -112,7 +125,7 @@ for countfile in args.countfilenames:
   source,logsum,logmax=getlik(countfile)
   printstats(source,logsum,countfile)
   sources.add(source)
-  print("%12g %12g %12g %12g %12g"%(logsum[0],logsum[0.05],logsum[0.1],logsum[0.15],logsum[0.199]))
+  #print("%12g %12g %12g %12g %12g"%(logsum[0],logsum[0.05],logsum[0.1],logsum[0.15],logsum[0.199]))
   for g in logsum:
     post[g]=post.get(g,0)+logsum[g]
     nn[g]=nn.get(g,0)+1
