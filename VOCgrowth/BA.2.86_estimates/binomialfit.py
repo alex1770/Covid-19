@@ -14,12 +14,17 @@
 # So here we do normal binomial regression, where p_i/(1-p_i) = exp(c + i*g)
 #
 # Rather than integrating over the nuisance parameter, c, uniformly, we'd like to get a bit more power by using a suitable prior.
-# Assume 1 virus on the day of introduction, so c+introday*g = -log(ipd), where ipd=infections per day.
-# (This assumes that we're comparing variant with everything else. Need to adjust if comparing variant to variant.)
+# Assume 1 virus on the day of introduction, so at p_{introday}=1/(ipd+1), where ipd=infections per day of non-variant, so
+# at i=introday, 1/ipd = p_i/(1-p_i) = exp(c + i*g), so c+introday*g = -log(ipd), 
+# (This assumes that we're comparing a variant with everything else. If comparing variant to variant, then ipd could get much lower, so it's
+# best to organise it so that the second variant is the rarer one, and minipd is sufficiently lower to account for min first variant numbers.)
 # Don't know ipd, but a reasonable range for the territories we are using (populous countries India, USA, China are broken down into states)
-# is 3000 - 600000, so treat log(ipd) as U[log(3000),log(600000)].
+# is 3000 - 600000, so could treat log(ipd) as U[log(3000),log(600000)].
 # The prior for the introduction of BA.2.86 is [2023-03-01, variantfirstseen]. (Would need to modify for other variants.)
-# So, for a given g, we assume prior for c is -(U[2023-03-01, variantfirstseen] + U[log(3000),log(600000)]).
+# So, for a given g, we'd assume prior for c is -(U[2023-03-01, variantfirstseen] + U[log(3000),log(600000)]).
+# However, it's not sensitive to the lower end of ipd (3000 in the above), so we can make it small enough to accommodate other situations,
+# like variant vs variant.
+
 
 import numpy as np
 from math import exp,log,sqrt,floor
@@ -46,8 +51,8 @@ def g2bin(g): return int(floor(g/dg+0.5))
 def bin2g(b): return b*dg
 
 minintrodate=datetoday(args.minintrodate)
-minipd=3000
-maxipd=600000
+minipd=1      # min and max infections per day of non-variant - see above
+maxipd=600000 #
 dc=0.25
 
 def getlik(countfile):
@@ -71,6 +76,7 @@ def getlik(countfile):
   for (v0,v1,dt) in zip(N0,N1,DT):
     V0[dt-minday]=v0
     V1[dt-minday]=v1
+  if V0.sum()<V1.sum(): print("Warning: baseline variant should not be smaller than new variant in input",countfile,file=sys.stderr)
   
   firstseen=min(i for i in range(ndays) if V1[i]>0)
 
