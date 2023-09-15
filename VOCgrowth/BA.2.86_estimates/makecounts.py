@@ -16,9 +16,10 @@ parser.add_argument('-d', '--decluster',  action="store_true",                  
 parser.add_argument('-s', '--sorted',     action="store_true",                           help="Use this flag to speed up processing if the input is in reverse date order")
 parser.add_argument('-b', '--baseline',   default="",                                    help="Baseline variant(s)")
 parser.add_argument('-t', '--target',     default="BA.2.86",                             help="Target variant")
+parser.add_argument('-v', '--verbosity',  type=int, default=1,                           help="Verbosity level (0,1,2,...)")
 args=parser.parse_args()
 
-if args.decluster and platform.python_implementation()=="CPython": print("Suggest using PyPy for speed\n")
+if args.verbosity>=1 and args.decluster and platform.python_implementation()=="CPython": print("Suggest using PyPy for speed\n")
 
 # Input is a GISAID tsv or (from UK) a CLIMB csv
 gisaidmode=(args.metadata[-4:]==".tsv")
@@ -119,7 +120,7 @@ for row in csvrows(args.metadata,keys,sep=sep):
 for country in d:
   num=[sum(x[i] for x in d[country].values()) for i in range(2)]
   if num[0]==0 or num[1]==0: continue
-  print(country)
+  if args.verbosity>=1: print(country)
   country_short=country.split(" / ")[-1].strip().replace(" ","_")
   with open(os.path.join("counts",country_short),"w") as fp:
     print("# "+source,file=fp)
@@ -163,6 +164,7 @@ wronglength=0
 if args.decluster:
   if gisaidmode:
     # Collect relevant sequences
+    # To allow for linebreaks in fasta, construct a list of lines for each virus name (one for each name in the metadata)
     for country in d:
       for date in d[country]:
         for (name,loc,lin) in d[country][date][2]:
@@ -184,19 +186,21 @@ if args.decluster:
   for id in ind:
     if ind[id]=="":
       notfound+=1
-      #print("Sequence "+id+" not found",file=sys.stderr)
+      if args.verbosity>=2: print("Sequence "+id+" not found",file=sys.stderr)
       #raise RuntimeError("Sequence "+id+" not found")
     elif len(ind[id])!=reflen:
       wronglength+=1
+      if args.verbosity>=2: print("Sequence "+id+" is of the wrong length (not aligned)",file=sys.stderr)
       #raise RuntimeError("Sequence %s has length %d; expecting %d for an aligned sequence"%(id,len(ind[id]),reflen))
-  print(notfound,"sequence(s) not found in fasta input",file=sys.stderr)
-  print(wronglength,"sequence(s) of the wrong length (not aligned)",file=sys.stderr)
+  if args.verbosity>=1:
+    print(notfound,"sequence(s) not found in fasta input",file=sys.stderr)
+    print(wronglength,"sequence(s) of the wrong length (not aligned)",file=sys.stderr)
     
   for country in d:
     num=[sum(x[i] for x in d[country].values()) for i in range(2)]
     if num[0]==0 or num[1]==0: continue
     for date in sorted(list(d[country])):
-      #print("Declustering",country,date)
+      if args.verbosity>=2: print("Declustering",country,date)
       subd={}
       d[country][date][:2]=[0,0]
       for (name,loc,lin) in d[country][date][2]:
