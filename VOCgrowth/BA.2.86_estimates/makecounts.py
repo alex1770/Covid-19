@@ -17,6 +17,7 @@ parser.add_argument('-s', '--sorted',     action="store_true",                  
 parser.add_argument('-b', '--baseline',   default="",                                    help="Baseline variant(s)")
 parser.add_argument('-t', '--target',     default="BA.2.86",                             help="Target variant")
 parser.add_argument('-v', '--verbosity',  type=int, default=1,                           help="Verbosity level (0,1,2,...)")
+parser.add_argument('-n', '--dirname',    default="counts",                              help="Prefix of directory name where results are stored")
 args=parser.parse_args()
 
 if args.verbosity>=1 and args.decluster and platform.python_implementation()=="CPython": print("Suggest using PyPy for speed\n")
@@ -122,7 +123,8 @@ for country in d:
   if num[0]==0 or num[1]==0: continue
   if args.verbosity>=1: print(country)
   country_short=country.split(" / ")[-1].strip().replace(" ","_")
-  with open(os.path.join("counts",country_short),"w") as fp:
+  os.makedirs(args.dirname,exist_ok=True)
+  with open(os.path.join(args.dirname,country_short),"w") as fp:
     print("# "+source,file=fp)
     for date in sorted(list(d[country])):
       print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
@@ -209,7 +211,8 @@ if args.decluster:
       for (loc,isvar) in subd:
         d[country][date][isvar]+=declusternumber(subd[loc,isvar])
     country_short=country.split(" / ")[-1].strip().replace(" ","_")
-    with open(os.path.join("counts_decluster",country_short),"w") as fp:
+    os.makedirs(args.dirname+"_decluster",exist_ok=True)
+    with open(os.path.join(args.dirname+"_decluster",country_short),"w") as fp:
       print("# "+source,file=fp)
       for date in sorted(list(d[country])):
         print(date,"%9.2f %9.2f"%(tuple(d[country][date][:2])),file=fp)
