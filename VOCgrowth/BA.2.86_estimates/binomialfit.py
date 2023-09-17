@@ -76,7 +76,7 @@ def getlik(countfile):
   for (v0,v1,dt) in zip(N0,N1,DT):
     V0[dt-minday]=v0
     V1[dt-minday]=v1
-  if V0.sum()<V1.sum(): print("Warning: baseline variant should not be smaller than new variant in input",countfile,file=sys.stderr)
+  #if V0.sum()<V1.sum(): print("Warning: baseline variant should not be smaller than new variant in input",countfile,file=sys.stderr)# alter
   
   firstseen=min(i for i in range(ndays) if V1[i]>0)
 
@@ -107,6 +107,8 @@ def printstats(source,ll,desc):
   el={g:exp(ll[g]-mx) for g in ll}
   tot=sum(el.values())
   if args.writegraph:
+    dn=os.path.dirname("outlik_"+desc)
+    if dn!="": os.makedirs(dn,exist_ok=True)
     with open("outlik_"+desc,"w") as fp:
       for g in sorted(list(el)):
         print("%10.6f %12g"%(g,el[g]/tot/dg),file=fp)
