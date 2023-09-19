@@ -17,8 +17,10 @@ conf=0.95
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-c',  '--mincount',    type=int,default=0,    help="Minimum variant count considered")
+parser.add_argument('-d',  '--decluster',   action="store_true",   help="Decluster the variant counts to reduce the effect of targetted sequencing")
 parser.add_argument('-s',  '--simple',      action="store_true",   help="Use simple weighted and overdispersion-corrected logistic regression instead of Dirichlet-Multinomial")
 parser.add_argument('-f',  '--mindate',     default="2022-01-01",  help="Min sample date of sequence")
+#parser.add_argument('-g',  '--gisaid',      action="store_true",   help="Use GISAID input")
 parser.add_argument('-t',  '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-l',  '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
 parser.add_argument('-m',  '--maxmult',     type=float,default=20, help="Maximum overdispersion multiplier")
@@ -55,13 +57,12 @@ def patmatch(lin):
   return ind
 
 jn='_'.join(Vnames)
+if len(jn)>200: jn=hashlib.sha256(jn.encode("utf-8")).hexdigest()[-16:]
+if args.decluster: jn+="__decluster"
 fn=os.path.join(cachedir,location+'_'+jn+'__%s'%cogdate)
-if len(fn)>250:
-  jn=hashlib.sha256(jn.encode("utf-8")).hexdigest()[-16:]
-  fn=os.path.join(cachedir,location+'_'+jn+'__%s'%cogdate)
 if os.path.isfile(fn):
   with open(fn,'rb') as fp:
-    data=pickle.load(fp)
+    counts=pickle.load(fp)
 else:
   # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
   # Note that BA.5* will match BA.5 and BA.5.1 but not BA.53
@@ -75,33 +76,36 @@ else:
     else: exact=lin;prefix="-"
     targlinsexact.append(expandlin(exact))
     targlinsprefix.append(expandlin(prefix))
-  data={}
-  for (name,date,p2,lin,mutations) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','usher_lineage','mutations']):
+  counts={}
+  seqlists={}
+  for (name,date,p2,lin,mutations,ambiguities) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','usher_lineage','mutations','ambiguities']):
     #if p2!='Y': continue
     if location!="UK":
       country=name.split('/')[0]
       if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
-    mutations='|'+mutations+'|'
-
-    # Possibly refine COG-UK lineage, or replace an Unassigned lineage, with lineage from decision tree
-    # if date>="2022-06-01": lin=classify(mutations,lin)
-    lin_e=expandlin(lin)
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
-    ind=patmatch(lin_e)
+    ind=patmatch(expandlin(lin))
     if ind==-1: continue
-    if date not in data: data[date]=[0]*numv
-    data[date][ind]+=1
-    #if date<mindate: break# If we don't abort early, then can store a cache file that works for any date range
+    if args.decluster:
+      if date not in seqlists: seqlists[date]=[[] for _ in range(numv)]
+      seqlists[date][ind].append(conv_climb_metadata_to_sequence(mutations,ambiguities))
+    else:
+      if date not in counts: counts[date]=[0]*numv
+      counts[date][ind]+=1
+    #if date<mindate: break# If we don't abort early, then can store a cache file that works for any date range - alter
+  if args.decluster:
+    for date in seqlists:
+      counts[date]=[declusternumber(s) for s in seqlists[date]]
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
-    pickle.dump(data,fp)
+    pickle.dump(counts,fp)
 
 mindate1=Date('2099-12-31')
 maxdate1=Date('2000-01-01')
-for date in data:
-  if data[date][0]>=args.mincount and max(data[date][1:])>=args.mincount:
+for date in counts:
+  if counts[date][0]>=args.mincount and max(counts[date][1:])>=args.mincount:
     mindate1=min(mindate1,Date(date))
     maxdate1=max(maxdate1,Date(date))
 mindate=max(mindate,mindate1)
@@ -110,7 +114,7 @@ print("Reduced date range:",mindate,"-",maxdate)
 
 VV=[]
 for date in Daterange(mindate,maxdate+1):
-  v=data.get(str(date),[0]*numv)
+  v=counts.get(str(date),[0]*numv)
   VV.append(v)
 if VV==[]: print("No data points found");sys.exit(0)
 VV=np.array(VV)
@@ -313,9 +317,9 @@ with open(datafn,'w') as fp:
   for t in range(maxt):
     if t<maxt0:
       v=VV[t]
-      print(mindate+t,' '.join("%6d"%x for x in v),end='',file=fp)
+      print(mindate+t,' '.join("%8g"%x for x in v),end='',file=fp)
     else:
-      print(mindate+t,' '.join("%6s"%'-' for x in v),end='',file=fp)
+      print(mindate+t,' '.join("%8s"%'-' for x in v),end='',file=fp)
     print(" %12g %12g %12g"%(growth_mean[t],growth_low[t],growth_high[t]),end='',file=fp)
     print(" %12g %12g %12g"%(pressure_mean[t],pressure_low[t],pressure_high[t]),end='',file=fp)
     for i in range(numv):
