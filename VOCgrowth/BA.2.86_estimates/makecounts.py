@@ -7,7 +7,6 @@ from stuff import *
 import sys,argparse,platform,os
 
 reflen=len(refgenome)
-diffthreshold=1
 
 parser=argparse.ArgumentParser()
 parser.add_argument('-m', '--metadata',   default="metadata_sorted_from2023-03-01.tsv",  help="Metadata input file")
@@ -24,57 +23,6 @@ if args.verbosity>=1 and args.decluster and platform.python_implementation()=="C
 
 # Input is a GISAID tsv or (from UK) a CLIMB csv
 gisaidmode=(args.metadata[-4:]==".tsv")
-
-stats={}
-for geneloc in genes.values():
-  for p in range(geneloc[0],geneloc[1],3):
-    c=refgenome[p:p+3]
-    x=codontable.get(c,'?')
-    if x not in stats: stats[x]={}
-    stats[x][c]=stats[x].get(c,0)+1
-
-# Find most likely triple of bases for each AA
-# AA2bases[ new AA name, refgenome triple ] = best guess for new triple
-AA2bases={}
-w0,w1,w2=0.4,0.7,0.75# Weights that work reasonably well
-for x in stats:
-  y=stats[x]
-  s=sum(stats[x].values())
-  for old3 in codontable:
-    best=(-1e30,)
-    for new3 in y:
-      # Mutation from old3 -> new3
-      score=y[new3]/s-w0*(old3[0]!=new3[0])-w1*(old3[1]!=new3[1])-w2*(old3[2]!=new3[2])
-      if score>best[0]: best=(score,new3)
-    AA2bases[x,old3]=best[1]
-
-# Get plausible sequence based on mutation and dropout lists.
-def conv_climb_metadata_to_sequence(mutations,ambiguities):
-  ml=mutations.split('|')
-  am=ambiguities.split('|')
-  output=list(refgenome)
-  for mut in ml:
-    (gene,m)=mut.split(':')
-    x=m[0]
-    p1=int(m[1:-1])
-    y=m[-1]
-    if gene=='synSNP':
-      p=p1-1
-      output[p]=y
-    else:
-      if gene=='orf1ab':
-        if p1<=4401: gene='ORF1a'
-        else: gene='ORF1b';p1-=4401
-      p0=genes[gene]
-      p=p0[0]+(p1-1)*3-1
-      output[p:p+3]=list(AA2bases[y,refgenome[p:p+3]])
-
-  for ar in am:
-    x=[int(p)-1 for p in ar.split('-')]
-    if len(x)==1: output[x[0]]='N'
-    else: output[x[0]:x[1]+1]=['N']*(x[1]+1-x[0])
-    
-  return "".join(output)
 
 if gisaidmode:
   keys=["Virus name","Location","Collection date","Lineage"]
@@ -128,37 +76,6 @@ for country in d:
     print("# "+source,file=fp)
     for date in sorted(list(d[country])):
       print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
-
-# Return the number of "sufficiently different" sequences from the set of sequences given as input.
-# Do this by making a graph where one sequences is joined to another if it is near-identical (up to diffthreshold bases different, not counting dropout regions)
-# then sum up 1/(degree+1) over all nodes. This would be 1 if it is a single clique, and n if it is n distinct sequences, and otherwise something inbetween.
-# Bits 3210
-#      ACGT
-# IUPAC codes: R=AG, Y=CT, K=GT, M=AC, S=CG, W=AT, B=CGT, D=AGT, H=ACT, V=ACG, N=ACGT
-bit={"A":8, "C":4, "G":2, "T":1, "M":12, "R":10, "W":9, "S":6, "Y":5, "K":3, "V":14, "H":13, "D":11, "B":7, "N":15, "-":15}
-def declusternumber(seqs):
-  nseq=0
-  # As an optimisation, first reduce to the set of locations which can change amongst the input sequences.
-  l=[15]*reflen
-  for s in seqs:
-    if s=="": nseq+=1# Sequence not known, assumed isolated
-    else:
-      for i in range(reflen): l[i]&=bit[s[i]]
-  sc=[]
-  for s in seqs:
-    if s!="": sc.append([bit[s[i]] for i in range(reflen) if l[i]==0])
-  n=len(sc)
-  deg=[0]*n
-  m=len([x for x in l if x==0])
-  for i in range(n-1):
-    for j in range(i+1,n):
-      diff=0
-      for k in range(m): diff+=(sc[i][k]&sc[j][k]==0)
-      similar=(diff<=diffthreshold)
-      deg[i]+=similar
-      deg[j]+=similar
-  for d in deg: nseq+=1/(d+1)
-  return nseq
 
 notfound=0
 wronglength=0
