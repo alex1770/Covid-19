@@ -1,13 +1,11 @@
-import sys,pickle,os,argparse
+import sys,pickle,os,argparse,hashlib
 from stuff import *
 from scipy.stats import norm, multivariate_normal as mvn
 from scipy.optimize import minimize
 from scipy.special import gammaln,digamma
 import numpy as np
 from math import sqrt,floor,log,exp
-from variantaliases import aliases
 from classify import classify, contractlin, expandlin
-import hashlib
 
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
