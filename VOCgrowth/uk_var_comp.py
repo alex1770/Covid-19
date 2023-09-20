@@ -77,9 +77,10 @@ else:
     targlinsexact.append(expandlin(exact))
     targlinsprefix.append(expandlin(prefix))
   counts={}
-  seqlists={}
+  seqdate=None
   for (name,date,p2,lin,mutations,ambiguities) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','usher_lineage','mutations','ambiguities']):
     #if p2!='Y': continue
+    if mutations=="": continue
     if location!="UK":
       country=name.split('/')[0]
       if country!=location: continue
@@ -89,15 +90,18 @@ else:
     ind=patmatch(expandlin(lin))
     if ind==-1: continue
     if args.decluster:
-      if date not in seqlists: seqlists[date]=[[] for _ in range(numv)]
-      seqlists[date][ind].append(conv_climb_metadata_to_sequence(mutations,ambiguities))
+      if date!=seqdate:
+        if seqdate!=None: counts[seqdate]=[declusternumber(s) for s in seqlist]
+        seqlist=[[] for _ in range(numv)]
+        seqdate=date
+        print(date)
+      seqlist[ind].append(conv_climb_metadata_to_sequence(mutations,ambiguities))
     else:
       if date not in counts: counts[date]=[0]*numv
       counts[date][ind]+=1
     #if date<mindate: break# If we don't abort early, then can store a cache file that works for any date range - alter
   if args.decluster:
-    for date in seqlists:
-      counts[date]=[declusternumber(s) for s in seqlists[date]]
+    if seqdate!=None: counts[seqdate]=[declusternumber(s) for s in seqlist]
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
     pickle.dump(counts,fp)
