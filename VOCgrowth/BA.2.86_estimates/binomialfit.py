@@ -8,7 +8,7 @@
 # we expect the chance of seeing the variant to be on the order of (a few)/number_of_cases, i.e.,
 # c should be about -log(number_of_cases/(a few)).
 # So in that case, we don't need to add the 0 for i<i0, because p_i will be
-# essentially zero for i<i0 anyway (assuming g>=0), given that we're sequencing
+# essentially zero for i<i0 anyway (assuming g>=0 before it was first seen), given that we're sequencing
 # far fewer than the number of infections. So we're back to normal binomial regression.
 #
 # So here we do normal binomial regression, where p_i/(1-p_i) = exp(c + i*g)
@@ -32,7 +32,8 @@ from stuff import *
 import argparse
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-m', '--maxg',     type=float,default=0.2,     help="Maximum daily logarithmic growth rate considered (effectively the prior is U[0,maxg])")
+parser.add_argument('-l', '--ming',     type=float,default=-0.1,    help="Minimum daily logarithmic growth rate considered")
+parser.add_argument('-m', '--maxg',     type=float,default=0.2,     help="Maximum daily logarithmic growth rate considered")
 parser.add_argument('-f', '--minintrodate',  default="2023-03-01",  help="Earliest possible introduction date of variant")
 parser.add_argument('-w', '--writegraph', action="store_true",      help="Whether to write graph output file")
 parser.add_argument('countfilenames',   nargs='*',                  help="Name of file containing counts of non-variant, variant")
@@ -67,6 +68,12 @@ def getlik(countfile):
       d=datetoday(y[0])
       v0,v1=float(y[1]),float(y[2])
       N0.append(v0);N1.append(v1);DT.append(d)
+
+  if 0:#alter
+    for i in range(len(N1)):
+      if N1[i]>0: break
+    else: assert 0
+    DT=DT[i:];N0=N0[i:];N1=N1[i:]
   
   minday=min(DT)
   maxday=max(DT)+1
@@ -81,14 +88,15 @@ def getlik(countfile):
   firstseen=min(i for i in range(ndays) if V1[i]>0)
 
   l=[]
-  ming,maxg=0,args.maxg
+  ming,maxg=args.ming,args.maxg
   mingq,maxgq=bin2g(g2bin(ming)),bin2g(g2bin(maxg))
   logsum={};logmax={}
   # Take expectation over c ~ -U[minintrodate, firstseen]*g - U[log(minipd),log(maxipd)]
   A1=log(minipd);B1=log(maxipd)
+  if minintrodate-minday>firstseen: raise RuntimeError("First seen variant before min intro date in "+countfile)
   for g in np.arange(mingq,maxgq,dg):
     A0=g*(minintrodate-minday);B0=g*firstseen
-    if A0>B0: raise RuntimeError("First seen variant before min intro date in "+countfile)
+    if g<0: A0,B0=B0,A0
     # c ~ -(U[A0,B0]+U[A1,B1])
     ll=[]
     totw=0
@@ -119,9 +127,9 @@ def printstats(source,ll,desc):
     t+=p
     s+=p*g
     while i<len(thr) and t>thr[i]:
-      print("%s: %2.0f%% point at daily logarithmic growth %5.3f = %+8.0f%% per week"%(desc,thr[i]*100,g,(exp(g*7)-1)*100))
+      print("%s: %2.0f%% point at daily logarithmic growth %6.3f = %+8.0f%% per week"%(desc,thr[i]*100,g,(exp(g*7)-1)*100))
       i+=1
-  print("%s: mean      at daily logarithmic growth %5.3f = %+8.0f%% per week"%(desc,s,(exp(s*7)-1)*100))
+  print("%s: mean      at daily logarithmic growth %6.3f = %+8.0f%% per week"%(desc,s,(exp(s*7)-1)*100))
   print()
     
 
