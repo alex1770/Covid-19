@@ -12,7 +12,7 @@ import hashlib
 np.set_printoptions(precision=6,suppress=True,linewidth=200)
 
 cachedir="cogukcachedir"
-datafile='cog_metadata.csv'
+datafile="cog_metadata.csv"
 conf=0.95
 
 parser=argparse.ArgumentParser()
@@ -60,10 +60,11 @@ jn='_'.join(Vnames)
 if len(jn)>200: jn=hashlib.sha256(jn.encode("utf-8")).hexdigest()[-16:]
 if args.decluster: jn+="__decluster"
 fn=os.path.join(cachedir,location+'_'+jn+'__%s'%cogdate)
+counts={}
 if os.path.isfile(fn):
-  with open(fn,'rb') as fp:
-    counts=pickle.load(fp)
-else:
+  with open(fn,"rb") as fp: counts=pickle.load(fp)
+  if min(counts)>mindate: counts={}
+if counts=={}:
   # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
   # Note that BA.5* will match BA.5 and BA.5.1 but not BA.53
   #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
@@ -76,32 +77,32 @@ else:
     else: exact=lin;prefix="-"
     targlinsexact.append(expandlin(exact))
     targlinsprefix.append(expandlin(prefix))
-  counts={}
   seqdate=None
   for (name,date,p2,lin,mutations,ambiguities) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','usher_lineage','mutations','ambiguities']):
-    #if p2!='Y': continue
     if mutations=="": continue
     if location!="UK":
       country=name.split('/')[0]
       if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
+    if date<mindate: continue
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     ind=patmatch(expandlin(lin))
     if ind==-1: continue
+    
     if args.decluster:
+      if seqdate!=None and date>seqdate: raise RuntimeError("Require metadata input to be grouped by date (e.g., date order) in decluster mode")
       if date!=seqdate:
         if seqdate!=None: counts[seqdate]=[declusternumber(s) for s in seqlist]
         seqlist=[[] for _ in range(numv)]
         seqdate=date
-        print(date)
       seqlist[ind].append(conv_climb_metadata_to_sequence(mutations,ambiguities))
     else:
       if date not in counts: counts[date]=[0]*numv
       counts[date][ind]+=1
-    #if date<mindate: break# If we don't abort early, then can store a cache file that works for any date range - alter
   if args.decluster:
     if seqdate!=None: counts[seqdate]=[declusternumber(s) for s in seqlist]
+  if mindate not in counts: counts[mindate]=[0]*numv# Ensure the start date is marked
   os.makedirs(cachedir,exist_ok=True)
   with open(fn,'wb') as fp:
     pickle.dump(counts,fp)
