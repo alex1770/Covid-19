@@ -24,6 +24,7 @@ parser.add_argument('-f',  '--mindate',     default="2022-01-01",  help="Min sam
 parser.add_argument('-t',  '--maxdate',     default="9999-12-31",  help="Max sample date of sequence")
 parser.add_argument('-l',  '--lineages',    default="BA.4*,BA.5*", help="Comma-separated list of lineages/variants")
 parser.add_argument('-m',  '--maxmult',     type=float,default=20, help="Maximum overdispersion multiplier")
+parser.add_argument('-n',  '--name',                               help="Name of output files")
 parser.add_argument('-p',  '--plotpoints',  action="store_true",   help="Whether to plot points corresponding to log(num(variant)/num(base variant))")
 parser.add_argument('-b',  '--plotbands',   action="store_true",   help="Whether to plot confidence bands around best-fit lines")
 parser.add_argument('-F',  '--future',      type=int,default=30,   help="Number of days ahead to project")
@@ -56,10 +57,10 @@ def patmatch(lin):
     if lin[:len(prefix)]==prefix: ind=i
   return ind
 
-jn='_'.join(Vnames)
-if len(jn)>200: jn=hashlib.sha256(jn.encode("utf-8")).hexdigest()[-16:]
-if args.decluster: jn+="__decluster"
-fn=os.path.join(cachedir,location+'_'+jn+'__%s'%cogdate)
+internalname='_'.join(Vnames)
+if len(internalname)>200: internalname=hashlib.sha256(internalname.encode("utf-8")).hexdigest()[-16:]
+if args.decluster: internalname+="__decluster"
+fn=os.path.join(cachedir,location+'_'+internalname+'__%s'%cogdate)
 counts={}
 if os.path.isfile(fn):
   with open(fn,"rb") as fp: counts=pickle.load(fp)
@@ -300,7 +301,7 @@ for i in range(1,numv):
   print(crossstr)
   out.append((grad,graderr,yoff,cross,crosserr,growthstr,doubstr,crossstr))
 
-datafn=location+'_%s'%jn
+datafn=(args.name if args.name else location+'_%s'%internalname)
 maxt0=maxdate-mindate+1
 maxt=maxt0+args.future
 samp=test[:,:numv,None]+test[:,numv:2*numv,None]*np.arange(maxt)[None,None,:]
