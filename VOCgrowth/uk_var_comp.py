@@ -28,6 +28,7 @@ parser.add_argument('-n',  '--name',                               help="Name of
 parser.add_argument('-p',  '--plotpoints',  action="store_true",   help="Whether to plot points corresponding to log(num(variant)/num(base variant))")
 parser.add_argument('-b',  '--plotbands',   action="store_true",   help="Whether to plot confidence bands around best-fit lines")
 parser.add_argument('-F',  '--future',      type=int,default=30,   help="Number of days ahead to project")
+parser.add_argument('-u',  '--unsorted',    action="store_true",   help="Use this if metadata input might not be in reverse date order")
 args=parser.parse_args()
 
 Vnames=args.lineages.split(',')
@@ -71,6 +72,7 @@ if counts=={}:
   #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
   targlinsexact=[]
   targlinsprefix=[]
+  prevdate=None
   for lin0 in Vnames:
     lin=expandlin(lin0)
     if lin=='*' or lin[-2:]=='.*': exact="-";prefix=lin[:-1]
@@ -85,7 +87,11 @@ if counts=={}:
       country=name.split('/')[0]
       if country!=location: continue
     if not (len(date)==10 and date[:2]=="20" and date[4]=="-" and date[7]=="-"): continue
-    if date<mindate: continue
+    if prevdate!=None and date>prevdate and not args.unsorted: raise RuntimeError("Input metadata not in reverse date order. Use -u option.")
+    prevdate=date
+    if date<mindate:
+      if args.unsorted: continue
+      break
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
     ind=patmatch(expandlin(lin))
