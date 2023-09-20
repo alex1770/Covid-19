@@ -250,7 +250,7 @@ if not args.simple:
   odmbound=False
   for i in range(len(xx)):
     if bounds[i][0]<bounds[i][1] and (xx[i]<bounds[i][0]+1e-3 or xx[i]>bounds[i][1]-1e-3):
-      if i<2*numv: print("Error:",Vnames[i%numv]+[" intercept"," growth"][i//numv],"hit bound")
+      if i<2*numv: print("Error:",Vnames[i%numv]+[" intercept"," growth"][i//numv],"hit bound",file=sys.stderr);assert 0
       else: odmbound=True;print("Note: overdispersion multiplier hit bound")
   print("Residual(overdispersion) multiplier from DM = %.3f"%xx[2*numv])
   
@@ -277,6 +277,8 @@ C[:numv,      :]-=C[0,:][None,:]
 C[numv:2*numv,:]-=C[numv,:][None,:]
 C[:,      :numv]-=C[:,0][:,None]
 C[:,numv:2*numv]-=C[:,numv][:,None]
+
+if not all(np.linalg.eigvals(C)>-1e-9): raise RuntimeError("Covariance not positive semidefinite - minimisation failed")
 
 # Sampling is most convenient way of getting CrIs for crossover points
 numsamp=50000
