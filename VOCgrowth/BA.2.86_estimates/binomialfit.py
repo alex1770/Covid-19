@@ -32,8 +32,8 @@ from stuff import *
 import argparse
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-l', '--ming',     type=float,default=-0.1,    help="Minimum daily logarithmic growth rate considered")
-parser.add_argument('-m', '--maxg',     type=float,default=0.2,     help="Maximum daily logarithmic growth rate considered")
+parser.add_argument('-l', '--ming',     type=float,default=-0.05,   help="Minimum daily logarithmic growth rate considered")
+parser.add_argument('-m', '--maxg',     type=float,default=0.15,    help="Maximum daily logarithmic growth rate considered")
 parser.add_argument('-f', '--minintrodate',  default="2023-03-01",  help="Earliest possible introduction date of variant")
 parser.add_argument('-w', '--writegraph', action="store_true",      help="Whether to write graph output file")
 parser.add_argument('countfilenames',   nargs='*',                  help="Name of file containing counts of non-variant, variant")
@@ -47,7 +47,7 @@ def LL(g,c,V0,V1):
   Z=np.log(1+np.exp(logodds))
   return np.sum(V1*(logodds-Z)-V0*Z)
 
-dg=0.001
+dg=0.0005
 def g2bin(g): return int(floor(g/dg+0.5))
 def bin2g(b): return b*dg
 
@@ -73,7 +73,9 @@ def getlik(countfile):
     for i in range(len(N1)):
       if N1[i]>0: break
     else: assert 0
+    i+=1
     DT=DT[i:];N0=N0[i:];N1=N1[i:]
+  if sum(N1)==0: return (source,)+({g:1 for g in np.arange(args.ming,args.maxg,dg)},)*2
   
   minday=min(DT)
   maxday=max(DT)+1
@@ -94,13 +96,15 @@ def getlik(countfile):
   # Take expectation over c ~ -U[minintrodate, firstseen]*g - U[log(minipd),log(maxipd)]
   A1=log(minipd);B1=log(maxipd)
   if minintrodate-minday>firstseen: raise RuntimeError("First seen variant before min intro date in "+countfile)
+  n=int(floor((B1-A1+(firstseen-(minintrodate-minday))*max(abs(mingq),abs(maxgq)))/dc))+1
   for g in np.arange(mingq,maxgq,dg):
     A0=g*(minintrodate-minday);B0=g*firstseen
     if g<0: A0,B0=B0,A0
     # c ~ -(U[A0,B0]+U[A1,B1])
     ll=[]
     totw=0
-    for mc in np.arange(A0+A1,B0+B1,dc):
+    for i in range(n):
+      mc=(B0+B1-A0-A1)*(i+0.5)/n+(A0+A1)
       weight=min(mc-(A0+A1),B0+B1-mc,B0-A0,B1-A1)+1e-9
       totw+=weight
       ll.append(LL(g,-mc,V0,V1)+log(weight))
