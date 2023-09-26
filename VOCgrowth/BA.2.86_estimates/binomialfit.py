@@ -35,6 +35,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument('-l', '--ming',     type=float,default=-0.05,   help="Minimum daily logarithmic growth rate considered")
 parser.add_argument('-m', '--maxg',     type=float,default=0.15,    help="Maximum daily logarithmic growth rate considered")
 parser.add_argument('-f', '--minintrodate',  default="2023-03-01",  help="Earliest possible introduction date of variant")
+parser.add_argument('-F', '--maxintrodate',  default="2023-09-01",  help="Latest possible introduction date of variant")
 parser.add_argument('-w', '--writegraph', action="store_true",      help="Whether to write graph output file")
 parser.add_argument('countfilenames',   nargs='*',                  help="Name of file containing counts of non-variant, variant")
 args=parser.parse_args()
@@ -75,7 +76,7 @@ def getlik(countfile):
     else: assert 0
     i+=1
     DT=DT[i:];N0=N0[i:];N1=N1[i:]
-  if sum(N1)==0: return (source,)+({g:1 for g in np.arange(args.ming,args.maxg,dg)},)*2
+  #if sum(N1)==0: return (source,)+({g:1 for g in np.arange(args.ming,args.maxg,dg)},)*2
   
   minday=min(DT)
   maxday=max(DT)+1
@@ -85,9 +86,8 @@ def getlik(countfile):
   for (v0,v1,dt) in zip(N0,N1,DT):
     V0[dt-minday]=v0
     V1[dt-minday]=v1
-  #if V0.sum()<V1.sum(): print("Warning: baseline variant should not be smaller than new variant in input",countfile,file=sys.stderr)# alter
-  
-  firstseen=min(i for i in range(ndays) if V1[i]>0)
+
+  firstseen=min(list(i for i in range(ndays) if V1[i]>0)+[datetoday(args.maxintrodate)-minday])
 
   l=[]
   ming,maxg=args.ming,args.maxg
