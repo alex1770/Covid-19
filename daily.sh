@@ -11,8 +11,8 @@ set -e
 (cd COG-UK; bash update.sh)
 (
     cd VOCgrowth
-    python3 uk_var_comp.py -d -f 2023-08-15 -p -b -l 'EG.5.1*,XBB.1.16*,BA.2.86*' -F30 -n topfewvariants
-    python3 uk_var_comp.py -d -f 2023-07-01 -l 'EG.1,EG.5.1,EG.5.1.1,EG.5.1.3,EG.5.1.4,EG.5.1.6,GE.1,XBB.1.16,XBB.1.16.11,XBB.1.16.15,XBB.1.16.6,XBB.2.3,XBB.2.3.11,DV.7.1,FL.1.5.1,GK.2,*,XBB.*,XBB.1.*,XBB.1.5*,XBB.1.9.*,XBB.1.16*,EG.*,FL.*,FY.*,BA.2.86*' -F30 -n topmanyvariants
+    python3 uk_var_comp.py -d -f 2023-08-15 -p -b -l 'XBB.1.16.11+XBB.1.16.15,EG.5.1.3,BA.2.86*,HK.3,HV.1' -F30 -n topfewvariants
+    python3 uk_var_comp.py -d -f 2023-07-01 -l 'EG.5.1,EG.5.1.1,EG.5.1.3,EG.5.1.4,EG.5.1.6,XBB.1.16,XBB.1.16.11,XBB.1.16.15,XBB.1.16.6,XBB.2.3.11,DV.7.1,FL.1.5.1,GE.1,GK.2,HF.1,HK.3,HV.1,*,XBB.*,XBB.1.*,XBB.1.5*,XBB.1.9.*,XBB.1.16*,EG.*,FL.*,FY.*,BA.2.86*' -F30 -n topmanyvariants
 )
 
 make
