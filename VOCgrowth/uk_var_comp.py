@@ -46,14 +46,15 @@ cogdate=datetime.datetime.utcfromtimestamp(os.path.getmtime(datafile+'.gz')).str
 
 # lin is assumed to have already been expanded
 def patmatch(lin):
+  lin=expandlin(lin)
   ind=-1
-  for i in range(len(Vnames)):
+  for i in range(len(Vind)):
     exact=targlinsexact[i]
     prefix=targlinsprefix[i]
     if lin==exact:
-      ind=i
+      ind=Vind[i]
       if prefix=='-': return ind# Exact match with non-wildcard takes precedence over anything later
-    if lin[:len(prefix)]==prefix: ind=i
+    if lin[:len(prefix)]==prefix: ind=Vind[i]
   return ind
 
 internalname='_'.join(Vnames)
@@ -65,19 +66,22 @@ if os.path.isfile(fn):
   with open(fn,"rb") as fp: counts=pickle.load(fp)
   if min(counts)>mindate: counts={}
 if counts=={}:
-  # Wildcard ending is replaced with '.'. It's a match if it's equal to a prefix of (database lineage)+'.'
+  # Compile patterns so that we can assign variants to pattern indexes
   # Note that BA.5* will match BA.5 and BA.5.1 but not BA.53
   #           BA.5.* will match BA.5.1 but not BA.5 or BA.53
   targlinsexact=[]
   targlinsprefix=[]
+  Vind=[]# Index into Vnames
   prevdate=None
-  for lin0 in Vnames:
-    lin=expandlin(lin0)
-    if lin=='*' or lin[-2:]=='.*': exact="-";prefix=lin[:-1]
-    elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
-    else: exact=lin;prefix="-"
-    targlinsexact.append(expandlin(exact))
-    targlinsprefix.append(expandlin(prefix))
+  for (ind,lin0) in enumerate(Vnames):
+    for lin1 in lin0.split('+'):
+      lin=expandlin(lin1)
+      if lin=='*' or lin[-2:]=='.*': exact="-";prefix=lin[:-1]
+      elif lin[-1]=='*': exact=lin[:-1];prefix=lin[:-1]+'.'
+      else: exact=lin;prefix="-"
+      targlinsexact.append(expandlin(exact))
+      targlinsprefix.append(expandlin(prefix))
+      Vind.append(ind)
   seqdate=None
   for (name,date,p2,lin,mutations,ambiguities) in csvrows(datafile,['sequence_name','sample_date','is_pillar_2','usher_lineage','mutations','ambiguities']):
     if mutations=="": continue
@@ -92,7 +96,7 @@ if counts=={}:
       break
     
     # Try to assign sublineage to one of the given lineages. E.g., if Vnames=["BA.1*","BA.1.1*","BA.2"] then BA.1.14 is counted as BA.1* but BA.1.1.14 is counted as BA.1.1*
-    ind=patmatch(expandlin(lin))
+    ind=patmatch(lin)
     if ind==-1: continue
     
     if args.decluster:
