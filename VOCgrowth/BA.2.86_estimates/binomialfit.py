@@ -76,7 +76,6 @@ def getlik(countfile):
     else: assert 0
     i+=1
     DT=DT[i:];N0=N0[i:];N1=N1[i:]
-  #if sum(N1)==0: return (source,)+({g:1 for g in np.arange(args.ming,args.maxg,dg)},)*2
   
   minday=min(DT)
   maxday=max(DT)+1
