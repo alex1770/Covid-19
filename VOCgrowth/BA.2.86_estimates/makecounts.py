@@ -17,6 +17,7 @@ parser.add_argument('-b', '--baseline',   default="",                           
 parser.add_argument('-t', '--target',     default="BA.2.86",                             help="Target variant")
 parser.add_argument('-v', '--verbosity',  type=int, default=1,                           help="Verbosity level (0,1,2,...)")
 parser.add_argument('-n', '--dirname',    default="counts",                              help="Prefix of directory name where results are stored")
+parser.add_argument('-z', '--zero',       action="store_true",                           help="Allow zero variant counts")
 args=parser.parse_args()
 
 if args.verbosity>=1 and args.decluster and platform.python_implementation()=="CPython": print("Suggest using PyPy for speed\n")
@@ -66,16 +67,35 @@ for row in csvrows(args.metadata,keys,sep=sep):
     d[country][date][v1]+=1# Target variant takes priority if both baseline and target match
     d[country][date][2].append((name,loc,lin))
 
+dcon={}
 for country in d:
   num=[sum(x[i] for x in d[country].values()) for i in range(2)]
-  if num[0]==0 or num[1]==0: continue
+  if num[0]==0 or (num[1]==0 and not args.zero): continue
   if args.verbosity>=1: print(country)
-  country_short=country.split(" / ")[-1].strip().replace(" ","_")
-  os.makedirs(args.dirname,exist_ok=True)
-  with open(os.path.join(args.dirname,country_short),"w") as fp:
+  country_short,continent=[country.split(" / ")[i].strip().replace(" ","_") for i in [-1,0]]
+  dirname=args.dirname+"_zero"*(num[1]==0)
+  os.makedirs(dirname,exist_ok=True)
+  if continent not in dcon: dcon[continent]={}
+  with open(os.path.join(dirname,country_short),"w") as fp:
     print("# "+source,file=fp)
     for date in sorted(list(d[country])):
       print(date,"%6d %6d"%(tuple(d[country][date][:2])),file=fp)
+      if date not in dcon[continent]: dcon[continent][date]=[0,0]
+      dcon[continent][date][0]+=d[country][date][0]
+      dcon[continent][date][1]+=d[country][date][1]
+if args.verbosity>=1: print()
+
+for continent in dcon:
+  num=[sum(x[i] for x in dcon[continent].values()) for i in range(2)]
+  if num[0]==0: continue
+  if args.verbosity>=1: print(continent)
+  dirname=args.dirname+"_continent"+"_zero"*(num[1]==0)
+  os.makedirs(dirname,exist_ok=True)
+  with open(os.path.join(dirname,continent),"w") as fp:
+    print("# "+source,file=fp)
+    for date in sorted(list(dcon[continent])):
+      print(date,"%6d %6d"%(tuple(dcon[continent][date])),file=fp)
+
 
 notfound=0
 wronglength=0
