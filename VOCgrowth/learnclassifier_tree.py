@@ -131,7 +131,7 @@ print("Found",len(allm),"mutations, of which",len(okm),"have occurred at least",
 def patmatch(name,lin):
   ind=len(lineages)
   for i in range(len(lineages)):
-    if name in targlinsname[i]: return i
+    if targlinsname[i] is not None and name in targlinsname[i]: return i
   for i in range(len(lineages)):
     if targlinsname[i] is None:
       exact=targlinsexact[i]
